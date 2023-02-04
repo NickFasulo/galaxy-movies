@@ -1,7 +1,7 @@
 import { ChakraBox } from './chakraBox'
 import { Image, WrapItem } from '@chakra-ui/react'
 
-export default function MovieCard({ ...movieData }) {
+export default function MovieCard({ poster_path, title }) {
   return (
     <WrapItem>
       <ChakraBox
@@ -14,9 +14,9 @@ export default function MovieCard({ ...movieData }) {
         borderRadius='1.1rem'
       >
         <Image
-          src={`https://image.tmdb.org/t/p/original${movieData.poster_path}`}
+          src={`https://image.tmdb.org/t/p/original${poster_path}`}
           fallbackSrc='fallback-1.jpg'
-          alt={movieData.title}
+          alt={title}
           objectFit='cover'
           borderRadius='1rem'
         />
