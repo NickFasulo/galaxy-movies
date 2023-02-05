@@ -51,15 +51,7 @@ export default function Home() {
                   {page.results.map((movie, i) => (
                     <MovieCard
                       key={i}
-                      backdrop_path={movie.backdrop_path}
-                      genre_ids={movie.genre_ids}
-                      id={movie.id}
-                      original_language={movie.original_language}
-                      overview={movie.overview}
-                      popularity={movie.popularity}
-                      poster_path={movie.poster_path}
-                      title={movie.title}
-                      vote_average={movie.vote_average}
+                      movie={movie}
                     />
                   ))}
                 </>
