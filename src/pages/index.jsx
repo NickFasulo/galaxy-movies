@@ -10,7 +10,7 @@ export default function Home() {
     'infiniteMovies',
     async ({ pageParam = 1 }) =>
       await fetch(
-        `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.TMDB_KEY}&page=${pageParam}`
+        `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}&page=${pageParam}`
       ).then(result => result.json()),
     {
       getNextPageParam: (lastPage, pages) => {
