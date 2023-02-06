@@ -14,10 +14,9 @@ export default function Home() {
       ).then(result => result.json()),
     {
       getNextPageParam: (lastPage, pages) => {
-        // console.log({ lastPage })
-        // if (lastPage.info.next) {
-        return pages.length + 1
-        // }
+        if (pages.length <= 10) {
+          return pages.length + 1
+        }
       }
     }
   )
@@ -39,20 +38,12 @@ export default function Home() {
             next={fetchNextPage}
             hasMore={hasNextPage}
             loader={<h2 style={{ textAlign: 'center' }}>Loading...</h2>}
-            endMessage={
-              <p style={{ textAlign: 'center' }}>
-                <b>End of movie list</b>
-              </p>
-            }
           >
             <Wrap justify='center'>
               {data?.pages.map(page => (
                 <>
                   {page.results.map((movie, i) => (
-                    <MovieCard
-                      key={i}
-                      movie={movie}
-                    />
+                    <MovieCard key={i} movie={movie} />
                   ))}
                 </>
               ))}
