@@ -1,3 +1,4 @@
+import React from 'react'
 import Head from 'next/head'
 import { Wrap, Box } from '@chakra-ui/react'
 import { useInfiniteQuery } from 'react-query'
@@ -40,12 +41,12 @@ export default function Home() {
             loader={<h2 style={{ textAlign: 'center' }}>Loading...</h2>}
           >
             <Wrap justify='center'>
-              {data?.pages.map(page => (
-                <>
+              {data?.pages.map((page, i) => (
+                <React.Fragment key={i}>
                   {page.results.map((movie, i) => (
-                    <MovieCard key={i} movie={movie} />
+                    <MovieCard key={i + 1} movie={movie} />
                   ))}
-                </>
+                </React.Fragment>
               ))}
             </Wrap>
           </InfiniteScroll>
