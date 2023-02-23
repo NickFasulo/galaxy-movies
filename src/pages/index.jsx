@@ -43,8 +43,8 @@ export default function Home() {
             <Wrap justify='center'>
               {data?.pages.map((page, i) => (
                 <React.Fragment key={i}>
-                  {page.results.map((movie, i) => (
-                    <MovieCard key={i + 1} movie={movie} />
+                  {page.results.map((movie) => (
+                    <MovieCard key={movie.id} movie={movie} />
                   ))}
                 </React.Fragment>
               ))}
