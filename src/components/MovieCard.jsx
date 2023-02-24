@@ -1,4 +1,4 @@
-import { ChakraBox } from './chakraBox'
+import { ChakraBox } from './ChakraBox'
 import { Image, WrapItem } from '@chakra-ui/react'
 import Link from 'next/link'
 
