@@ -8,7 +8,7 @@ import {
   Heading,
   Text
 } from '@chakra-ui/react'
-import { StarIcon, CalendarIcon } from '@chakra-ui/icons'
+import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import CustomSpinner from '../../components/CustomSpinner'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
@@ -91,21 +91,25 @@ export default function Movie({ query }) {
             boxShadow='dark-lg'
           >
             <Heading
-              margin='1rem 0 0'
+              margin='1rem 0 0.5rem'
               color='white'
               textShadow='2px 0 4px black'
             >
               {movie.title}
             </Heading>
-            <Flex width='12rem' justify='space-between'>
-              <CalendarIcon color='white' />
-              <Text color='white' textShadow='2px 0 4px black'>
-                {dateFormatter(movie.release_date)}
-              </Text>
-              <Text color='white'>|</Text>
-              <Text color='white' textShadow='2px 0 4px black'>
-                {timeFormatter(movie.runtime)}
-              </Text>
+            <Flex width='14rem' justify='space-between'>
+              <Flex align='center'>
+                <CalendarIcon color='white' />
+                <Text color='white' textShadow='2px 0 4px black' marginLeft={1.5}>
+                  {dateFormatter(movie.release_date)}
+                </Text>
+              </Flex>
+              <Flex align='center'>
+                <TimeIcon color='white' />
+                <Text color='white' textShadow='2px 0 4px black' marginLeft={1.5}>
+                  {timeFormatter(movie.runtime)}
+                </Text>
+              </Flex>
             </Flex>
             <Text
               as='em'
