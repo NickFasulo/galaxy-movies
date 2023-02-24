@@ -9,6 +9,7 @@ import {
   Heading,
   Text
 } from '@chakra-ui/react'
+import { StarIcon } from '@chakra-ui/icons'
 import CustomSpinner from '../../components/CustomSpinner'
 
 export const getServerSideProps = async context => {
@@ -86,6 +87,7 @@ export default function Movie({ query }) {
             flexDirection='column'
             background='rgba(0, 0, 0, 0.6)'
             borderRadius='1rem'
+            boxShadow='dark-lg'
           >
             <Heading
               margin='1rem 0 0'
@@ -94,11 +96,7 @@ export default function Movie({ query }) {
             >
               {movie.title}
             </Heading>
-            <Text
-              width='40rem'
-              color='white'
-              textShadow='2px 0 4px black'
-            >
+            <Text width='40rem' color='white' textShadow='2px 0 4px black'>
               {new Date(movie.release_date).toLocaleDateString('en-us', {
                 year: 'numeric',
                 month: 'short',
@@ -122,20 +120,28 @@ export default function Movie({ query }) {
             >
               {movie.overview}
             </Text>
-            <Flex align='center' justify='flex-end' height='100%'>
-              {movie.production_companies.map(company => (
-                <Image
-                  key={company.id}
-                  alt={company.name}
-                  src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
-                  onError={e => (e.target.style.display = 'none')}
-                  width='4rem'
-                  margin='0 1rem'
-                  padding={1}
-                  borderRadius={2}
-                  background='white'
-                />
-              ))}
+            <Flex height='100%' align='flex-end' justify='space-between'>
+              <Flex align='center'>
+                <StarIcon boxSize={5} color='gold' />
+                <Text fontSize='lg' marginLeft={2} color='white'>
+                  {movie.vote_average}
+                </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                {movie.production_companies.map(company => (
+                  <Image
+                    key={company.id}
+                    alt={company.name}
+                    src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
+                    onError={e => (e.target.style.display = 'none')}
+                    width='4rem'
+                    margin='0 1rem'
+                    padding={0.5}
+                    borderRadius={2}
+                    background='white'
+                  />
+                ))}
+              </Flex>
             </Flex>
           </Flex>
         </Flex>
