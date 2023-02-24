@@ -43,13 +43,13 @@ export default function Movie({ query }) {
       height='100vh'
       justify='center'
       align='center'
+      backgroundColor='dimgrey'
+      backgroundBlendMode='multiply'
+      backgroundImage={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
+      backgroundPosition='center'
+      backgroundRepeat='no-repeat'
+      backgroundSize='cover'
     >
-      <Image
-        src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
-        position='absolute'
-        filter='auto'
-        brightness='35%'
-      />
       {loading ? (
         <CustomSpinner />
       ) : (
@@ -66,7 +66,7 @@ export default function Movie({ query }) {
               fallbackSrc='fallback-1.jpg'
               alt={movie.title}
               objectFit='cover'
-              width='16rem'
+              width='24rem'
               borderRadius='1rem'
               boxShadow='dark-lg'
             />
@@ -82,7 +82,7 @@ export default function Movie({ query }) {
             margin='2rem'
             padding='1rem'
             position='relative'
-            height='24rem'
+            height='27rem'
             flexDirection='column'
             background='rgba(0, 0, 0, 0.6)'
             borderRadius='1rem'
@@ -95,7 +95,6 @@ export default function Movie({ query }) {
               {movie.title}
             </Heading>
             <Text
-              fontSize='lg'
               width='40rem'
               color='white'
               textShadow='2px 0 4px black'
