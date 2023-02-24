@@ -3,14 +3,15 @@ import {
   Flex,
   Wrap,
   WrapItem,
-  Box,
   Image,
   Badge,
   Heading,
   Text
 } from '@chakra-ui/react'
-import { StarIcon } from '@chakra-ui/icons'
+import { StarIcon, CalendarIcon } from '@chakra-ui/icons'
 import CustomSpinner from '../../components/CustomSpinner'
+import timeFormatter from '../../utils/timeFormatter'
+import dateFormatter from '../../utils/dateFormatter'
 
 export const getServerSideProps = async context => {
   return {
@@ -96,13 +97,16 @@ export default function Movie({ query }) {
             >
               {movie.title}
             </Heading>
-            <Text width='40rem' color='white' textShadow='2px 0 4px black'>
-              {new Date(movie.release_date).toLocaleDateString('en-us', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </Text>
+            <Flex width='12rem' justify='space-between'>
+              <CalendarIcon color='white' />
+              <Text color='white' textShadow='2px 0 4px black'>
+                {dateFormatter(movie.release_date)}
+              </Text>
+              <Text color='white'>|</Text>
+              <Text color='white' textShadow='2px 0 4px black'>
+                {timeFormatter(movie.runtime)}
+              </Text>
+            </Flex>
             <Text
               as='em'
               fontSize='lg'
@@ -124,7 +128,7 @@ export default function Movie({ query }) {
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
                 <Text fontSize='lg' marginLeft={2} color='white'>
-                  {movie.vote_average}
+                  {Math.round(movie.vote_average * 10) / 10}
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
