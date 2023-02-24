@@ -36,13 +36,10 @@ export default function Movie({ query }) {
     }
   }, [])
 
-  console.log(movie)
-
   return (
     <Flex
       position='relative'
-      overflow='hidden'
-      height='100vh'
+      height={{ sm: 'auto', md: '100vh' }}
       justify='center'
       align='center'
       backgroundColor='dimgrey'
@@ -55,12 +52,15 @@ export default function Movie({ query }) {
       {loading ? (
         <CustomSpinner />
       ) : (
-        <Flex>
+        <Flex
+          flexDirection={{ sm: 'column', md: 'row' }}
+          align={{ sm: 'center', md: 'normal' }}
+        >
           <Flex
             alignItems='center'
             flexDirection='column'
             position='relative'
-            margin='2rem'
+            margin={{ sm: 0, md: '2rem' }}
             width='18rem'
           >
             <Image
@@ -71,6 +71,7 @@ export default function Movie({ query }) {
               width='24rem'
               borderRadius='1rem'
               boxShadow='dark-lg'
+              marginTop={{ sm: '2rem', md: 0 }}
             />
             <Wrap justify='center' margin='2rem 0'>
               {movie.genres.map(genre => (
@@ -81,13 +82,14 @@ export default function Movie({ query }) {
             </Wrap>
           </Flex>
           <Flex
-            margin='2rem'
+            margin={{ sm: 0, md: '2rem' }}
             padding='1rem'
             position='relative'
-            height='27rem'
+            height={{ sm: 'auto', md: '27rem' }}
+            width={{ sm: '96vw', md: '40rem' }}
             flexDirection='column'
             background='rgba(0, 0, 0, 0.6)'
-            borderRadius='1rem'
+            borderRadius={{ sm: 0, md: '1rem' }}
             boxShadow='dark-lg'
           >
             <Heading
@@ -100,13 +102,21 @@ export default function Movie({ query }) {
             <Flex width='14rem' justify='space-between'>
               <Flex align='center'>
                 <CalendarIcon color='white' />
-                <Text color='white' textShadow='2px 0 4px black' marginLeft={1.5}>
+                <Text
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  marginLeft={1.5}
+                >
                   {dateFormatter(movie.release_date)}
                 </Text>
               </Flex>
               <Flex align='center'>
                 <TimeIcon color='white' />
-                <Text color='white' textShadow='2px 0 4px black' marginLeft={1.5}>
+                <Text
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  marginLeft={1.5}
+                >
                   {timeFormatter(movie.runtime)}
                 </Text>
               </Flex>
@@ -120,18 +130,13 @@ export default function Movie({ query }) {
             >
               {movie.tagline}
             </Text>
-            <Text
-              fontSize='lg'
-              width='40rem'
-              color='white'
-              textShadow='2px 0 4px black'
-            >
+            <Text fontSize='lg' color='white' textShadow='2px 0 4px black' marginBottom={{ sm: '2rem', md: 0}}>
               {movie.overview}
             </Text>
             <Flex height='100%' align='flex-end' justify='space-between'>
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
-                <Text fontSize='lg' marginLeft={2} color='white'>
+                <Text fontSize='lg' marginLeft={{ sm: 0, md: 2 }} color='white'>
                   {Math.round(movie.vote_average * 10) / 10}
                 </Text>
               </Flex>

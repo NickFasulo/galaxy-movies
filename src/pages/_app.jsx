@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ReactQueryDevtools } from 'react-query/devtools'
+// import { ReactQueryDevtools } from 'react-query/devtools'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
 
@@ -11,7 +11,7 @@ function MyApp({ Component, pageProps }) {
         <ChakraProvider>
           <Component {...pageProps} />
         </ChakraProvider>
-        <ReactQueryDevtools initialIsOpen={false}/>
+        {/* <ReactQueryDevtools initialIsOpen={false}/> */}
       </Hydrate>
     </QueryClientProvider>
   )

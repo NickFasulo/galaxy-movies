@@ -30,7 +30,7 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Box height='100vh'>
+      <Box height='100vh' background='whitesmoke'>
         {status !== 'success' ? (
           <CustomSpinner />
         ) : (
