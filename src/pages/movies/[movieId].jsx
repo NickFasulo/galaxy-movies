@@ -25,16 +25,21 @@ export default function Movie({ query }) {
   const [movie, setMovie] = useState({})
   const [loading, setLoading] = useState(true)
 
+  console.log({query})
+
   useEffect(() => {
     return async () => {
       const res = await fetch(
         `https://api.themoviedb.org/3/movie/${query.movieId}?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}`
       )
       const movieData = await res.json()
+      console.log({movieData})
       setMovie(movieData)
       setLoading(false)
     }
   }, [])
+
+  console.log({movie})
 
   return (
     <Flex
