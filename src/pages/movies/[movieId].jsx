@@ -31,8 +31,6 @@ export default function Movie({ query }) {
         `https://api.themoviedb.org/3/movie/${query.movieId}?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}`
       )
       const movieData = await res.json()
-      console.log('hit')
-      console.log({ movieData })
       setMovie(movieData)
     } catch (e) {
       throw new Error(e)
@@ -44,12 +42,10 @@ export default function Movie({ query }) {
     fetchMovie()
   }, [])
 
-  console.log({ movie })
-
   return (
     <Flex
       position='relative'
-      height={{ sm: 'auto', md: '100vh' }}
+      height={{ base: 'auto', md: '100vh' }}
       justify='center'
       align='center'
       backgroundColor='dimgrey'
@@ -63,14 +59,14 @@ export default function Movie({ query }) {
         <CustomSpinner />
       ) : (
         <Flex
-          flexDirection={{ sm: 'column', md: 'row' }}
-          align={{ sm: 'center', md: 'normal' }}
+          flexDirection={{ base: 'column', md: 'row' }}
+          align={{ base: 'center', md: 'normal' }}
         >
           <Flex
             alignItems='center'
             flexDirection='column'
             position='relative'
-            margin={{ sm: 0, md: '2rem' }}
+            margin={{ base: 0, md: '2rem' }}
             width='18rem'
           >
             <Image
@@ -81,7 +77,7 @@ export default function Movie({ query }) {
               width='24rem'
               borderRadius='1rem'
               boxShadow='dark-lg'
-              marginTop={{ sm: '2rem', md: 0 }}
+              marginTop={{ base: '2rem', md: 0 }}
             />
             <Wrap justify='center' margin='2rem 0'>
               {movie.genres.map(genre => (
@@ -92,24 +88,27 @@ export default function Movie({ query }) {
             </Wrap>
           </Flex>
           <Flex
-            margin={{ sm: 0, md: '2rem' }}
+            margin={{ base: 0, md: '2rem' }}
             padding='1rem'
             position='relative'
-            height={{ sm: 'auto', md: '27rem' }}
-            width={{ sm: '96vw', md: '40rem' }}
+            height={{ base: 'auto', md: '27rem' }}
+            width={{ base: '100%', md: '40rem' }}
             flexDirection='column'
             background='rgba(0, 0, 0, 0.6)'
-            borderRadius={{ sm: 0, md: '1rem' }}
+            borderRadius={{ base: 0, md: '1rem' }}
             boxShadow='dark-lg'
           >
             <Heading
-              margin='1rem 0 0.5rem'
+              margin={{ base: '1rem auto', md: '1rem 0 0.5rem' }}
               color='white'
               textShadow='2px 0 4px black'
             >
               {movie.title}
             </Heading>
-            <Flex width='14rem' justify='space-between'>
+            <Flex
+              width={{ base: '100%', md: '14rem' }}
+              justify={{ base: 'space-evenly', md: 'space-between' }}
+            >
               <Flex align='center'>
                 <CalendarIcon color='white' />
                 <Text
@@ -135,7 +134,7 @@ export default function Movie({ query }) {
               as='em'
               fontSize='lg'
               color='gray.400'
-              margin='1rem 0'
+              margin={{ base: '1rem auto', md: '1rem 0' }}
               textShadow='2px 0 4px black'
             >
               {movie.tagline}
@@ -144,7 +143,7 @@ export default function Movie({ query }) {
               fontSize='lg'
               color='white'
               textShadow='2px 0 4px black'
-              marginBottom={{ sm: '2rem', md: 0 }}
+              marginBottom={{ base: '2rem', md: 0 }}
             >
               {movie.overview}
             </Text>
@@ -158,7 +157,7 @@ export default function Movie({ query }) {
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {movie.production_companies.slice(0, 5).map(company => (
+                {movie.production_companies.slice(0, 3).map(company => (
                   <Image
                     key={company.id}
                     alt={company.name}

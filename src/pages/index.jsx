@@ -30,7 +30,7 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Box height='100vh' background='whitesmoke'>
+      <Box height='100%' backgroundColor='whitesmoke'>
         {status !== 'success' ? (
           <CustomSpinner />
         ) : (
@@ -43,7 +43,7 @@ export default function Home() {
             <Wrap justify='center'>
               {data?.pages.map((page, i) => (
                 <React.Fragment key={i}>
-                  {page.results.map((movie) => (
+                  {page.results.map(movie => (
                     <MovieCard key={movie.id} movie={movie} />
                   ))}
                 </React.Fragment>
