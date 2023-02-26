@@ -25,20 +25,26 @@ export default function Movie({ query }) {
   const [movie, setMovie] = useState({})
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    return async () => {
+  const fetchMovie = async () => {
+    try {
       const res = await fetch(
         `https://api.themoviedb.org/3/movie/${query.movieId}?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}`
       )
       const movieData = await res.json()
       console.log('hit')
-      console.log({movieData})
+      console.log({ movieData })
       setMovie(movieData)
-      setLoading(false)
+    } catch (e) {
+      throw new Error(e)
     }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchMovie()
   }, [])
 
-  console.log({movie})
+  console.log({ movie })
 
   return (
     <Flex
@@ -146,7 +152,9 @@ export default function Movie({ query }) {
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
                 <Text fontSize='lg' marginLeft={2} color='white'>
-                  {movie.vote_average !== 0 ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
+                  {movie.vote_average !== 0
+                    ? Math.round(movie.vote_average * 10) / 10
+                    : 'TBD'}
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
