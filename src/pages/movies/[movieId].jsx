@@ -130,18 +130,23 @@ export default function Movie({ query }) {
             >
               {movie.tagline}
             </Text>
-            <Text fontSize='lg' color='white' textShadow='2px 0 4px black' marginBottom={{ sm: '2rem', md: 0}}>
+            <Text
+              fontSize='lg'
+              color='white'
+              textShadow='2px 0 4px black'
+              marginBottom={{ sm: '2rem', md: 0 }}
+            >
               {movie.overview}
             </Text>
             <Flex height='100%' align='flex-end' justify='space-between'>
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
-                <Text fontSize='lg' marginLeft={{ sm: 0, md: 2 }} color='white'>
-                  {Math.round(movie.vote_average * 10) / 10}
+                <Text fontSize='lg' marginLeft={2} color='white'>
+                  {movie.vote_average !== 0 ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {movie.production_companies.map(company => (
+                {movie.production_companies.slice(0, 5).map(company => (
                   <Image
                     key={company.id}
                     alt={company.name}
