@@ -6,6 +6,15 @@ body {
     Helvetica Neue, sans-serif;
 }
 
+::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: darkgrey;
+  border-radius: 1rem;
+}
+
 a {
   text-decoration: none;
 }

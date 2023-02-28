@@ -10,6 +10,7 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import CustomSpinner from '../../components/CustomSpinner'
+import ReviewModal from '../../components/ReviewModal'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 
@@ -45,9 +46,9 @@ export default function Movie({ query }) {
   return (
     <Flex
       position='relative'
-      height={{ base: 'auto', md: '100vh' }}
       justify='center'
       align='center'
+      height={{ base: 'auto', md: '100vh' }}
       backgroundColor='dimgrey'
       backgroundBlendMode='multiply'
       backgroundImage={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
@@ -67,7 +68,7 @@ export default function Movie({ query }) {
             flexDirection='column'
             position='relative'
             margin={{ base: 0, md: '2rem' }}
-            width='18rem'
+            width='20rem'
           >
             <Image
               src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
@@ -88,20 +89,22 @@ export default function Movie({ query }) {
             </Wrap>
           </Flex>
           <Flex
-            margin={{ base: 0, md: '2rem' }}
-            padding='1rem'
+            className='movie-details'
             position='relative'
-            height={{ base: 'auto', md: '27rem' }}
-            width={{ base: '100%', md: '40rem' }}
             flexDirection='column'
-            background='rgba(0, 0, 0, 0.6)'
+            padding='1rem'
+            margin={{ base: 0, md: '2rem' }}
+            height={{ base: 'auto', md: '30rem' }}
+            width={{ base: '100%', md: '40rem' }}
+            overflowY={{ base: 'visible', md: 'auto' }}
             borderRadius={{ base: 0, md: '1rem' }}
+            background='rgba(0, 0, 0, 0.6)'
             boxShadow='dark-lg'
           >
             <Heading
-              margin={{ base: '1rem auto', md: '1rem 0 0.5rem' }}
               color='white'
               textShadow='2px 0 4px black'
+              margin={{ base: '1rem auto', md: '1rem 0 0.5rem' }}
             >
               {movie.title}
             </Heading>
@@ -134,8 +137,8 @@ export default function Movie({ query }) {
               as='em'
               fontSize='lg'
               color='gray.400'
-              margin={{ base: '1rem auto', md: '1rem 0' }}
               textShadow='2px 0 4px black'
+              margin={{ base: '1rem auto', md: '1rem 0' }}
             >
               {movie.tagline}
             </Text>
@@ -147,7 +150,12 @@ export default function Movie({ query }) {
             >
               {movie.overview}
             </Text>
-            <Flex height='100%' align='flex-end' justify='space-between'>
+            <ReviewModal movieTitle={movie.title} />
+            <Flex
+              align='flex-end'
+              justify='space-between'
+              marginBottom={{ base: '1rem', md: 0 }}
+            >
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
                 <Text fontSize='lg' marginLeft={2} color='white'>
