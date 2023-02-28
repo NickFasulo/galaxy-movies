@@ -89,7 +89,6 @@ export default function Movie({ query }) {
             </Wrap>
           </Flex>
           <Flex
-            className='movie-details'
             position='relative'
             flexDirection='column'
             padding='1rem'
