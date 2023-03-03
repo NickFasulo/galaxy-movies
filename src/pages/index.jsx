@@ -1,6 +1,6 @@
 import React from 'react'
 import Head from 'next/head'
-import { Wrap, Box, Flex } from '@chakra-ui/react'
+import { Wrap, Box } from '@chakra-ui/react'
 import { useInfiniteQuery } from 'react-query'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
@@ -30,7 +30,7 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Box height='100%' backgroundColor='whitesmoke'>
+      <Box height='100%'>
         {status !== 'success' ? (
           <CustomSpinner />
         ) : (

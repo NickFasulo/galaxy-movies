@@ -95,7 +95,6 @@ export default function Movie({ query }) {
             margin={{ base: 0, md: '2rem' }}
             height={{ base: 'auto', md: '30rem' }}
             width={{ base: '100%', md: '40rem' }}
-            overflowY={{ base: 'visible', md: 'auto' }}
             borderRadius={{ base: 0, md: '1rem' }}
             background='rgba(0, 0, 0, 0.6)'
             boxShadow='dark-lg'
@@ -103,6 +102,7 @@ export default function Movie({ query }) {
             <Heading
               color='white'
               textShadow='2px 0 4px black'
+              textAlign={{ base: 'center', md: 'left'}}
               margin={{ base: '1rem auto', md: '1rem 0 0.5rem' }}
             >
               {movie.title}
@@ -142,10 +142,13 @@ export default function Movie({ query }) {
               {movie.tagline}
             </Text>
             <Text
-              fontSize='lg'
+              height='100%'
               color='white'
+              fontSize='lg'
               textShadow='2px 0 4px black'
+              paddingRight={2}
               marginBottom={{ base: '2rem', md: 0 }}
+              overflowY={{ base: 'visible', md: 'auto' }}
             >
               {movie.overview}
             </Text>

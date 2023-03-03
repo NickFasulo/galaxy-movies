@@ -10,8 +10,8 @@ export default function CustomSpinner() {
       sx={{
         position: 'absolute',
         top: '50vh',
-        left: '49vw',
-        transform: 'translate(-50vh, -49vw)'
+        left: '50vw',
+        transform: 'translate(-50vh, -50vw)'
       }}
     />
   )
