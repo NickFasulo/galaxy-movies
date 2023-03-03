@@ -9,9 +9,9 @@ export default function CustomSpinner() {
       size='xl'
       sx={{
         position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)'
+        top: '50vh',
+        left: '49vw',
+        transform: 'translate(-50vh, -49vw)'
       }}
     />
   )

@@ -1,6 +1,6 @@
 import React from 'react'
 import Head from 'next/head'
-import { Wrap, Box } from '@chakra-ui/react'
+import { Wrap, Box, Flex } from '@chakra-ui/react'
 import { useInfiniteQuery } from 'react-query'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
@@ -38,7 +38,6 @@ export default function Home() {
             dataLength={data?.pages.length * 20}
             next={fetchNextPage}
             hasMore={hasNextPage}
-            loader={<h2 style={{ textAlign: 'center' }}>Loading...</h2>}
           >
             <Wrap justify='center'>
               {data?.pages.map((page, i) => (
