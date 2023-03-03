@@ -1,7 +1,7 @@
 # Top Stuff
 ### [Live Demo](https://top-stuff.vercel.app/)
 
-A mobile friendly application using React, React Hooks, Next.js, and Chakra-UI that lets users browse trending movies and view movie details.
+A mobile friendly application built with Next.js, React Query, and Chakra-UI that lets users browse trending movies and view movie details.
 App includes infinite scrolling and the ability to see an AI generated review using OpenAI.
 
 Powered by [The Movie Database](https://www.themoviedb.org/)
