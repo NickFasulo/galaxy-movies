@@ -82,8 +82,8 @@ export default function Movie({ query }) {
             />
             <Wrap justify='center' margin='2rem 0'>
               {movie.genres.map(genre => (
-                <WrapItem>
-                  <Badge key={genre.id}>{genre.name}</Badge>
+                <WrapItem key={genre.id}>
+                  <Badge>{genre.name}</Badge>
                 </WrapItem>
               ))}
             </Wrap>
@@ -102,7 +102,7 @@ export default function Movie({ query }) {
             <Heading
               color='white'
               textShadow='2px 0 4px black'
-              textAlign={{ base: 'center', md: 'left'}}
+              textAlign={{ base: 'center', md: 'left' }}
               margin={{ base: '1rem auto', md: '1rem 0 0.5rem' }}
             >
               {movie.title}

@@ -14,10 +14,10 @@ import {
 import { Configuration, OpenAIApi } from 'openai'
 
 export default function ReviewModal({ movieTitle }) {
-  const router = useRouter()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [movieReview, setMovieReview] = useState()
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   const configuration = new Configuration({
     apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY
