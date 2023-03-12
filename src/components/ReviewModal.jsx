@@ -73,6 +73,15 @@ export default function ReviewModal({ movieTitle }) {
             🤖&nbsp; Movie Bot's Review &nbsp;🍿
           </ModalHeader>
           <ModalBody>{movieReview}</ModalBody>
+          {/* <ModalBody>
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Iusto ipsa,
+            ipsum quae eaque consequuntur inventore ipsam! Ipsam iusto
+            exercitationem eum adipisci non! Placeat provident alias molestias
+            hic vitae velit eligendi. Lorem ipsum dolor sit amet consectetur,
+            adipisicing elit. Quos architecto veniam cupiditate exercitationem
+            nam est sapiente voluptas quas quia impedit. Laudantium, temporibus
+            obcaecati ullam fugit quis quisquam porro soluta eveniet?
+          </ModalBody> */}
           <ModalFooter>
             <Button margin='0 auto' onClick={onClose}>
               Close
