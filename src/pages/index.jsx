@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'
 import Head from 'next/head'
+import React, { useState, useEffect } from 'react'
 import { Wrap, Box, Flex, Input } from '@chakra-ui/react'
+import { ArrowUpIcon } from '@chakra-ui/icons'
 import { useInfiniteQuery } from 'react-query'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import InfiniteScroll from 'react-infinite-scroll-component'
+import ScrollToTop from 'react-scroll-up'
 
 export default function Home() {
   const [allMovies, setAllMovies] = useState([])
@@ -109,6 +111,9 @@ export default function Home() {
             </InfiniteScroll>
           </>
         )}
+        <ScrollToTop showUnder={160} style={{ background: 'white', borderRadius: 5, boxShadow: '0 0 6px black'}}>
+          <ArrowUpIcon boxSize={10} />
+        </ScrollToTop>
       </Box>
     </>
   )
