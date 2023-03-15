@@ -1,22 +1,26 @@
 import Head from 'next/head'
 import React, { useState, useEffect } from 'react'
+import { useInfiniteQuery } from 'react-query'
+import ScrollToTop from 'react-scroll-up'
+import InfiniteScroll from 'react-infinite-scroll-component'
 import { Wrap, Box, Flex, Input } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
-import { useInfiniteQuery } from 'react-query'
+import DropDown from '../components/DropDown'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
-import InfiniteScroll from 'react-infinite-scroll-component'
-import ScrollToTop from 'react-scroll-up'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 
 export default function Home() {
+  const [category, setCategory] = useLocalStorage('category', 'popular')
   const [allMovies, setAllMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
   const [filteredResults, setFilteredResults] = useState([])
+
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
     'infiniteMovies',
     async ({ pageParam = 1 }) =>
       await fetch(
-        `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}&page=${pageParam}`
+        `https://api.themoviedb.org/3/movie/${category}?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}&page=${pageParam}`
       ).then(result => result.json()),
     {
       getNextPageParam: (lastPage, pages) => {
@@ -27,13 +31,28 @@ export default function Home() {
     }
   )
 
+  const changeCategory = selectedCat => {
+    setCategory(selectedCat)
+    if (typeof window !== 'undefined') window.location.reload()
+  }
+
+  const searchMovies = searchValue => {
+    setSearchInput(searchValue)
+    if (searchInput !== '') {
+      const filteredData = allMovies.filter(movie => {
+        return movie.title.toLowerCase().includes(searchInput.toLowerCase())
+      })
+      setFilteredResults(filteredData)
+    }
+  }
+
   const fetchAllMovies = async () => {
     try {
       let allMoviesArray = []
 
       for (let i = 1; i <= 10; i++) {
         const result = await fetch(
-          `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}&page=${i}`
+          `https://api.themoviedb.org/3/movie/${category}?api_key=${process.env.NEXT_PUBLIC_TMDB_KEY}&page=${i}`
         )
         const movieData = await result.json()
         allMoviesArray.push(movieData.results)
@@ -48,16 +67,6 @@ export default function Home() {
   useEffect(() => {
     fetchAllMovies()
   }, [])
-
-  const searchMovies = searchValue => {
-    setSearchInput(searchValue)
-    if (searchInput !== '') {
-      const filteredData = allMovies.filter(movie => {
-        return movie.title.toLowerCase().includes(searchInput.toLowerCase())
-      })
-      setFilteredResults(filteredData)
-    }
-  }
 
   return (
     <>
@@ -82,14 +91,16 @@ export default function Home() {
           </h1>
         ) : (
           <>
-            <Flex justify='center' width='100%'>
-              <Input
-                onChange={e => searchMovies(e.target.value)}
-                placeholder='Search movies...'
-                width={{ base: '80%', md: '40rem' }}
-                margin='2rem auto'
-              />
+            <Flex justify='center' align='center' width='100%'>
+              <Flex margin='2rem 0' width={{ base: '85%', md: '40rem' }}>
+                <Input
+                  onChange={e => searchMovies(e.target.value)}
+                  placeholder='Search movies...'
+                />
+                <DropDown category={category} changeCategory={changeCategory} />
+              </Flex>
             </Flex>
+
             <InfiniteScroll
               dataLength={data?.pages.length * 20}
               next={fetchNextPage}
@@ -111,7 +122,14 @@ export default function Home() {
             </InfiniteScroll>
           </>
         )}
-        <ScrollToTop showUnder={160} style={{ background: 'white', borderRadius: 5, boxShadow: '0 0 6px black'}}>
+        <ScrollToTop
+          showUnder={160}
+          style={{
+            background: 'white',
+            borderRadius: 5,
+            boxShadow: '0 0 6px black'
+          }}
+        >
           <ArrowUpIcon boxSize={10} />
         </ScrollToTop>
       </Box>
