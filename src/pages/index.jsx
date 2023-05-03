@@ -9,12 +9,13 @@ import DropDown from '../components/DropDown'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+// import { useDebounce } from '../hooks/useDebounce'
 
 export default function Home() {
   const [category, setCategory] = useLocalStorage('category', 'popular')
   const [allMovies, setAllMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
-  const [filteredResults, setFilteredResults] = useState([])
+  const [filteredMovies, setFilteredMovies] = useState([])
 
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
     'infiniteMovies',
@@ -42,7 +43,7 @@ export default function Home() {
       const filteredData = allMovies.filter(movie => {
         return movie.title.toLowerCase().includes(searchInput.toLowerCase())
       })
-      setFilteredResults(filteredData)
+      setFilteredMovies(filteredData)
     }
   }
 
@@ -108,7 +109,7 @@ export default function Home() {
             >
               <Wrap justify='center'>
                 {searchInput.length > 1
-                  ? filteredResults.map(movie => (
+                  ? filteredMovies.map(movie => (
                       <MovieCard key={movie.id} movie={movie} />
                     ))
                   : data?.pages.map((page, i) => (

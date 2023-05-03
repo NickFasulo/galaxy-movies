@@ -29,8 +29,8 @@ export default function ReviewModal({ movieTitle }) {
     try {
       const review = await openai.createCompletion({
         model: 'text-davinci-003',
-        prompt: `Write a movie review for ${movieTitle}.`,
-        temperature: 0.6,
+        prompt: `Write a movie review for ${movieTitle} in eight sentences.`,
+        temperature: 0.7,
         max_tokens: 120
       })
       setMovieReview(review.data.choices[0].text)
