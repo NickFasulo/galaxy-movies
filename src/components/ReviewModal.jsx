@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react'
 import { Configuration, OpenAIApi } from 'openai'
 
-export default function ReviewModal({ movieTitle }) {
+export default function ReviewModal({ movieTitle, prodCompany }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [movieReview, setMovieReview] = useState()
   const [loading, setLoading] = useState(true)
@@ -29,7 +29,7 @@ export default function ReviewModal({ movieTitle }) {
     try {
       const review = await openai.createCompletion({
         model: 'text-davinci-003',
-        prompt: `Write a movie review for ${movieTitle} in eight sentences.`,
+        prompt: `Write a movie review for ${movieTitle} by ${prodCompany} in one complete paragraph.`,
         temperature: 0.7,
         max_tokens: 120
       })
