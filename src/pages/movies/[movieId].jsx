@@ -152,7 +152,10 @@ export default function Movie({ query }) {
             >
               {movie.overview}
             </Text>
-            <ReviewModal movieTitle={movie.title} prodCompany={movie.production_companies[0].name} />
+            <ReviewModal
+              movieTitle={movie.title}
+              prodCompany={movie.production_companies[0].name}
+            />
             <Flex
               align='flex-end'
               justify='space-between'
@@ -173,7 +176,8 @@ export default function Movie({ query }) {
                     alt={company.name}
                     src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
                     onError={e => (e.target.style.display = 'none')}
-                    width='4rem'
+                    maxWidth='4rem'
+                    maxHeight='4rem'
                     margin='0 1rem'
                     padding={0.5}
                     borderRadius={2}

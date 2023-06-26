@@ -33,7 +33,7 @@ export default function ReviewModal({ movieTitle, prodCompany }) {
         temperature: 0.7,
         max_tokens: 120
       })
-      setMovieReview(review.data.choices[0].text)
+      setMovieReview(review.data.choices[0].text + '.')
     } catch (e) {
       throw new Error(e)
     }
