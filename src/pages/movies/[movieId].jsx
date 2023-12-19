@@ -153,8 +153,7 @@ export default function Movie({ query }) {
               {movie.overview}
             </Text>
             <ReviewModal
-              movieTitle={movie.title}
-              prodCompany={movie.production_companies[0].name}
+              modalData={movie}
             />
             <Flex
               align='flex-end'
