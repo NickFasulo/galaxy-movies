@@ -1,8 +1,18 @@
+@font-face {
+  font-family: 'SpaceRanger';
+  src: url('../asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf');
+}
+
 html,
 body {
   padding: 0;
   margin: 0;
   font-family: Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans,
+    Helvetica Neue, sans-serif;
+}
+
+header {
+  font-family: SpaceRanger, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans,
     Helvetica Neue, sans-serif;
 }
 
@@ -14,6 +24,12 @@ body {
 ::-webkit-scrollbar-thumb {
   background-color: darkgrey;
   border-radius: 1rem;
+}
+
+header {
+  text-align: center;
+  font-size: 2.5em;
+  font-family: 'SpaceRanger';
 }
 
 a {

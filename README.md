@@ -1,4 +1,5 @@
-# Top Stuff
+# Galaxy Movies
+
 ### [Live Demo](https://top-stuff.vercel.app/)
 
 A mobile friendly application built with Next.js, React Query, and Chakra-UI that lets users browse trending movies and view movie details.

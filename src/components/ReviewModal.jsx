@@ -25,8 +25,6 @@ export default function ReviewModal({ modalData }) {
 
   const openai = new OpenAIApi(configuration)
 
-  console.log(modalData)
-
   const aiReview = async () => {
     try {
       const review = await openai.createCompletion({

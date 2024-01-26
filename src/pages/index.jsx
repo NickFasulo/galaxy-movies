@@ -72,8 +72,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Top Stuff</title>
-        <meta name='description' content='Top Stuff' />
+        <title>Galaxy Movies</title>
+        <meta name='description' content='Galaxy Movies' />
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
@@ -92,6 +92,7 @@ export default function Home() {
           </h1>
         ) : (
           <>
+            <header>Galaxy Movies</header>
             <Flex justify='center' align='center' width='100%'>
               <Flex margin='2rem 0' width={{ base: '85%', md: '40rem' }}>
                 <Input
