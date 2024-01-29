@@ -92,7 +92,7 @@ export default function Home() {
           </h1>
         ) : (
           <>
-            <header>Galaxy Movies</header>
+            <header className='title'>Galaxy Movies</header>
             <Flex justify='center' align='center' width='100%'>
               <Flex margin='2rem 0' width={{ base: '85%', md: '40rem' }}>
                 <Input

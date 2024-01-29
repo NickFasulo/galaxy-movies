@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import {
   Flex,
+  Text,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -69,8 +70,10 @@ export default function ReviewModal({ modalData }) {
       <Modal isOpen={isOpen} onClose={onClose} size='lg' isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader textAlign='center'>
-            🤖&nbsp; Movie Bot's Review &nbsp;🍿
+          <ModalHeader>
+            <Text textAlign='center' fontFamily='Halftone'>
+              🤖&nbsp; Movie Bot's Review &nbsp;🍿
+            </Text>
           </ModalHeader>
           <ModalBody>{movieReview}</ModalBody>
           <ModalFooter>

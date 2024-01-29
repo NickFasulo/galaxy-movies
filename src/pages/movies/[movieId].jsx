@@ -169,7 +169,7 @@ export default function Movie({ query }) {
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {movie.production_companies.slice(0, 3).map(company => (
+                {movie.production_companies.slice(0, 1).map(company => (
                   <Image
                     key={company.id}
                     alt={company.name}
