@@ -6,8 +6,7 @@
 
 @font-face {
   font-family: 'Halftone';
-  src: url('../asset/space-ranger-font/SpaceRanger-EMJl.otf')
-    format('opentype');
+  src: url('../asset/space-ranger-font/SpaceRanger-EMJl.otf') format('opentype');
 }
 
 html,
@@ -26,9 +25,9 @@ body {
   font-size: xx-large;
   font-family: SpaceRanger, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans,
     Droid Sans, Helvetica Neue, sans-serif;
-  background-image: url('/background.jpg');
-  background-size: cover;
   border-radius: 8px;
+  box-shadow: inset 0px 0px 6px 0px white;
+  background-color: #001e2e;
 }
 
 ::-webkit-scrollbar {
