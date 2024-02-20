@@ -15,7 +15,6 @@ export default function Home() {
   const [category, setCategory] = useLocalStorage('category', 'popular')
   const [allMovies, setAllMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
-  const [searchShow, setSearchShow] = useState(false)
   const [filteredMovies, setFilteredMovies] = useState([])
   const inputRef = useRef(null)
 
@@ -48,9 +47,6 @@ export default function Home() {
         return movie.title.toLowerCase().includes(searchInput.toLowerCase())
       })
       setFilteredMovies(filteredMovies)
-      setSearchShow(true)
-    } else {
-      setSearchShow(false)
     }
   }
 
@@ -107,7 +103,6 @@ export default function Home() {
                   ref={inputRef}
                   placeholder='Search movies...'
                 />
-                <Button onClick={searchMovies}>Search</Button>
                 <DropDown category={category} changeCategory={changeCategory} />
               </Flex>
             </Flex>
@@ -118,7 +113,7 @@ export default function Home() {
               hasMore={hasNextPage}
             >
               <Wrap justify='center'>
-                {searchInput.length > 1
+                {searchInput.length > 2
                   ? filteredMovies.map(movie => (
                       <MovieCard key={movie.id} movie={movie} />
                     ))
