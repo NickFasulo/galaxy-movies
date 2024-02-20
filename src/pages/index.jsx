@@ -1,9 +1,9 @@
 import Head from 'next/head'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useInfiniteQuery } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Wrap, Box, Flex, Input } from '@chakra-ui/react'
+import { Wrap, Box, Flex, Input, Button } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
 import DropDown from '../components/DropDown'
 import MovieCard from '../components/MovieCard'
@@ -15,7 +15,9 @@ export default function Home() {
   const [category, setCategory] = useLocalStorage('category', 'popular')
   const [allMovies, setAllMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
+  const [searchShow, setSearchShow] = useState(false)
   const [filteredMovies, setFilteredMovies] = useState([])
+  const inputRef = useRef(null)
 
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
     'infiniteMovies',
@@ -37,13 +39,18 @@ export default function Home() {
     if (typeof window !== 'undefined') window.location.reload()
   }
 
-  const searchMovies = searchValue => {
-    setSearchInput(searchValue)
-    if (searchInput !== '') {
-      const filteredData = allMovies.filter(movie => {
+  const searchMovies = () => {
+    const searchedMovie = inputRef.current.value
+    setSearchInput(searchedMovie)
+
+    if (searchedMovie !== '') {
+      const filteredMovies = allMovies.filter(movie => {
         return movie.title.toLowerCase().includes(searchInput.toLowerCase())
       })
-      setFilteredMovies(filteredData)
+      setFilteredMovies(filteredMovies)
+      setSearchShow(true)
+    } else {
+      setSearchShow(false)
     }
   }
 
@@ -97,8 +104,10 @@ export default function Home() {
               <Flex margin='2rem 0' width={{ base: '85%', md: '40rem' }}>
                 <Input
                   onChange={e => searchMovies(e.target.value)}
+                  ref={inputRef}
                   placeholder='Search movies...'
                 />
+                <Button onClick={searchMovies}>Search</Button>
                 <DropDown category={category} changeCategory={changeCategory} />
               </Flex>
             </Flex>
