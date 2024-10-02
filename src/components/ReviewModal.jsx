@@ -12,7 +12,6 @@ import {
   Button,
   useDisclosure
 } from '@chakra-ui/react'
-import { Configuration, OpenAIApi } from 'openai'
 
 export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -20,23 +19,19 @@ export default function ReviewModal({ modalData }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const configuration = new Configuration({
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY
-  })
-
-  const openai = new OpenAIApi(configuration)
-
   const aiReview = async () => {
     try {
-      const review = await openai.createCompletion({
-        model: 'gpt-3.5-turbo-instruct',
-        prompt: `Write a review for the ${modalData.genres[0].name} ${modalData.genres[1].name} movie "${modalData.title}" in one paragraph based on this overview: ${modalData.overview}.`,
-        temperature: 0.7,
-        max_tokens: 120
+      const res = await fetch('/api/generateReview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ modalData })
       })
-      setMovieReview(review.data.choices[0].text + '.')
-    } catch (e) {
-      throw new Error(e)
+      const data = await res.json()
+      setMovieReview(data.review)
+    } catch (error) {
+      console.error('Error fetching review:', error)
     }
     setLoading(false)
   }
