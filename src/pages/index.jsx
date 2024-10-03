@@ -102,6 +102,7 @@ export default function Home() {
 									onChange={e => searchMovies(e.target.value)}
 									ref={inputRef}
 									placeholder='Search movies...'
+                  background={'white'}
 								/>
 								<DropDown category={category} changeCategory={changeCategory} />
 							</Flex>
