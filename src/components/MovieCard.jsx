@@ -9,7 +9,7 @@ export default function MovieCard({ movie }) {
 
   const handleMouseEnter = () => {
     setBgImage(`https://image.tmdb.org/t/p/original${movie.poster_path}`)
-    setBgOpacity(0.25)
+    setBgOpacity(0.3)
   }
 
   const handleMouseLeave = () => {
@@ -24,18 +24,29 @@ export default function MovieCard({ movie }) {
     <>
       <Box
         position='fixed'
-        top={-5}
-        left={-5}
-        right={-5}
-        bottom={-5}
-        bgImage={`url(${bgImage})`}
+        top={-1}
+        left={-1}
+        right={-1}
+        bottom={-1}
+        zIndex={-1}
         bgSize='cover'
         bgPosition='center'
-        zIndex={-1}
+        bgImage={`url(${bgImage})`}
         transition='opacity 0.3s ease-in-out'
         opacity={bgOpacity}
       />
-
+      <Box
+        position='fixed'
+        top={-1}
+        left={-1}
+        right={-1}
+        bottom={-1}
+        zIndex={-1}
+        pointerEvents='none'
+        bg='radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0, 0, 0, 1) 100%)'
+        transition='opacity 0.3s ease-in-out'
+        opacity={bgOpacity}
+      />
       <WrapItem>
         <ChakraBox
           whileHover={{ scale: 1.05 }}
