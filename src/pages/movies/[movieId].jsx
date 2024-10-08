@@ -41,6 +41,8 @@ export default function Movie({ query }) {
 		fetchMovie()
 	}, [])
 
+	console.log('movie data:', movie);
+
 	return (
 		<Flex
 			position='relative'

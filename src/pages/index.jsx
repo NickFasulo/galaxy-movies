@@ -33,8 +33,8 @@ export default function Home() {
 		}
 	)
 
-	const changeCategory = selectedCat => {
-		setCategory(selectedCat)
+	const changeCategory = selectedCategory => {
+		setCategory(selectedCategory)
 		if (typeof window !== 'undefined') window.location.reload()
 	}
 

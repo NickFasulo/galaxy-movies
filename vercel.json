@@ -1,0 +1,6 @@
+{
+  "cron": {
+    "schedule": "* 3 * * *",
+    "path": "/api/insertAllMovies"
+  }
+}

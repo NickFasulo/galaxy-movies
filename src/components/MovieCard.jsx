@@ -8,7 +8,7 @@ export default function MovieCard({ movie }) {
   const [bgOpacity, setBgOpacity] = useState(0)
 
   const handleMouseEnter = () => {
-    setBgImage(`https://image.tmdb.org/t/p/original${movie.poster_path}`)
+    setBgImage(`https://image.tmdb.org/t/p/original${movie.backdrop_path}`)
     setBgOpacity(0.3)
   }
 
