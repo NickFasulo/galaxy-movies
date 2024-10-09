@@ -1,12 +1,41 @@
 import supabase from '../../lib/supabaseClient'
 const TMDB_API_KEY = process.env.TMDB_API_KEY
 
+// Fetch movie IDs from a specific category
 const fetchMoviesFromCategory = async (category, page) => {
   const response = await fetch(
     `https://api.themoviedb.org/3/movie/${category}?api_key=${TMDB_API_KEY}&page=${page}`
   )
   const data = await response.json()
-  return data.results
+  return data.results.map(movie => ({ tmdb_id: movie.id }))
+}
+
+const deleteMoviesFromDB = async (categoryId, limit) => {
+  const { data: existingMovies, error: fetchError } = await supabase
+    .from('movie_categories')
+    .select('tmdb_id')
+    .eq('category_id', categoryId)
+
+  if (fetchError) {
+    console.error('Error fetching existing movies:', fetchError)
+    throw fetchError
+  }
+
+  if (existingMovies.length >= limit) {
+    const moviesToDelete = existingMovies
+      .slice(0, existingMovies.length - limit + 1)
+      .map(movie => movie.tmdb_id)
+
+    const { error: deleteError } = await supabase
+      .from('movies')
+      .delete()
+      .in('tmdb_id', moviesToDelete)
+
+    if (deleteError) {
+      console.error('Error deleting movies:', deleteError)
+      throw deleteError
+    }
+  }
 }
 
 const fetchAndInsertGenres = async () => {
@@ -39,52 +68,38 @@ const fetchAndInsertGenres = async () => {
   }
 }
 
-const deleteMoviesFromDB = async (categoryId, limit) => {
-  const { data: existingMovies, error: fetchError } = await supabase
-    .from('movie_categories')
-    .select('tmdb_id')
-    .eq('category_id', categoryId)
+// Fetch detailed movie data for a given movie ID
+const fetchMovieDetails = async tmdbId => {
+  const response = await fetch(`/api/movieDetails?movieId=${tmdbId}`)
+  const data = await response.json()
+  return data
+}
 
-  if (fetchError) {
-    console.error('Error fetching existing movies:', fetchError)
-    throw fetchError
+// Rate-limiting function (40 requests per second)
+const rateLimit = async (requests, limit = 40) => {
+  const chunks = []
+
+  for (let i = 0; i < requests.length; i += limit) {
+    chunks.push(requests.slice(i, i + limit))
   }
 
-  if (existingMovies.length >= limit) {
-    const moviesToDelete = existingMovies
-      .slice(0, existingMovies.length - limit + 1)
-      .map(movie => movie.tmdb_id)
-
-    const { error: deleteError } = await supabase
-      .from('movies')
-      .delete()
-      .in('tmdb_id', moviesToDelete)
-
-    if (deleteError) {
-      console.error('Error deleting movies:', deleteError)
-      throw deleteError
-    }
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map(request => request()))
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second between chunks
   }
 }
 
+// Insert movies into DB after fetching details
 const insertMoviesIntoDB = async (movies, categoryId) => {
-  for (const movie of movies) {
-    const { genre_ids, ...movieData } = movie
-    const { data: existingMovie, error: fetchError } = await supabase
-      .from('movies')
-      .select('tmdb_id')
-      .eq('tmdb_id', movie.id)
-      .single()
+  const fetchMovieDetailTasks = movies.map(movie => async () => {
+    try {
+      // Fetch movie details before inserting
+      const movieDetails = await fetchMovieDetails(movie.tmdb_id)
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error checking for existing movie:', fetchError)
-      continue
-    }
-
-    if (!existingMovie) {
+      // Insert movie details into the database
       const { error: insertError } = await supabase.from('movies').insert({
-        ...movieData,
-        tmdb_id: movie.id,
+        ...movieDetails,
+        tmdb_id: movie.tmdb_id,
         category_id: categoryId
       })
 
@@ -92,36 +107,13 @@ const insertMoviesIntoDB = async (movies, categoryId) => {
         console.error('Error inserting movie:', insertError)
         throw insertError
       }
-
-      const { error: categoryError } = await supabase
-        .from('movie_categories')
-        .insert({
-          tmdb_id: movie.id,
-          category_id: categoryId
-        })
-
-      if (categoryError) {
-        console.error('Error associating movie with category:', categoryError)
-        throw categoryError
-      }
-
-      if (genre_ids && genre_ids.length > 0) {
-        const genreData = genre_ids.map(genre_id => ({
-          tmdb_id: movie.id,
-          genre_id
-        }))
-
-        const { error: genreError } = await supabase
-          .from('movie_genres')
-          .insert(genreData)
-
-        if (genreError) {
-          console.error('Error inserting movie genres:', genreError)
-          throw genreError
-        }
-      }
+    } catch (error) {
+      console.error('Error fetching movie details or inserting movie:', error)
     }
-  }
+  })
+
+  // Apply rate limiting for movie details fetching (40 requests per second)
+  await rateLimit(fetchMovieDetailTasks, 40)
 }
 
 const fetchCategoriesFromDB = async () => {
@@ -153,6 +145,7 @@ export default async function handler(req, res) {
         await delay(1000)
       }
 
+      // Insert movies into DB after fetching details
       await deleteMoviesFromDB(id, movieLimitPerCategory)
       await insertMoviesIntoDB(allMovies, id)
     }
