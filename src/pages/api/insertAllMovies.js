@@ -38,36 +38,6 @@ const deleteMoviesFromDB = async (categoryId, limit) => {
   }
 }
 
-const fetchAndInsertGenres = async () => {
-  try {
-    const response = await fetch(
-      `https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}`
-    )
-    const { genres } = await response.json()
-
-    for (const genre of genres) {
-      const { data: existingGenre } = await supabase
-        .from('genres')
-        .select('id')
-        .eq('id', genre.id)
-        .single()
-
-      if (!existingGenre) {
-        const { error } = await supabase
-          .from('genres')
-          .insert([{ id: genre.id, name: genre.name }])
-
-        if (error) {
-          console.error('Error inserting genre:', error)
-          throw error
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching or inserting genres:', error)
-  }
-}
-
 // Fetch detailed movie data for a given movie ID
 const fetchMovieDetails = async tmdbId => {
   const response = await fetch(
@@ -129,6 +99,61 @@ const handleMovieCollection = async belongs_to_collection => {
   }
 }
 
+const handleMovieGenres = async movieGenres => {
+  try {
+    for (const genre of movieGenres) {
+      // Check if the genre already exists in the database
+      const { data: existingGenre, error: genreFetchError } = await supabase
+        .from('genres')
+        .select('id')
+        .eq('tmdb_id', genre.id)
+        .single()
+
+      if (genreFetchError) {
+        console.error('Error fetching genre:', genreFetchError)
+        throw genreFetchError
+      }
+
+      let genreId
+      if (existingGenre) {
+        genreId = existingGenre.id
+      } else {
+        // Insert the new genre into the genres table
+        const { data: newGenre, error: genreInsertError } = await supabase
+          .from('genres')
+          .insert({
+            tmdb_id: genre.id,
+            name: genre.name
+          })
+          .select('id')
+          .single()
+
+        if (genreInsertError) {
+          console.error('Error inserting genre:', genreInsertError)
+          throw genreInsertError
+        }
+        genreId = newGenre.id
+      }
+
+      // Insert into movie_genres relationship table
+      const { error: movieGenreInsertError } = await supabase
+        .from('movie_genres')
+        .insert({
+          movie_id: movieDetails.id, // The TMDB movie ID
+          genre_id: genreId
+        })
+
+      if (movieGenreInsertError) {
+        console.error('Error inserting movie_genres:', movieGenreInsertError)
+        throw movieGenreInsertError
+      }
+    }
+  } catch (error) {
+    console.error('Error handling movie genres:', error)
+    throw error
+  }
+}
+
 // Rate-limiting function (40 requests per second)
 const rateLimit = async (requests, limit = 40) => {
   const batches = []
@@ -155,10 +180,25 @@ const insertMoviesIntoDB = async (movies, categoryId) => {
         movieDetails.belongs_to_collection
       )
 
+      // Handle inserting genres and movie_genres relationship
+      await handleMovieGenres(movieDetails.genres, movieDetails.id)
+
       // Insert movie details into the database
       const { error: insertError } = await supabase.from('movies').insert({
-        ...movieDetails,
-        tmdb_id: movie.tmdb_id,
+        tmdb_id: movieDetails.id,
+        title: movieDetails.title,
+        overview: movieDetails.overview,
+        release_date: movieDetails.release_date,
+        runtime: movieDetails.runtime,
+        popularity: movieDetails.popularity,
+        vote_average: movieDetails.vote_average,
+        vote_count: movieDetails.vote_count,
+        poster_path: movieDetails.poster_path,
+        backdrop_path: movieDetails.backdrop_path,
+        homepage: movieDetails.homepage,
+        imdb_id: movieDetails.imdb_id,
+        tagline: movieDetails.tagline,
+        status: movieDetails.status,
         category_id: categoryId
       })
 
