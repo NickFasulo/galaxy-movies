@@ -70,22 +70,76 @@ const fetchAndInsertGenres = async () => {
 
 // Fetch detailed movie data for a given movie ID
 const fetchMovieDetails = async tmdbId => {
-  const response = await fetch(`/api/movieDetails?movieId=${tmdbId}`)
+  const response = await fetch(
+    `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${process.env.TMDB_API_KEY}`
+  )
   const data = await response.json()
   return data
 }
 
-// Rate-limiting function (40 requests per second)
-const rateLimit = async (requests, limit = 40) => {
-  const chunks = []
-
-  for (let i = 0; i < requests.length; i += limit) {
-    chunks.push(requests.slice(i, i + limit))
+const handleMovieCollection = async belongs_to_collection => {
+  if (!belongs_to_collection) {
+    return null
   }
 
-  for (const chunk of chunks) {
-    await Promise.all(chunk.map(request => request()))
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second between chunks
+  try {
+    const collection = belongs_to_collection
+
+    // Check if the collection already exists in the database
+    const { data: existingCollection, error: collectionFetchError } =
+      await supabase
+        .from('collections')
+        .select('id')
+        .eq('tmdb_id', collection.id)
+        .single()
+
+    if (collectionFetchError) {
+      console.error('Error fetching collection:', collectionFetchError)
+      throw collectionFetchError
+    }
+
+    if (existingCollection) {
+      // Return the ID of the existing collection
+      return existingCollection.id
+    } else {
+      // Insert the new collection into the collections table
+      const { data: newCollection, error: collectionInsertError } =
+        await supabase
+          .from('collections')
+          .insert({
+            tmdb_id: collection.id,
+            name: collection.name,
+            poster_path: collection.poster_path,
+            backdrop_path: collection.backdrop_path
+          })
+          .select('id') // Return the ID of the inserted collection
+          .single()
+
+      if (collectionInsertError) {
+        console.error('Error inserting collection:', collectionInsertError)
+        throw collectionInsertError
+      }
+
+      // Return the newly inserted collection ID
+      return newCollection.id
+    }
+  } catch (error) {
+    console.error('Error handling movie collection:', error)
+    throw error
+  }
+}
+
+// Rate-limiting function (40 requests per second)
+const rateLimit = async (requests, limit = 40) => {
+  const batches = []
+
+  for (let i = 0; i < requests.length; i += limit) {
+    batches.push(requests.slice(i, i + limit))
+  }
+
+  for (const batch of batches) {
+    await Promise.all(batch.map(request => request()))
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
 }
 
@@ -96,12 +150,35 @@ const insertMoviesIntoDB = async (movies, categoryId) => {
       // Fetch movie details before inserting
       const movieDetails = await fetchMovieDetails(movie.tmdb_id)
 
+      // Handle movie collection logic
+      const collectionId = await handleMovieCollection(
+        movieDetails.belongs_to_collection
+      )
+
       // Insert movie details into the database
       const { error: insertError } = await supabase.from('movies').insert({
         ...movieDetails,
         tmdb_id: movie.tmdb_id,
         category_id: categoryId
       })
+
+      // If the movie belongs to a collection, insert the movie_collection relationship
+      if (collectionId) {
+        const { error: insertMovieCollectionError } = await supabase
+          .from('movie_collections')
+          .insert({
+            movie_id: movieDetails.id, // The TMDB movie ID
+            collection_id: collectionId // The ID of the collection from the database
+          })
+
+        if (insertMovieCollectionError) {
+          console.error(
+            'Error inserting movie_collection:',
+            insertMovieCollectionError
+          )
+          throw insertMovieCollectionError
+        }
+      }
 
       if (insertError) {
         console.error('Error inserting movie:', insertError)
