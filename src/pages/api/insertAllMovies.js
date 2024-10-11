@@ -1,7 +1,6 @@
 import supabase from '../../lib/supabaseClient'
 const TMDB_API_KEY = process.env.TMDB_API_KEY
 
-// Fetch movie IDs from a specific category
 const fetchMoviesFromCategory = async (category, page) => {
   const response = await fetch(
     `https://api.themoviedb.org/3/movie/${category}?api_key=${TMDB_API_KEY}&page=${page}`
@@ -13,7 +12,7 @@ const fetchMoviesFromCategory = async (category, page) => {
 const deleteMoviesFromDB = async (categoryId, limit) => {
   const { data: existingMovies, error: fetchError } = await supabase
     .from('movie_categories')
-    .select('tmdb_id')
+    .select('movie_id')
     .eq('category_id', categoryId)
 
   if (fetchError) {
@@ -38,7 +37,6 @@ const deleteMoviesFromDB = async (categoryId, limit) => {
   }
 }
 
-// Fetch detailed movie data for a given movie ID
 const fetchMovieDetails = async tmdbId => {
   const response = await fetch(
     `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${process.env.TMDB_API_KEY}`
@@ -55,13 +53,12 @@ const handleMovieCollection = async belongs_to_collection => {
   try {
     const collection = belongs_to_collection
 
-    // Check if the collection already exists in the database
     const { data: existingCollection, error: collectionFetchError } =
       await supabase
         .from('collections')
         .select('id')
         .eq('tmdb_id', collection.id)
-        .single()
+        .maybeSingle()
 
     if (collectionFetchError) {
       console.error('Error fetching collection:', collectionFetchError)
@@ -69,10 +66,8 @@ const handleMovieCollection = async belongs_to_collection => {
     }
 
     if (existingCollection) {
-      // Return the ID of the existing collection
       return existingCollection.id
     } else {
-      // Insert the new collection into the collections table
       const { data: newCollection, error: collectionInsertError } =
         await supabase
           .from('collections')
@@ -82,7 +77,7 @@ const handleMovieCollection = async belongs_to_collection => {
             poster_path: collection.poster_path,
             backdrop_path: collection.backdrop_path
           })
-          .select('id') // Return the ID of the inserted collection
+          .select('id')
           .single()
 
       if (collectionInsertError) {
@@ -90,7 +85,6 @@ const handleMovieCollection = async belongs_to_collection => {
         throw collectionInsertError
       }
 
-      // Return the newly inserted collection ID
       return newCollection.id
     }
   } catch (error) {
@@ -99,15 +93,14 @@ const handleMovieCollection = async belongs_to_collection => {
   }
 }
 
-const handleMovieGenres = async movieGenres => {
+const handleMovieGenres = async (movieGenres, movieId) => {
   try {
     for (const genre of movieGenres) {
-      // Check if the genre already exists in the database
       const { data: existingGenre, error: genreFetchError } = await supabase
         .from('genres')
         .select('id')
         .eq('tmdb_id', genre.id)
-        .single()
+        .maybeSingle()
 
       if (genreFetchError) {
         console.error('Error fetching genre:', genreFetchError)
@@ -118,7 +111,6 @@ const handleMovieGenres = async movieGenres => {
       if (existingGenre) {
         genreId = existingGenre.id
       } else {
-        // Insert the new genre into the genres table
         const { data: newGenre, error: genreInsertError } = await supabase
           .from('genres')
           .insert({
@@ -135,11 +127,10 @@ const handleMovieGenres = async movieGenres => {
         genreId = newGenre.id
       }
 
-      // Insert into movie_genres relationship table
       const { error: movieGenreInsertError } = await supabase
         .from('movie_genres')
         .insert({
-          movie_id: movieDetails.id, // The TMDB movie ID
+          movie_id: movieId,
           genre_id: genreId
         })
 
@@ -154,8 +145,68 @@ const handleMovieGenres = async movieGenres => {
   }
 }
 
-// Rate-limiting function (40 requests per second)
-const rateLimit = async (requests, limit = 40) => {
+const handleProductionCompanies = async (productionCompanies, movieId) => {
+  try {
+    for (const company of productionCompanies) {
+      const { data: existingCompany, error: companyFetchError } = await supabase
+        .from('production_companies')
+        .select('id')
+        .eq('tmdb_id', company.id)
+        .single()
+
+      if (companyFetchError && companyFetchError.code !== 'PGRST116') {
+        console.error('Error fetching production company:', companyFetchError)
+        throw companyFetchError
+      }
+
+      let productionCompanyId
+      if (existingCompany) {
+        productionCompanyId = existingCompany.id
+      } else {
+        const { data: newCompany, error: companyInsertError } = await supabase
+          .from('production_companies')
+          .insert({
+            tmdb_id: company.id,
+            name: company.name,
+            logo_path: company.logo_path,
+            origin_country: company.origin_country
+          })
+          .select('id')
+          .single()
+
+        if (companyInsertError) {
+          console.error(
+            'Error inserting production company:',
+            companyInsertError
+          )
+          throw companyInsertError
+        }
+
+        productionCompanyId = newCompany.id
+      }
+
+      const { error: movieCompanyInsertError } = await supabase
+        .from('movie_production_companies')
+        .insert({
+          tmdb_id: movieId,
+          production_company_id: productionCompanyId
+        })
+
+      if (movieCompanyInsertError) {
+        console.error(
+          'Error inserting movie_production_companies:',
+          movieCompanyInsertError
+        )
+        throw movieCompanyInsertError
+      }
+    }
+  } catch (error) {
+    console.error('Error handling production companies:', error)
+    throw error
+  }
+}
+
+const rateLimit = async (requests, limit) => {
   const batches = []
 
   for (let i = 0; i < requests.length; i += limit) {
@@ -168,68 +219,117 @@ const rateLimit = async (requests, limit = 40) => {
   }
 }
 
-// Insert movies into DB after fetching details
 const insertMoviesIntoDB = async (movies, categoryId) => {
   const fetchMovieDetailTasks = movies.map(movie => async () => {
     try {
-      // Fetch movie details before inserting
-      const movieDetails = await fetchMovieDetails(movie.tmdb_id)
+      const { data: existingMovie, error: fetchMovieError } = await supabase
+        .from('movies')
+        .select('id')
+        .eq('tmdb_id', movie.tmdb_id)
+        .maybeSingle()
 
-      // Handle movie collection logic
-      const collectionId = await handleMovieCollection(
-        movieDetails.belongs_to_collection
-      )
+      if (fetchMovieError) {
+        console.error('Error fetching movie:', fetchMovieError)
+        throw fetchMovieError
+      }
 
-      // Handle inserting genres and movie_genres relationship
-      await handleMovieGenres(movieDetails.genres, movieDetails.id)
+      let movieId
+      let movieDetails = existingMovie
+        ? null
+        : await fetchMovieDetails(movie.tmdb_id)
 
-      // Insert movie details into the database
-      const { error: insertError } = await supabase.from('movies').insert({
-        tmdb_id: movieDetails.id,
-        title: movieDetails.title,
-        overview: movieDetails.overview,
-        release_date: movieDetails.release_date,
-        runtime: movieDetails.runtime,
-        popularity: movieDetails.popularity,
-        vote_average: movieDetails.vote_average,
-        vote_count: movieDetails.vote_count,
-        poster_path: movieDetails.poster_path,
-        backdrop_path: movieDetails.backdrop_path,
-        homepage: movieDetails.homepage,
-        imdb_id: movieDetails.imdb_id,
-        tagline: movieDetails.tagline,
-        status: movieDetails.status,
-        category_id: categoryId
-      })
+      if (existingMovie) {
+        movieId = existingMovie.id
+        console.log(`Movie with tmdb_id ${movie.tmdb_id} already exists.`)
+      } else {
+        const collectionId = await handleMovieCollection(
+          movieDetails.belongs_to_collection
+        )
 
-      // If the movie belongs to a collection, insert the movie_collection relationship
-      if (collectionId) {
-        const { error: insertMovieCollectionError } = await supabase
-          .from('movie_collections')
+        const { data: insertedMovie, error: insertError } = await supabase
+          .from('movies')
           .insert({
-            movie_id: movieDetails.id, // The TMDB movie ID
-            collection_id: collectionId // The ID of the collection from the database
+            tmdb_id: movieDetails.id,
+            title: movieDetails.title,
+            adult: movieDetails.adult,
+            overview: movieDetails.overview,
+            release_date: movieDetails.release_date,
+            runtime: movieDetails.runtime,
+            budget: movieDetails.budget,
+            revenue: movieDetails.revenue,
+            vote_average: movieDetails.vote_average,
+            vote_count: movieDetails.vote_count,
+            poster_path: movieDetails.poster_path,
+            backdrop_path: movieDetails.backdrop_path,
+            homepage: movieDetails.homepage,
+            status: movieDetails.status,
+            tagline: movieDetails.tagline,
+            popularity: movieDetails.popularity,
+            imdb_id: movieDetails.imdb_id,
+            category_id: categoryId,
+            video: movieDetails.video,
+            production_countries: movieDetails.production_countries,
+            spoken_languages: movieDetails.spoken_languages
+          })
+          .select('id')
+          .single()
+
+        if (insertError) {
+          console.error('Error inserting movie:', insertError)
+          throw insertError
+        }
+
+        movieId = insertedMovie.id
+
+        const { error: insertCategoryError } = await supabase
+          .from('movie_categories')
+          .insert({
+            movie_id: movieId,
+            category_id: categoryId
           })
 
-        if (insertMovieCollectionError) {
+        if (insertCategoryError) {
           console.error(
-            'Error inserting movie_collection:',
-            insertMovieCollectionError
+            'Error inserting movie_categories:',
+            insertCategoryError
           )
-          throw insertMovieCollectionError
+          throw insertCategoryError
+        }
+
+        if (collectionId && movieId) {
+          const { error: insertCollectionError } = await supabase
+            .from('movie_collections')
+            .insert({
+              movie_id: movieId,
+              collection_id: collectionId
+            })
+
+          if (insertCollectionError) {
+            console.error(
+              'Error inserting movie_collection:',
+              insertCollectionError
+            )
+            throw insertCollectionError
+          }
         }
       }
 
-      if (insertError) {
-        console.error('Error inserting movie:', insertError)
-        throw insertError
+      if (!movieDetails && movieId) {
+        movieDetails = await fetchMovieDetails(movie.tmdb_id)
+      }
+
+      if (movieId) {
+        await handleProductionCompanies(
+          movieDetails.production_companies,
+          movieId
+        )
+        await handleMovieGenres(movieDetails.genres, movieId)
       }
     } catch (error) {
       console.error('Error fetching movie details or inserting movie:', error)
     }
   })
 
-  // Apply rate limiting for movie details fetching (40 requests per second)
   await rateLimit(fetchMovieDetailTasks, 40)
 }
 
@@ -248,9 +348,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export default async function handler(req, res) {
   try {
-    await fetchAndInsertGenres()
     const categories = await fetchCategoriesFromDB()
-    const totalRequests = 10
+    const totalRequests = 20
     const movieLimitPerCategory = 10000
 
     for (const { id, name } of categories) {
@@ -259,10 +358,9 @@ export default async function handler(req, res) {
       for (let i = 1; i <= totalRequests; i++) {
         const movies = await fetchMoviesFromCategory(name, i)
         allMovies = allMovies.concat(movies)
-        await delay(1000)
+        await delay(1500)
       }
 
-      // Insert movies into DB after fetching details
       await deleteMoviesFromDB(id, movieLimitPerCategory)
       await insertMoviesIntoDB(allMovies, id)
     }
