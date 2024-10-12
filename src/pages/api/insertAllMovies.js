@@ -9,34 +9,6 @@ const fetchMoviesFromCategory = async (category, page) => {
   return data.results.map(movie => ({ tmdb_id: movie.id }))
 }
 
-const deleteMoviesFromDB = async (categoryId, limit) => {
-  const { data: existingMovies, error: fetchError } = await supabase
-    .from('movie_categories')
-    .select('movie_id')
-    .eq('category_id', categoryId)
-
-  if (fetchError) {
-    console.error('Error fetching existing movies:', fetchError)
-    throw fetchError
-  }
-
-  if (existingMovies.length >= limit) {
-    const moviesToDelete = existingMovies
-      .slice(0, existingMovies.length - limit + 1)
-      .map(movie => movie.tmdb_id)
-
-    const { error: deleteError } = await supabase
-      .from('movies')
-      .delete()
-      .in('tmdb_id', moviesToDelete)
-
-    if (deleteError) {
-      console.error('Error deleting movies:', deleteError)
-      throw deleteError
-    }
-  }
-}
-
 const fetchMovieDetails = async tmdbId => {
   const response = await fetch(
     `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${process.env.TMDB_API_KEY}`
@@ -89,58 +61,6 @@ const handleMovieCollection = async belongs_to_collection => {
     }
   } catch (error) {
     console.error('Error handling movie collection:', error)
-    throw error
-  }
-}
-
-const handleMovieGenres = async (movieGenres, movieId) => {
-  try {
-    for (const genre of movieGenres) {
-      const { data: existingGenre, error: genreFetchError } = await supabase
-        .from('genres')
-        .select('id')
-        .eq('tmdb_id', genre.id)
-        .maybeSingle()
-
-      if (genreFetchError) {
-        console.error('Error fetching genre:', genreFetchError)
-        throw genreFetchError
-      }
-
-      let genreId
-      if (existingGenre) {
-        genreId = existingGenre.id
-      } else {
-        const { data: newGenre, error: genreInsertError } = await supabase
-          .from('genres')
-          .insert({
-            tmdb_id: genre.id,
-            name: genre.name
-          })
-          .select('id')
-          .single()
-
-        if (genreInsertError) {
-          console.error('Error inserting genre:', genreInsertError)
-          throw genreInsertError
-        }
-        genreId = newGenre.id
-      }
-
-      const { error: movieGenreInsertError } = await supabase
-        .from('movie_genres')
-        .insert({
-          movie_id: movieId,
-          genre_id: genreId
-        })
-
-      if (movieGenreInsertError) {
-        console.error('Error inserting movie_genres:', movieGenreInsertError)
-        throw movieGenreInsertError
-      }
-    }
-  } catch (error) {
-    console.error('Error handling movie genres:', error)
     throw error
   }
 }
@@ -323,7 +243,6 @@ const insertMoviesIntoDB = async (movies, categoryId) => {
           movieDetails.production_companies,
           movieId
         )
-        await handleMovieGenres(movieDetails.genres, movieId)
       }
     } catch (error) {
       console.error('Error fetching movie details or inserting movie:', error)
@@ -361,7 +280,6 @@ export default async function handler(req, res) {
         await delay(1500)
       }
 
-      await deleteMoviesFromDB(id, movieLimitPerCategory)
       await insertMoviesIntoDB(allMovies, id)
     }
 
