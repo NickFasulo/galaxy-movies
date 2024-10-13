@@ -269,7 +269,6 @@ export default async function handler(req, res) {
   try {
     const categories = await fetchCategoriesFromDB()
     const totalRequests = 20
-    const movieLimitPerCategory = 10000
 
     for (const { id, name } of categories) {
       let allMovies = []
