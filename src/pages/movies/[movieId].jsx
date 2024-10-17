@@ -26,6 +26,8 @@ export default function Movie({ query }) {
   const [movie, setMovie] = useState({})
   const [loading, setLoading] = useState(true)
 
+	console.log('movie: ', movie)
+
   const fetchMovie = async () => {
     try {
       const res = await fetch(`/api/movieDetails?movieId=${query.movieId}`)

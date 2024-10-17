@@ -1,7 +1,7 @@
 import { ChakraBox } from './ChakraBox'
 import { Image, WrapItem, Box } from '@chakra-ui/react'
-import Link from 'next/link'
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function MovieCard({ movie }) {
   const [bgImage, setBgImage] = useState('')
@@ -69,7 +69,12 @@ export default function MovieCard({ movie }) {
           </Link>
         </ChakraBox>
       </WrapItem>
+
+      <img
+        src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
+        alt='Preload'
+        style={{ display: 'none' }}
+      />
     </>
   )
 }
-

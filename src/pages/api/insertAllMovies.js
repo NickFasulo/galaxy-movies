@@ -65,6 +65,49 @@ const handleMovieCollection = async belongs_to_collection => {
   }
 }
 
+const handleMovieGenres = async (genres, movieId) => {
+  try {
+    for (const genre of genres) {
+      const { data: existingGenre, error: genreFetchError } = await supabase
+        .from('genres')
+        .select('id')
+        .eq('tmdb_id', genre.id)
+        .single()
+
+      if (genreFetchError && genreFetchError.code !== 'PGRST116') {
+        console.error('Error fetching genre:', genreFetchError)
+        throw genreFetchError
+      }
+
+      let genreId
+
+      if (existingGenre) {
+        genreId = existingGenre.id
+      } else {
+        console.error(
+          `Genre with TMDB ID ${genre.id} not found in genres table.`
+        )
+        continue
+      }
+
+      const { error: movieGenreInsertError } = await supabase
+        .from('movie_genres')
+        .insert({
+          movie_id: movieId,
+          genre_id: genreId
+        })
+
+      if (movieGenreInsertError) {
+        console.error('Error inserting movie_genres:', movieGenreInsertError)
+        throw movieGenreInsertError
+      }
+    }
+  } catch (error) {
+    console.error('Error handling movie genres:', error)
+    throw error
+  }
+}
+
 const handleProductionCompanies = async (productionCompanies, movieId) => {
   try {
     for (const company of productionCompanies) {
@@ -80,6 +123,7 @@ const handleProductionCompanies = async (productionCompanies, movieId) => {
       }
 
       let productionCompanyId
+
       if (existingCompany) {
         productionCompanyId = existingCompany.id
       } else {
@@ -243,6 +287,8 @@ const insertMoviesIntoDB = async (movies, categoryId) => {
           movieDetails.production_companies,
           movieId
         )
+
+        await handleMovieGenres(movieDetails.genres, movieId)
       }
     } catch (error) {
       console.error('Error fetching movie details or inserting movie:', error)
@@ -284,11 +330,11 @@ export default async function handler(req, res) {
 
     res
       .status(200)
-      .json({ message: 'Movies and genres fetched and inserted successfully!' })
+      .json({ message: 'Movies fetched and inserted successfully!' })
   } catch (error) {
     console.error('Error:', error)
     res.status(500).json({
-      error: 'An error occurred while fetching and inserting movies and genres.'
+      error: 'An error occurred while fetching and inserting movies.'
     })
   }
 }
