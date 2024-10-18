@@ -81,7 +81,7 @@ export default function Home() {
 			</Head>
 
 			<Box height='100%'>
-				{status === 'loading' ? (
+				{status !== 'loading' ? (
 					<CustomSpinner />
 				) : status === 'error' ? (
 					<h1
