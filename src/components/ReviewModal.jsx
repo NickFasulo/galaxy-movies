@@ -58,13 +58,7 @@ export default function ReviewModal({ modalData }) {
               🤖&nbsp; Movie Bot's Review &nbsp;🍿
             </Text>
           </ModalHeader>
-          {/* <ModalBody>{movieReview}</ModalBody> */}
-          <ModalBody>
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci
-            tempora maiores exercitationem doloribus soluta dignissimos quasi
-            itaque repellat veritatis repudiandae atque molestiae ex, explicabo
-            optio. Vitae minus quaerat sit rerum?
-          </ModalBody>
+          <ModalBody>{movieReview}</ModalBody>
           <ModalFooter>
             <Button margin='0 auto' onClick={onClose}>
               Close
