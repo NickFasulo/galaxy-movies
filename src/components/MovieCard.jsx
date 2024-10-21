@@ -51,8 +51,8 @@ export default function MovieCard({ movie }) {
         <ChakraBox
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          margin='2rem'
-          width={{ base: '80vw', md: '13rem' }}
+          mx='auto'
+          width={{ base: '11rem', md: '13rem' }}
           boxShadow='dark-lg'
           borderRadius='1.1rem'
           onMouseEnter={handleMouseEnter}

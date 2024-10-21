@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
 import {
   Flex,
   Text,
@@ -17,7 +16,6 @@ export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [movieReview, setMovieReview] = useState()
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   const aiReview = async () => {
     try {
@@ -42,25 +40,15 @@ export default function ReviewModal({ modalData }) {
 
   return (
     <>
-      <Flex justify='space-evenly' align='flex-end'>
-        <Button
-          size='sm'
-          width='8rem'
-          margin={{ base: '1rem 0 3rem', md: '1.5rem 0 2rem' }}
-          onClick={onOpen}
-          isLoading={loading}
-        >
-          See Review
-        </Button>
-        <Button
-          size='sm'
-          width='8rem'
-          margin={{ base: '1rem 0 3rem', md: '1.5rem 0 2rem' }}
-          onClick={() => router.back()}
-        >
-          Go Back
-        </Button>
-      </Flex>
+      <Button
+        size='sm'
+        width='8rem'
+        margin={{ base: '1.5rem 0', md: '1.5rem 0 2rem' }}
+        onClick={onOpen}
+        isLoading={loading}
+      >
+        See Review
+      </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size='lg' isCentered>
         <ModalOverlay />
@@ -70,7 +58,13 @@ export default function ReviewModal({ modalData }) {
               🤖&nbsp; Movie Bot's Review &nbsp;🍿
             </Text>
           </ModalHeader>
-          <ModalBody>{movieReview}</ModalBody>
+          {/* <ModalBody>{movieReview}</ModalBody> */}
+          <ModalBody>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci
+            tempora maiores exercitationem doloribus soluta dignissimos quasi
+            itaque repellat veritatis repudiandae atque molestiae ex, explicabo
+            optio. Vitae minus quaerat sit rerum?
+          </ModalBody>
           <ModalFooter>
             <Button margin='0 auto' onClick={onClose}>
               Close
