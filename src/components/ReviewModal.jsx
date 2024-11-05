@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import {
-  Flex,
   Text,
   Modal,
   ModalOverlay,

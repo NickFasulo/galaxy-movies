@@ -15,6 +15,8 @@ export default function Home() {
   const [allMovies, setAllMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
   const [filteredMovies, setFilteredMovies] = useState([])
+  const [atTop, setAtTop] = useState(false)
+  const headerRef = useRef(null)
   const inputRef = useRef(null)
 
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
@@ -32,8 +34,8 @@ export default function Home() {
     }
   )
 
-  const changeCategory = selectedCat => {
-    setCategory(selectedCat)
+  const changeCategory = selectedCategory => {
+    setCategory(selectedCategory)
     if (typeof window !== 'undefined') window.location.reload()
   }
 
@@ -71,6 +73,20 @@ export default function Home() {
     fetchAllMovies()
   }, [])
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (headerRef.current) {
+        const inputTop = headerRef.current.getBoundingClientRect().top
+        setAtTop(inputTop === 0)
+      }
+    }
+  
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   return (
     <>
       <Head>
@@ -94,19 +110,33 @@ export default function Home() {
           </h1>
         ) : (
           <>
-            <Box margin={{ base: '3rem 0', md: '4rem 0' }}>
+            <Box margin={{ base: '2rem 0', md: '3rem 0' }}>
               <header margin={0} className='title'>
                 Galaxy Movies
               </header>
             </Box>
-            <Flex justify='center' align='center' width='100%'>
-              <Flex width={{ base: '90%', md: '40rem' }}>
+            <Flex
+              ref={headerRef}
+              justify='center'
+              align='center'
+              position='sticky'
+              top='0'
+              zIndex='1000'
+              background={atTop ? 'white' : 'transparent'}
+            >
+              <Flex
+                justify={'center'}
+                width={'100%'}
+                padding={{ base: '1rem', md: '1.25rem' }}
+              >
                 <Input
-                  onChange={e => searchMovies(e.target.value)}
                   ref={inputRef}
+                  onChange={e => searchMovies(e.target.value)}
                   placeholder='Search movies...'
                   background={'white'}
+                  width={{ base: '90%', md: '40rem' }}
                 />
+                <Box padding={{ base: '0 0.25rem', md: '0 0.5rem' }} />
                 <DropDown category={category} changeCategory={changeCategory} />
               </Flex>
             </Flex>
@@ -117,7 +147,7 @@ export default function Home() {
               hasMore={hasNextPage}
             >
               <SimpleGrid
-                margin={{ base: '4rem 1rem', md: '5rem' }}
+                margin={{ base: '3rem 1rem', md: '5rem' }}
                 spacing={{ base: 8, md: 12 }}
                 columns={{ base: 2, md: 5 }}
               >

@@ -8,7 +8,11 @@ export default function MovieCard({ movie }) {
   const [bgOpacity, setBgOpacity] = useState(0)
 
   const handleMouseEnter = () => {
-    setBgImage(`https://image.tmdb.org/t/p/original${movie.backdrop_path}`)
+    const imageUrl = movie.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+      : '/galaxy-movies-background.png'
+
+    setBgImage(imageUrl)
     setBgOpacity(0.3)
   }
 
@@ -71,7 +75,11 @@ export default function MovieCard({ movie }) {
       </WrapItem>
 
       <img
-        src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
+        src={
+          movie.backdrop_path
+            ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+            : '/galaxy-movies-background.png'
+        }
         alt='Preload'
         style={{ display: 'none' }}
       />
