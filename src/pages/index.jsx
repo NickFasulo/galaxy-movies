@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import React, { useState, useEffect, useRef } from 'react'
-import { useInfiniteQuery } from 'react-query'
+import { useInfiniteQuery, useQueryClient } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Box, Flex, Input, SimpleGrid } from '@chakra-ui/react'
@@ -12,15 +12,17 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 
 export default function Home() {
   const [category, setCategory] = useLocalStorage('category', 'popular')
-  const [allMovies, setAllMovies] = useState([])
-  const [searchInput, setSearchInput] = useState('')
   const [filteredMovies, setFilteredMovies] = useState([])
+  const [searchInput, setSearchInput] = useState('')
+  const [allMovies, setAllMovies] = useState([])
   const [atTop, setAtTop] = useState(false)
   const headerRef = useRef(null)
   const inputRef = useRef(null)
 
+  const queryClient = useQueryClient()
+
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
-    'infiniteMovies',
+    ['infiniteMovies', category],
     async ({ pageParam = 1 }) =>
       await fetch(`/api/allMovies?category=${category}&page=${pageParam}`).then(
         result => result.json()
@@ -36,7 +38,7 @@ export default function Home() {
 
   const changeCategory = selectedCategory => {
     setCategory(selectedCategory)
-    if (typeof window !== 'undefined') window.location.reload()
+    queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
   }
 
   const searchMovies = () => {
@@ -140,11 +142,10 @@ export default function Home() {
                 <DropDown category={category} changeCategory={changeCategory} />
               </Flex>
             </Flex>
-
             <InfiniteScroll
-              dataLength={data?.pages.length * 20}
               next={fetchNextPage}
               hasMore={hasNextPage}
+              dataLength={data?.pages.length * 20}
             >
               <SimpleGrid
                 margin={{ base: '3rem 1rem', md: '5rem' }}
