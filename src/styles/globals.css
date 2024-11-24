@@ -36,10 +36,6 @@ body {
   background-color: #001e2e;
 }
 
-.sticky-header {
-  will-change: background;
-}
-
 ::-webkit-scrollbar {
   width: 0.5rem;
   height: 0.5rem;

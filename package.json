@@ -21,7 +21,8 @@
     "react-infinite-scroll-component": "^6.1.0",
     "react-player": "^2.16.0",
     "react-query": "^3.39.3",
-    "react-scroll-up": "^1.4.0"
+    "react-scroll-up": "^1.4.0",
+    "react-sticky": "^6.0.3"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^15.0.3"
