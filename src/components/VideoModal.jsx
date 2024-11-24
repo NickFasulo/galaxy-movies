@@ -13,6 +13,7 @@ const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 
 export default function VideoModal({ videoKey }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const isPlayable = !!videoKey && videoKey !== 'null'
 
   return (
     <>
@@ -21,8 +22,13 @@ export default function VideoModal({ videoKey }) {
         width='8rem'
         margin={{ base: '1.5rem', md: '1.5rem 0 2rem' }}
         onClick={onOpen}
+        isDisabled={!isPlayable}
       >
-        <Icon as={BsCaretRightFill} boxSize={6} />
+        {!isPlayable ? (
+          'Unavailable'
+        ) : (
+          <Icon as={BsCaretRightFill} boxSize={6} />
+        )}
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size='full' trapFocus={false}>
