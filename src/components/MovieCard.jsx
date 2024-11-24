@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
 import { Image, WrapItem, Box } from '@chakra-ui/react'
 
-export default function MovieCard({ movie }) {
+function MovieCard({ movie }) {
   const [bgImage, setBgImage] = useState('')
   const [bgOpacity, setBgOpacity] = useState(0)
 
@@ -86,3 +86,5 @@ export default function MovieCard({ movie }) {
     </>
   )
 }
+
+export default memo(MovieCard)

@@ -95,6 +95,20 @@ export default function Home() {
         <title>Galaxy Movies</title>
         <meta name='description' content='Galaxy Movies' />
         <link rel='icon' href='/favicon.ico' />
+        <link
+          rel='preload'
+          href='/asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf'
+          as='font'
+          type='font/otf'
+          crossorigin='anonymous'
+        />
+        <link
+          rel='preload'
+          href='/asset/space-ranger-font/SpaceRanger-EMJl.otf'
+          as='font'
+          type='font/otf'
+          crossorigin='anonymous'
+        />
       </Head>
 
       <Box height='100%'>
