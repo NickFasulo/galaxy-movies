@@ -4,7 +4,7 @@ import removeUnderscores from '../utils/removeUnderscores'
 
 export default function DropDown({ category, changeCategory }) {
   return (
-    <Menu>
+    <Menu zIndex={2000} touchAction='manipulation'>
       <MenuButton as={Button} rightIcon={<ChevronDownIcon />} minWidth='8.9rem'>
         {removeUnderscores(category)}
       </MenuButton>
