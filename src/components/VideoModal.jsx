@@ -8,7 +8,8 @@ import {
 } from '@chakra-ui/react'
 import { Icon } from '@chakra-ui/react'
 import { BsCaretRightFill } from 'react-icons/bs'
-import ReactPlayer from 'react-player'
+import dynamic from 'next/dynamic'
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 
 export default function VideoModal({ videoKey }) {
   const { isOpen, onOpen, onClose } = useDisclosure()

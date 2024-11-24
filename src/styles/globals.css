@@ -21,8 +21,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans,
-    Helvetica Neue, sans-serif;
+  font-family: Roboto, Fira Sans, Helvetica Neue, Arial, sans-serif;
   scroll-behavior: smooth;
 }
 
@@ -32,10 +31,13 @@ body {
   color: white;
   text-align: center;
   font-size: xx-large;
-  font-family: SpaceRanger, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans,
-    Droid Sans, Helvetica Neue, sans-serif;
+  font-family: 'SpaceRanger', Roboto, Arial, sans-serif;
   border-radius: 8px;
   background-color: #001e2e;
+}
+
+.sticky-header {
+  will-change: background;
 }
 
 ::-webkit-scrollbar {

@@ -139,6 +139,8 @@ export default function Home() {
               top='0'
               zIndex='1000'
               background={atTop ? 'white' : 'transparent'}
+              transition='background-color 0.3s ease-in-out'
+              className='sticky-header'
             >
               <Flex
                 justify={'center'}
