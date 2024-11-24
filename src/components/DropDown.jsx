@@ -8,7 +8,7 @@ export default function DropDown({ category, changeCategory }) {
       <MenuButton as={Button} rightIcon={<ChevronDownIcon />} minWidth='8.9rem'>
         {removeUnderscores(category)}
       </MenuButton>
-      <MenuList zIndex={2000}>
+      <MenuList zIndex={2000} position='relative'>
         <MenuItem onClick={() => changeCategory('popular')}>Popular</MenuItem>
         <MenuItem onClick={() => changeCategory('top_rated')}>Top Rated</MenuItem>
         <MenuItem onClick={() => changeCategory('now_playing')}>Now Playing</MenuItem>
