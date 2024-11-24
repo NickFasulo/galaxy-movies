@@ -15,6 +15,7 @@ export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [movieReview, setMovieReview] = useState()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const aiReview = async () => {
     try {
@@ -25,9 +26,15 @@ export default function ReviewModal({ modalData }) {
         },
         body: JSON.stringify({ modalData })
       })
-      const data = await res.json()
-      setMovieReview(data.review)
+      if (res.status === 500) {
+        setError(true)
+        setMovieReview(null)
+      } else {
+        const data = await res.json()
+        setMovieReview(data.review)
+      }
     } catch (error) {
+      setError(true)
       console.error('Error fetching review:', error)
     }
     setLoading(false)
@@ -45,8 +52,9 @@ export default function ReviewModal({ modalData }) {
         margin={{ base: '1.5rem 0', md: '1.5rem 0 2rem' }}
         onClick={onOpen}
         isLoading={loading}
+        isDisabled={error}
       >
-        See Review
+        {error ? 'Unavailable' : 'See Review'}
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size='lg' isCentered>
