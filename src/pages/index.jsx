@@ -122,6 +122,7 @@ export default function Home() {
                     style={style}
                     justify='center'
                     align='center'
+                    zIndex={1000}
                     background={
                       isSticky ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
                     }
