@@ -3,10 +3,10 @@ import {
   Flex,
   Wrap,
   WrapItem,
-  Image,
   Badge,
   Heading,
-  Text
+  Text,
+  Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import CustomSpinner from '../../components/CustomSpinner'
@@ -15,6 +15,7 @@ import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
+import Image from 'next/image'
 
 export const getServerSideProps = async context => {
   return {
@@ -85,16 +86,19 @@ export default function Movie({ query }) {
             margin={{ base: 0, md: '2rem' }}
             width='20rem'
           >
-            <Image
-              src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
-              fallbackSrc='fallback-1.jpg'
-              alt={movie.title}
-              objectFit='cover'
-              width='24rem'
-              borderRadius='1rem'
-              boxShadow='dark-lg'
-              marginTop={{ base: '2rem', md: 0 }}
-            />
+            <Box marginTop={{ base: '2rem', md: 0 }}>
+              <Image
+                src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
+                alt={movie.title}
+                width={384}
+                height={576}
+                style={{
+                  objectFit: 'cover',
+                  borderRadius: '1rem',
+                  boxShadow: 'dark-lg'
+                }}
+              />
+            </Box>
             <Wrap justify='center' margin='2rem 0'>
               {movie.genres.map(genre => (
                 <WrapItem key={genre.id}>
@@ -173,7 +177,7 @@ export default function Movie({ query }) {
               align={{ base: 'center', md: 'flex-end' }}
             >
               <ReviewModal modalData={movie} />
-              <VideoModal videoKey={videoKey}/>
+              <VideoModal videoKey={videoKey} />
               <BackButton />
             </Flex>
             <Flex
@@ -195,13 +199,15 @@ export default function Movie({ query }) {
                     key={company.id}
                     alt={company.name}
                     src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
-                    onError={e => (e.target.style.display = 'none')}
-                    maxWidth='4rem'
-                    maxHeight='4rem'
-                    margin='0 1rem'
-                    padding={0.5}
-                    borderRadius={2}
-                    background='white'
+                    width={64}
+                    height={64}
+                    style={{
+                      margin: '0 1rem',
+                      padding: '0.5rem',
+                      borderRadius: '0.2rem',
+                      background: 'white'
+                    }}
+                    onError={() => {}}
                   />
                 ))}
               </Flex>

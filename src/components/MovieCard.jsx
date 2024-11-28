@@ -1,7 +1,8 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
-import { Image, WrapItem, Box } from '@chakra-ui/react'
+import { WrapItem, Box } from '@chakra-ui/react'
 
 function MovieCard({ movie }) {
   const [bgImage, setBgImage] = useState('')
@@ -65,10 +66,15 @@ function MovieCard({ movie }) {
           <Link href={`/movies/${movie.id}`}>
             <Image
               src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
-              fallbackSrc='fallback-1.jpg'
               alt={movie.title}
-              objectFit='cover'
-              borderRadius='1rem'
+              width={208}
+              height={312}
+              placeholder='blur'
+              blurDataURL='/fallback-1.jpg'
+              style={{
+                objectFit: 'cover',
+                borderRadius: '1rem'
+              }}
             />
           </Link>
         </ChakraBox>

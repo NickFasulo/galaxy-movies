@@ -4,7 +4,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 })
 
 const nextConfig = {
-  reactStrictMode: true
+  reactStrictMode: true,
+  images: {
+    domains: ['image.tmdb.org']
+  }
 }
 
 module.exports = withBundleAnalyzer(nextConfig)
