@@ -66,7 +66,7 @@ export default function Movie({ query }) {
       backgroundBlendMode='multiply'
       backgroundImage={{
         base: `https://image.tmdb.org/t/p/original${movie.poster_path}`,
-        md: `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+        md: `https://image.tmdb.org/t/p/original${movie.backdrop_path || movie.poster_path}`
       }}
       backgroundPosition='center'
       backgroundRepeat='no-repeat'
@@ -147,7 +147,7 @@ export default function Movie({ query }) {
                   textShadow='2px 0 4px black'
                   marginLeft={1.5}
                 >
-                  {timeFormatter(movie.runtime)}
+                  {movie.runtime != 0 ? timeFormatter(movie.runtime) : 'N/A'}
                 </Text>
               </Flex>
             </Flex>
@@ -194,22 +194,23 @@ export default function Movie({ query }) {
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {movie.production_companies.slice(0, 1).map(company => (
-                  <Image
-                    key={company.id}
-                    alt={company.name}
-                    src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
-                    width={64}
-                    height={64}
-                    style={{
-                      margin: '0 1rem',
-                      padding: '0.5rem',
-                      borderRadius: '0.2rem',
-                      background: 'white'
-                    }}
-                    onError={() => {}}
-                  />
-                ))}
+                {movie.production_companies.slice(0, 1).map(company =>
+                  company.logo_path ? (
+                    <Image
+                      key={company.id}
+                      alt={company.name}
+                      src={`https://image.tmdb.org/t/p/original${company.logo_path}`}
+                      width={64}
+                      height={64}
+                      style={{
+                        margin: '0 1rem',
+                        padding: '0.5rem',
+                        borderRadius: '0.2rem',
+                        background: 'white'
+                      }}
+                    />
+                  ) : null
+                )}
               </Flex>
             </Flex>
           </Flex>
