@@ -137,7 +137,7 @@ export default function Movie({ query }) {
                   textShadow='2px 0 4px black'
                   marginLeft={1.5}
                 >
-                  {dateFormatter(movie.release_date)}
+                  {dateFormatter(movie.release_date) || 'N/A'}
                 </Text>
               </Flex>
               <Flex align='center'>
@@ -147,7 +147,7 @@ export default function Movie({ query }) {
                   textShadow='2px 0 4px black'
                   marginLeft={1.5}
                 >
-                  {movie.runtime != 0 ? timeFormatter(movie.runtime) : 'N/A'}
+                  {movie.runtime !== 0 ? timeFormatter(movie.runtime) : 'N/A'}
                 </Text>
               </Flex>
             </Flex>
@@ -169,7 +169,7 @@ export default function Movie({ query }) {
               marginBottom={{ base: '1.5rem', md: 0 }}
               overflowY={{ base: 'visible', md: 'auto' }}
             >
-              {movie.overview}
+              {movie.overview || 'Discription unavailable.'}
             </Text>
             <Flex
               justify='space-evenly'
