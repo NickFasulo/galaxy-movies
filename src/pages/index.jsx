@@ -2,7 +2,7 @@ import Head from 'next/head'
 import React, { useState, useEffect, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
-import { Sticky, StickyContainer } from 'react-sticky'
+import Sticky from 'react-stickynode'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Box, Flex, Input, SimpleGrid } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
@@ -16,6 +16,7 @@ export default function Home() {
   const [filteredMovies, setFilteredMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
   const [allMovies, setAllMovies] = useState([])
+  const [isSticky, setIsSticky] = useState(false)
   const inputRef = useRef(null)
 
   const queryClient = useQueryClient()
@@ -34,6 +35,14 @@ export default function Home() {
       }
     }
   )
+
+  const handleStateChange = status => {
+    if (status.status === Sticky.STATUS_FIXED) {
+      setIsSticky(true)
+    } else {
+      setIsSticky(false)
+    }
+  }
 
   const changeCategory = selectedCategory => {
     setCategory(selectedCategory)
@@ -85,110 +94,100 @@ export default function Home() {
           href='/asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf'
           as='font'
           type='font/otf'
-          crossorigin='anonymous'
+          crossOrigin='anonymous'
         />
         <link
           rel='preload'
           href='/asset/space-ranger-font/SpaceRanger-EMJl.otf'
           as='font'
           type='font/otf'
-          crossorigin='anonymous'
+          crossOrigin='anonymous'
         />
       </Head>
-      <StickyContainer>
-        <Box height='100%'>
-          {status === 'loading' ? (
-            <CustomSpinner />
-          ) : status === 'error' ? (
-            <h1
-              style={{
-                textAlign: 'center',
-                marginTop: '20rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Error loading movies
-            </h1>
-          ) : (
-            <>
-              <Box margin={{ base: '2rem 0', md: '3rem 0' }}>
-                <header margin={0} className='title'>
-                  Galaxy Movies
-                </header>
-              </Box>
-              <Sticky>
-                {({ style, isSticky }) => (
-                  <Flex
-                    style={style}
-                    justify='center'
-                    align='center'
-                    zIndex={1000}
-                    background={
-                      isSticky ? 'rgba(255, 255, 255, 0.7)' : 'transparent'
-                    }
-                    transition='background-color 0.3s ease-in-out'
-                    sx={{
-                      backdropFilter: isSticky ? 'blur(10px)' : 'none'
-                    }}
-                  >
-                    <Flex
-                      justify={'center'}
-                      width={'100%'}
-                      padding={{ base: '1rem', md: '1.25rem' }}
-                    >
-                      <Input
-                        ref={inputRef}
-                        onChange={e => searchMovies(e.target.value)}
-                        placeholder='Search movies...'
-                        background={'white'}
-                        width={{ base: '90%', md: '40rem' }}
-                      />
-                      <Box padding={{ base: '0 0.25rem', md: '0 0.5rem' }} />
-                      <DropDown
-                        category={category}
-                        changeCategory={changeCategory}
-                      />
-                    </Flex>
-                  </Flex>
-                )}
-              </Sticky>
-              <InfiniteScroll
-                next={fetchNextPage}
-                hasMore={hasNextPage}
-                dataLength={data?.pages.length * 20}
-              >
-                <SimpleGrid
-                  margin={{ base: '3rem 1rem', md: '5rem' }}
-                  spacing={{ base: 8, md: 12 }}
-                  columns={{ base: 2, md: 5 }}
-                >
-                  {searchInput.length > 2
-                    ? filteredMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} />
-                      ))
-                    : data?.pages.map((page, i) => (
-                        <React.Fragment key={i}>
-                          {page.results.map(movie => (
-                            <MovieCard key={movie.id} movie={movie} />
-                          ))}
-                        </React.Fragment>
-                      ))}
-                </SimpleGrid>
-              </InfiniteScroll>
-            </>
-          )}
-          <ScrollToTop
-            showUnder={160}
+      <Box height='100%'>
+        {status === 'loading' ? (
+          <CustomSpinner />
+        ) : status === 'error' ? (
+          <h1
             style={{
-              background: 'white',
-              borderRadius: 5,
-              boxShadow: '0 0 6px black'
+              textAlign: 'center',
+              marginTop: '20rem',
+              fontWeight: 'bold'
             }}
           >
-            <ArrowUpIcon boxSize={10} />
-          </ScrollToTop>
-        </Box>
-      </StickyContainer>
+            Error loading movies
+          </h1>
+        ) : (
+          <>
+            <Box margin={{ base: '2rem 0', md: '3rem 0' }}>
+              <header margin={0} className='title'>
+                Galaxy Movies
+              </header>
+            </Box>
+            <Sticky onStateChange={handleStateChange}>
+              <Flex
+                justify='center'
+                align='center'
+                zIndex={9999}
+                background={isSticky ? 'white' : 'transparent'}
+                transition='background-color 0.3s ease-in-out'
+              >
+                <Flex
+                  justify={'center'}
+                  width={'100%'}
+                  padding={{ base: '1rem', md: '1.25rem' }}
+                >
+                  <Input
+                    ref={inputRef}
+                    onChange={e => searchMovies(e.target.value)}
+                    placeholder='Search movies...'
+                    background={'white'}
+                    width={{ base: '90%', md: '40rem' }}
+                  />
+                  <Box padding={{ base: '0 0.25rem', md: '0 0.5rem' }} />
+                  <DropDown
+                    category={category}
+                    changeCategory={changeCategory}
+                  />
+                </Flex>
+              </Flex>
+            </Sticky>
+            <InfiniteScroll
+              next={fetchNextPage}
+              hasMore={hasNextPage}
+              dataLength={data?.pages.length * 20}
+            >
+              <SimpleGrid
+                margin={{ base: '3rem 1rem', md: '5rem' }}
+                spacing={{ base: 8, md: 12 }}
+                columns={{ base: 2, md: 5 }}
+              >
+                {searchInput.length > 2
+                  ? filteredMovies.map(movie => (
+                      <MovieCard key={movie.id} movie={movie} />
+                    ))
+                  : data?.pages.map((page, i) => (
+                      <React.Fragment key={i}>
+                        {page.results.map(movie => (
+                          <MovieCard key={movie.id} movie={movie} />
+                        ))}
+                      </React.Fragment>
+                    ))}
+              </SimpleGrid>
+            </InfiniteScroll>
+          </>
+        )}
+        <ScrollToTop
+          showUnder={160}
+          style={{
+            background: 'white',
+            borderRadius: 5,
+            boxShadow: '0 0 6px black'
+          }}
+        >
+          <ArrowUpIcon boxSize={10} />
+        </ScrollToTop>
+      </Box>
     </>
   )
 }
