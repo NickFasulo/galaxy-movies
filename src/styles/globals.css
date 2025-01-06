@@ -22,7 +22,6 @@ body {
   margin: 0;
   padding: 0;
   font-family: Roboto, Fira Sans, Helvetica Neue, Arial, sans-serif;
-  /* scroll-behavior: smooth; */
 }
 
 .title {
@@ -34,6 +33,10 @@ body {
   font-family: 'SpaceRanger', Roboto, Arial, sans-serif;
   border-radius: 8px;
   background-color: #001e2e;
+}
+
+.sticky-inner-wrapper {
+  z-index: 9999;
 }
 
 ::-webkit-scrollbar {

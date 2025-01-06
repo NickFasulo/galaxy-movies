@@ -128,7 +128,6 @@ export default function Home() {
               <Flex
                 justify='center'
                 align='center'
-                zIndex={9999}
                 background={isSticky ? 'white' : 'transparent'}
                 transition='background-color 0.3s ease-in-out'
               >
