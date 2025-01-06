@@ -16,7 +16,6 @@ export default function Home() {
   const [filteredMovies, setFilteredMovies] = useState([])
   const [searchInput, setSearchInput] = useState('')
   const [allMovies, setAllMovies] = useState([])
-  const [isSticky, setIsSticky] = useState(false)
   const inputRef = useRef(null)
 
   const queryClient = useQueryClient()
@@ -35,14 +34,6 @@ export default function Home() {
       }
     }
   )
-
-  const handleStateChange = status => {
-    if (status.status === Sticky.STATUS_FIXED) {
-      setIsSticky(true)
-    } else {
-      setIsSticky(false)
-    }
-  }
 
   const changeCategory = selectedCategory => {
     setCategory(selectedCategory)
@@ -124,13 +115,8 @@ export default function Home() {
                 Galaxy Movies
               </header>
             </Box>
-            <Sticky onStateChange={handleStateChange}>
-              <Flex
-                justify='center'
-                align='center'
-                background={isSticky ? 'white' : 'transparent'}
-                transition='background-color 0.3s ease-in-out'
-              >
+            <Sticky innerActiveClass='sticky-header-active'>
+              <Flex justify='center' align='center'>
                 <Flex
                   justify={'center'}
                   width={'100%'}

@@ -37,6 +37,11 @@ body {
 
 .sticky-inner-wrapper {
   z-index: 9999;
+  background: transparent;
+}
+
+.sticky-header-active {
+  background: white;
 }
 
 ::-webkit-scrollbar {
