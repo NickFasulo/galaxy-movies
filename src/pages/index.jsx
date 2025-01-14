@@ -28,7 +28,7 @@ export default function Home() {
       ),
     {
       getNextPageParam: (lastPage, pages) => {
-        if (pages.length <= 10) {
+        if (pages.length <= 15) {
           return pages.length + 1
         }
       }
@@ -56,7 +56,7 @@ export default function Home() {
     try {
       let allMoviesArray = []
 
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 1; i <= 15; i++) {
         const result = await fetch(
           `/api/allMovies?category=${category}&page=${i}`
         )
