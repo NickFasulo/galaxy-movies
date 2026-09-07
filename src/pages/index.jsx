@@ -120,7 +120,7 @@ export default function Home() {
                 <Flex
                   justify={'center'}
                   width={'100%'}
-                  padding={{ base: '1rem', md: '1.25rem' }}
+                  padding={'0.75rem'}
                 >
                   <Input
                     ref={inputRef}

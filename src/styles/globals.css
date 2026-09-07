@@ -41,6 +41,8 @@ body {
 }
 
 .sticky-header-active {
+  border-bottom: 1px solid #e2e8f0;
+  transition: border-bottom 0.2s ease-in-out;
   background: white;
 }
 
