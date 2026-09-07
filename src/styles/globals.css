@@ -33,6 +33,12 @@ body {
   font-family: 'SpaceRanger', Roboto, Arial, sans-serif;
   border-radius: 8px;
   background-color: #001e2e;
+  transform: skewX(-15deg);
+}
+
+.title span {
+  display: inline-block;
+  transform: skewX(15deg); 
 }
 
 .sticky-inner-wrapper {

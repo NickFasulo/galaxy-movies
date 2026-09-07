@@ -112,7 +112,7 @@ export default function Home() {
           <>
             <Box margin={{ base: '2rem 0', md: '3rem 0' }}>
               <header margin={0} className='title'>
-                Galaxy Movies
+                <span>Galaxy Movies</span>
               </header>
             </Box>
             <Sticky innerActiveClass='sticky-header-active'>
