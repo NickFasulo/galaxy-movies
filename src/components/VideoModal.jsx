@@ -19,8 +19,7 @@ export default function VideoModal({ videoKey }) {
     <>
       <Button
         size='sm'
-        width='8rem'
-        margin={{ base: '1.5rem', md: '1.5rem 0 2rem' }}
+        width='7rem'
         onClick={onOpen}
         isDisabled={!isPlayable}
       >

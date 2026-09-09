@@ -48,8 +48,7 @@ export default function ReviewModal({ modalData }) {
     <>
       <Button
         size='sm'
-        width='8rem'
-        margin={{ base: '1.5rem 0', md: '1.5rem 0 2rem' }}
+        width='7rem'
         onClick={onOpen}
         isLoading={loading}
         isDisabled={error}

@@ -7,8 +7,7 @@ export default function BackButton() {
   return (
     <Button
       size='sm'
-      width='8rem'
-      margin={{ base: '1.5rem', md: '1.5rem 0 2rem' }}
+      width='7rem'
       onClick={() => router.back()}
     >
       Go Back
