@@ -149,12 +149,12 @@ export default function Movie({ query }) {
             borderRadius='1rem'
             background='rgba(0, 0, 0, 0.65)'
             boxShadow='dark-lg'
+            gap='1rem'
           >
             <Heading
               color='white'
               textShadow='2px 0 4px black'
               textAlign={{ base: 'center', md: 'left' }}
-              margin={{ base: '0.5rem auto', md: '0 0 0.5rem' }}
             >
               {movie.title}
             </Heading>
@@ -180,7 +180,6 @@ export default function Movie({ query }) {
               fontSize='lg'
               color='gray.400'
               textShadow='2px 0 4px black'
-              margin='0.5rem 0'
               textAlign={{ base: 'center', md: 'left' }}
             >
               {movie.tagline}
@@ -189,7 +188,6 @@ export default function Movie({ query }) {
               color='white'
               fontSize='md'
               textShadow='2px 0 4px black'
-              marginBottom='1rem'
               overflowY='auto'
               textAlign={{ base: 'center', md: 'left' }}
               flex={1}
@@ -201,7 +199,7 @@ export default function Movie({ query }) {
               flexDirection={{ base: 'column', md: 'row' }}
               align={{ base: 'center', md: 'flex-end' }}
               gap={{ base: '2rem', md: '3rem' }}
-              margin={{ base: '1rem 0', md: 'auto' }}
+              margin='1rem 0'
             >
               <ReviewModal modalData={movie} />
               <VideoModal videoKey={videoKey} />
