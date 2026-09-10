@@ -37,7 +37,21 @@ export default function Home() {
 
   const moviesList = useMemo(() => {
     if (!data?.pages) return []
-    return data.pages.flatMap((page) => page.results || [])
+
+    const seenIds = new Set()
+    const uniqueMovies = []
+
+    for (const page of data.pages) {
+      if (!page.results) continue
+      for (const movie of page.results) {
+        if (movie?.id && !seenIds.has(movie.id)) {
+          seenIds.add(movie.id)
+          uniqueMovies.push(movie)
+        }
+      }
+    }
+
+    return uniqueMovies
   }, [data])
 
   const filteredMovies = useMemo(() => {
