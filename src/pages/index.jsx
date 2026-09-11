@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useInfiniteQuery, useQueryClient } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
 import Sticky from 'react-stickynode'
@@ -9,13 +9,19 @@ import { ArrowUpIcon } from '@chakra-ui/icons'
 import DropDown from '../components/DropDown'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
-import { useLocalStorage } from '../hooks/useLocalStorage'
 
 export default function Home() {
-  const [category, setCategory] = useLocalStorage('category', 'popular')
+  const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
 
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const savedCategory = localStorage.getItem('category')
+    if (savedCategory) {
+      setCategory(savedCategory)
+    }
+  }, [])
 
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
     ['infiniteMovies', category],
@@ -32,8 +38,9 @@ export default function Home() {
 
   const changeCategory = useCallback((selectedCategory) => {
     setCategory(selectedCategory)
+    localStorage.setItem('category', selectedCategory)
     queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
-  }, [setCategory, queryClient])
+  }, [queryClient])
 
   const moviesList = useMemo(() => {
     if (!data?.pages) return []
@@ -128,6 +135,7 @@ export default function Home() {
               next={fetchNextPage}
               hasMore={Boolean(hasNextPage && searchInput.length <= 2)}
               dataLength={filteredMovies.length}
+              scrollThreshold={0.8}
             >
               <Box minH='100vh'>
                 <SimpleGrid
