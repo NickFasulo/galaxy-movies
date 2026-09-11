@@ -13,6 +13,7 @@ import CustomSpinner from '../components/CustomSpinner'
 export default function Home() {
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   const queryClient = useQueryClient()
 
@@ -23,15 +24,29 @@ export default function Home() {
     }
   }, [])
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim())
+    }, 400)
+
+    return () => clearTimeout(handler)
+  }, [searchInput])
+
+  const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
+
   const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
-    ['infiniteMovies', category],
+    ['infiniteMovies', category, activeSearch],
     async ({ pageParam = 1 }) => {
-      const res = await fetch(`/api/allMovies?category=${category}&page=${pageParam}`)
+      const url = activeSearch
+        ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}`
+        : `/api/allMovies?category=${category}&page=${pageParam}`
+      const res = await fetch(url)
       return res.json()
     },
     {
-      getNextPageParam: (_lastPage, pages) => {
-        return pages.length < 15 ? pages.length + 1 : undefined
+      getNextPageParam: (lastPage, pages) => {
+        const totalPages = lastPage?.total_pages || 1
+        return pages.length < totalPages ? pages.length + 1 : undefined
       }
     }
   )
@@ -61,34 +76,12 @@ export default function Home() {
     return uniqueMovies
   }, [data])
 
-  const filteredMovies = useMemo(() => {
-    const query = searchInput.trim().toLowerCase()
-    if (query.length <= 2) return moviesList
-    return moviesList.filter((movie) =>
-      movie.title?.toLowerCase().includes(query)
-    )
-  }, [moviesList, searchInput])
-
   return (
     <>
       <Head>
         <title>Galaxy Movies</title>
         <meta name='description' content='Galaxy Movies' />
         <link rel='icon' href='/favicon.ico' />
-        <link
-          rel='preload'
-          href='/asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf'
-          as='font'
-          type='font/otf'
-          crossOrigin='anonymous'
-        />
-        <link
-          rel='preload'
-          href='/asset/space-ranger-font/SpaceRanger-EMJl.otf'
-          as='font'
-          type='font/otf'
-          crossOrigin='anonymous'
-        />
       </Head>
       <Box height='100%'>
         {status === 'loading' ? (
@@ -133,8 +126,8 @@ export default function Home() {
             </Sticky>
             <InfiniteScroll
               next={fetchNextPage}
-              hasMore={Boolean(hasNextPage && searchInput.length <= 2)}
-              dataLength={filteredMovies.length}
+              hasMore={Boolean(hasNextPage)}
+              dataLength={moviesList.length}
               scrollThreshold={0.8}
             >
               <Box minH='100vh'>
@@ -143,7 +136,7 @@ export default function Home() {
                   spacing={{ base: 8, md: 12 }}
                   columns={{ base: 2, md: 5 }}
                 >
-                  {filteredMovies.map(movie => (
+                  {moviesList.map(movie => (
                     <MovieCard key={movie.id} movie={movie} />
                   ))}
                 </SimpleGrid>

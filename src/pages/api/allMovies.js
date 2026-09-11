@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const { category = 'popular', page = 1 } = req.query
+  const { category = 'popular', page = 1, search = '' } = req.query
   const apiKey = process.env.TMDB_API_KEY
 
   if (!apiKey) {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const minVotes = getMinVoteThreshold(category)
+  const minVotes = search.trim().length > 0 ? 0 : getMinVoteThreshold(category)
   const now = new Date()
   const currentYear = now.getFullYear()
   const todayStr = now.toISOString().split('T')[0]
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       if (!movie.poster_path || !movie.overview || movie.overview.trim() === '') return false
       if (movie.vote_count < minVotes) return false
 
-      if (category === 'now_playing' && movie.release_date) {
+      if (!search.trim() && category === 'now_playing' && movie.release_date) {
         const releaseYear = new Date(movie.release_date).getFullYear()
         if (currentYear - releaseYear > 1) return false
       }
@@ -53,11 +53,15 @@ export default async function handler(req, res) {
 
   try {
     const pageNum = parseInt(page, 10)
-    
-    // Sort upcoming by popularity so major releases appear first, filtered from today forward
-    const endpoint = category === 'upcoming'
-      ? `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&primary_release_date.gte=${todayStr}&sort_by=popularity.desc`
-      : `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${pageNum}&include_adult=false`
+    let endpoint = ''
+
+    if (search.trim().length > 0) {
+      endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
+    } else if (category === 'upcoming') {
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&primary_release_date.gte=${todayStr}&sort_by=popularity.desc`
+    } else {
+      endpoint = `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${pageNum}&include_adult=false`
+    }
 
     const response = await fetch(endpoint)
     const data = await response.json()
