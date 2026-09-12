@@ -31,6 +31,7 @@ export default async function handler(req, res) {
   const now = new Date()
   const currentYear = now.getFullYear()
   const todayStr = now.toISOString().split('T')[0]
+  const popularCutoffDate = `${currentYear - 3}-01-01`
 
   const filterMovies = movies => {
     return movies.filter(movie => {
@@ -59,6 +60,8 @@ export default async function handler(req, res) {
       endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
     } else if (category === 'upcoming') {
       endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&primary_release_date.gte=${todayStr}&sort_by=popularity.desc`
+    } else if (category === 'popular') {
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${popularCutoffDate}`
     } else {
       endpoint = `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${pageNum}&include_adult=false`
     }
