@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { Flex, Input, Box } from '@chakra-ui/react'
 import Sticky from 'react-stickynode'
 import DropDown from './DropDown'
@@ -7,8 +7,7 @@ export default function SearchBar({
   category,
   changeCategory,
   searchInput,
-  setSearchInput,
-  queryClient
+  setSearchInput
 }) {
   const isSearchActive = searchInput.trim().length > 0
 
