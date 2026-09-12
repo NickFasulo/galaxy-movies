@@ -17,6 +17,9 @@ export default function Home() {
 
   const queryClient = useQueryClient()
 
+  // Expand search input and hide dropdown ONLY when the user has typed text
+  const isSearchActive = searchInput.trim().length > 0
+
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
     if (savedCategory) {
@@ -103,24 +106,35 @@ export default function Home() {
               </header>
             </Box>
             <Sticky innerActiveClass='sticky-header-active'>
-              <Flex justify='center' align='center'>
+              <Flex justify='center' align='center' width='100%'>
                 <Flex
                   justify='center'
-                  width='100%'
+                  align='center'
+                  width={{ base: '90%', md: '50rem' }}
                   padding='0.75rem'
+                  overflow='hidden'
                 >
                   <Input
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
                     placeholder='Search movies...'
                     background='white'
-                    width={{ base: '90%', md: '40rem' }}
+                    flex='1'
                   />
-                  <Box padding={{ base: '0 0.25rem', md: '0 0.5rem' }} />
-                  <DropDown
-                    category={category}
-                    changeCategory={changeCategory}
-                  />
+                  <Box
+                    maxWidth={isSearchActive ? '0px' : '200px'}
+                    opacity={isSearchActive ? 0 : 1}
+                    pointerEvents={isSearchActive ? 'none' : 'auto'}
+                    marginLeft={isSearchActive ? '0px' : '0.75rem'}
+                    transition='all 0.3s ease-in-out'
+                    overflow='hidden'
+                    whiteSpace='nowrap'
+                  >
+                    <DropDown
+                      category={category}
+                      changeCategory={changeCategory}
+                    />
+                  </Box>
                 </Flex>
               </Flex>
             </Sticky>
