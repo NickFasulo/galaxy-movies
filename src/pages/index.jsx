@@ -3,11 +3,10 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
-import Sticky from 'react-stickynode'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Box, Flex, Input, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
-import DropDown from '../components/DropDown'
+import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 
@@ -19,8 +18,6 @@ export default function Home() {
   const isRestoredRef = useRef(false)
 
   const queryClient = useQueryClient()
-
-  const isSearchActive = searchInput.trim().length > 0
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
@@ -64,14 +61,16 @@ export default function Home() {
     }
   )
 
-  const changeCategory = useCallback((selectedCategory) => {
-    setCategory(selectedCategory)
-    localStorage.setItem('category', selectedCategory)
-    isRestoredRef.current = true
-    sessionStorage.removeItem('homeScrollPos')
-    sessionStorage.removeItem('homeSearchInput')
-    queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
-  }, [queryClient])
+  const changeCategory = useCallback(
+    selectedCategory => {
+      setCategory(selectedCategory)
+      localStorage.setItem('category', selectedCategory)
+      isRestoredRef.current = true
+      sessionStorage.removeItem('homeScrollPos')
+      queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
+    },
+    [queryClient]
+  )
 
   const moviesList = useMemo(() => {
     if (!data?.pages) return []
@@ -150,62 +149,43 @@ export default function Home() {
                 <span>Galaxy Movies</span>
               </header>
             </Box>
-            <Sticky innerActiveClass='sticky-header-active'>
-              <Flex justify='center' align='center' width='100%'>
-                <Flex
-                  justify='center'
-                  align='center'
-                  width={{ base: '90%', md: '50rem' }}
-                  padding='0.75rem'
-                  overflow='hidden'
-                >
-                  <Input
-                    value={searchInput}
-                    onChange={e => {
-                      setSearchInput(e.target.value)
-                      if (e.target.value === '') {
-                        sessionStorage.removeItem('homeSearchInput')
-                      }
-                    }}
-                    placeholder='Search movies...'
-                    background='white'
-                    flex='1'
-                  />
-                  <Box
-                    maxWidth={isSearchActive ? '0px' : '200px'}
-                    opacity={isSearchActive ? 0 : 1}
-                    pointerEvents={isSearchActive ? 'none' : 'auto'}
-                    marginLeft={isSearchActive ? '0px' : '0.75rem'}
-                    transition='all 0.3s ease-in-out'
-                    overflow='hidden'
-                    whiteSpace='nowrap'
+            <SearchBar
+              category={category}
+              changeCategory={changeCategory}
+              searchInput={searchInput}
+              setSearchInput={setSearchInput}
+              queryClient={queryClient}
+            />
+            {moviesList.length === 0 ? (
+              <Text
+                textAlign='center'
+                marginTop='10rem'
+                fontWeight='bold'
+                fontSize='xl'
+                color='gray.500'
+              >
+                No movies found
+              </Text>
+            ) : (
+              <InfiniteScroll
+                next={fetchNextPage}
+                hasMore={Boolean(hasNextPage)}
+                dataLength={moviesList.length}
+                scrollThreshold={0.8}
+              >
+                <Box minH='100vh'>
+                  <SimpleGrid
+                    margin={{ base: '3rem 1rem', md: '5rem' }}
+                    spacing={{ base: 8, md: 12 }}
+                    columns={{ base: 2, md: 5 }}
                   >
-                    <DropDown
-                      category={category}
-                      changeCategory={changeCategory}
-                    />
-                  </Box>
-                </Flex>
-              </Flex>
-            </Sticky>
-            <InfiniteScroll
-              next={fetchNextPage}
-              hasMore={Boolean(hasNextPage)}
-              dataLength={moviesList.length}
-              scrollThreshold={0.8}
-            >
-              <Box minH='100vh'>
-                <SimpleGrid
-                  margin={{ base: '3rem 1rem', md: '5rem' }}
-                  spacing={{ base: 8, md: 12 }}
-                  columns={{ base: 2, md: 5 }}
-                >
-                  {moviesList.map(movie => (
-                    <MovieCard key={movie.id} movie={movie} />
-                  ))}
-                </SimpleGrid>
-              </Box>
-            </InfiniteScroll>
+                    {moviesList.map(movie => (
+                      <MovieCard key={movie.id} movie={movie} />
+                    ))}
+                  </SimpleGrid>
+                </Box>
+              </InfiniteScroll>
+            )}
           </>
         )}
         <ScrollToTop
