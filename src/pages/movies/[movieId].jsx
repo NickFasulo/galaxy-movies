@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {
   Flex,
@@ -10,61 +9,41 @@ import {
   Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
-import CustomSpinner from '../../components/CustomSpinner'
 import ReviewModal from '../../components/ReviewModal'
 import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
+import { getFirstPlayableKey } from '../../utils/youtubeCache'
 
-export const getServerSideProps = async context => {
-  return {
-    props: {
-      query: context.query
+export const getServerSideProps = async (context) => {
+  const { movieId } = context.query
+
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`
+    )
+    
+    if (!res.ok) throw new Error('Failed to fetch movie details')
+    
+    const movieData = await res.json()
+    const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
+
+    return {
+      props: {
+        movie: movieData,
+        videoKey: validVideoKey,
+      },
+    }
+  } catch (error) {
+    console.error(error)
+    return {
+      notFound: true,
     }
   }
 }
 
-export default function Movie({ query }) {
-  const [movie, setMovie] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [videoKey, setVideoKey] = useState(null)
-
-  const fetchMovie = async () => {
-    try {
-      const res = await fetch(`/api/movieDetails?movieId=${query.movieId}`)
-      const movieData = await res.json()
-      
-      const findVideoKey = videos => {
-        const officialTrailer = videos?.find(
-          video => video.type === 'Trailer' && video.official
-        )
-        return officialTrailer
-          ? officialTrailer.key
-          : videos?.find(video => video.type === 'Teaser')?.key || null
-      }
-
-      setMovie(movieData)
-      setVideoKey(findVideoKey(movieData.videos))
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMovie()
-  }, [])
-
-  if (loading || !movie) {
-    return (
-      <Flex minH='100vh' justify='center' align='center' bg='black'>
-        <CustomSpinner />
-      </Flex>
-    )
-  }
-
+export default function Movie({ movie, videoKey }) {
   const backdropUrl = movie.backdrop_path 
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
     : `https://image.tmdb.org/t/p/w780${movie.poster_path}`
