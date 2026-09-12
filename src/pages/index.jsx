@@ -1,5 +1,6 @@
 import Head from 'next/head'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/router'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from 'react-query'
 import ScrollToTop from 'react-scroll-up'
 import Sticky from 'react-stickynode'
@@ -11,19 +12,26 @@ import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 
 export default function Home() {
+  const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const isRestoredRef = useRef(false)
 
   const queryClient = useQueryClient()
 
-  // Expand search input and hide dropdown ONLY when the user has typed text
   const isSearchActive = searchInput.trim().length > 0
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
     if (savedCategory) {
       setCategory(savedCategory)
+    }
+
+    const savedSearch = sessionStorage.getItem('homeSearchInput')
+    if (savedSearch) {
+      setSearchInput(savedSearch)
+      setDebouncedSearch(savedSearch.trim())
     }
   }, [])
 
@@ -47,6 +55,8 @@ export default function Home() {
       return res.json()
     },
     {
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 30,
       getNextPageParam: (lastPage, pages) => {
         const totalPages = lastPage?.total_pages || 1
         return pages.length < totalPages ? pages.length + 1 : undefined
@@ -57,6 +67,9 @@ export default function Home() {
   const changeCategory = useCallback((selectedCategory) => {
     setCategory(selectedCategory)
     localStorage.setItem('category', selectedCategory)
+    isRestoredRef.current = true
+    sessionStorage.removeItem('homeScrollPos')
+    sessionStorage.removeItem('homeSearchInput')
     queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
   }, [queryClient])
 
@@ -78,6 +91,38 @@ export default function Home() {
 
     return uniqueMovies
   }, [data])
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      sessionStorage.setItem('homeScrollPos', window.scrollY.toString())
+      sessionStorage.setItem('homeSearchInput', searchInput)
+    }
+
+    router.events.on('routeChangeStart', handleRouteChange)
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange)
+    }
+  }, [router, searchInput])
+
+  useEffect(() => {
+    if (isRestoredRef.current) return
+
+    const savedPos = sessionStorage.getItem('homeScrollPos')
+    if (savedPos && moviesList.length > 0) {
+      const targetPos = parseInt(savedPos, 10)
+
+      const timer = setTimeout(() => {
+        window.scrollTo({
+          top: targetPos,
+          behavior: 'instant'
+        })
+        isRestoredRef.current = true
+        sessionStorage.removeItem('homeScrollPos')
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [moviesList.length])
 
   return (
     <>
@@ -116,7 +161,12 @@ export default function Home() {
                 >
                   <Input
                     value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
+                    onChange={e => {
+                      setSearchInput(e.target.value)
+                      if (e.target.value === '') {
+                        sessionStorage.removeItem('homeSearchInput')
+                      }
+                    }}
                     placeholder='Search movies...'
                     background='white'
                     flex='1'
