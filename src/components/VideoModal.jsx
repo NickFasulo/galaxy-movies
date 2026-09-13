@@ -17,7 +17,6 @@ const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 export default function VideoModal({ videoKey }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
 
-  // Completely omit button rendering if no valid video key is provided
   if (!videoKey || videoKey === 'null') return null
 
   return (
@@ -25,7 +24,6 @@ export default function VideoModal({ videoKey }) {
       <Button size="sm" width="7rem" onClick={onOpen}>
         <Icon as={BsCaretRightFill} boxSize={6} />
       </Button>
-
       <Modal
         isOpen={isOpen}
         onClose={onClose}
@@ -49,7 +47,6 @@ export default function VideoModal({ videoKey }) {
           left={0}
           overflow="hidden"
         >
-          {/* Subtle top-right floating close button */}
           <ModalCloseButton
             color="white"
             size="lg"
@@ -60,8 +57,6 @@ export default function VideoModal({ videoKey }) {
             borderRadius="full"
             _hover={{ bg: 'whiteAlpha.400' }}
           />
-
-          {/* Full Screen Centered Container */}
           <Flex
             width="100%"
             height="100%"
@@ -69,9 +64,8 @@ export default function VideoModal({ videoKey }) {
             align="center"
             overflow="hidden"
             p={{ base: 2, md: 6 }}
-            onClick={onClose} // Tapping backdrop padding closes modal
+            onClick={onClose}
           >
-            {/* Video Wrapper strictly bounded by viewport dimensions */}
             <Flex
               width="100%"
               maxWidth={{ base: '100%', md: '90vw' }}
@@ -79,7 +73,7 @@ export default function VideoModal({ videoKey }) {
               align="center"
               justify="center"
               overflow="hidden"
-              onClick={e => e.stopPropagation()} // Clicks on player won't trigger backdrop close
+              onClick={e => e.stopPropagation()}
             >
               <AspectRatio ratio={16 / 9} width="100%" maxHeight="100%">
                 <ReactPlayer
