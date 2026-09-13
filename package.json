@@ -12,11 +12,9 @@
     "@chakra-ui/react": "^2.4.9",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
-    "@tensorflow/tfjs": "^4.22.0",
     "framer-motion": "^9.1.7",
     "lru-cache": "^11.5.2",
     "next": "^15.0.3",
-    "nsfwjs": "^4.3.0",
     "openai": "^4.77.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -25,8 +23,7 @@
     "react-player": "^2.16.0",
     "react-query": "^3.39.3",
     "react-scroll-up": "^1.4.0",
-    "react-stickynode": "^5.0.1",
-    "sharp": "^0.35.4"
+    "react-stickynode": "^5.0.1"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^15.0.3"
