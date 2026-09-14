@@ -26,7 +26,11 @@
     "react-stickynode": "^5.0.1"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^15.0.3"
+    "@next/bundle-analyzer": "^15.0.3",
+    "@types/node": "^26.5.1",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^6.0.3"
   },
   "overrides": {
     "tar": "^7.4.3",

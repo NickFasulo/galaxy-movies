@@ -1,26 +1,34 @@
 import Head from 'next/head'
-import { useRouter } from 'next/router'
+import dynamic from 'next/dynamic'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from 'react-query'
-import ScrollToTop from 'react-scroll-up'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Box, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
+
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
+import type { Movie, MovieCategory, MoviePageResponse } from '../types/movie'
 
-export default function Home() {
-  const router = useRouter()
-  const [category, setCategory] = useState('popular')
-  const [searchInput, setSearchInput] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const isRestoredRef = useRef(false)
+const ScrollToTop = dynamic(
+  () => import('react-scroll-up'),
+  {
+    ssr: false,
+    loading: () => null
+  }
+)
+
+export default function Home(): JSX.Element {
+  const [category, setCategory] = useState<MovieCategory>('popular')
+  const [searchInput, setSearchInput] = useState<string>('')
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('')
+  const isRestoredRef = useRef<boolean>(false)
 
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const savedCategory = localStorage.getItem('category')
+    const savedCategory = localStorage.getItem('category') as MovieCategory | null
     if (savedCategory) {
       setCategory(savedCategory)
     }
@@ -33,11 +41,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const handler = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim())
     }, 400)
 
-    return () => clearTimeout(handler)
+    return () => window.clearTimeout(handler)
   }, [searchInput])
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
@@ -48,35 +56,35 @@ export default function Home() {
       const url = activeSearch
         ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}`
         : `/api/allMovies?category=${category}&page=${pageParam}`
+
       const res = await fetch(url)
-      return res.json()
+      return (await res.json()) as MoviePageResponse
     },
     {
       staleTime: 1000 * 60 * 5,
-      cacheTime: 1000 * 60 * 30,
       getNextPageParam: (lastPage, pages) => {
-        const totalPages = lastPage?.total_pages || 1
+        const totalPages = lastPage?.total_pages ?? 1
         return pages.length < totalPages ? pages.length + 1 : undefined
       }
     }
   )
 
   const changeCategory = useCallback(
-    selectedCategory => {
+    (selectedCategory: MovieCategory): void => {
       setCategory(selectedCategory)
       localStorage.setItem('category', selectedCategory)
       isRestoredRef.current = true
       sessionStorage.removeItem('homeScrollPos')
-      queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
+      void queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
     },
     [queryClient]
   )
 
-  const moviesList = useMemo(() => {
+  const moviesList = useMemo<Movie[]>(() => {
     if (!data?.pages) return []
 
-    const seenIds = new Set()
-    const uniqueMovies = []
+    const seenIds = new Set<number>()
+    const uniqueMovies: Movie[] = []
 
     for (const page of data.pages) {
       if (!page.results) continue
@@ -92,25 +100,28 @@ export default function Home() {
   }, [data])
 
   useEffect(() => {
-    const handleRouteChange = () => {
+    const saveHomeState = (): void => {
       sessionStorage.setItem('homeScrollPos', window.scrollY.toString())
       sessionStorage.setItem('homeSearchInput', searchInput)
     }
 
-    router.events.on('routeChangeStart', handleRouteChange)
+    window.addEventListener('beforeunload', saveHomeState)
+    window.addEventListener('pagehide', saveHomeState)
+
     return () => {
-      router.events.off('routeChangeStart', handleRouteChange)
+      window.removeEventListener('beforeunload', saveHomeState)
+      window.removeEventListener('pagehide', saveHomeState)
     }
-  }, [router, searchInput])
+  }, [searchInput])
 
   useEffect(() => {
     if (isRestoredRef.current) return
 
     const savedPos = sessionStorage.getItem('homeScrollPos')
     if (savedPos && moviesList.length > 0) {
-      const targetPos = parseInt(savedPos, 10)
+      const targetPos = Number.parseInt(savedPos, 10)
 
-      const timer = setTimeout(() => {
+      const timer = window.setTimeout(() => {
         window.scrollTo({
           top: targetPos,
           behavior: 'instant'
@@ -119,7 +130,7 @@ export default function Home() {
         sessionStorage.removeItem('homeScrollPos')
       }, 100)
 
-      return () => clearTimeout(timer)
+      return () => window.clearTimeout(timer)
     }
   }, [moviesList.length])
 
@@ -134,12 +145,7 @@ export default function Home() {
         {status === 'loading' ? (
           <CustomSpinner />
         ) : status === 'error' ? (
-          <Text
-            textAlign='center'
-            marginTop='20rem'
-            fontWeight='bold'
-            fontSize='xl'
-          >
+          <Text textAlign='center' marginTop='20rem' fontWeight='bold' fontSize='xl'>
             Error loading movies
           </Text>
         ) : (
@@ -168,10 +174,11 @@ export default function Home() {
               </Text>
             ) : (
               <InfiniteScroll
-                next={fetchNextPage}
+                next={() => void fetchNextPage()}
                 hasMore={Boolean(hasNextPage)}
                 dataLength={moviesList.length}
                 scrollThreshold={0.8}
+                loader={<CustomSpinner />}
               >
                 <Box minH='100vh'>
                   <SimpleGrid

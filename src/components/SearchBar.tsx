@@ -1,27 +1,35 @@
-import { useCallback } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { Flex, Input, Box } from '@chakra-ui/react'
 import Sticky from 'react-stickynode'
+
+import type { MovieCategory } from '../types/movie'
 import DropDown from './DropDown'
+
+type SearchBarProps = {
+  category: MovieCategory
+  changeCategory: (category: MovieCategory) => void
+  searchInput: string
+  setSearchInput: Dispatch<SetStateAction<string>>
+  queryClient?: unknown
+}
 
 export default function SearchBar({
   category,
   changeCategory,
   searchInput,
   setSearchInput
-}) {
+}: SearchBarProps): JSX.Element {
   const isSearchActive = searchInput.trim().length > 0
 
-  const handleCategoryChange = useCallback(
-    selectedCategory => {
-      changeCategory(selectedCategory)
-      sessionStorage.removeItem('homeSearchInput')
-    },
-    [changeCategory]
-  )
+  const handleCategoryChange = (selectedCategory: MovieCategory): void => {
+    changeCategory(selectedCategory)
+    sessionStorage.removeItem('homeSearchInput')
+  }
 
-  const handleInputChange = e => {
-    const value = e.target.value
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = event.target.value
     setSearchInput(value)
+
     if (value === '') {
       sessionStorage.removeItem('homeSearchInput')
     }
@@ -54,10 +62,7 @@ export default function SearchBar({
               overflow='hidden'
               whiteSpace='nowrap'
             >
-              <DropDown
-                category={category}
-                changeCategory={handleCategoryChange}
-              />
+              <DropDown category={category} changeCategory={handleCategoryChange} />
             </Box>
           </Flex>
         </Flex>

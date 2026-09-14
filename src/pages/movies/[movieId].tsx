@@ -1,53 +1,98 @@
+import type { GetServerSideProps, InferGetServerSidePropsType } from 'next'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import {
-  Flex,
-  Wrap,
-  WrapItem,
-  Badge,
-  Heading,
-  Text,
-  Box
-} from '@chakra-ui/react'
+import { Button, Flex, Wrap, WrapItem, Badge, Heading, Text, Box, Icon } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
-import ReviewModal from '../../components/ReviewModal'
-import VideoModal from '../../components/VideoModal'
-import BackButton from '../../components/BackButton'
+import { BsCaretRightFill } from 'react-icons/bs'
+
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
-import { getFirstPlayableKey } from '../../utils/youtubeCache'
+import type { Movie } from '../../types/movie'
 
-export const getServerSideProps = async (context) => {
-  const { movieId } = context.query
+const ReviewModal = dynamic(() => import('../../components/ReviewModal'), {
+  ssr: false,
+  loading: () => <Button size='sm' width='7rem' isDisabled>See Review</Button>
+})
+
+const VideoModal = dynamic(() => import('../../components/VideoModal'), {
+  ssr: false,
+  loading: () => (
+    <Button size='sm' width='7rem' isDisabled>
+      <Icon as={BsCaretRightFill} boxSize={6} />
+    </Button>
+  )
+})
+
+const BackButton = dynamic(() => import('../../components/BackButton'), {
+  ssr: false,
+  loading: () => <Button size='sm' width='7rem' isDisabled>Go Back</Button>
+})
+
+type MoviePageProps = {
+  movie: Movie
+  videoKey: string | null
+}
+
+const getPreferredVideoKey = (movie: Movie): string | null => {
+  const videos = movie.videos?.results ?? []
+
+  return (
+    videos.find(video => video.type === 'Trailer' && video.official && video.key)?.key ??
+    videos.find(video => video.type === 'Trailer' && video.key)?.key ??
+    videos.find(video => video.type === 'Teaser' && video.key)?.key ??
+    videos.find(video => video.key)?.key ??
+    null
+  )
+}
+
+export const getServerSideProps: GetServerSideProps<MoviePageProps, { movieId: string }> = async context => {
+  const movieId = context.params?.movieId
+
+  if (!movieId) {
+    return { notFound: true }
+  }
+
+  const apiKey = process.env.TMDB_API_KEY
+  if (!apiKey) {
+    return { notFound: true }
+  }
 
   try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`
+    const response = await fetch(
+      `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&append_to_response=videos`
     )
-    
-    if (!res.ok) throw new Error('Failed to fetch movie details')
-    
-    const movieData = await res.json()
-    const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch movie details')
+    }
+
+    const movieData = (await response.json()) as Movie
 
     return {
       props: {
         movie: movieData,
-        videoKey: validVideoKey,
-      },
+        videoKey: getPreferredVideoKey(movieData)
+      }
     }
   } catch (error) {
     console.error(error)
-    return {
-      notFound: true,
-    }
+    return { notFound: true }
   }
 }
 
-export default function Movie({ movie, videoKey }) {
-  const backdropUrl = movie.backdrop_path 
-    ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
-    : `https://image.tmdb.org/t/p/w780${movie.poster_path}`
-  const posterUrl = `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+export default function MoviePage({
+  movie,
+  videoKey
+}: InferGetServerSidePropsType<typeof getServerSideProps>): JSX.Element {
+  const backdropUrl = movie.backdrop_path
+    ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
+    : movie.poster_path
+      ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+      : '/galaxy-movies-background.png'
+
+  const posterUrl = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+    : '/galaxy-movies-background.png'
 
   return (
     <Box position='relative' minH='100vh' overflow='hidden'>
@@ -100,7 +145,7 @@ export default function Movie({ movie, videoKey }) {
           >
             <Box position='relative' width='20rem' height='30rem'>
               <Image
-                src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : posterUrl}
                 alt={movie.title || 'Movie Poster'}
                 fill
                 sizes='(max-width: 768px) 100vw, 320px'
@@ -188,9 +233,7 @@ export default function Movie({ movie, videoKey }) {
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
                 <Text fontSize='lg' marginLeft={2} color='white'>
-                  {movie.vote_average
-                    ? Math.round(movie.vote_average * 10) / 10
-                    : 'TBD'}
+                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>

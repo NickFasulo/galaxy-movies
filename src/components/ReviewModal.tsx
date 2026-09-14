@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   Text,
   Modal,
@@ -11,13 +11,25 @@ import {
   useDisclosure
 } from '@chakra-ui/react'
 
-export default function ReviewModal({ modalData }) {
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const [movieReview, setMovieReview] = useState()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+import type { Movie } from '../types/movie'
 
-  const aiReview = async () => {
+type ReviewModalProps = {
+  modalData: Movie
+}
+
+export default function ReviewModal({ modalData }: ReviewModalProps): JSX.Element {
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [movieReview, setMovieReview] = useState<string | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<boolean>(false)
+  const [hasRequestedReview, setHasRequestedReview] = useState<boolean>(false)
+
+  const aiReview = useCallback(async (): Promise<void> => {
+    if (hasRequestedReview) return
+
+    setLoading(true)
+    setError(false)
+
     try {
       const res = await fetch('/api/generateReview', {
         method: 'POST',
@@ -26,30 +38,34 @@ export default function ReviewModal({ modalData }) {
         },
         body: JSON.stringify({ modalData })
       })
+
       if (res.status === 500) {
         setError(true)
         setMovieReview(null)
       } else {
-        const data = await res.json()
-        setMovieReview(data.review)
+        const data = (await res.json()) as { review?: string }
+        setMovieReview(data.review ?? null)
       }
-    } catch (error) {
+    } catch (fetchError) {
       setError(true)
-      console.error('Error fetching review:', error)
+      console.error('Error fetching review:', fetchError)
+    } finally {
+      setLoading(false)
+      setHasRequestedReview(true)
     }
-    setLoading(false)
-  }
+  }, [hasRequestedReview, modalData])
 
-  useEffect(() => {
-    aiReview()
-  }, [])
+  const handleOpen = async (): Promise<void> => {
+    onOpen()
+    await aiReview()
+  }
 
   return (
     <>
       <Button
         size='sm'
         width='7rem'
-        onClick={onOpen}
+        onClick={() => void handleOpen()}
         isLoading={loading}
         isDisabled={error}
       >
@@ -61,10 +77,10 @@ export default function ReviewModal({ modalData }) {
         <ModalContent>
           <ModalHeader>
             <Text textAlign='center' fontFamily='Halftone'>
-              🤖&nbsp; Movie Bot's Review &nbsp;🍿
+              🤖&nbsp; Movie Bot&apos;s Review &nbsp;🍿
             </Text>
           </ModalHeader>
-          <ModalBody>{movieReview}</ModalBody>
+          <ModalBody>{movieReview ?? 'Review unavailable.'}</ModalBody>
           <ModalFooter>
             <Button margin='0 auto' onClick={onClose}>
               Close

@@ -1,8 +1,15 @@
 import { Menu, MenuButton, MenuList, MenuItem, Button } from '@chakra-ui/react'
 import { ChevronDownIcon } from '@chakra-ui/icons'
+
+import type { MovieCategory } from '../types/movie'
 import removeUnderscores from '../utils/removeUnderscores'
 
-export default function DropDown({ category, changeCategory }) {
+type DropDownProps = {
+  category: MovieCategory | string
+  changeCategory: (category: MovieCategory) => void
+}
+
+export default function DropDown({ category, changeCategory }: DropDownProps): JSX.Element {
   return (
     <Menu>
       <MenuButton as={Button} rightIcon={<ChevronDownIcon />} minWidth='8.9rem'>

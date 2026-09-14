@@ -1,13 +1,19 @@
+import { useState, memo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, memo } from 'react'
-import { ChakraBox } from './ChakraBox'
 import { WrapItem, Box, Skeleton } from '@chakra-ui/react'
 
-function MovieCard({ movie }) {
-  const [bgImage, setBgImage] = useState('')
-  const [bgOpacity, setBgOpacity] = useState(0)
-  const [isLoaded, setIsLoaded] = useState(false)
+import { ChakraBox } from './ChakraBox'
+import type { Movie } from '../types/movie'
+
+type MovieCardProps = {
+  movie: Movie
+}
+
+function MovieCard({ movie }: MovieCardProps): JSX.Element {
+  const [bgImage, setBgImage] = useState<string>('')
+  const [bgOpacity, setBgOpacity] = useState<number>(0)
+  const [isLoaded, setIsLoaded] = useState<boolean>(false)
 
   const backdropUrl = movie.backdrop_path
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
@@ -17,7 +23,7 @@ function MovieCard({ movie }) {
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : null
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = (): void => {
     const img = new window.Image()
     img.src = backdropUrl
 
@@ -25,7 +31,7 @@ function MovieCard({ movie }) {
     setBgOpacity(0.3)
   }
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (): void => {
     setBgOpacity(0)
     setTimeout(() => {
       setBgImage('')
@@ -73,7 +79,7 @@ function MovieCard({ movie }) {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <Link href={`/movies/${movie.id}`} passHref legacyBehavior>
+          <Link href={`/movies/${movie.id}`} passHref>
             <Box
               as='a'
               display='block'
@@ -113,9 +119,7 @@ function MovieCard({ movie }) {
                     height='100%'
                     p={2}
                   >
-                    <span style={{ color: '#A0AEC0', textAlign: 'center' }}>
-                      {movie.title}
-                    </span>
+                    <span style={{ color: '#A0AEC0', textAlign: 'center' }}>{movie.title}</span>
                   </Box>
                 )}
               </Skeleton>
