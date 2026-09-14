@@ -68,12 +68,12 @@ function MovieCard({ movie }) {
           mx='auto'
           width={{ base: '11rem', md: '13rem' }}
           boxShadow='dark-lg'
-          borderRadius='1.1rem'
+          borderRadius='1rem'
           overflow='hidden'
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <Link href={`/movies/${movie.id}`} passHref legacyBehavior>
+          <Link href={`/movies/${movie.id}`} passHref>
             <Box
               as='a'
               display='block'

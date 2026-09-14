@@ -192,7 +192,7 @@ export default function Home() {
           showUnder={160}
           style={{
             background: 'white',
-            borderRadius: 5,
+            borderRadius: '1rem',
             boxShadow: '0 0 6px black'
           }}
         >
