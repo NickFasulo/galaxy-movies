@@ -2,11 +2,13 @@
   font-family: 'SpaceRanger';
   src: url('../asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf')
     format('opentype');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Halftone';
   src: url('../asset/space-ranger-font/SpaceRanger-EMJl.otf') format('opentype');
+  font-display: swap;
 }
 
 * {
@@ -22,6 +24,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: Roboto, Fira Sans, Helvetica Neue, Arial, sans-serif;
+  background: #ffffff;
 }
 
 .title {

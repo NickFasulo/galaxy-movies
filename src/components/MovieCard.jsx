@@ -4,7 +4,7 @@ import { useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
 import { WrapItem, Box, Skeleton } from '@chakra-ui/react'
 
-function MovieCard({ movie }) {
+function MovieCard({ movie, priority = false }) {
   const [bgImage, setBgImage] = useState('')
   const [bgOpacity, setBgOpacity] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -74,6 +74,7 @@ function MovieCard({ movie }) {
           overflow='hidden'
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 416px' }}
         >
           <Link href={`/movies/${movie.id}`} passHref>
             <Box
@@ -99,6 +100,7 @@ function MovieCard({ movie }) {
                     src={posterUrl}
                     alt={movie.title || 'Movie Poster'}
                     fill
+                    priority={priority}
                     sizes='(max-width: 768px) 176px, 208px'
                     onLoad={() => setIsLoaded(true)}
                     style={{

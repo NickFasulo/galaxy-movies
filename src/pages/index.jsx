@@ -156,9 +156,9 @@ export default function Home() {
         ) : (
           <>
             <Box margin={{ base: '2rem 0', md: '3rem 0' }}>
-              <header className='title'>
+              <h1 className='title'>
                 <span>Galaxy Movies</span>
-              </header>
+              </h1>
             </Box>
             <SearchBar
               category={category}
@@ -199,8 +199,12 @@ export default function Home() {
                     spacing={{ base: 8, md: 12 }}
                     columns={{ base: 2, md: 5 }}
                   >
-                    {moviesList.map(movie => (
-                      <MovieCard key={movie.id} movie={movie} />
+                    {moviesList.map((movie, index) => (
+                      <MovieCard
+                        key={movie.id}
+                        movie={movie}
+                        priority={index < 5}
+                      />
                     ))}
                   </SimpleGrid>
                 </Box>

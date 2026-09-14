@@ -113,6 +113,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
                 src={posterSrc}
                 alt={movie.title || 'Movie Poster'}
                 fill
+                priority
                 sizes='(max-width: 768px) 100vw, 320px'
                 onError={() => setPosterSrc('/galaxy-movies-background.png')}
                 style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
