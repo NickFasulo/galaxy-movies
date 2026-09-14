@@ -50,7 +50,7 @@ export default function ReviewModal({ modalData }) {
     <>
       <Button
         size='sm'
-        width={{ base: '5rem', md: '7rem' }}
+        width={{ base: '5.5rem', md: '7rem' }}
         onClick={() => {
           onOpen()
           if (!movieReview || error) {
