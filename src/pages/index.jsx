@@ -57,6 +57,8 @@ export default function Home() {
       staleTime: 1000 * 60 * 5,
       cacheTime: 1000 * 60 * 30,
       getNextPageParam: (lastPage, pages) => {
+        if (!lastPage?.results?.length) return undefined
+
         const totalPages = lastPage?.total_pages || 1
         return pages.length < totalPages ? pages.length + 1 : undefined
       }
@@ -91,6 +93,11 @@ export default function Home() {
 
     return uniqueMovies
   }, [data])
+
+  const hasReachedEnd = Boolean(
+    data?.pages?.length &&
+    (!hasNextPage || data.pages.some(page => page?.results?.length === 0))
+  )
 
   useEffect(() => {
     const handleRouteChange = () => {
@@ -177,38 +184,40 @@ export default function Home() {
                 No movies found
               </Text>
             ) : (
-              <InfiniteScroll
-                next={fetchNextPage}
-                hasMore={Boolean(hasNextPage)}
-                dataLength={moviesList.length}
-                scrollThreshold={0.8}
-                loader={
-                  <Text textAlign='center' color='gray.500' padding='1rem'>
-                    Loading more movies...
-                  </Text>
-                }
-                endMessage={
+              <>
+                <InfiniteScroll
+                  next={fetchNextPage}
+                  hasMore={Boolean(hasNextPage)}
+                  dataLength={moviesList.length}
+                  scrollThreshold={0.8}
+                  loader={
+                    <Text textAlign='center' color='gray.500' padding='1rem'>
+                      Loading more movies...
+                    </Text>
+                  }
+                >
+                  <Box minH='100vh'>
+                    <SimpleGrid
+                      margin={{ base: '3rem 1rem', md: '5rem' }}
+                      spacing={{ base: 8, md: 12 }}
+                      columns={{ base: 2, md: 5 }}
+                    >
+                      {moviesList.map((movie, index) => (
+                        <MovieCard
+                          key={movie.id}
+                          movie={movie}
+                          priority={index < 5}
+                        />
+                      ))}
+                    </SimpleGrid>
+                  </Box>
+                </InfiniteScroll>
+                {hasReachedEnd && (
                   <Text textAlign='center' color='gray.500' padding='1rem'>
                     You&apos;ve reached the end.
                   </Text>
-                }
-              >
-                <Box minH='100vh'>
-                  <SimpleGrid
-                    margin={{ base: '3rem 1rem', md: '5rem' }}
-                    spacing={{ base: 8, md: 12 }}
-                    columns={{ base: 2, md: 5 }}
-                  >
-                    {moviesList.map((movie, index) => (
-                      <MovieCard
-                        key={movie.id}
-                        movie={movie}
-                        priority={index < 5}
-                      />
-                    ))}
-                  </SimpleGrid>
-                </Box>
-              </InfiniteScroll>
+                )}
+              </>
             )}
           </>
         )}
