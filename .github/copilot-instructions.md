@@ -1,6 +1,11 @@
-# Code Optimization & Performance Rules
-- **Tree-shaking & Bloat:** Identify and remove dead code, unused dependencies, and redundant utilities.
-- **Lighthouse Performance:** Enforce dynamic imports (React.lazy/Next.js dynamic) for heavy components below the fold.
-- **Core Web Vitals:** Ensure images use explicit dimensions and priority loading for LCP elements.
-- **Bundle Size:** Replace heavy third-party libraries (e.g., moment.js, lodash) with native JS equivalents where possible.
-- **State & Renders:** Prevent unnecessary re-renders using React.memo, useMemo, or structural state isolation.
+# Repository Maintenance Standards
+
+## Stack & Architecture
+- Framework: Next.js (App Router), TypeScript (Strict), Tailwind CSS.
+- Testing: Playwright for E2E, Vitest for unit tests.
+
+## Maintenance Rules
+- **No Heavy Dependencies:** Do not add third-party libraries for tasks that native JS APIs (e.g., `fetch`, `Intl`, `Crypto`) can perform.
+- **Dynamic Imports:** Any component over 50KB or loaded below the fold must use dynamic dynamic/lazy imports.
+- **Verification Rule:** After editing files, run `npm run check` (Typecheck + Build). Fix any reported compiler errors before concluding.
+- **Dead Code Policy:** When refactoring components, remove all unused exports, types, and styles immediately.
