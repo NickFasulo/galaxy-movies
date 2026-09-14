@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check": "npm run build",
+    "lhci": "npm run build && lhci autorun --config=./lighthouserc.cjs",
     "start": "next start"
   },
   "dependencies": {
@@ -25,6 +27,7 @@
     "react-stickynode": "^5.0.1"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^15.0.3"
   },
   "overrides": {
