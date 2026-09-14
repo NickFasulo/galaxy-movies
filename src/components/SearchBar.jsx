@@ -1,6 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Flex, Input, Box } from '@chakra-ui/react'
-import Sticky from 'react-stickynode'
 import DropDown from './DropDown'
 
 export default function SearchBar({
@@ -10,6 +9,17 @@ export default function SearchBar({
   setSearchInput
 }) {
   const isSearchActive = searchInput.trim().length > 0
+  const [isSticky, setIsSticky] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsSticky(window.scrollY > 0)
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleCategoryChange = useCallback(
     selectedCategory => {
@@ -28,40 +38,46 @@ export default function SearchBar({
   }
 
   return (
-    <Sticky innerActiveClass='sticky-header-active'>
-      <div>
-        <Flex justify='center' align='center' width='100%'>
-          <Flex
-            justify='center'
-            align='center'
-            width={{ base: '90%', md: '50rem' }}
-            padding='0.75rem'
+    <Box
+      position='sticky'
+      top={0}
+      zIndex={20}
+      background={isSticky ? 'white' : 'transparent'}
+      borderBottom={isSticky ? '1px solid' : 'none'}
+      borderColor='gray.200'
+      transition='background 0.2s ease-in-out, border-bottom 0.2s ease-in-out'
+    >
+      <Flex justify='center' align='center' width='100%'>
+        <Flex
+          justify='center'
+          align='center'
+          width={{ base: '90%', md: '50rem' }}
+          padding='0.75rem'
+          overflow='hidden'
+        >
+          <Input
+            value={searchInput}
+            onChange={handleInputChange}
+            placeholder='Search movies...'
+            background='white'
+            flex='1'
+          />
+          <Box
+            maxWidth={isSearchActive ? '0px' : '200px'}
+            opacity={isSearchActive ? 0 : 1}
+            pointerEvents={isSearchActive ? 'none' : 'auto'}
+            marginLeft={isSearchActive ? '0px' : '0.75rem'}
+            transition='all 0.3s ease-in-out'
             overflow='hidden'
+            whiteSpace='nowrap'
           >
-            <Input
-              value={searchInput}
-              onChange={handleInputChange}
-              placeholder='Search movies...'
-              background='white'
-              flex='1'
+            <DropDown
+              category={category}
+              changeCategory={handleCategoryChange}
             />
-            <Box
-              maxWidth={isSearchActive ? '0px' : '200px'}
-              opacity={isSearchActive ? 0 : 1}
-              pointerEvents={isSearchActive ? 'none' : 'auto'}
-              marginLeft={isSearchActive ? '0px' : '0.75rem'}
-              transition='all 0.3s ease-in-out'
-              overflow='hidden'
-              whiteSpace='nowrap'
-            >
-              <DropDown
-                category={category}
-                changeCategory={handleCategoryChange}
-              />
-            </Box>
-          </Flex>
+          </Box>
         </Flex>
-      </div>
-    </Sticky>
+      </Flex>
+    </Box>
   )
 }

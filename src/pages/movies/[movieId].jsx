@@ -11,7 +11,7 @@ import {
   Avatar
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
-import ReviewModal from '../../components/ReviewModal'
+// import ReviewModal from '../../components/ReviewModal'
 import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import WatchProviders from '../../components/WatchProviders'
@@ -90,7 +90,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
             alt={movie.title || 'Movie Backdrop'}
             fill
             priority
-            sizes='100vw'
+            sizes='(max-width: 768px) 100vw, 100vw'
             onError={() => setBackdropSrc('/galaxy-movies-background.png')}
             style={{ objectFit: 'cover', objectPosition: 'center 20%' }}
           />
@@ -101,7 +101,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
             alt={movie.title || 'Movie Poster'}
             fill
             priority
-            sizes='100vw'
+            sizes='(max-width: 768px) 100vw, 100vw'
             onError={() => setBackdropSrc('/galaxy-movies-background.png')}
             style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
           />
@@ -204,13 +204,13 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
             </Text>
 
             <Flex display={{ base: 'flex', md: 'none' }} direction='row' justify='space-between' align='center' w='100%'>
-              <ReviewModal modalData={movie} />
+              {/* <ReviewModal modalData={movie} /> */}
               <VideoModal videoKey={videoKey} />
               <BackButton />
             </Flex>
 
             <Flex display={{ base: 'none', md: 'flex' }} justify='space-evenly' align='flex-end' gap='3rem'>
-              <ReviewModal modalData={movie} />
+              {/* <ReviewModal modalData={movie} /> */}
               <VideoModal videoKey={videoKey} />
               <BackButton />
             </Flex>
@@ -264,7 +264,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
                 {movie.production_companies?.slice(0, 1).map((company) =>
                   company.logo_path ? (
                     <Box key={company.id} position='relative' w='64px' h='32px'>
-                      <Image alt={company.name} src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} fill style={{ objectFit: 'contain', padding: '0.25rem', borderRadius: '0.2rem', background: 'white' }} />
+                      <Image alt={company.name} src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} fill sizes='64px' style={{ objectFit: 'contain', padding: '0.25rem', borderRadius: '0.2rem', background: 'white' }} />
                     </Box>
                   ) : null
                 )}

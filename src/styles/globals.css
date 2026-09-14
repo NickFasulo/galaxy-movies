@@ -44,17 +44,6 @@ body {
   transform: skewX(15deg); 
 }
 
-.sticky-inner-wrapper {
-  z-index: 9999;
-  background: transparent;
-}
-
-.sticky-header-active {
-  border-bottom: 1px solid #e2e8f0;
-  transition: border-bottom 0.2s ease-in-out;
-  background: white;
-}
-
 ::-webkit-scrollbar {
   width: 0.5rem;
   height: 0.5rem;

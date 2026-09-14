@@ -80,7 +80,6 @@ function MovieCard({ movie, priority = false }) {
         >
           <Link href={`/movies/${movie.id}`} passHref>
             <Box
-              as='a'
               display='block'
               position='relative'
               width='100%'
