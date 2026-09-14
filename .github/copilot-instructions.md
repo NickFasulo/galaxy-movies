@@ -14,3 +14,8 @@
 - **Auto-Verification & Commit:** Once a maintenance or feature task is complete and all build/test checks pass, analyze the file diff (`git diff`).
 - **Commit Format:** Generate a concise commit message following the [Conventional Commits](https://www.conventionalcommits.org) format (e.g., `refactor:`, `perf:`, `fix:`).
 - **Execution:** Stage all updated files (`git add .`), commit the changes, and push the branch to `origin` automatically using the terminal tool.
+
+## Vercel Deployment Protocol
+- **Trigger Deployment:** Upon pushing changes via `git push`, a Vercel Preview Deployment will automatically generate.
+- **Inspect Live Build:** Use the Vercel CLI (`vercel inspect` or `vercel logs`) via terminal to monitor deployment status.
+- **Deployment Error Remediation:** If the Vercel build fails in the cloud (e.g., middleware errors, missing environment variables, server-side rendering faults), pull the Vercel build logs, resolve the breaking issue locally, and push an update.

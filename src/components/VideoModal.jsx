@@ -21,7 +21,12 @@ export default function VideoModal({ videoKey }) {
 
   return (
     <>
-      <Button size="sm" width="7rem" onClick={onOpen}>
+      <Button
+        size="sm"
+        width="7rem"
+        onClick={onOpen}
+        aria-label="Watch trailer"
+      >
         <Icon as={BsCaretRightFill} boxSize={6} />
       </Button>
       <Modal

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Text,
   Modal,
@@ -13,11 +13,16 @@ import {
 
 export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const [movieReview, setMovieReview] = useState()
-  const [loading, setLoading] = useState(true)
+  const [movieReview, setMovieReview] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
   const aiReview = async () => {
+    if (loading) return
+
+    setLoading(true)
+    setError(false)
+
     try {
       const res = await fetch('/api/generateReview', {
         method: 'POST',
@@ -26,34 +31,34 @@ export default function ReviewModal({ modalData }) {
         },
         body: JSON.stringify({ modalData })
       })
-      if (res.status === 500) {
-        setError(true)
-        setMovieReview(null)
-      } else {
-        const data = await res.json()
-        setMovieReview(data.review)
+      if (!res.ok) {
+        throw new Error('Failed to generate review')
       }
+
+      const data = await res.json()
+      setMovieReview(data.review)
     } catch (error) {
       setError(true)
+      setMovieReview(null)
       console.error('Error fetching review:', error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
-
-  useEffect(() => {
-    aiReview()
-  }, [])
 
   return (
     <>
       <Button
         size='sm'
         width='7rem'
-        onClick={onOpen}
-        isLoading={loading}
-        isDisabled={error}
+        onClick={() => {
+          onOpen()
+          if (!movieReview || error) {
+            aiReview()
+          }
+        }}
       >
-        {error ? 'Unavailable' : 'See Review'}
+        See Review
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size='lg' isCentered>
@@ -64,8 +69,19 @@ export default function ReviewModal({ modalData }) {
               🤖&nbsp; Movie Bot's Review &nbsp;🍿
             </Text>
           </ModalHeader>
-          <ModalBody>{movieReview}</ModalBody>
+          <ModalBody>
+            {loading
+              ? 'Generating a review...'
+              : error
+                ? 'The review could not be generated. Please try again.'
+                : movieReview}
+          </ModalBody>
           <ModalFooter>
+            {error && (
+              <Button marginRight='auto' onClick={aiReview} isLoading={loading}>
+                Try again
+              </Button>
+            )}
             <Button margin='0 auto' onClick={onClose}>
               Close
             </Button>

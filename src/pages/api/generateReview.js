@@ -4,6 +4,11 @@ const openai = new OpenAI()
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { modalData } = req.body
+    const genres = modalData?.genres?.map(genre => genre.name).filter(Boolean)
+
+    if (!modalData?.title || !modalData?.overview) {
+      return res.status(400).json({ error: 'Movie title and overview are required' })
+    }
 
     try {
       const review = await openai.chat.completions.create({
@@ -16,7 +21,7 @@ export default async function handler(req, res) {
           },
           {
             role: 'user',
-            content: `Write a review for the ${modalData.genres[0].name} ${modalData.genres[1].name} movie "${modalData.title}" in one paragraph based on this overview: ${modalData.overview}.`
+            content: `Write a review for the ${genres?.join(' ') || 'movie'} "${modalData.title}" in one paragraph based on this overview: ${modalData.overview}.`
           }
         ]
       })

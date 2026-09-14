@@ -49,6 +49,9 @@ export default function Home() {
         ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}`
         : `/api/allMovies?category=${category}&page=${pageParam}`
       const res = await fetch(url)
+      if (!res.ok) {
+        throw new Error('Failed to load movies')
+      }
       return res.json()
     },
     {
@@ -172,6 +175,16 @@ export default function Home() {
                 hasMore={Boolean(hasNextPage)}
                 dataLength={moviesList.length}
                 scrollThreshold={0.8}
+                loader={
+                  <Text textAlign='center' color='gray.500' padding='1rem'>
+                    Loading more movies...
+                  </Text>
+                }
+                endMessage={
+                  <Text textAlign='center' color='gray.500' padding='1rem'>
+                    You&apos;ve reached the end.
+                  </Text>
+                }
               >
                 <Box minH='100vh'>
                   <SimpleGrid
@@ -190,6 +203,7 @@ export default function Home() {
         )}
         <ScrollToTop
           showUnder={160}
+          title='Scroll to top'
           style={{
             background: 'white',
             borderRadius: '1rem',

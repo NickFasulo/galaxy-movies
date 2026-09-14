@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { useState } from 'react'
 import {
   Flex,
   Wrap,
@@ -62,17 +63,40 @@ export const getServerSideProps = async (context) => {
 export default function Movie({ movie, videoKey, watchProviders, director, topCast, ageRating }) {
   const backdropUrl = movie.backdrop_path 
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
-    : `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+    : movie.poster_path
+      ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+      : '/galaxy-movies-background.png'
+  const posterUrl = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : '/galaxy-movies-background.png'
+  const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
+  const [posterSrc, setPosterSrc] = useState(posterUrl)
 
   return (
     <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
       {/* Background Images & Gradients */}
       <Box position='absolute' top={0} left={0} right={0} h={{ base: '300px', md: '500px' }} zIndex={0}>
         <Box display={{ base: 'none', md: 'block' }} position='relative' h='100%' w='100%'>
-          <Image src={backdropUrl} alt={movie.title || 'Movie Backdrop'} fill priority sizes='100vw' style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+          <Image
+            src={backdropSrc}
+            alt={movie.title || 'Movie Backdrop'}
+            fill
+            priority
+            sizes='100vw'
+            onError={() => setBackdropSrc('/galaxy-movies-background.png')}
+            style={{ objectFit: 'cover', objectPosition: 'center 20%' }}
+          />
         </Box>
         <Box display={{ base: 'block', md: 'none' }} position='relative' h='100%' w='100%'>
-          <Image src={`https://image.tmdb.org/t/p/w780${movie.poster_path}`} alt={movie.title || 'Movie Poster'} fill priority sizes='100vw' style={{ objectFit: 'cover', objectPosition: 'center' }} />
+          <Image
+            src={posterSrc}
+            alt={movie.title || 'Movie Poster'}
+            fill
+            priority
+            sizes='100vw'
+            onError={() => setPosterSrc('/galaxy-movies-background.png')}
+            style={{ objectFit: 'cover', objectPosition: 'center' }}
+          />
         </Box>
         <Box position='absolute' inset={0} bgGradient='linear(to-b, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)' />
         <Box position='absolute' inset={0} bgGradient='linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)' />
@@ -85,7 +109,14 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
           {/* Left Column */}
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
             <Box position='relative' w='20rem' h='30rem'>
-              <Image src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} alt={movie.title || 'Movie Poster'} fill sizes='(max-width: 768px) 100vw, 320px' style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }} />
+              <Image
+                src={posterSrc}
+                alt={movie.title || 'Movie Poster'}
+                fill
+                sizes='(max-width: 768px) 100vw, 320px'
+                onError={() => setPosterSrc('/galaxy-movies-background.png')}
+                style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
+              />
             </Box>
 
             <Wrap justify='center'>
