@@ -1,5 +1,4 @@
 import { useState } from 'react'
-// import { ReactQueryDevtools } from 'react-query/devtools'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
@@ -16,7 +15,6 @@ function MyApp({ Component, pageProps }) {
         <ChakraProvider>
           <Component {...pageProps} />
         </ChakraProvider>
-        {/* <ReactQueryDevtools initialIsOpen={false}/> */}
       </Hydrate>
     </QueryClientProvider>
   )

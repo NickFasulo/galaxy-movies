@@ -49,18 +49,20 @@ function MovieCard({ movie }) {
           opacity={bgOpacity}
         />
       )}
-      <Box
-        position='fixed'
-        top={-1}
-        left={-1}
-        right={-1}
-        bottom={-1}
-        zIndex={-1}
-        pointerEvents='none'
-        bg='radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0, 0, 0, 1) 100%)'
-        transition='opacity 0.3s ease-in-out'
-        opacity={bgOpacity}
-      />
+      {bgImage && (
+        <Box
+          position='fixed'
+          top={-1}
+          left={-1}
+          right={-1}
+          bottom={-1}
+          zIndex={-1}
+          pointerEvents='none'
+          bg='radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 100%)'
+          transition='opacity 0.3s ease-in-out'
+          opacity={bgOpacity}
+        />
+      )}
       <WrapItem>
         <ChakraBox
           whileHover={{ scale: 1.05 }}

@@ -1,10 +1,9 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useInfiniteQuery, useQueryClient } from 'react-query'
-import ScrollToTop from 'react-scroll-up'
+import { useInfiniteQuery } from 'react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Box, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
@@ -17,7 +16,7 @@ export default function Home() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const isRestoredRef = useRef(false)
 
-  const queryClient = useQueryClient()
+  const [showScrollTop, setShowScrollTop] = useState(false)
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
@@ -70,9 +69,8 @@ export default function Home() {
       localStorage.setItem('category', selectedCategory)
       isRestoredRef.current = true
       sessionStorage.removeItem('homeScrollPos')
-      queryClient.invalidateQueries(['infiniteMovies', selectedCategory])
     },
-    [queryClient]
+    []
   )
 
   const moviesList = useMemo(() => {
@@ -126,6 +124,16 @@ export default function Home() {
     }
   }, [moviesList.length])
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const shouldShow = window.scrollY > 160
+      setShowScrollTop(current => (current === shouldShow ? current : shouldShow))
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
     <>
       <Head>
@@ -157,7 +165,6 @@ export default function Home() {
               changeCategory={changeCategory}
               searchInput={searchInput}
               setSearchInput={setSearchInput}
-              queryClient={queryClient}
             />
             {moviesList.length === 0 ? (
               <Text
@@ -201,17 +208,19 @@ export default function Home() {
             )}
           </>
         )}
-        <ScrollToTop
-          showUnder={160}
-          title='Scroll to top'
-          style={{
-            background: 'white',
-            borderRadius: '1rem',
-            boxShadow: '0 0 6px black'
-          }}
-        >
-          <ArrowUpIcon boxSize={10} />
-        </ScrollToTop>
+        {showScrollTop && (
+          <IconButton
+            aria-label='Scroll to top'
+            icon={<ArrowUpIcon boxSize={8} />}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            position='fixed'
+            right={{ base: '1rem', md: '2rem' }}
+            bottom={{ base: '1rem', md: '2rem' }}
+            zIndex={10}
+            borderRadius='full'
+            boxShadow='0 0 6px black'
+          />
+        )}
       </Box>
     </>
   )
