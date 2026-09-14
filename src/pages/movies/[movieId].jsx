@@ -75,7 +75,15 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
   return (
     <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
       {/* Background Images & Gradients */}
-      <Box position='absolute' top={0} left={0} right={0} h={{ base: '300px', md: '500px' }} zIndex={0}>
+      <Box
+        position='absolute'
+        top={{ base: 'auto', md: 0 }}
+        bottom={{ base: 0, md: 'auto' }}
+        left={0}
+        right={0}
+        h={{ base: '400px', md: '500px' }}
+        zIndex={0}
+      >
         <Box display={{ base: 'none', md: 'block' }} position='relative' h='100%' w='100%'>
           <Image
             src={backdropSrc}
@@ -89,17 +97,31 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
         </Box>
         <Box display={{ base: 'block', md: 'none' }} position='relative' h='100%' w='100%'>
           <Image
-            src={posterSrc}
+            src={backdropSrc}
             alt={movie.title || 'Movie Poster'}
             fill
             priority
             sizes='100vw'
-            onError={() => setPosterSrc('/galaxy-movies-background.png')}
-            style={{ objectFit: 'cover', objectPosition: 'center' }}
+            onError={() => setBackdropSrc('/galaxy-movies-background.png')}
+            style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
           />
         </Box>
-        <Box position='absolute' inset={0} bgGradient='linear(to-b, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)' />
-        <Box position='absolute' inset={0} bgGradient='linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)' />
+        <Box
+          position='absolute'
+          inset={0}
+          bgGradient={{
+            base: 'linear(to-t, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)',
+            md: 'linear(to-b, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)'
+          }}
+        />
+        <Box
+          position='absolute'
+          inset={0}
+          bgGradient={{
+            base: 'linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)',
+            md: 'linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)'
+          }}
+        />
       </Box>
 
       {/* Main Container */}
@@ -108,7 +130,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
           
           {/* Left Column */}
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
-            <Box position='relative' w='20rem' h='30rem'>
+            <Box position='relative' w={{ base: '20rem', md: '20rem' }} h={{ base: '30rem', md: '30rem' }}>
               <Image
                 src={posterSrc}
                 alt={movie.title || 'Movie Poster'}
@@ -120,7 +142,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
               />
             </Box>
 
-            <Wrap justify='center'>
+            <Wrap justify='center' spacing={{ base: 4, md: 2 }}>
               {movie.genres?.map((genre) => (
                 <WrapItem key={genre.id}><Badge>{genre.name}</Badge></WrapItem>
               ))}
@@ -130,17 +152,12 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
               <WatchProviders watchProviders={watchProviders} />
             </Box>
 
-            <Flex display={{ base: 'flex', md: 'none' }} direction='column' align='center' w='100%' gap='1rem'>
-              <ReviewModal modalData={movie} />
-              <VideoModal videoKey={videoKey} />
-              <BackButton />
-            </Flex>
           </Flex>
 
           {/* Right Column */}
-          <Flex direction='column' w={{ base: '100%', md: '40rem' }} gap='1rem'>
+          <Flex direction='column' w={{ base: '20rem', md: '40rem' }} maxW='100%' gap='1rem'>
             <Box>
-              <Flex align='center' gap={3} wrap='wrap'>
+              <Flex align='center' justify={{ base: 'center', md: 'flex-start' }} gap={4} wrap='wrap'>
                 <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
                   <Text as='span' display='inline-block'>{movie.title}</Text>
                 </Heading>
@@ -149,13 +166,23 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
                 </Badge>
               </Flex>
               {director && (
-                <Text fontSize='sm' color='gray.400' textShadow='0 0 4px black' mt={1}>
+                <Text
+                  fontSize='sm'
+                  color='gray.400'
+                  textShadow='0 0 4px black'
+                  mt={{ base: 4, md: 1 }}
+                  textAlign={{ base: 'center', md: 'left' }}
+                >
                   Directed by <Text as='span' color='white' fontWeight='semibold'>{director}</Text>
                 </Text>
               )}
             </Box>
 
-            <Flex w={{ base: '100%', md: '14rem' }} justify={{ base: 'space-evenly', md: 'space-between' }}>
+            <Flex
+              w={{ base: '100%', md: '14rem' }}
+              justify={{ base: 'center', md: 'space-between' }}
+              gap={{ base: 4, md: 0 }}
+            >
               <Flex align='center'>
                 <CalendarIcon color='white' />
                 <Text color='white' textShadow='0 0 4px black' ml={1.5}>{dateFormatter(movie.release_date) || 'N/A'}</Text>
@@ -172,9 +199,15 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
               </Text>
             )}
 
-            <Text color='white' fontSize='md' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
+            <Text color='white' fontSize='md' textShadow='0 0 4px black' textAlign='left'>
               {movie.overview || 'Description unavailable.'}
             </Text>
+
+            <Flex display={{ base: 'flex', md: 'none' }} direction='row' justify='space-between' align='center' w='100%'>
+              <ReviewModal modalData={movie} />
+              <VideoModal videoKey={videoKey} />
+              <BackButton />
+            </Flex>
 
             <Flex display={{ base: 'none', md: 'flex' }} justify='space-evenly' align='flex-end' gap='3rem'>
               <ReviewModal modalData={movie} />
@@ -183,11 +216,25 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
             </Flex>
 
             {topCast.length > 0 && (
-              <Box>
-                <Text color='gray.400' fontSize='xs' fontWeight='bold' textTransform='uppercase' mb={2} textShadow='0 0 4px black'>
+              <Box mb={4}>
+                <Text
+                  color='gray.400'
+                  fontSize='xs'
+                  fontWeight='bold'
+                  textTransform='uppercase'
+                  textShadow='0 0 4px black'
+                  textAlign='center'
+                  position='relative'
+                  display='flex'
+                  alignItems='center'
+                  gap={3}
+                  mb={2}
+                  _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                  _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                >
                   Cast
                 </Text>
-                <Wrap spacing={2}>
+                <Wrap spacing={{ base: 4, md: 2 }} justify={{ base: 'center', md: 'flex-start' }}>
                   {topCast.map((actor) => (
                     <WrapItem key={actor.id}>
                       <Flex align='center' bg='rgba(255, 255, 255, 0.1)' px={2.5} py={1} borderRadius='md' gap={2}>
@@ -200,17 +247,23 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
               </Box>
             )}
 
-            <Flex align='center' justify='space-between'>
+            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
-                <Text fontSize='lg' ml={2} color='white' textShadow='2px 0 4px black'>
+                <Text
+                  fontSize='lg'
+                  ml={2}
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  textAlign='center'
+                >
                   {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
                 {movie.production_companies?.slice(0, 1).map((company) =>
                   company.logo_path ? (
-                    <Box key={company.id} position='relative' w='64px' h='64px'>
+                    <Box key={company.id} position='relative' w='64px' h='32px'>
                       <Image alt={company.name} src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} fill style={{ objectFit: 'contain', padding: '0.25rem', borderRadius: '0.2rem', background: 'white' }} />
                     </Box>
                   ) : null

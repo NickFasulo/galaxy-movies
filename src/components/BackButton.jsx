@@ -20,7 +20,7 @@ export default function BackButton() {
   return (
     <Button
       size='sm'
-      width='7rem'
+      width={{ base: '5rem', md: '7rem' }}
       onClick={handleBack}
     >
       Go Back

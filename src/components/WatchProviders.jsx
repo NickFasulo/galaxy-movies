@@ -12,7 +12,7 @@ export default function WatchProviders({ watchProviders }) {
   if (!flatrate.length && !rent.length && !buy.length) return null
 
   return (
-    <Box p={3} bg='blackAlpha.600' borderRadius='md' border='1px solid' borderColor='whiteAlpha.200'>
+    <Box p={3} bg='blackAlpha.600' borderRadius='1rem' border='1px solid' borderColor='whiteAlpha.200'>
       <Flex align='center' justify='space-between' mb={2}>
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>
           Where to Watch
@@ -28,7 +28,7 @@ export default function WatchProviders({ watchProviders }) {
           <Text color='gray.300' fontSize='xs' mb={1.5}>
             Stream
           </Text>
-          <Flex wrap='wrap' gap={2}>
+          <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
             {flatrate.map((provider) => (
               <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
                 <Box position='relative' width='32px' height='32px'>
@@ -49,7 +49,7 @@ export default function WatchProviders({ watchProviders }) {
           <Text color='gray.300' fontSize='xs' mb={1.5}>
             Rent / Buy
           </Text>
-          <Flex wrap='wrap' gap={2}>
+          <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
             {[...rent, ...buy]
               .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
               .map((provider) => (
