@@ -74,7 +74,6 @@ function MovieCard({ movie, priority = false }) {
           overflow='hidden'
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 416px' }}
         >
           <Link href={`/movies/${movie.id}`} passHref>
             <Box
