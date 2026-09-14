@@ -13,7 +13,8 @@
 ## Workflow Completion Protocol
 - **Auto-Verification & Commit:** Once a maintenance or feature task is complete and all build/test checks pass, analyze the file diff (`git diff`).
 - **Commit Format:** Generate a concise commit message following the [Conventional Commits](https://www.conventionalcommits.org) format (e.g., `refactor:`, `perf:`, `fix:`).
-- **Execution:** Stage all updated files (`git add .`), commit the changes, and push the branch to `origin` automatically using the terminal tool.
+- **Execution:** Stage and commit updated files only when the user requests a commit. Never push automatically; pushing requires explicit user approval in the current conversation.
+- **Visual Verification:** When changing UI, styling, layout, interaction, or visual performance behavior, start or reuse a local development/production preview after editing and visually verify the affected flow in a browser before concluding.
 
 ## Vercel Deployment Protocol
 - **Trigger Deployment:** Upon pushing changes via `git push`, a Vercel Preview Deployment will automatically generate.
