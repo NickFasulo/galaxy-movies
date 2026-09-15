@@ -1,0 +1,49 @@
+import Head from 'next/head'
+import Link from 'next/link'
+import { Box, Heading, Text } from '@chakra-ui/react'
+import MovieGrid from '../../components/MovieGrid'
+import { fetchDiscoverMovies, streamingProviders } from '../../utils/tmdb'
+
+export async function getServerSideProps({ params, res }) {
+  const provider = streamingProviders[params.provider]
+  if (!provider) return { notFound: true }
+
+  try {
+    const data = await fetchDiscoverMovies({ providerId: provider.id })
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+    return { props: { provider: params.provider, ...provider, movies: data.results } }
+  } catch (error) {
+    console.error(error)
+    res.statusCode = 502
+    return { props: { provider: params.provider, ...provider, movies: [], dataError: true } }
+  }
+}
+
+export default function StreamingPage({ provider, title, movies, dataError }) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const canonicalUrl = `${siteUrl}/streaming/${provider}`
+  const description = `Explore movies currently available on ${title.replace(' Movies', '')} in the United States.`
+
+  return (
+    <>
+      <Head>
+        <title>{`${title} | Galaxy Movies`}</title>
+        <meta name='description' content={description} />
+        <link rel='canonical' href={canonicalUrl} />
+      </Head>
+      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+        <Box maxW='70rem' mx='auto' px={6}>
+          <Link href='/'>← Galaxy Movies</Link>
+          <Heading as='h1' mt={8}>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+          {dataError ? (
+            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
+          ) : <MovieGrid movies={movies} />}
+          <Text textAlign='center' mt={8} color='gray.600'>
+            Availability changes by region and over time. Check the movie page for current provider information.
+          </Text>
+        </Box>
+      </Box>
+    </>
+  )
+}

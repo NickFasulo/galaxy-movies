@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, memo } from 'react'
+import { useRef, useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
 import { WrapItem, Box, Skeleton } from '@chakra-ui/react'
 
@@ -8,6 +8,8 @@ function MovieCard({ movie, priority = false }) {
   const [bgImage, setBgImage] = useState('')
   const [bgOpacity, setBgOpacity] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
+  const hoverTimer = useRef(null)
+  const removeTimer = useRef(null)
 
   const backdropUrl = movie.backdrop_path
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
@@ -21,13 +23,25 @@ function MovieCard({ movie, priority = false }) {
     const img = new window.Image()
     img.src = backdropUrl
 
-    setBgImage(backdropUrl)
-    setBgOpacity(0.3)
+    if (removeTimer.current) {
+      window.clearTimeout(removeTimer.current)
+    }
+    if (hoverTimer.current) {
+      window.clearTimeout(hoverTimer.current)
+    }
+
+    hoverTimer.current = window.setTimeout(() => {
+      setBgImage(backdropUrl)
+      setBgOpacity(0.3)
+    }, 750)
   }
 
   const handleMouseLeave = () => {
     setBgOpacity(0)
-    setTimeout(() => {
+    if (hoverTimer.current) {
+      window.clearTimeout(hoverTimer.current)
+    }
+    removeTimer.current = window.setTimeout(() => {
       setBgImage('')
     }, 300)
   }
@@ -36,6 +50,7 @@ function MovieCard({ movie, priority = false }) {
     <>
       {bgImage && (
         <Box
+          aria-hidden='true'
           position='fixed'
           top={-1}
           left={-1}
@@ -43,15 +58,16 @@ function MovieCard({ movie, priority = false }) {
           bottom={-1}
           zIndex={0}
           pointerEvents='none'
+          bgImage={`url(${bgImage})`}
           bgSize='cover'
           bgPosition='center'
-          bgImage={`url(${bgImage})`}
-          transition='opacity 0.3s ease-in-out'
           opacity={bgOpacity}
+          transition='opacity 0.3s ease-in-out'
         />
       )}
       {bgImage && (
         <Box
+          aria-hidden='true'
           position='fixed'
           top={-1}
           left={-1}

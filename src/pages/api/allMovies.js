@@ -30,7 +30,12 @@ export default async function handler(req, res) {
 
     const response = await fetch(endpoint)
     if (!response.ok) {
-      return res.status(response.status).json({ message: 'TMDB API fetch failed' })
+      const status = response.status === 401 ? 502 : response.status
+      return res.status(status).json({
+        message: response.status === 401
+          ? 'TMDB rejected the configured API key'
+          : 'TMDB API fetch failed'
+      })
     }
 
     const data = await response.json()

@@ -33,7 +33,16 @@ export const getServerSideProps = async (context) => {
       fetch(`https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${process.env.TMDB_API_KEY}`)
     ])
 
-    if (!movieRes.ok) throw new Error('Failed to fetch movie details')
+    if (!movieRes.ok) {
+      if (movieRes.status === 404) return { notFound: true }
+      return {
+        props: {
+          movieError: movieRes.status === 401
+            ? 'Movie data is unavailable because the configured TMDB API key was rejected.'
+            : 'Movie data is temporarily unavailable. Please try again later.'
+        }
+      }
+    }
 
     const movieData = await movieRes.json()
     const providersData = await providersRes.json()
@@ -64,11 +73,30 @@ export const getServerSideProps = async (context) => {
     }
   } catch (error) {
     console.error(error)
-    return { notFound: true }
+    return {
+      props: {
+        movieError: 'Movie data is temporarily unavailable. Please try again later.'
+      }
+    }
   }
 }
 
-export default function Movie({ movie, videoKey, watchProviders, director, topCast, ageRating }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating }) {
+  if (movieError) {
+    return (
+      <>
+        <Head>
+          <title>Movie unavailable | Galaxy Movies</title>
+          <meta name='description' content={movieError} />
+        </Head>
+        <Box minH='100vh' p={8} textAlign='center'>
+          <Text mt={20}>{movieError}</Text>
+          <Link href='/'>Return to Galaxy Movies</Link>
+        </Box>
+      </>
+    )
+  }
+
   const backdropUrl = movie.backdrop_path 
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
     : movie.poster_path

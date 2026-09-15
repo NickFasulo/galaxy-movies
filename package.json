@@ -4,6 +4,7 @@
   "private": false,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "powershell -NoProfile -Command \"if (Test-Path .next) { Remove-Item .next -Recurse -Force }; npm.cmd run dev\"",
     "build": "next build",
     "check": "npm run build",
     "lhci": "npm run build && lhci autorun --config=./lighthouserc.cjs",
