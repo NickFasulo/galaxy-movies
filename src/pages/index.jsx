@@ -5,6 +5,7 @@ import { useInfiniteQuery } from 'react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Box, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
+import Link from 'next/link'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
@@ -41,7 +42,7 @@ export default function Home() {
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
 
-  const { data, status, fetchNextPage, hasNextPage } = useInfiniteQuery(
+  const { data, status, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(
     ['infiniteMovies', category, activeSearch],
     async ({ pageParam = 1 }) => {
       const url = activeSearch
@@ -158,7 +159,7 @@ export default function Home() {
             fontWeight='bold'
             fontSize='xl'
           >
-            Error loading movies
+            {error?.message || 'Error loading movies'}
           </Text>
         ) : (
           <>
@@ -187,7 +188,7 @@ export default function Home() {
               <>
                 <InfiniteScroll
                   next={fetchNextPage}
-                  hasMore={Boolean(hasNextPage)}
+                  hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
                   dataLength={moviesList.length}
                   scrollThreshold={0.8}
                   loader={
@@ -212,11 +213,26 @@ export default function Home() {
                     </SimpleGrid>
                   </Box>
                 </InfiniteScroll>
+                {isFetchingNextPage && (
+                  <Text textAlign='center' color='gray.500' padding='1rem'>
+                    Loading more movies...
+                  </Text>
+                )}
                 {hasReachedEnd && (
                   <Text textAlign='center' color='gray.500' padding='1rem'>
                     You&apos;ve reached the end.
                   </Text>
                 )}
+                <Text textAlign='center' color='gray.500' fontSize='sm' padding='2rem'>
+                  <Link href='/browse/popular'>Browse popular</Link>{' · '}
+                  <Link href='/browse/now-playing'>Now playing</Link>{' · '}
+                  <Link href='/browse/upcoming'>Upcoming</Link>{' · '}
+                  <Link href='/disclosure'>Affiliate disclosure</Link>{' · '}
+                  <Link href='/about'>About</Link>{' · '}
+                  <Link href='/privacy'>Privacy</Link>{' · '}
+                  <Link href='/terms'>Terms</Link>{' · '}
+                  <Link href='/contact'>Contact</Link>
+                </Text>
               </>
             )}
           </>
