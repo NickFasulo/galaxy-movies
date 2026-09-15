@@ -6,7 +6,7 @@ const DEFAULT_BACKGROUND = 'rgba(20, 24, 28, 0.9)'
 const LOGO_HEIGHT = 48
 const LOGO_PADDING = 4
 const MIN_LOGO_WIDTH = 64
-const MAX_LOGO_WIDTH = 240
+const MAX_LOGO_WIDTH = 120
 
 export default function ProductionLogo({ company }) {
   const logoUrl = `https://image.tmdb.org/t/p/w185${company.logo_path}`

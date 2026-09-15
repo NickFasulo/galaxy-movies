@@ -236,7 +236,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
                 >
                   Cast
                 </Text>
-                <Wrap spacing={{ base: 4, md: 2 }} justify={{ base: 'center', md: 'flex-start' }}>
+                <Wrap spacing={{ base: 4, md: 2 }} justify='center'>
                   {topCast.map((actor) => (
                     <WrapItem key={actor.id}>
                       <Flex align='center' bg='rgba(255, 255, 255, 0.1)' px={2.5} py={1} borderRadius='md' gap={2}>
