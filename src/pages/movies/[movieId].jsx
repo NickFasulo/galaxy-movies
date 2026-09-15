@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Flex,
   Wrap,
@@ -71,6 +71,61 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
     : '/galaxy-movies-background.png'
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
+  const productionCompany = movie.production_companies?.find(company => company.logo_path)
+  const productionLogoUrl = productionCompany
+    ? `https://image.tmdb.org/t/p/w185${productionCompany.logo_path}`
+    : null
+  const [productionLogoBackground, setProductionLogoBackground] = useState('rgba(20, 24, 28, 0.9)')
+  const [productionLogoWidth, setProductionLogoWidth] = useState(64)
+
+  useEffect(() => {
+    if (!productionLogoUrl) return undefined
+
+    const logoImage = new window.Image()
+    logoImage.crossOrigin = 'anonymous'
+    logoImage.src = productionLogoUrl
+
+    const handleLoad = () => {
+      const logoAspectRatio = logoImage.naturalWidth / logoImage.naturalHeight
+      if (logoAspectRatio > 0) {
+        setProductionLogoWidth(Math.min(240, Math.max(64, Math.round((32 * logoAspectRatio) + 16))))
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 32
+      canvas.height = 24
+      const context = canvas.getContext('2d')
+
+      if (!context) return
+
+      try {
+        context.drawImage(logoImage, 0, 0, canvas.width, canvas.height)
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+        let luminanceTotal = 0
+        let visiblePixels = 0
+
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (pixels[index + 3] < 32) continue
+
+          luminanceTotal += (pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114)
+          visiblePixels += 1
+        }
+
+        if (visiblePixels > 0) {
+          const averageLuminance = luminanceTotal / visiblePixels
+          setProductionLogoBackground(averageLuminance < 145 ? 'white' : 'rgba(20, 24, 28, 0.9)')
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'SecurityError') {
+          return
+        }
+        throw error
+      }
+    }
+
+    logoImage.addEventListener('load', handleLoad)
+    return () => logoImage.removeEventListener('load', handleLoad)
+  }, [productionLogoUrl])
 
   return (
     <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
@@ -203,7 +258,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
               {movie.overview || 'Description unavailable.'}
             </Text>
 
-            <Flex display={{ base: 'flex', md: 'none' }} direction='row' justify='space-between' align='center' w='100%'>
+            <Flex display={{ base: 'flex', md: 'none' }} direction='row' justify='space-evenly' align='center' w='100%'>
               {/* <ReviewModal modalData={movie} /> */}
               <VideoModal videoKey={videoKey} />
               <BackButton />
@@ -261,13 +316,28 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {movie.production_companies?.slice(0, 1).map((company) =>
-                  company.logo_path ? (
-                    <Box key={company.id} position='relative' w='64px' h='32px'>
-                      <Image alt={company.name} src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} fill sizes='64px' style={{ objectFit: 'contain', padding: '0.25rem', borderRadius: '0.2rem', background: 'white' }} />
+                {productionCompany ? (
+                    <Box
+                      key={productionCompany.id}
+                      position='relative'
+                      w={`${productionLogoWidth}px`}
+                      h='48px'
+                      bg={productionLogoBackground}
+                      borderRadius='lg'
+                    >
+                      <Image
+                        alt={productionCompany.name}
+                        src={productionLogoUrl}
+                        fill
+                        sizes={`${productionLogoWidth - 16}px`}
+                        style={{
+                          objectFit: 'contain',
+                          objectPosition: 'center',
+                          padding: '0.5rem'
+                        }}
+                      />
                     </Box>
-                  ) : null
-                )}
+                ) : null}
               </Flex>
             </Flex>
           </Flex>
