@@ -5,6 +5,7 @@ import { useInfiniteQuery } from 'react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Box, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
+import Link from 'next/link'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
@@ -217,6 +218,9 @@ export default function Home() {
                     You&apos;ve reached the end.
                   </Text>
                 )}
+                <Text textAlign='center' color='gray.500' fontSize='sm' padding='2rem'>
+                  <Link href='/disclosure'>Affiliate disclosure</Link>
+                </Text>
               </>
             )}
           </>

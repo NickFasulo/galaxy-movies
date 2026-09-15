@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import Head from 'next/head'
+import Link from 'next/link'
 import { useState } from 'react'
 import {
   Flex,
@@ -45,6 +47,11 @@ export const getServerSideProps = async (context) => {
     const director = creditsData.crew?.find((person) => person.job === 'Director')?.name || null
     const topCast = creditsData.cast?.slice(0, 10) || []
 
+    context.res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=3600, stale-while-revalidate=86400'
+    )
+
     return {
       props: {
         movie: movieData,
@@ -73,9 +80,45 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const canonicalUrl = `${siteUrl}/movies/${movie.id}`
+  const description = movie.overview || `Where to watch ${movie.title}.`
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Movie',
+    name: movie.title,
+    description,
+    image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl}`,
+    dateCreated: movie.release_date || undefined,
+    aggregateRating: movie.vote_count > 0 ? {
+      '@type': 'AggregateRating',
+      ratingValue: movie.vote_average,
+      ratingCount: movie.vote_count,
+      bestRating: 10,
+      worstRating: 0
+    } : undefined
+  }
 
   return (
-    <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
+    <>
+      <Head>
+        <title>{`${movie.title} | Galaxy Movies`}</title>
+        <meta name='description' content={description} />
+        <link rel='canonical' href={canonicalUrl} />
+        <meta property='og:type' content='video.movie' />
+        <meta property='og:title' content={`${movie.title} | Galaxy Movies`} />
+        <meta property='og:description' content={description} />
+        <meta property='og:url' content={canonicalUrl} />
+        <meta property='og:image' content={posterUrl} />
+        <meta name='twitter:card' content='summary_large_image' />
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
+          }}
+        />
+      </Head>
+      <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
       {/* Background Images & Gradients */}
       <Box
         position='absolute'
@@ -152,6 +195,9 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
               <WatchProviders watchProviders={watchProviders} />
+              <Text color='gray.500' fontSize='xs' mt={2} textAlign='center'>
+                <Link href='/disclosure'>Affiliate disclosure</Link>
+              </Text>
             </Box>
 
           </Flex>
@@ -270,6 +316,7 @@ export default function Movie({ movie, videoKey, watchProviders, director, topCa
 
         </Flex>
       </Flex>
-    </Box>
+      </Box>
+    </>
   )
 }
