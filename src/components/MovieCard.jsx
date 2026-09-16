@@ -1,150 +1,63 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRef, useState, memo } from 'react'
+import { useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
-import { WrapItem, Box, Skeleton } from '@chakra-ui/react'
+import { WrapItem, Box, Skeleton, Text } from '@chakra-ui/react'
 
 function MovieCard({ movie, priority = false }) {
-  const [bgImage, setBgImage] = useState('')
-  const [bgOpacity, setBgOpacity] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
-  const hoverTimer = useRef(null)
-  const removeTimer = useRef(null)
-
-  const backdropUrl = movie.backdrop_path
-    ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
-    : '/galaxy-movies-background.png'
-
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : null
 
-  const handleMouseEnter = () => {
-    const img = new window.Image()
-    img.src = backdropUrl
-
-    if (removeTimer.current) {
-      window.clearTimeout(removeTimer.current)
-    }
-    if (hoverTimer.current) {
-      window.clearTimeout(hoverTimer.current)
-    }
-
-    hoverTimer.current = window.setTimeout(() => {
-      setBgImage(backdropUrl)
-      setBgOpacity(0.3)
-    }, 750)
-  }
-
-  const handleMouseLeave = () => {
-    setBgOpacity(0)
-    if (hoverTimer.current) {
-      window.clearTimeout(hoverTimer.current)
-    }
-    removeTimer.current = window.setTimeout(() => {
-      setBgImage('')
-    }, 300)
-  }
-
   return (
-    <>
-      {bgImage && (
-        <Box
-          aria-hidden='true'
-          position='fixed'
-          top={-1}
-          left={-1}
-          right={-1}
-          bottom={-1}
-          zIndex={0}
-          pointerEvents='none'
-          bgImage={`url(${bgImage})`}
-          bgSize='cover'
-          bgPosition='center'
-          opacity={bgOpacity}
-          transition='opacity 0.3s ease-in-out'
-        />
-      )}
-      {bgImage && (
-        <Box
-          aria-hidden='true'
-          position='fixed'
-          top={-1}
-          left={-1}
-          right={-1}
-          bottom={-1}
-          zIndex={0}
-          pointerEvents='none'
-          bg='radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 100%)'
-          transition='opacity 0.3s ease-in-out'
-          opacity={bgOpacity}
-        />
-      )}
-      <WrapItem>
-        <ChakraBox
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          mx='auto'
-          position='relative'
-          zIndex={1}
-          width={{ base: '11rem', md: '13rem' }}
-          boxShadow='dark-lg'
-          borderRadius='1rem'
-          overflow='hidden'
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <Link href={`/movies/${movie.id}`} passHref>
-            <Box
-              display='block'
-              position='relative'
-              width='100%'
-              paddingTop='150%'
-              bg='gray.800'
+    <WrapItem>
+      <ChakraBox
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        mx='auto'
+        position='relative'
+        zIndex={1}
+        w={{ base: '11rem', md: '13rem' }}
+        boxShadow='dark-lg'
+        borderRadius='1rem'
+        overflow='hidden'
+      >
+        <Link href={`/movies/${movie.id}`}>
+          <Box position='relative' w='100%' aspectRatio='2/3' bg='gray.800'>
+            <Skeleton
+              isLoaded={isLoaded || !posterUrl}
+              position='absolute'
+              inset={0}
+              startColor='gray.700'
+              endColor='gray.900'
             >
-              <Skeleton
-                isLoaded={isLoaded}
-                position='absolute'
-                top={0}
-                left={0}
-                width='100%'
-                height='100%'
-                startColor='gray.700'
-                endColor='gray.900'
-              >
-                {posterUrl ? (
-                  <Image
-                    src={posterUrl}
-                    alt={movie.title || 'Movie Poster'}
-                    fill
-                    priority={priority}
-                    sizes='(max-width: 768px) 176px, 208px'
-                    onLoad={() => setIsLoaded(true)}
-                    style={{
-                      objectFit: 'cover',
-                      opacity: isLoaded ? 1 : 0,
-                      transition: 'opacity 0.3s ease-in-out'
-                    }}
-                  />
-                ) : (
-                  <Box
-                    display='flex'
-                    alignItems='center'
-                    justifyContent='center'
-                    height='100%'
-                    p={2}
-                  >
-                    <span style={{ color: '#A0AEC0', textAlign: 'center' }}>
-                      {movie.title}
-                    </span>
-                  </Box>
-                )}
-              </Skeleton>
-            </Box>
-          </Link>
-        </ChakraBox>
-      </WrapItem>
-    </>
+              {posterUrl ? (
+                <Image
+                  src={posterUrl}
+                  alt={movie.title || 'Movie Poster'}
+                  fill
+                  priority={priority}
+                  sizes='(max-width: 768px) 176px, 208px'
+                  onLoad={() => setIsLoaded(true)}
+                  style={{
+                    objectFit: 'cover',
+                    opacity: isLoaded ? 1 : 0,
+                    transition: 'opacity 0.3s ease-in-out'
+                  }}
+                />
+              ) : (
+                <Box display='flex' align='center' justify='center' h='100%' p={2}>
+                  <Text color='gray.400' textAlign='center' fontSize='sm'>
+                    {movie.title}
+                  </Text>
+                </Box>
+              )}
+            </Skeleton>
+          </Box>
+        </Link>
+      </ChakraBox>
+    </WrapItem>
   )
 }
 
