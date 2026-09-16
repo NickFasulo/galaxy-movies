@@ -2,74 +2,57 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Box } from '@chakra-ui/react'
 
-const DEFAULT_BACKGROUND = 'rgba(20, 24, 28, 0.9)'
-const LOGO_HEIGHT = 48
-const LOGO_PADDING = 4
-const MIN_LOGO_WIDTH = 64
-const MAX_LOGO_WIDTH = 120
+const DEFAULT_BG = 'rgba(20, 24, 28, 0.9)'
+
+function analyzeLogo(src) {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const aspect = img.naturalWidth / img.naturalHeight || 1
+      const width = Math.min(120, Math.max(64, Math.round(40 * aspect) + 8))
+      const canvas = document.createElement('canvas')
+      canvas.width = 32; canvas.height = 24
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+
+      if (!ctx) return resolve({ width, bg: DEFAULT_BG })
+      ctx.drawImage(img, 0, 0, 32, 24)
+
+      const pixels = ctx.getImageData(0, 0, 32, 24).data
+      let luminanceTotal = 0, visiblePixels = 0
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i + 3] < 32) continue
+        luminanceTotal += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
+        visiblePixels++
+      }
+
+      const isDark = visiblePixels > 0 && (luminanceTotal / visiblePixels) < 145
+      resolve({ width, bg: isDark ? 'white' : DEFAULT_BG })
+    }
+    img.onerror = () => resolve({ width: 64, bg: DEFAULT_BG })
+    img.src = src
+  })
+}
 
 export default function ProductionLogo({ company }) {
   const logoUrl = `https://image.tmdb.org/t/p/w185${company.logo_path}`
-  const [background, setBackground] = useState(DEFAULT_BACKGROUND)
-  const [width, setWidth] = useState(MIN_LOGO_WIDTH)
+  const [{ width, bg }, setStyle] = useState({ width: 64, bg: DEFAULT_BG })
 
   useEffect(() => {
-    const logoImage = new window.Image()
-    logoImage.crossOrigin = 'anonymous'
-    logoImage.onload = () => {
-      const aspectRatio = logoImage.naturalWidth / logoImage.naturalHeight
-      if (aspectRatio > 0) {
-        setWidth(Math.min(
-          MAX_LOGO_WIDTH,
-          Math.max(MIN_LOGO_WIDTH, Math.round((LOGO_HEIGHT - (LOGO_PADDING * 2)) * aspectRatio) + (LOGO_PADDING * 2))
-        ))
-      }
-
-      const canvas = document.createElement('canvas')
-      canvas.width = 32
-      canvas.height = 24
-      const context = canvas.getContext('2d')
-      if (!context) return
-
-      try {
-        context.drawImage(logoImage, 0, 0, canvas.width, canvas.height)
-        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-        let luminanceTotal = 0
-        let visiblePixels = 0
-
-        for (let index = 0; index < pixels.length; index += 4) {
-          if (pixels[index + 3] < 32) continue
-
-          luminanceTotal += (pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114)
-          visiblePixels += 1
-        }
-
-        if (visiblePixels > 0) {
-          setBackground(luminanceTotal / visiblePixels < 145 ? 'white' : DEFAULT_BACKGROUND)
-        }
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === 'SecurityError')) throw error
-      }
-    }
-    logoImage.src = logoUrl
-
-    return () => {
-      logoImage.onload = null
-    }
+    let active = true
+    analyzeLogo(logoUrl).then((res) => active && setStyle(res))
+    return () => { active = false }
   }, [logoUrl])
 
   return (
-    <Box position='relative' w={`${width}px`} h={`${LOGO_HEIGHT}px`} bg={background} borderRadius='lg'>
+    <Box position='relative' w={`${width}px`} h='48px' bg={bg} borderRadius='lg'>
       <Image
         alt={company.name}
         src={logoUrl}
         fill
-        sizes={`${width - (LOGO_PADDING * 2)}px`}
-        style={{
-          objectFit: 'contain',
-          objectPosition: 'center',
-          padding: `${LOGO_PADDING}px`
-        }}
+        sizes={`${width - 8}px`}
+        style={{ objectFit: 'contain', objectPosition: 'center', padding: '4px' }}
       />
     </Box>
   )

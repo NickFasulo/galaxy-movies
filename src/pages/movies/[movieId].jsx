@@ -147,7 +147,6 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         />
       </Head>
       <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
-      {/* Background Images & Gradients */}
       <Box
         position='absolute'
         top={{ base: 'auto', md: 0 }}
@@ -197,11 +196,9 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         />
       </Box>
 
-      {/* Main Container */}
       <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '4rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
           
-          {/* Left Column */}
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
             <Box position='relative' w={{ base: '20rem', md: '20rem' }} h={{ base: '30rem', md: '30rem' }}>
               <Image
@@ -223,14 +220,10 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
               <WatchProviders watchProviders={watchProviders} />
-              <Text color='gray.500' fontSize='xs' mt={2} textAlign='center'>
-                <Link href='/disclosure'>Affiliate disclosure</Link>
-              </Text>
             </Box>
 
           </Flex>
 
-          {/* Right Column */}
           <Flex direction='column' w={{ base: '20rem', md: '40rem' }} maxW='100%' gap='1rem'>
             <Box>
               <Flex align='center' justify={{ base: 'center', md: 'flex-start' }} gap={4} wrap='wrap'>

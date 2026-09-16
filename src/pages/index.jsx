@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from 'react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Box, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, Flex, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
@@ -138,65 +138,78 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Box h='100%'>
-        {status === 'loading' ? (
+      <Box h='100%' pb='4rem'>
+        <Box my={{ base: '2rem', md: '3rem' }}>
+          <h1 className='title'>
+            <span>Galaxy Movies</span>
+          </h1>
+        </Box>
+
+        <SearchBar
+          category={category}
+          changeCategory={changeCategory}
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+        />
+
+        {status === 'loading' && moviesList.length === 0 ? (
           <CustomSpinner />
         ) : status === 'error' ? (
           <Text textAlign='center' mt='20rem' fontWeight='bold' fontSize='xl'>
             {error?.message || 'Error loading movies'}
           </Text>
+        ) : moviesList.length === 0 ? (
+          <Text textAlign='center' mt='10rem' fontWeight='bold' fontSize='xl' color='gray.500'>
+            No movies found
+          </Text>
         ) : (
           <>
-            <Box my={{ base: '2rem', md: '3rem' }}>
-              <h1 className='title'>
-                <span>Galaxy Movies</span>
-              </h1>
-            </Box>
+            <InfiniteScroll
+              next={fetchNextPage}
+              hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
+              dataLength={moviesList.length}
+              scrollThreshold={0.8}
+              loader={
+                <Text textAlign='center' color='gray.500' p='1rem'>
+                  Loading more movies...
+                </Text>
+              }
+            >
+              <SimpleGrid
+                my={{ base: '3rem', md: '5rem' }}
+                mx={{ base: '1rem', md: '5rem' }}
+                spacing={{ base: 8, md: 12 }}
+                columns={{ base: 2, md: 5 }}
+                minH='100vh'
+              >
+                {moviesList.map((movie, index) => (
+                  <MovieCard key={movie.id} movie={movie} priority={index < 5} />
+                ))}
+              </SimpleGrid>
+            </InfiniteScroll>
 
-            <SearchBar
-              category={category}
-              changeCategory={changeCategory}
-              searchInput={searchInput}
-              setSearchInput={setSearchInput}
-            />
-
-            {moviesList.length === 0 ? (
-              <Text textAlign='center' mt='10rem' fontWeight='bold' fontSize='xl' color='gray.500'>
-                No movies found
+            {hasReachedEnd && (
+              <Text textAlign='center' color='gray.500' p='1rem' mb='3rem'>
+                You&apos;ve reached the end.
               </Text>
-            ) : (
-              <>
-                <InfiniteScroll
-                  next={fetchNextPage}
-                  hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
-                  dataLength={moviesList.length}
-                  scrollThreshold={0.8}
-                  loader={
-                    <Text textAlign='center' color='gray.500' p='1rem'>
-                      Loading more movies...
-                    </Text>
-                  }
-                >
-                  <SimpleGrid
-                    my={{ base: '3rem', md: '5rem' }}
-                    mx={{ base: '1rem', md: '5rem' }}
-                    spacing={{ base: 8, md: 12 }}
-                    columns={{ base: 2, md: 5 }}
-                    minH='100vh'
-                  >
-                    {moviesList.map((movie, index) => (
-                      <MovieCard key={movie.id} movie={movie} priority={index < 5} />
-                    ))}
-                  </SimpleGrid>
-                </InfiniteScroll>
+            )}
 
-                {hasReachedEnd && (
-                  <Text textAlign='center' color='gray.500' p='1rem'>
-                    You&apos;ve reached the end.
-                  </Text>
-                )}
-
-                <Text textAlign='center' color='gray.500' fontSize='sm' p='2rem'>
+            <Flex align='center' justify='center'>
+              <Box
+                as='footer'
+                position='fixed'
+                bottom='0'
+                left='0'
+                right='0'
+                mx='auto'
+                borderTopRadius={{ base: 0, md: '0.5rem' }}
+                zIndex={9}
+                py='0.25rem'
+                px='0.5rem'
+                w='fit-content'
+                bg='white'
+              >
+                <Text textAlign='center' color='gray.600' fontSize='sm'>
                   <Link href='/browse/popular'>Browse popular</Link> ·{' '}
                   <Link href='/browse/now-playing'>Now playing</Link> ·{' '}
                   <Link href='/browse/upcoming'>Upcoming</Link> ·{' '}
@@ -206,8 +219,8 @@ export default function Home() {
                   <Link href='/terms'>Terms</Link> ·{' '}
                   <Link href='/contact'>Contact</Link>
                 </Text>
-              </>
-            )}
+              </Box>
+            </Flex>
           </>
         )}
 
@@ -218,7 +231,7 @@ export default function Home() {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             position='fixed'
             right={{ base: '1rem', md: '2rem' }}
-            bottom={{ base: '1rem', md: '2rem' }}
+            bottom={{ base: '4.5rem', md: '5rem' }}
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'
