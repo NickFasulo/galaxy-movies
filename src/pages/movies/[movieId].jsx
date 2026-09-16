@@ -297,19 +297,36 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                   display='flex'
                   alignItems='center'
                   gap={3}
-                  mb={2}
+                  mb={4}
                   _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                   _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                 >
                   Cast
                 </Text>
-                <Wrap spacing={{ base: 4, md: 2 }} justify='center'>
+                <Wrap spacing={3} justify='center'>
                   {topCast.map((actor) => (
                     <WrapItem key={actor.id}>
-                      <Flex align='center' bg='rgba(255, 255, 255, 0.1)' px={2.5} py={1} borderRadius='md' gap={2}>
-                        <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
-                        <Text fontSize='xs' color='white' textShadow='0 0 4px black'>{actor.name}</Text>
-                      </Flex>
+                      <Link href={`/person/${actor.id}`} passHref>
+                        <Flex
+                          align='center'
+                          bg='rgba(255, 255, 255, 0.1)'
+                          px={3.5}
+                          py={1.5}
+                          borderRadius='full'
+                          gap={2.5}
+                          cursor='pointer'
+                          transition='all 0.2s ease-in-out'
+                          _hover={{
+                            bg: 'rgba(255, 255, 255, 0.2)',
+                            transform: 'translateY(-2px)'
+                          }}
+                        >
+                          <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
+                          <Text fontSize='sm' color='white' fontWeight='medium' textShadow='0 0 4px black'>
+                            {actor.name}
+                          </Text>
+                        </Flex>
+                      </Link>
                     </WrapItem>
                   ))}
                 </Wrap>
