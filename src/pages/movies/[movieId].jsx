@@ -9,8 +9,7 @@ import {
   Badge,
   Heading,
   Text,
-  Box,
-  Avatar
+  Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 // import ReviewModal from '../../components/ReviewModal'
@@ -18,6 +17,7 @@ import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
+import ActorAvatar from '../../components/ActorAvatar'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
@@ -54,7 +54,7 @@ export const getServerSideProps = async (context) => {
     const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
     const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
     const director = creditsData.crew?.find((person) => person.job === 'Director')?.name || null
-    const topCast = creditsData.cast?.slice(0, 10) || []
+    const topCast = creditsData.cast?.slice(0, 15) || []
 
     context.res.setHeader(
       'Cache-Control',
@@ -307,7 +307,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                   {topCast.map((actor) => (
                     <WrapItem key={actor.id}>
                       <Flex align='center' bg='rgba(255, 255, 255, 0.1)' px={2.5} py={1} borderRadius='md' gap={2}>
-                        {actor.profile_path && <Avatar src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`} name={actor.name} size='xs' />}
+                        <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
                         <Text fontSize='xs' color='white' textShadow='0 0 4px black'>{actor.name}</Text>
                       </Flex>
                     </WrapItem>

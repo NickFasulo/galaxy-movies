@@ -65,8 +65,8 @@ export default function ReviewModal({ modalData }) {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>
-            <Text textAlign='center' fontFamily='Halftone'>
-              🤖&nbsp; Movie Bot's Review &nbsp;🍿
+            <Text textAlign='center'>
+              Movie Bot's Review
             </Text>
           </ModalHeader>
           <ModalBody>
