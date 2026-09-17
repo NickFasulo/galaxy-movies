@@ -53,7 +53,8 @@ export const getServerSideProps = async (context) => {
     const countryCode = context.req.headers['x-vercel-ip-country'] || 'US'
     const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
     const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
-    const director = creditsData.crew?.find((person) => person.job === 'Director')?.name || null
+    const directorObj = creditsData.crew?.find((person) => person.job === 'Director')
+    const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
     const topCast = creditsData.cast?.slice(0, 15) || []
 
     context.res.setHeader(
@@ -242,7 +243,18 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                   mt={{ base: 4, md: 1 }}
                   textAlign={{ base: 'center', md: 'left' }}
                 >
-                  Directed by <Text as='span' color='white' fontWeight='semibold'>{director}</Text>
+                  Directed by{' '}
+                  <Link href={`/person/${director.id}`} passHref>
+                    <Text
+                      as='span'
+                      color='white'
+                      fontWeight='semibold'
+                      _hover={{ textDecoration: 'underline' }}
+                      cursor='pointer'
+                    >
+                      {director.name}
+                    </Text>
+                  </Link>
                 </Text>
               )}
             </Box>
@@ -297,7 +309,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                   display='flex'
                   alignItems='center'
                   gap={3}
-                  mb={4}
+                  mb={2}
                   _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                   _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                 >
@@ -347,7 +359,18 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {productionCompany ? <ProductionLogo company={productionCompany} /> : null}
+                {productionCompany ? (
+                  <Link href={`/company/${productionCompany.id}`} passHref>
+                    <Box
+                      as='span'
+                      cursor='pointer'
+                      transition='all 0.2s ease-in-out'
+                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
+                    >
+                      <ProductionLogo company={productionCompany} />
+                    </Box>
+                  </Link>
+                ) : null}
               </Flex>
             </Flex>
           </Flex>

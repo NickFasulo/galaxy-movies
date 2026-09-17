@@ -14,24 +14,33 @@ export async function getServerSideProps({ res }) {
     ...Object.keys(movieGenres).map(genre => `${siteUrl}/genre/${genre}`),
     ...Object.keys(streamingProviders).map(provider => `${siteUrl}/streaming/${provider}`)
   ]
+
   const movieIds = new Set()
 
   try {
-    for (const category of Object.keys(movieCategories)) {
-      const data = await fetchDiscoverMovies({ category })
-      for (const movie of data.results || []) movieIds.add(movie.id)
+    const categories = Object.keys(movieCategories)
+    const categoryResults = await Promise.all(
+      categories.map(category => fetchDiscoverMovies({ category }))
+    )
+
+    for (const data of categoryResults) {
+      for (const movie of data?.results || []) {
+        if (movie?.id) movieIds.add(movie.id)
+      }
     }
   } catch (error) {
-    console.error(error)
+    console.error('Error fetching movies for sitemap:', error)
   }
 
   urls.push(...Array.from(movieIds, id => `${siteUrl}/movies/${id}`))
+
   const escapeXml = value => value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
+
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(url => `  <url><loc>${escapeXml(url)}</loc></url>`).join('\n')}

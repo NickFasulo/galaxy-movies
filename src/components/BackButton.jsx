@@ -1,29 +1,26 @@
 import { useRouter } from 'next/router'
 import { Button } from '@chakra-ui/react'
+import { ArrowBackIcon } from '@chakra-ui/icons'
 
 export default function BackButton() {
   const router = useRouter()
 
   const handleBack = () => {
-    const hasSameOriginHistory =
-      window.history.length > 1 &&
-      document.referrer.startsWith(window.location.origin)
-
-    if (hasSameOriginHistory) {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
-      return
+    } else {
+      router.push('/')
     }
-
-    router.push('/')
   }
 
   return (
     <Button
       size='sm'
       width={{ base: '5.5rem', md: '7rem' }}
+      leftIcon={<ArrowBackIcon />}
       onClick={handleBack}
     >
-      Go Back
+      Back
     </Button>
   )
 }

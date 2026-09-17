@@ -1,13 +1,12 @@
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Flex,
   Box,
   Heading,
   Text,
-  Badge,
   SimpleGrid
 } from '@chakra-ui/react'
 import { StarIcon } from '@chakra-ui/icons'
@@ -26,19 +25,23 @@ export const getServerSideProps = async (context) => {
       if (res.status === 404) return { notFound: true }
       return {
         props: {
-          error: 'Actor information is temporarily unavailable.'
+          error: 'Person information is temporarily unavailable.'
         }
       }
     }
 
     const person = await res.json()
 
-    const castMovies = person.movie_credits?.cast || []
-    const uniqueMovies = Array.from(
-      new Map(castMovies.map((m) => [m.id, m])).values()
-    )
+    const crewMovies = person.movie_credits?.crew || []
+    const directedList = crewMovies.filter((m) => m.job === 'Director')
+    const uniqueDirected = Array.from(
+      new Map(directedList.map((m) => [m.id, m])).values()
+    ).sort((a, b) => b.popularity - a.popularity)
 
-    const sortedMovies = uniqueMovies.sort((a, b) => b.popularity - a.popularity)
+    const castList = person.movie_credits?.cast || []
+    const uniqueActing = Array.from(
+      new Map(castList.map((m) => [m.id, m])).values()
+    ).sort((a, b) => b.popularity - a.popularity)
 
     context.res.setHeader(
       'Cache-Control',
@@ -48,20 +51,45 @@ export const getServerSideProps = async (context) => {
     return {
       props: {
         person,
-        movies: sortedMovies
+        directedMovies: uniqueDirected,
+        actingMovies: uniqueActing
       }
     }
   } catch (error) {
     console.error(error)
     return {
       props: {
-        error: 'Actor information is temporarily unavailable.'
+        error: 'Person information is temporarily unavailable.'
       }
     }
   }
 }
 
-export default function ActorDetails({ person, movies, error }) {
+export default function PersonDetails({ person, directedMovies, actingMovies, error }) {
+  const headerRef = useRef(null)
+  const sidebarRef = useRef(null)
+  const [containerHeight, setContainerHeight] = useState(undefined)
+
+  useEffect(() => {
+    if (!headerRef.current || !sidebarRef.current) return
+
+    const updateHeight = () => {
+      if (headerRef.current && sidebarRef.current) {
+        const hHeader = headerRef.current.offsetHeight
+        const hSidebar = sidebarRef.current.offsetHeight
+        setContainerHeight(hHeader + hSidebar)
+      }
+    }
+
+    updateHeight()
+
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(headerRef.current)
+    observer.observe(sidebarRef.current)
+
+    return () => observer.disconnect()
+  }, [person])
+
   if (error) {
     return (
       <Box minH='100vh' bg='#14181c' p={8} textAlign='center' color='white'>
@@ -95,6 +123,7 @@ export default function ActorDetails({ person, movies, error }) {
   }
 
   const age = getAge()
+  const totalCredits = (directedMovies?.length || 0) + (actingMovies?.length || 0)
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -108,7 +137,7 @@ export default function ActorDetails({ person, movies, error }) {
       '@type': 'Place',
       name: person.place_of_birth
     } : undefined,
-    jobTitle: person.known_for_department || 'Actor'
+    jobTitle: person.known_for_department || 'Film Professional'
   }
 
   return (
@@ -146,102 +175,113 @@ export default function ActorDetails({ person, movies, error }) {
             w='100%'
             gap={{ base: '2rem', md: '3rem' }}
           >
-            <Flex
-              direction='column'
-              align='center'
-              position={{ base: 'relative', md: 'sticky' }}
-              top={{ md: '2rem' }}
-              w={{ base: '100%', maxW: '20rem' }}
+            <Box
+              w={{ base: '100%', md: '20rem' }}
+              h={{ base: 'auto', md: containerHeight ? `${containerHeight}px` : 'auto' }}
               flexShrink={0}
-              gap='1.25rem'
             >
-              <Box position='relative' w='20rem' h='30rem'>
-                <Image
-                  src={profileSrc}
-                  alt={person.name}
-                  fill
-                  priority
-                  sizes='(max-width: 768px) 100vw, 320px'
-                  onError={() => setProfileSrc('/galaxy-movies-background.png')}
-                  style={{
-                    objectFit: 'cover',
-                    borderRadius: '1rem',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)'
-                  }}
-                />
-              </Box>
-
-              <Box
+              <Flex
+                ref={sidebarRef}
+                direction='column'
+                align='center'
+                position={{ base: 'relative', md: 'sticky' }}
+                top={{ md: '2rem' }}
                 w='100%'
-                p={4}
-                bg='blackAlpha.600'
-                borderRadius='1rem'
-                border='1px solid'
-                borderColor='whiteAlpha.200'
+                maxW='20rem'
+                mx='auto'
+                gap='1.25rem'
               >
-                <Heading as='h3' fontSize='sm' textTransform='uppercase' color='gray.400' mb={3}>
-                  Personal Info
-                </Heading>
+                <Box position='relative' w='100%' maxW='20rem' h='30rem'>
+                  <Image
+                    src={profileSrc}
+                    alt={person.name}
+                    fill
+                    priority
+                    sizes='(max-width: 768px) 100vw, 320px'
+                    onError={() => setProfileSrc('/galaxy-movies-background.png')}
+                    style={{
+                      objectFit: 'cover',
+                      borderRadius: '1rem',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)'
+                    }}
+                  />
+                </Box>
 
-                <Flex direction='column' gap={2.5} fontSize='xs'>
-                  {person.known_for_department && (
+                <Box
+                  w='100%'
+                  maxW='20rem'
+                  p={4}
+                  bg='blackAlpha.600'
+                  borderRadius='1rem'
+                  border='1px solid'
+                  borderColor='whiteAlpha.200'
+                >
+                  <Heading as='h3' fontSize='sm' textTransform='uppercase' color='gray.400' mb={3}>
+                    Personal Info
+                  </Heading>
+
+                  <Flex direction='column' gap={2.5} fontSize='xs'>
+                    {person.known_for_department && (
+                      <Box>
+                        <Text color='gray.400' fontWeight='bold'>Known For</Text>
+                        <Text color='white'>{person.known_for_department}</Text>
+                      </Box>
+                    )}
+
+                    {person.birthday && (
+                      <Box>
+                        <Text color='gray.400' fontWeight='bold'>Born</Text>
+                        <Text color='white'>
+                          {dateFormatter(person.birthday)} {age ? `(age ${age}${person.deathday ? ', died' : ''})` : ''}
+                        </Text>
+                      </Box>
+                    )}
+
+                    {person.place_of_birth && (
+                      <Box>
+                        <Text color='gray.400' fontWeight='bold'>Place of Birth</Text>
+                        <Text color='white'>{person.place_of_birth}</Text>
+                      </Box>
+                    )}
+
                     <Box>
-                      <Text color='gray.400' fontWeight='bold'>Known For</Text>
-                      <Text color='white'>{person.known_for_department}</Text>
+                      <Text color='gray.400' fontWeight='bold'>Known Credits</Text>
+                      <Text color='white'>{totalCredits} movies</Text>
                     </Box>
-                  )}
+                  </Flex>
+                </Box>
 
-                  {person.birthday && (
-                    <Box>
-                      <Text color='gray.400' fontWeight='bold'>Born</Text>
-                      <Text color='white'>
-                        {dateFormatter(person.birthday)} {age ? `(age ${age}${person.deathday ? ', died' : ''})` : ''}
-                      </Text>
-                    </Box>
-                  )}
-
-                  {person.place_of_birth && (
-                    <Box>
-                      <Text color='gray.400' fontWeight='bold'>Place of Birth</Text>
-                      <Text color='white'>{person.place_of_birth}</Text>
-                    </Box>
-                  )}
-
-                  <Box>
-                    <Text color='gray.400' fontWeight='bold'>Known Credits</Text>
-                    <Text color='white'>{movies.length} movies</Text>
-                  </Box>
-                </Flex>
-              </Box>
-
-              <BackButton />
-            </Flex>
+                <BackButton />
+              </Flex>
+            </Box>
 
             <Flex direction='column' flex={1} w='100%' gap='1.5rem'>
-              <Box>
-                <Heading size='2xl' color='white' textShadow='0 0 4px black' textAlign='center'>
-                  {person.name}
-                </Heading>
+              <Box ref={headerRef} display='flex' flexDirection='column' gap='1.5rem'>
+                <Box>
+                  <Heading size='2xl' color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
+                    {person.name}
+                  </Heading>
+                </Box>
+
+                {person.biography && (
+                  <Box>
+                    <Heading as='h2' size='sm' color='gray.400' textTransform='uppercase' mb={2} textAlign={{ base: 'center', md: 'left' }}>
+                      Biography
+                    </Heading>
+                    <Text
+                      color='gray.200'
+                      fontSize='sm'
+                      lineHeight='relaxed'
+                      whiteSpace='pre-line'
+                      textShadow='0 0 4px black'
+                    >
+                      {person.biography}
+                    </Text>
+                  </Box>
+                )}
               </Box>
 
-              {person.biography && (
-                <Box>
-                  <Heading as='h2' size='sm' color='gray.400' textTransform='uppercase' mb={2}>
-                    Biography
-                  </Heading>
-                  <Text
-                    color='gray.200'
-                    fontSize='sm'
-                    lineHeight='relaxed'
-                    whiteSpace='pre-line'
-                    textShadow='0 0 4px black'
-                  >
-                    {person.biography}
-                  </Text>
-                </Box>
-              )}
-
-              {movies.length > 0 && (
+              {directedMovies?.length > 0 && (
                 <Box mt={2}>
                   <Text
                     color='gray.400'
@@ -256,12 +296,38 @@ export default function ActorDetails({ person, movies, error }) {
                     _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                     _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
                   >
-                    Known For ({movies.length})
+                    Directed Movies ({directedMovies.length})
                   </Text>
 
                   <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
-                    {movies.map((movie) => (
-                      <MovieCard key={movie.id} movie={movie} />
+                    {directedMovies.map((movie) => (
+                      <MovieCard key={movie.id} movie={movie} showRole={false} />
+                    ))}
+                  </SimpleGrid>
+                </Box>
+              )}
+
+              {actingMovies?.length > 0 && (
+                <Box mt={2}>
+                  <Text
+                    color='gray.400'
+                    fontSize='xs'
+                    fontWeight='bold'
+                    textTransform='uppercase'
+                    textShadow='0 0 4px black'
+                    display='flex'
+                    alignItems='center'
+                    gap={3}
+                    mb={4}
+                    _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                    _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                  >
+                    Acting Credits ({actingMovies.length})
+                  </Text>
+
+                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
+                    {actingMovies.map((movie) => (
+                      <MovieCard key={movie.id} movie={movie} showRole={true} />
                     ))}
                   </SimpleGrid>
                 </Box>
@@ -274,30 +340,26 @@ export default function ActorDetails({ person, movies, error }) {
   )
 }
 
-function MovieCard({ movie }) {
+function MovieCard({ movie, showRole }) {
   const [imgSrc, setImgSrc] = useState(
     movie.poster_path
-      ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : '/galaxy-movies-background.png'
   )
-
-  const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : 'N/A'
 
   return (
     <Link href={`/movies/${movie.id}`} passHref>
       <Box
         bg='rgba(255, 255, 255, 0.05)'
-        borderRadius='0.75rem'
+        borderRadius='xl'
         overflow='hidden'
-        border='1px solid'
-        borderColor='whiteAlpha.200'
+        cursor='pointer'
         transition='all 0.2s ease-in-out'
         _hover={{
-          transform: 'translateY(-4px)',
-          borderColor: 'whiteAlpha.500',
+          transform: 'translateY(-6px)',
+          boxShadow: '0 12px 24px -10px rgba(0,0,0,0.8)',
           bg: 'rgba(255, 255, 255, 0.1)'
         }}
-        cursor='pointer'
         h='100%'
         display='flex'
         flexDirection='column'
@@ -307,47 +369,36 @@ function MovieCard({ movie }) {
             src={imgSrc}
             alt={movie.title || 'Movie Poster'}
             fill
-            sizes='(max-width: 768px) 50vw, 200px'
+            sizes='(max-width: 768px) 50vw, 20vw'
             onError={() => setImgSrc('/galaxy-movies-background.png')}
             style={{ objectFit: 'cover' }}
           />
-          {movie.vote_average > 0 && (
-            <Badge
-              position='absolute'
-              top={2}
-              right={2}
-              bg='blackAlpha.800'
-              color='gold'
-              px={1.5}
-              py={0.5}
-              borderRadius='md'
-              fontSize='xs'
-              display='flex'
-              alignItems='center'
-              gap={1}
-            >
-              <StarIcon boxSize={2.5} />
-              {Math.round(movie.vote_average * 10) / 10}
-            </Badge>
-          )}
         </Box>
 
-        <Flex direction='column' p={2.5} flex={1} justify='space-between'>
+        <Box p={3} display='flex' flexDirection='column' justifyContent='space-between' flex={1}>
           <Box>
-            <Text color='white' fontWeight='bold' fontSize='xs' noOfLines={1}>
+            <Text fontWeight='bold' fontSize='sm' noOfLines={1} color='white'>
               {movie.title}
             </Text>
-            {movie.character && (
-              <Text color='gray.400' fontSize='10px' noOfLines={1} mt={0.5}>
+            {showRole && movie.character && (
+              <Text color='gray.400' fontSize='xs' noOfLines={1} mt={0.5}>
                 as {movie.character}
               </Text>
             )}
           </Box>
 
-          <Text color='gray.500' fontSize='10px' mt={2}>
-            {releaseYear}
-          </Text>
-        </Flex>
+          <Flex justify='space-between' align='center' mt={2}>
+            <Text fontSize='xs' color='gray.400'>
+              {dateFormatter(movie.release_date)?.slice(-4) || 'N/A'}
+            </Text>
+            <Flex align='center' gap={1}>
+              <StarIcon boxSize={3} color='gold' />
+              <Text fontSize='xs' fontWeight='semibold' color='white'>
+                {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
+              </Text>
+            </Flex>
+          </Flex>
+        </Box>
       </Box>
     </Link>
   )

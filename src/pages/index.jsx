@@ -202,7 +202,7 @@ export default function Home() {
                 left='0'
                 right='0'
                 mx='auto'
-                borderTopRadius={{ base: 0, md: '0.5rem' }}
+                borderTopRadius='0.5rem'
                 zIndex={9}
                 py='0.25rem'
                 px='0.5rem'
@@ -210,10 +210,6 @@ export default function Home() {
                 bg='white'
               >
                 <Text textAlign='center' color='gray.600' fontSize='sm'>
-                  <Link href='/browse/popular'>Browse popular</Link> ·{' '}
-                  <Link href='/browse/now-playing'>Now playing</Link> ·{' '}
-                  <Link href='/browse/upcoming'>Upcoming</Link> ·{' '}
-                  <Link href='/disclosure'>Affiliate disclosure</Link> ·{' '}
                   <Link href='/about'>About</Link> ·{' '}
                   <Link href='/privacy'>Privacy</Link> ·{' '}
                   <Link href='/terms'>Terms</Link> ·{' '}
