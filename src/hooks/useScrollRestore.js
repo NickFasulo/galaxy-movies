@@ -8,22 +8,31 @@ export const useScrollRestore = () => {
   const isBack = useRef(false)
 
   useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+
     router.beforePopState(() => {
       isBack.current = true
       return true
     })
 
     const onRouteChangeStart = () => {
-      const url = router.pathname
-      scrollPositions.current[url] = window.scrollY
+      const url = router.asPath
+      // Exclude the homepage '/' as it handles its own scroll restoration
+      if (url !== '/') {
+        scrollPositions.current[url] = window.scrollY
+      }
     }
 
     const onRouteChangeComplete = url => {
-      if (isBack.current && scrollPositions.current[url]) {
-        window.scroll({
-          top: scrollPositions.current[url],
-          behavior: 'auto'
-        })
+      if (url !== '/' && isBack.current && scrollPositions.current[url]) {
+        setTimeout(() => {
+          window.scrollTo({
+            top: scrollPositions.current[url],
+            behavior: 'auto'
+          })
+        }, 0)
       }
 
       isBack.current = false

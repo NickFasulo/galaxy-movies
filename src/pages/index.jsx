@@ -110,11 +110,12 @@ export default function Home() {
     const savedPos = sessionStorage.getItem('homeScrollPos')
     if (savedPos && moviesList.length > 0) {
       const targetPos = parseInt(savedPos, 10)
+      // Use a tiny delay to ensure the DOM is painted and ready for scroll restoration
       const timer = setTimeout(() => {
         window.scrollTo({ top: targetPos, behavior: 'instant' })
         isRestoredRef.current = true
         sessionStorage.removeItem('homeScrollPos')
-      }, 100)
+      }, 20)
 
       return () => clearTimeout(timer)
     }
