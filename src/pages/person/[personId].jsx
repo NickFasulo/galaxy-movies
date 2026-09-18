@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Flex,
   Box,
@@ -66,30 +66,6 @@ export const getServerSideProps = async (context) => {
 }
 
 export default function PersonDetails({ person, directedMovies, actingMovies, error }) {
-  const headerRef = useRef(null)
-  const sidebarRef = useRef(null)
-  const [containerHeight, setContainerHeight] = useState(undefined)
-
-  useEffect(() => {
-    if (!headerRef.current || !sidebarRef.current) return
-
-    const updateHeight = () => {
-      if (headerRef.current && sidebarRef.current) {
-        const hHeader = headerRef.current.offsetHeight
-        const hSidebar = sidebarRef.current.offsetHeight
-        setContainerHeight(hHeader + hSidebar)
-      }
-    }
-
-    updateHeight()
-
-    const observer = new ResizeObserver(updateHeight)
-    observer.observe(headerRef.current)
-    observer.observe(sidebarRef.current)
-
-    return () => observer.disconnect()
-  }, [person])
-
   if (error) {
     return (
       <Box minH='100vh' bg='#14181c' p={8} textAlign='center' color='white'>
@@ -177,15 +153,11 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
           >
             <Box
               w={{ base: '100%', md: '20rem' }}
-              h={{ base: 'auto', md: containerHeight ? `${containerHeight}px` : 'auto' }}
               flexShrink={0}
             >
               <Flex
-                ref={sidebarRef}
                 direction='column'
                 align='center'
-                position={{ base: 'relative', md: 'sticky' }}
-                top={{ md: '2rem' }}
                 w='100%'
                 maxW='20rem'
                 mx='auto'
@@ -256,7 +228,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
             </Box>
 
             <Flex direction='column' flex={1} w='100%' gap='1.5rem'>
-              <Box ref={headerRef} display='flex' flexDirection='column' gap='1.5rem'>
+              <Box display='flex' flexDirection='column' gap='1.5rem'>
                 <Box>
                   <Heading size='2xl' color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
                     {person.name}
