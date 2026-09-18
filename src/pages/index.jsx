@@ -9,6 +9,7 @@ import { ArrowUpIcon } from '@chakra-ui/icons'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
+import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 
 export default function Home() {
   const router = useRouter()
@@ -16,7 +17,9 @@ export default function Home() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showScrollTop, setShowScrollTop] = useState(false)
+
   const isRestoredRef = useRef(false)
+  const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
@@ -110,7 +113,6 @@ export default function Home() {
     const savedPos = sessionStorage.getItem('homeScrollPos')
     if (savedPos && moviesList.length > 0) {
       const targetPos = parseInt(savedPos, 10)
-      // Use a tiny delay to ensure the DOM is painted and ready for scroll restoration
       const timer = setTimeout(() => {
         window.scrollTo({ top: targetPos, behavior: 'instant' })
         isRestoredRef.current = true
@@ -139,7 +141,9 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Box h='100%' pb='4rem'>
+      <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
+
+      <Box position='relative' zIndex={1} h='100%' pb='4rem'>
         <Box my={{ base: '2rem', md: '3rem' }}>
           <h1 className='title'>
             <span>Galaxy Movies</span>
@@ -184,7 +188,13 @@ export default function Home() {
                 minH='100vh'
               >
                 {moviesList.map((movie, index) => (
-                  <MovieCard key={movie.id} movie={movie} priority={index < 5} />
+                  <Box
+                    key={movie.id}
+                    onMouseEnter={() => handleCardMouseEnter(movie.backdrop_path)}
+                    onMouseLeave={handleCardMouseLeave}
+                  >
+                    <MovieCard movie={movie} priority={index < 5} />
+                  </Box>
                 ))}
               </SimpleGrid>
             </InfiniteScroll>
