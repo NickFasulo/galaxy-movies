@@ -103,7 +103,6 @@ export default function Company({ company, movies, companyError }) {
 
       <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} px={{ base: 4, md: 12 }}>
         <Box maxW='1200px' mx='auto'>
-          {/* Company Details Container */}
           <Flex
             direction={{ base: 'column', md: 'row' }}
             align={{ base: 'center', md: 'flex-start' }}
@@ -160,7 +159,6 @@ export default function Company({ company, movies, companyError }) {
             <Flex direction='column' gap={3} textAlign={{ base: 'center', md: 'left' }} flex={1}>
               <Heading size='xl'>{company.name}</Heading>
 
-              {/* Location & Meta Group */}
               <Flex direction='column' gap={2} align={{ base: 'center', md: 'flex-start' }}>
                 <Flex gap={3} justify={{ base: 'center', md: 'flex-start' }} wrap='wrap' align='center'>
                   {company.origin_country && (
@@ -199,14 +197,15 @@ export default function Company({ company, movies, companyError }) {
             </Flex>
           </Flex>
 
-          {/* Back Button */}
           <Flex justify='center' mb={10}>
             <BackButton />
           </Flex>
 
-          <Heading size='lg' mb={6}>
-            Popular Releases
-          </Heading>
+          <Flex justify='center' mb={6}>
+            <Heading size='lg'>
+              Popular Releases
+            </Heading>
+          </Flex>
 
           {movies.length === 0 ? (
             <Text color='gray.400'>No movies found for this production company.</Text>
