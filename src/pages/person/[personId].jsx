@@ -77,7 +77,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
 
   const profileUrl = person.profile_path
     ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
-    : '/galaxy-movies-background.png'
+    : '/poster_fallback.webp'
 
   const [profileSrc, setProfileSrc] = useState(profileUrl)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
@@ -170,7 +170,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
                     fill
                     priority
                     sizes='(max-width: 768px) 100vw, 320px'
-                    onError={() => setProfileSrc('/galaxy-movies-background.png')}
+                    onError={() => setProfileSrc('/poster_fallback.webp')}
                     style={{
                       objectFit: 'cover',
                       borderRadius: '1rem',
@@ -316,7 +316,7 @@ function MovieCard({ movie, showRole }) {
   const [imgSrc, setImgSrc] = useState(
     movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-      : '/galaxy-movies-background.png'
+      : '/poster_fallback.webp'
   )
 
   return (
@@ -342,7 +342,7 @@ function MovieCard({ movie, showRole }) {
             alt={movie.title || 'Movie Poster'}
             fill
             sizes='(max-width: 768px) 50vw, 20vw'
-            onError={() => setImgSrc('/galaxy-movies-background.png')}
+            onError={() => setImgSrc('/poster_fallback.webp')}
             style={{ objectFit: 'cover' }}
           />
         </Box>

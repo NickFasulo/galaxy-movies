@@ -243,7 +243,7 @@ export default function Company({ company, movies, companyError }) {
               {movies.map((movie) => {
                 const posterPath = movie.poster_path
                   ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : '/galaxy-movies-background.png'
+                  : '/poster_fallback.webp'
 
                 return (
                   <Link key={movie.id} href={`/movies/${movie.id}`} passHref>

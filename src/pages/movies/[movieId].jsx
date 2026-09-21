@@ -100,12 +100,10 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
 
   const backdropUrl = movie.backdrop_path 
     ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
-    : movie.poster_path
-      ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
-      : '/galaxy-movies-background.png'
+    : '/backdrop_fallback.webp'
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : '/galaxy-movies-background.png'
+    : '/poster_fallback.webp'
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
@@ -189,7 +187,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             fill
             priority
             sizes='(max-width: 768px) 100vw, 100vw'
-            onError={() => setBackdropSrc('/galaxy-movies-background.png')}
+            onError={() => setBackdropSrc('/backdrop_fallback.webp')}
             style={{ objectFit: 'cover', objectPosition: 'center 20%' }}
           />
         </Box>
@@ -200,7 +198,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             fill
             priority
             sizes='(max-width: 768px) 100vw, 100vw'
-            onError={() => setBackdropSrc('/galaxy-movies-background.png')}
+            onError={() => setBackdropSrc('/backdrop_fallback.webp')}
             style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
           />
         </Box>
@@ -233,7 +231,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                 fill
                 priority
                 sizes='(max-width: 768px) 100vw, 320px'
-                onError={() => setPosterSrc('/galaxy-movies-background.png')}
+                onError={() => setPosterSrc('/poster_fallback.webp')}
                 style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
               />
             </Box>
