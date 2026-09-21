@@ -80,7 +80,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
     : '/galaxy-movies-background.png'
 
   const [profileSrc, setProfileSrc] = useState(profileUrl)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/person/${person.id}`
   const description = person.biography
     ? `${person.biography.slice(0, 155).trim()}...`

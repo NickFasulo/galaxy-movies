@@ -83,9 +83,24 @@ export default function Company({ company, movies, companyError }) {
     ? `https://image.tmdb.org/t/p/w500${company.logo_path}`
     : null
   const [logoSrc, setLogoSrc] = useState(logoUrl)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/company/${company.id}`
   const description = company.description || `Explore movies produced by ${company.name}.`
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: company.name,
+    description,
+    url: company.homepage || canonicalUrl,
+    logo: logoUrl || undefined,
+    foundingLocation: company.headquarters
+      ? { '@type': 'Place', name: company.headquarters }
+      : undefined,
+    address: company.origin_country
+      ? { '@type': 'PostalAddress', addressCountry: company.origin_country }
+      : undefined
+  }
 
   return (
     <>
@@ -93,12 +108,25 @@ export default function Company({ company, movies, companyError }) {
         <title>{`${company.name} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+
         <meta property='og:type' content='website' />
+        <meta property='og:site_name' content='Galaxy Movies' />
         <meta property='og:title' content={`${company.name} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
         {logoUrl && <meta property='og:image' content={logoUrl} />}
-        <meta name='twitter:card' content='summary_large_image' />
+
+        <meta name='twitter:card' content='summary' />
+        <meta name='twitter:title' content={`${company.name} | Galaxy Movies`} />
+        <meta name='twitter:description' content={description} />
+        {logoUrl && <meta name='twitter:image' content={logoUrl} />}
+
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
+          }}
+        />
       </Head>
 
       <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} px={{ base: 4, md: 12 }}>
@@ -135,6 +163,7 @@ export default function Company({ company, movies, companyError }) {
                   src={logoSrc}
                   alt={`${company.name} logo`}
                   fill
+                  priority
                   sizes='200px'
                   onError={() => setLogoSrc(null)}
                   style={{ objectFit: 'contain', padding: '0.5rem' }}

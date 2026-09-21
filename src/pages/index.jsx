@@ -132,12 +132,52 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
+  const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
+  const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
+  const ogImage = `${siteUrl}/galaxy-movies-background.png`
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Galaxy Movies',
+    url: siteUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/?search={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  }
+
   return (
     <>
       <Head>
-        <title>Galaxy Movies</title>
-        <meta name='description' content='Galaxy Movies' />
+        <title>{pageTitle}</title>
+        <meta name='description' content={pageDescription} />
+        <link rel='canonical' href={siteUrl} />
         <link rel='icon' href='/favicon.ico' />
+
+        <meta property='og:type' content='website' />
+        <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:title' content={pageTitle} />
+        <meta property='og:description' content={pageDescription} />
+        <meta property='og:url' content={siteUrl} />
+        <meta property='og:image' content={ogImage} />
+
+        <meta name='twitter:card' content='summary_large_image' />
+        <meta name='twitter:title' content={pageTitle} />
+        <meta name='twitter:description' content={pageDescription} />
+        <meta name='twitter:image' content={ogImage} />
+
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema).replace(/</g, '\\u003c')
+          }}
+        />
       </Head>
 
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />

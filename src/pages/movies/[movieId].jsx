@@ -109,16 +109,34 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/movies/${movie.id}`
   const description = movie.overview || `Where to watch ${movie.title}.`
+  const genres = movie.genres?.map(g => g.name) || []
+  // ISO 8601 duration: PT{h}H{m}M
+  const isoDuration = movie.runtime
+    ? `PT${Math.floor(movie.runtime / 60)}H${movie.runtime % 60}M`
+    : undefined
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Movie',
     name: movie.title,
     description,
     image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl}`,
-    dateCreated: movie.release_date || undefined,
+    datePublished: movie.release_date || undefined,
+    duration: isoDuration,
+    genre: genres.length > 0 ? genres : undefined,
+    director: director ? {
+      '@type': 'Person',
+      name: director.name,
+      url: `${siteUrl}/person/${director.id}`
+    } : undefined,
+    actor: topCast.length > 0 ? topCast.slice(0, 5).map(person => ({
+      '@type': 'Person',
+      name: person.name,
+      url: `${siteUrl}/person/${person.id}`
+    })) : undefined,
     aggregateRating: movie.vote_count > 0 ? {
       '@type': 'AggregateRating',
       ratingValue: movie.vote_average,
@@ -134,12 +152,19 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         <title>{`${movie.title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+
         <meta property='og:type' content='video.movie' />
+        <meta property='og:site_name' content='Galaxy Movies' />
         <meta property='og:title' content={`${movie.title} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
         <meta property='og:image' content={posterUrl} />
+
         <meta name='twitter:card' content='summary_large_image' />
+        <meta name='twitter:title' content={`${movie.title} | Galaxy Movies`} />
+        <meta name='twitter:description' content={description} />
+        <meta name='twitter:image' content={posterUrl} />
+
         <script
           type='application/ld+json'
           dangerouslySetInnerHTML={{

@@ -20,7 +20,7 @@ export async function getServerSideProps({ params, res }) {
 }
 
 export default function GenrePage({ genre, title, movies, dataError }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxy-movies.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/genre/${genre}`
   const description = `Discover ${title.toLowerCase()}, including popular picks and movies worth watching.`
 
@@ -30,6 +30,16 @@ export default function GenrePage({ genre, title, movies, dataError }) {
         <title>{`${title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+
+        <meta property='og:type' content='website' />
+        <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:title' content={`${title} | Galaxy Movies`} />
+        <meta property='og:description' content={description} />
+        <meta property='og:url' content={canonicalUrl} />
+
+        <meta name='twitter:card' content='summary' />
+        <meta name='twitter:title' content={`${title} | Galaxy Movies`} />
+        <meta name='twitter:description' content={description} />
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
