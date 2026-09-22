@@ -86,6 +86,14 @@ export default function Company({ company, movies, companyError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/company/${company.id}`
   const description = company.description || `Explore movies produced by ${company.name}.`
+  const ogSubtitle = company.headquarters
+    ? `${company.headquarters} · Production Company`
+    : 'Production Company · Galaxy Movies'
+  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
+    title: company.name,
+    subtitle: ogSubtitle,
+    ...(logoUrl ? { poster: logoUrl } : {})
+  }).toString()}`
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -114,12 +122,14 @@ export default function Company({ company, movies, companyError }) {
         <meta property='og:title' content={`${company.name} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
-        {logoUrl && <meta property='og:image' content={logoUrl} />}
+        <meta property='og:image' content={ogImage} />
+        <meta property='og:image:width' content='1200' />
+        <meta property='og:image:height' content='630' />
 
-        <meta name='twitter:card' content='summary' />
+        <meta name='twitter:card' content='summary_large_image' />
         <meta name='twitter:title' content={`${company.name} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
-        {logoUrl && <meta name='twitter:image' content={logoUrl} />}
+        <meta name='twitter:image' content={ogImage} />
 
         <script
           type='application/ld+json'

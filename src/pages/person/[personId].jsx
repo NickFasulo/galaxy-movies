@@ -85,6 +85,17 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
   const description = person.biography
     ? `${person.biography.slice(0, 155).trim()}...`
     : `Explore filmography, biography, and movie details for ${person.name} on Galaxy Movies.`
+  const ogPoster = person.profile_path
+    ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
+    : null
+  const ogSubtitle = person.known_for_department
+    ? `${person.known_for_department} · Galaxy Movies`
+    : description
+  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
+    title: person.name,
+    subtitle: ogSubtitle,
+    ...(ogPoster ? { poster: ogPoster } : {})
+  }).toString()}`
 
   const getAge = () => {
     if (!person.birthday) return null
@@ -127,12 +138,14 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
         <meta property='og:title' content={`${person.name} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
-        <meta property='og:image' content={profileSrc} />
+        <meta property='og:image' content={ogImage} />
+        <meta property='og:image:width' content='1200' />
+        <meta property='og:image:height' content='630' />
 
         <meta name='twitter:card' content='summary_large_image' />
         <meta name='twitter:title' content={`${person.name} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
-        <meta name='twitter:image' content={profileSrc} />
+        <meta name='twitter:image' content={ogImage} />
 
         <script
           type='application/ld+json'

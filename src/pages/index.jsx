@@ -135,7 +135,10 @@ export default function Home() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
   const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
-  const ogImage = `${siteUrl}/backdrop_fallback.webp`
+  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
+    title: 'Galaxy Movies',
+    subtitle: 'Discover Popular & New Films'
+  }).toString()}`
 
   const websiteSchema = {
     '@context': 'https://schema.org',

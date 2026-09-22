@@ -111,6 +111,15 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
   const canonicalUrl = `${siteUrl}/movies/${movie.id}`
   const description = movie.overview || `Where to watch ${movie.title}.`
   const genres = movie.genres?.map(g => g.name) || []
+  const ogPoster = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : null
+  const ogSubtitle = movie.tagline || description
+  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
+    title: movie.title,
+    subtitle: ogSubtitle,
+    ...(ogPoster ? { poster: ogPoster } : {})
+  }).toString()}`
   // ISO 8601 duration: PT{h}H{m}M
   const isoDuration = movie.runtime
     ? `PT${Math.floor(movie.runtime / 60)}H${movie.runtime % 60}M`
@@ -156,12 +165,14 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         <meta property='og:title' content={`${movie.title} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
-        <meta property='og:image' content={posterUrl} />
+        <meta property='og:image' content={ogImage} />
+        <meta property='og:image:width' content='1200' />
+        <meta property='og:image:height' content='630' />
 
         <meta name='twitter:card' content='summary_large_image' />
         <meta name='twitter:title' content={`${movie.title} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
-        <meta name='twitter:image' content={posterUrl} />
+        <meta name='twitter:image' content={ogImage} />
 
         <script
           type='application/ld+json'

@@ -16,6 +16,7 @@
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/og": "^1.0.2",
     "framer-motion": "^9.1.7",
     "lru-cache": "^11.5.2",
     "next": "^15.0.3",

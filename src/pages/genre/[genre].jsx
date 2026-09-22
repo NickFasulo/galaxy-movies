@@ -23,6 +23,14 @@ export default function GenrePage({ genre, title, movies, dataError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/genre/${genre}`
   const description = `Discover ${title.toLowerCase()}, including popular picks and movies worth watching.`
+  const featuredPoster = movies?.[0]?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
+    : null
+  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
+    title,
+    subtitle: description,
+    ...(featuredPoster ? { poster: featuredPoster } : {})
+  }).toString()}`
 
   return (
     <>
@@ -36,10 +44,14 @@ export default function GenrePage({ genre, title, movies, dataError }) {
         <meta property='og:title' content={`${title} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
+        <meta property='og:image' content={ogImage} />
+        <meta property='og:image:width' content='1200' />
+        <meta property='og:image:height' content='630' />
 
-        <meta name='twitter:card' content='summary' />
+        <meta name='twitter:card' content='summary_large_image' />
         <meta name='twitter:title' content={`${title} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
+        <meta name='twitter:image' content={ogImage} />
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
