@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
+import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import '../styles/globals.css'
 
@@ -14,6 +15,7 @@ function MyApp({ Component, pageProps }) {
       <Hydrate state={pageProps.dehydratedState}>
         <ChakraProvider>
           <Component {...pageProps} />
+          <Analytics />
         </ChakraProvider>
       </Hydrate>
     </QueryClientProvider>
