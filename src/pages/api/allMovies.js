@@ -67,6 +67,10 @@ export default async function handler(req, res) {
     const filteredMovies = rawMovies.filter(movie => {
       if (!movie.poster_path) return false
       
+      if (search.trim().length > 0) {
+        return true
+      }
+      
       if (category === 'popular' && movie.release_date) {
         const releaseYear = new Date(movie.release_date).getFullYear()
         if (releaseYear < popularCutoffYear) return false
