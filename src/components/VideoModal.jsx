@@ -22,8 +22,8 @@ export default function VideoModal({ videoKey }) {
   return (
     <>
       <Button
-        size="sm"
-        width={{ base: '5.5rem', md: '7rem' }}
+        size={{ base: 'md', md: 'sm' }}
+        width={{ base: '8rem', md: '7rem' }}
         onClick={onOpen}
         aria-label="Watch trailer"
       >

@@ -12,7 +12,7 @@ import {
   Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
-// import ReviewModal from '../../components/ReviewModal'
+import ReviewModal from '../../components/ReviewModal'
 import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
@@ -191,26 +191,24 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         h={{ base: '400px', md: '500px' }}
         zIndex={0}
       >
-        <Box display={{ base: 'none', md: 'block' }} position='relative' h='100%' w='100%'>
+        <Box
+          position='relative'
+          h='100%'
+          w='100%'
+          sx={{
+            img: {
+              objectFit: 'cover',
+              objectPosition: { base: 'center bottom', md: 'center 20%' }
+            }
+          }}
+        >
           <Image
             src={backdropSrc}
             alt={movie.title || 'Movie Backdrop'}
             fill
             priority
-            sizes='(max-width: 768px) 100vw, 100vw'
+            sizes='100vw'
             onError={() => setBackdropSrc('/backdrop_fallback.webp')}
-            style={{ objectFit: 'cover', objectPosition: 'center 20%' }}
-          />
-        </Box>
-        <Box display={{ base: 'block', md: 'none' }} position='relative' h='100%' w='100%'>
-          <Image
-            src={backdropSrc}
-            alt={movie.title || 'Movie Poster'}
-            fill
-            priority
-            sizes='(max-width: 768px) 100vw, 100vw'
-            onError={() => setBackdropSrc('/backdrop_fallback.webp')}
-            style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
           />
         </Box>
         <Box
@@ -318,14 +316,15 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               {movie.overview || 'Description unavailable.'}
             </Text>
 
-            <Flex display={{ base: 'flex', md: 'none' }} direction='row' justify='space-evenly' align='center' w='100%'>
-              {/* <ReviewModal modalData={movie} /> */}
-              <VideoModal videoKey={videoKey} />
-              <BackButton />
-            </Flex>
-
-            <Flex display={{ base: 'none', md: 'flex' }} justify='space-evenly' align='flex-end' gap='3rem'>
-              {/* <ReviewModal modalData={movie} /> */}
+            <Flex
+              direction={{ base: 'column', md: 'row' }}
+              align={{ base: 'center', md: 'flex-end' }}
+              justify={{ base: 'center', md: 'space-evenly' }}
+              gap='2rem'
+              w='100%'
+              py={{ base: '1rem', md: 0 }}
+            >
+              <ReviewModal modalData={movie} />
               <VideoModal videoKey={videoKey} />
               <BackButton />
             </Flex>

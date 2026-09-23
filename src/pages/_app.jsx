@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
@@ -6,7 +6,7 @@ import { useScrollRestore } from '../hooks/useScrollRestore'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }) {
-  const [queryClient] = useState(() => new QueryClient())
+  const queryClient = useMemo(() => new QueryClient(), [])
 
   useScrollRestore()
 
@@ -15,7 +15,7 @@ function MyApp({ Component, pageProps }) {
       <Hydrate state={pageProps.dehydratedState}>
         <ChakraProvider>
           <Component {...pageProps} />
-          <Analytics />
+          {process.env.NODE_ENV === 'production' && <Analytics />}
         </ChakraProvider>
       </Hydrate>
     </QueryClientProvider>

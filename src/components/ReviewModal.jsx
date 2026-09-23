@@ -29,7 +29,18 @@ export default function ReviewModal({ modalData }) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ modalData })
+        body: JSON.stringify({
+          modalData: {
+            title: modalData.title,
+            overview: modalData.overview,
+            genres: Array.isArray(modalData.genres)
+              ? modalData.genres
+                  .map((genre) => ({ name: genre?.name }))
+                  .filter((genre) => genre.name)
+                  .slice(0, 5)
+              : []
+          }
+        })
       })
       if (!res.ok) {
         throw new Error('Failed to generate review')
@@ -49,8 +60,8 @@ export default function ReviewModal({ modalData }) {
   return (
     <>
       <Button
-        size='sm'
-        width={{ base: '5.5rem', md: '7rem' }}
+        size={{ base: 'md', md: 'sm' }}
+        width={{ base: '8rem', md: '7rem' }}
         onClick={() => {
           onOpen()
           if (!movieReview || error) {
@@ -58,7 +69,7 @@ export default function ReviewModal({ modalData }) {
           }
         }}
       >
-        See Review
+        AI Synopsis
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose} size='lg' isCentered>
@@ -66,14 +77,18 @@ export default function ReviewModal({ modalData }) {
         <ModalContent>
           <ModalHeader>
             <Text textAlign='center'>
-              Movie Bot's Review
+              Movie Bot's Synopsis
             </Text>
           </ModalHeader>
           <ModalBody>
             {loading
-              ? 'Generating a review...'
+              ? <Text textAlign='center'>
+                  'Synopsis loading...'
+                </Text>
               : error
-                ? 'The review could not be generated. Please try again.'
+                ? <Text textAlign='center'>
+                    'The synopsis could not be generated. Please try again.'
+                  </Text>
                 : movieReview}
           </ModalBody>
           <ModalFooter>
