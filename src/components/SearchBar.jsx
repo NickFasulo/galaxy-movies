@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { Flex, Input, Box } from '@chakra-ui/react'
 import DropDown from './DropDown'
 
@@ -10,16 +10,24 @@ export default function SearchBar({
 }) {
   const isSearchActive = searchInput.trim().length > 0
   const [isSticky, setIsSticky] = useState(false)
+  const headerRef = useRef(null)
+  const [headerTop, setHeaderTop] = useState(0)
+
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderTop(headerRef.current.getBoundingClientRect().top + window.scrollY)
+    }
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsSticky(window.scrollY > 0)
+      setIsSticky(window.scrollY > headerTop)
     }
 
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [headerTop])
 
   const handleCategoryChange = useCallback(
     selectedCategory => {
@@ -39,6 +47,7 @@ export default function SearchBar({
 
   return (
     <Box
+      ref={headerRef}
       position='sticky'
       top={0}
       zIndex={20}
