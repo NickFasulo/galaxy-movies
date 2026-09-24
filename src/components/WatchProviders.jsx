@@ -35,7 +35,7 @@ export default function WatchProviders({ watchProviders }) {
                 <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
                   <Box position='relative' width='32px' height='32px'>
                     <Image
-                      src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
+                      src={provider.logo_path}
                       alt={provider.provider_name}
                       fill
                       style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
@@ -58,7 +58,7 @@ export default function WatchProviders({ watchProviders }) {
                   <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
                     <Box position='relative' width='32px' height='32px'>
                       <Image
-                        src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
+                        src={provider.logo_path}
                         alt={provider.provider_name}
                         fill
                         style={{ borderRadius: '0.375rem', objectFit: 'cover' }}

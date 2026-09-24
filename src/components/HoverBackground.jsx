@@ -11,7 +11,7 @@ export function useHoverBackground() {
     if (!backdropPath) return
 
     hoverTimerRef.current = setTimeout(() => {
-      setHoveredBg(`https://image.tmdb.org/t/p/w1280${backdropPath}`)
+      setHoveredBg(backdropPath)
       setIsBgVisible(true)
     }, 750)
   }, [])
@@ -36,6 +36,8 @@ export function useHoverBackground() {
 }
 
 export default function HoverBackground({ hoveredBg, isBgVisible }) {
+  const backgroundImage = hoveredBg ? `url(https://image.tmdb.org/t/p/w1280${hoveredBg})` : 'none'
+  
   return (
     <Box
       display={{ base: 'none', md: 'block' }}
@@ -48,7 +50,7 @@ export default function HoverBackground({ hoveredBg, isBgVisible }) {
       pointerEvents='none'
       opacity={isBgVisible && hoveredBg ? 0.25 : 0}
       transition='opacity 0.6s ease-in-out'
-      bgImage={hoveredBg ? `url(${hoveredBg})` : 'none'}
+      bgImage={backgroundImage}
       bgPosition='center'
       bgSize='cover'
       bgRepeat='no-repeat'

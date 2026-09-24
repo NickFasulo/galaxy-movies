@@ -7,8 +7,6 @@ import { WrapItem, Box, Skeleton, Text } from '@chakra-ui/react'
 function MovieCard({ movie, priority = false }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const posterUrl = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : null
 
   return (
     <WrapItem>

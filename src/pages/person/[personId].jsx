@@ -75,26 +75,21 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
     )
   }
 
-  const profileUrl = person.profile_path
-    ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
-    : '/poster_fallback.webp'
-
-  const [profileSrc, setProfileSrc] = useState(profileUrl)
+  const profilePath = person.profile_path || '/poster_fallback.webp'
+  const [profileSrc, setProfileSrc] = useState(profilePath)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/person/${person.id}`
   const description = person.biography
     ? `${person.biography.slice(0, 155).trim()}...`
     : `Explore filmography, biography, and movie details for ${person.name} on Galaxy Movies.`
   const ogPoster = person.profile_path
-    ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
-    : null
   const ogSubtitle = person.known_for_department
     ? `${person.known_for_department} · Galaxy Movies`
     : description
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title: person.name,
     subtitle: ogSubtitle,
-    ...(ogPoster ? { poster: ogPoster } : {})
+    ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
   }).toString()}`
 
   const getAge = () => {
@@ -326,11 +321,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
 }
 
 function MovieCard({ movie, showRole }) {
-  const [imgSrc, setImgSrc] = useState(
-    movie.poster_path
-      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-      : '/poster_fallback.webp'
-  )
+  const [imgSrc, setImgSrc] = useState(movie.poster_path || '/poster_fallback.webp')
 
   return (
     <Link href={`/movies/${movie.id}`} passHref>

@@ -36,7 +36,8 @@ function analyzeLogo(src) {
 }
 
 export default function ProductionLogo({ company }) {
-  const logoUrl = `https://image.tmdb.org/t/p/w185${company.logo_path}`
+  const logoPath = company.logo_path
+  const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w185${logoPath}` : null
   const [{ width, bg }, setStyle] = useState({ width: 64, bg: DEFAULT_BG })
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function ProductionLogo({ company }) {
     <Box position='relative' w={`${width}px`} h='48px' bg={bg} borderRadius='lg'>
       <Image
         alt={company.name}
-        src={logoUrl}
+        src={logoPath}
         fill
         sizes={`${width - 8}px`}
         style={{ objectFit: 'contain', objectPosition: 'center', padding: '4px' }}

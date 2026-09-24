@@ -79,10 +79,8 @@ export default function Company({ company, movies, companyError }) {
     )
   }
 
-  const logoUrl = company.logo_path
-    ? `https://image.tmdb.org/t/p/w500${company.logo_path}`
-    : null
-  const [logoSrc, setLogoSrc] = useState(logoUrl)
+  const logoPath = company.logo_path
+  const [hasLogoError, setHasLogoError] = useState(false)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/company/${company.id}`
   const description = company.description || `Explore movies produced by ${company.name}.`
@@ -92,7 +90,7 @@ export default function Company({ company, movies, companyError }) {
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title: company.name,
     subtitle: ogSubtitle,
-    ...(logoUrl ? { poster: logoUrl } : {})
+    ...(logoPath ? { poster: `https://image.tmdb.org/t/p/w500${logoPath}` } : {})
   }).toString()}`
 
   const structuredData = {
@@ -156,7 +154,7 @@ export default function Company({ company, movies, companyError }) {
             maxW='100%'
             mx='auto'
           >
-            {logoSrc ? (
+            {logoPath && !hasLogoError ? (
               <Box
                 position='relative'
                 w='200px'
@@ -170,12 +168,12 @@ export default function Company({ company, movies, companyError }) {
                 justifyContent='center'
               >
                 <Image
-                  src={logoSrc}
+                  src={logoPath}
                   alt={`${company.name} logo`}
                   fill
                   priority
                   sizes='200px'
-                  onError={() => setLogoSrc(null)}
+                  onError={() => setHasLogoError(true)}
                   style={{ objectFit: 'contain', padding: '0.5rem' }}
                 />
               </Box>
@@ -251,9 +249,7 @@ export default function Company({ company, movies, companyError }) {
           ) : (
             <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing={{ base: 4, md: 6 }}>
               {movies.map((movie) => {
-                const posterPath = movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : '/poster_fallback.webp'
+                const posterPath = movie.poster_path || '/poster_fallback.webp'
 
                 return (
                   <Link key={movie.id} href={`/movies/${movie.id}`} passHref>

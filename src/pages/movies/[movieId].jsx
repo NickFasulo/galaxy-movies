@@ -98,12 +98,8 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     )
   }
 
-  const backdropUrl = movie.backdrop_path 
-    ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
-    : '/backdrop_fallback.webp'
-  const posterUrl = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : '/poster_fallback.webp'
+  const backdropUrl = movie.backdrop_path || '/backdrop_fallback.webp'
+  const posterUrl = movie.poster_path || '/poster_fallback.webp'
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
@@ -112,13 +108,11 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
   const description = movie.overview || `Where to watch ${movie.title}.`
   const genres = movie.genres?.map(g => g.name) || []
   const ogPoster = movie.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    : null
   const ogSubtitle = movie.tagline || description
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title: movie.title,
     subtitle: ogSubtitle,
-    ...(ogPoster ? { poster: ogPoster } : {})
+    ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
   }).toString()}`
   // ISO 8601 duration: PT{h}H{m}M
   const isoDuration = movie.runtime
