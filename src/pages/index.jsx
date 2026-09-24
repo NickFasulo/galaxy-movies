@@ -176,6 +176,7 @@ export default function Home() {
         <meta name='twitter:image' content={ogImage} />
         <meta name='impact-site-verification' value='1ad17b76-2079-4639-9f17-f65f40948c6b' />
         <meta name="google-adsense-account" content="ca-pub-7970999589560353" />
+        <meta name="google-site-verification" content="dI9IyHQELzpq29cGmnFHM5lAXtVXJFovinLzCWl2NlM" />
 
         <script
           type='application/ld+json'
