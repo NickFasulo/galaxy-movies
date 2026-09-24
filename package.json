@@ -15,6 +15,7 @@
     "@chakra-ui/react": "^2.4.9",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
+    "@tiun/sdk": "^1.0.0",
     "@upstash/redis": "1.39.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/og": "^1.0.2",
