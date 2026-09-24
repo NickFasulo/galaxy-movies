@@ -10,6 +10,7 @@ import {
   Button,
   useDisclosure
 } from '@chakra-ui/react'
+import { track } from '@vercel/analytics'
 
 export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -67,6 +68,9 @@ export default function ReviewModal({ modalData }) {
           if (!movieReview || error) {
             aiReview()
           }
+          if (process.env.NODE_ENV === 'production') {
+            track('ai_synopsis_click')
+          }
         }}
       >
         AI Synopsis
@@ -93,7 +97,16 @@ export default function ReviewModal({ modalData }) {
           </ModalBody>
           <ModalFooter>
             {error && (
-              <Button marginRight='auto' onClick={aiReview} isLoading={loading}>
+              <Button
+                marginRight='auto'
+                onClick={() => {
+                  aiReview()
+                  if (process.env.NODE_ENV === 'production') {
+                    track('ai_synopsis_click')
+                  }
+                }}
+                isLoading={loading}
+              >
                 Try again
               </Button>
             )}
