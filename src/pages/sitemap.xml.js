@@ -10,6 +10,13 @@ const escapeXml = value =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
 
+const formatDate = (dateString) => {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return null
+  return date.toISOString().split('T')[0]
+}
+
 function urlEntry(loc, lastmod) {
   const escapedLoc = escapeXml(loc)
   return lastmod
@@ -63,7 +70,7 @@ export async function getServerSideProps({ res }) {
     for (const movie of allMovies) {
       if (!movie?.id) continue
       if (!movieEntries.has(movie.id)) {
-        const lastmod = movie.release_date || today
+        const lastmod = formatDate(movie.release_date) || today
         movieEntries.set(movie.id, lastmod)
       }
 
