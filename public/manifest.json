@@ -1,0 +1,19 @@
+{
+  "name": "Galaxy Movies",
+  "short_name": "Galaxy Movies",
+  "description": "Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14181c",
+  "theme_color": "#14181c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["entertainment", "movies"],
+  "screenshots": []
+}

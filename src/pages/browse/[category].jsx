@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
 import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
+import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 
 export async function getServerSideProps({ params, res }) {
   const category = movieCategories[params.category]
@@ -31,6 +32,32 @@ export default function BrowsePage({ category, title, description, movies, dataE
     ...(featuredPoster ? { poster: featuredPoster } : {})
   }).toString()}`
 
+  const itemListData = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: title,
+    description,
+    url: canonicalUrl,
+    numberOfItems: movies?.length || 0,
+    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Movie',
+        name: movie.title,
+        url: `${siteUrl}/movies/${movie.id}`,
+        image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
+        datePublished: movie.release_date || undefined
+      }
+    })) || []
+  }
+
+  const breadcrumbItems = [
+    { name: 'Home', url: siteUrl },
+    { name: 'Browse', url: `${siteUrl}/browse` },
+    { name: title, url: canonicalUrl }
+  ]
+
   return (
     <>
       <Head>
@@ -51,6 +78,14 @@ export default function BrowsePage({ category, title, description, movies, dataE
         <meta name='twitter:title' content={`${title} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
         <meta name='twitter:image' content={ogImage} />
+
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(itemListData).replace(/</g, '\\u003c')
+          }}
+        />
+        <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>

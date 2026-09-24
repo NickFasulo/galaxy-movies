@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon, ExternalLinkIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
+import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 
 export const getServerSideProps = async (context) => {
@@ -80,6 +81,7 @@ export default function Company({ company, movies, companyError }) {
   }
 
   const logoPath = company.logo_path
+  const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w500${logoPath}` : undefined
   const [hasLogoError, setHasLogoError] = useState(false)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/company/${company.id}`
@@ -90,7 +92,7 @@ export default function Company({ company, movies, companyError }) {
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title: company.name,
     subtitle: ogSubtitle,
-    ...(logoPath ? { poster: `https://image.tmdb.org/t/p/w500${logoPath}` } : {})
+    ...(logoUrl ? { poster: logoUrl } : {})
   }).toString()}`
 
   const structuredData = {
@@ -99,7 +101,7 @@ export default function Company({ company, movies, companyError }) {
     name: company.name,
     description,
     url: company.homepage || canonicalUrl,
-    logo: logoUrl || undefined,
+    logo: logoUrl,
     foundingLocation: company.headquarters
       ? { '@type': 'Place', name: company.headquarters }
       : undefined,
@@ -107,6 +109,12 @@ export default function Company({ company, movies, companyError }) {
       ? { '@type': 'PostalAddress', addressCountry: company.origin_country }
       : undefined
   }
+
+  const breadcrumbItems = [
+    { name: 'Home', url: siteUrl },
+    { name: 'Companies', url: `${siteUrl}/company` },
+    { name: company.name, url: canonicalUrl }
+  ]
 
   return (
     <>
@@ -135,6 +143,7 @@ export default function Company({ company, movies, companyError }) {
             __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
           }}
         />
+        <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
 
       <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} px={{ base: 4, md: 12 }}>
@@ -154,7 +163,7 @@ export default function Company({ company, movies, companyError }) {
             maxW='100%'
             mx='auto'
           >
-            {logoPath && !hasLogoError ? (
+            {logoUrl && !hasLogoError ? (
               <Box
                 position='relative'
                 w='200px'
@@ -168,7 +177,7 @@ export default function Company({ company, movies, companyError }) {
                 justifyContent='center'
               >
                 <Image
-                  src={logoPath}
+                  src={logoUrl}
                   alt={`${company.name} logo`}
                   fill
                   priority

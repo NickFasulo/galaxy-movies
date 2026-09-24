@@ -18,6 +18,7 @@ import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
 import ActorAvatar from '../../components/ActorAvatar'
+import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
@@ -147,6 +148,23 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     } : undefined
   }
 
+  const videoObjectData = videoKey ? {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: `${movie.title} Trailer`,
+    description: `Watch the official trailer for ${movie.title}`,
+    thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl}`,
+    uploadDate: movie.release_date || undefined,
+    contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
+    embedUrl: `https://www.youtube.com/embed/${videoKey}`
+  } : null
+
+  const breadcrumbItems = [
+    { name: 'Home', url: siteUrl },
+    { name: 'Movies', url: `${siteUrl}/movies` },
+    { name: movie.title, url: canonicalUrl }
+  ]
+
   return (
     <>
       <Head>
@@ -174,6 +192,15 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
           }}
         />
+        {videoObjectData && (
+          <script
+            type='application/ld+json'
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(videoObjectData).replace(/</g, '\\u003c')
+            }}
+          />
+        )}
+        <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
       <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
       <Box

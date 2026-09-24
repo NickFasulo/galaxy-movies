@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
+import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 
 export const getServerSideProps = async (context) => {
@@ -122,6 +123,12 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
     jobTitle: person.known_for_department || 'Film Professional'
   }
 
+  const breadcrumbItems = [
+    { name: 'Home', url: siteUrl },
+    { name: 'People', url: `${siteUrl}/person` },
+    { name: person.name, url: canonicalUrl }
+  ]
+
   return (
     <>
       <Head>
@@ -148,6 +155,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
             __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
           }}
         />
+        <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
 
       <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: '2rem', md: '4rem' }} px='1rem'>

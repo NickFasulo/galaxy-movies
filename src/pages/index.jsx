@@ -145,6 +145,7 @@ export default function Home() {
     '@type': 'WebSite',
     name: 'Galaxy Movies',
     url: siteUrl,
+    description: pageDescription,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -152,6 +153,22 @@ export default function Home() {
         urlTemplate: `${siteUrl}/?search={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
+    }
+  }
+
+  const webApplicationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Galaxy Movies',
+    url: siteUrl,
+    description: pageDescription,
+    applicationCategory: 'Entertainment',
+    operatingSystem: 'All',
+    browserRequirements: 'Requires JavaScript',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD'
     }
   }
 
@@ -182,6 +199,12 @@ export default function Home() {
           type='application/ld+json'
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(websiteSchema).replace(/</g, '\\u003c')
+          }}
+        />
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(webApplicationSchema).replace(/</g, '\\u003c')
           }}
         />
       </Head>
