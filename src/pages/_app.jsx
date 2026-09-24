@@ -13,7 +13,7 @@ function MyApp({ Component, pageProps }) {
 
   useEffect(() => {
     tiun.init({
-      snippetId: 'YOUR_SNIPPET_ID',
+      snippetId: '8DpSIcwNMglV5Rh9FZlygzxprSzvMosIOLu4jcu6',
       language: 'en'
     })
   }, [])

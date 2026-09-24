@@ -174,6 +174,7 @@ export default function Home() {
         <meta name='twitter:title' content={pageTitle} />
         <meta name='twitter:description' content={pageDescription} />
         <meta name='twitter:image' content={ogImage} />
+        <meta name='impact-site-verification' value='1ad17b76-2079-4639-9f17-f65f40948c6b' />
 
         <script
           type='application/ld+json'
