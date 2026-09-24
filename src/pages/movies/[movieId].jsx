@@ -58,10 +58,12 @@ export const getServerSideProps = async (context) => {
     const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
     const topCast = creditsData.cast?.slice(0, 15) || []
 
-    context.res.setHeader(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    )
+    if (context.res) {
+      context.res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=3600, stale-while-revalidate=86400'
+      )
+    }
 
     return {
       props: {
@@ -99,8 +101,12 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     )
   }
 
-  const backdropUrl = movie.backdrop_path || '/backdrop_fallback.webp'
-  const posterUrl = movie.poster_path || '/poster_fallback.webp'
+  const backdropUrl = movie.backdrop_path 
+    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` 
+    : '/backdrop_fallback.webp'
+  const posterUrl = movie.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+    : '/poster_fallback.webp'
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
@@ -125,7 +131,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     '@type': 'Movie',
     name: movie.title,
     description,
-    image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl}`,
+    image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
     datePublished: movie.release_date || undefined,
     duration: isoDuration,
     genre: genres.length > 0 ? genres : undefined,
@@ -153,7 +159,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     '@type': 'VideoObject',
     name: `${movie.title} Trailer`,
     description: `Watch the official trailer for ${movie.title}`,
-    thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl}`,
+    thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
     uploadDate: movie.release_date || undefined,
     contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
     embedUrl: `https://www.youtube.com/embed/${videoKey}`
@@ -230,6 +236,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             priority
             sizes='100vw'
             onError={() => setBackdropSrc('/backdrop_fallback.webp')}
+            unoptimized={backdropSrc.startsWith('/')}
           />
         </Box>
         <Box
@@ -263,6 +270,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                 sizes='(max-width: 768px) 100vw, 320px'
                 onError={() => setPosterSrc('/poster_fallback.webp')}
                 style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
+                unoptimized={posterSrc.startsWith('/')}
               />
             </Box>
 

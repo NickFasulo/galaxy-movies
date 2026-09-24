@@ -13,7 +13,7 @@ export default function ActorAvatar({ profilePath, name }) {
 
   const imageSrc = profilePath && !hasError 
     ? `https://image.tmdb.org/t/p/w185${profilePath}` 
-    : undefined
+    : '/profile_fallback.webp'
 
   return (
     <Avatar

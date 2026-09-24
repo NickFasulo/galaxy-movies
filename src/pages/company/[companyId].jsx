@@ -39,10 +39,12 @@ export const getServerSideProps = async (context) => {
     const companyData = await companyRes.json()
     const moviesData = moviesRes.ok ? await moviesRes.json() : { results: [] }
 
-    context.res.setHeader(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    )
+    if (context.res) {
+      context.res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=3600, stale-while-revalidate=86400'
+      )
+    }
 
     return {
       props: {
@@ -184,6 +186,7 @@ export default function Company({ company, movies, companyError }) {
                   sizes='200px'
                   onError={() => setHasLogoError(true)}
                   style={{ objectFit: 'contain', padding: '0.5rem' }}
+                  unoptimized={logoUrl?.startsWith('/')}
                 />
               </Box>
             ) : (
@@ -258,7 +261,10 @@ export default function Company({ company, movies, companyError }) {
           ) : (
             <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing={{ base: 4, md: 6 }}>
               {movies.map((movie) => {
-                const posterPath = movie.poster_path || '/poster_fallback.webp'
+                const posterPath = movie.poster_path 
+                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+                  : '/poster_fallback.webp'
+                const [imgSrc, setImgSrc] = useState(posterPath)
 
                 return (
                   <Link key={movie.id} href={`/movies/${movie.id}`} passHref>
@@ -276,11 +282,13 @@ export default function Company({ company, movies, companyError }) {
                     >
                       <Box position='relative' w='100%' pt='150%'>
                         <Image
-                          src={posterPath}
+                          src={imgSrc}
                           alt={movie.title || 'Movie Poster'}
                           fill
                           sizes='(max-width: 768px) 50vw, 20vw'
                           style={{ objectFit: 'cover' }}
+                          onError={() => setImgSrc('/poster_fallback.webp')}
+                          unoptimized={imgSrc.startsWith('/')}
                         />
                       </Box>
                       <Box p={3}>

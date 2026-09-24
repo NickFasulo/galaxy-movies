@@ -44,10 +44,12 @@ export const getServerSideProps = async (context) => {
       new Map(castList.map((m) => [m.id, m])).values()
     ).sort((a, b) => b.popularity - a.popularity)
 
-    context.res.setHeader(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    )
+    if (context.res) {
+      context.res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=3600, stale-while-revalidate=86400'
+      )
+    }
 
     return {
       props: {
@@ -76,7 +78,9 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
     )
   }
 
-  const profilePath = person.profile_path || '/poster_fallback.webp'
+  const profilePath = person.profile_path 
+    ? `https://image.tmdb.org/t/p/w500${person.profile_path}` 
+    : '/poster_fallback.webp'
   const [profileSrc, setProfileSrc] = useState(profilePath)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/person/${person.id}`
@@ -113,7 +117,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
     '@type': 'Person',
     name: person.name,
     description,
-    image: profileSrc.startsWith('http') ? profileSrc : `${siteUrl}${profileSrc}`,
+    image: profileSrc.startsWith('http') ? profileSrc : `${siteUrl}${profileSrc.startsWith('/') ? profileSrc : '/' + profileSrc}`,
     birthDate: person.birthday || undefined,
     deathDate: person.deathday || undefined,
     birthPlace: person.place_of_birth ? {
@@ -192,6 +196,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
                       borderRadius: '1rem',
                       boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)'
                     }}
+                    unoptimized={profileSrc.startsWith('/')}
                   />
                 </Box>
 
@@ -329,7 +334,10 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
 }
 
 function MovieCard({ movie, showRole }) {
-  const [imgSrc, setImgSrc] = useState(movie.poster_path || '/poster_fallback.webp')
+  const posterPath = movie.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+    : '/poster_fallback.webp'
+  const [imgSrc, setImgSrc] = useState(posterPath)
 
   return (
     <Link href={`/movies/${movie.id}`} passHref>
@@ -356,6 +364,7 @@ function MovieCard({ movie, showRole }) {
             sizes='(max-width: 768px) 50vw, 20vw'
             onError={() => setImgSrc('/poster_fallback.webp')}
             style={{ objectFit: 'cover' }}
+            unoptimized={imgSrc.startsWith('/')}
           />
         </Box>
 
