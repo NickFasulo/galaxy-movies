@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
+import HomeButton from '../../components/HomeButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 
@@ -244,7 +245,10 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
                   </Flex>
                 </Box>
 
-                <BackButton />
+                <Flex justify='center' gap={10}>
+                  <BackButton />
+                  <HomeButton />
+                </Flex>
               </Flex>
             </Box>
 

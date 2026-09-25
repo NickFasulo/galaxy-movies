@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon, ExternalLinkIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
+import HomeButton from '../../components/HomeButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 
@@ -246,8 +247,9 @@ export default function Company({ company, movies, companyError }) {
             </Flex>
           </Flex>
 
-          <Flex justify='center' mb={10}>
+          <Flex justify='center' gap={10} mb={10}>
             <BackButton />
+            <HomeButton />
           </Flex>
 
           <Flex justify='center' mb={6}>
