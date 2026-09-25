@@ -19,7 +19,7 @@ const GENRE_MAP = {
   western: 37
 }
 
-const { isBot, getClientIP, checkRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkRateLimit: checkGlobalRateLimit } = require('../../utils/rateLimiter')
 
 export default async function handler(req, res) {
   const ip = getClientIP(req)
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ message: 'Bot access denied' })
   }
   
-  const rateLimitResult = checkRateLimit(ip, 'api')
+  const rateLimitResult = checkGlobalRateLimit(ip, 'api')
   if (!rateLimitResult.allowed) {
     res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
     return res.status(429).json({ message: rateLimitResult.reason })

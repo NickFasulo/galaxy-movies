@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
-const { isBot, getClientIP, checkRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkRateLimit: checkGlobalRateLimit } = require('../../utils/rateLimiter')
 
 let openai
 let redis
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Bot access denied' })
   }
   
-  const rateLimitResult = checkRateLimit(ip, 'strict')
+  const rateLimitResult = checkGlobalRateLimit(ip, 'strict')
   if (!rateLimitResult.allowed) {
     res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
     return res.status(429).json({ error: rateLimitResult.reason })
