@@ -19,7 +19,23 @@ const GENRE_MAP = {
   western: 37
 }
 
+const { isBot, getClientIP, checkRateLimit } = require('../../utils/rateLimiter')
+
 export default async function handler(req, res) {
+  const ip = getClientIP(req)
+  const userAgent = req.headers['user-agent']
+  
+  if (isBot(userAgent)) {
+    return res.status(403).json({ message: 'Bot access denied' })
+  }
+  
+  const rateLimitResult = checkRateLimit(ip, 'api')
+  if (!rateLimitResult.allowed) {
+    res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
+    return res.status(429).json({ message: rateLimitResult.reason })
+  }
+  
+  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining)
   const { category = 'popular', page = 1, search = '' } = req.query
   const apiKey = process.env.TMDB_API_KEY
 
@@ -83,7 +99,8 @@ export default async function handler(req, res) {
       return true
     })
 
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400')
+    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
 
     return res.status(200).json({
       ...data,

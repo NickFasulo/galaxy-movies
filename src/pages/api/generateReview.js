@@ -2,11 +2,12 @@ import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
+const { isBot, getClientIP, checkRateLimit } = require('../../utils/rateLimiter')
 
 let openai
 let redis
 
-const reviewCache = new LRUCache({ max: 500, ttl: 1000 * 60 * 60 * 24 })
+const reviewCache = new LRUCache({ max: 1000, ttl: 1000 * 60 * 60 * 24 * 7 })
 
 const localRequestLimits = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
 
@@ -79,6 +80,21 @@ export default async function handler(req, res) {
     return res.status(405).end(`Method ${req.method} Not Allowed`)
   }
 
+  const ip = getClientIP(req)
+  const userAgent = req.headers['user-agent']
+  
+  if (isBot(userAgent)) {
+    return res.status(403).json({ error: 'Bot access denied' })
+  }
+  
+  const rateLimitResult = checkRateLimit(ip, 'strict')
+  if (!rateLimitResult.allowed) {
+    res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
+    return res.status(429).json({ error: rateLimitResult.reason })
+  }
+  
+  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining)
+
   const modalData = req.body?.modalData
   const genres = Array.isArray(modalData?.genres)
     ? modalData.genres.map(genre => genre?.name).filter(Boolean).slice(0, 5)
@@ -105,6 +121,8 @@ export default async function handler(req, res) {
   const reviewKey = getReviewKey(modalData)
   const cachedReview = reviewCache.get(reviewKey)
   if (cachedReview) {
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
     return res.status(200).json({ review: cachedReview, cached: true })
   }
 
@@ -136,6 +154,10 @@ export default async function handler(req, res) {
     }
 
     reviewCache.set(reviewKey, reviewText)
+    
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
+    
     return res.status(200).json({ review: reviewText, cached: false })
   } catch (error) {
     console.error('Error generating review:', error)

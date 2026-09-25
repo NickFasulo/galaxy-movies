@@ -17,6 +17,7 @@ export default function Home() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
   const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
 
@@ -48,6 +49,16 @@ export default function Home() {
   } = useInfiniteQuery(
     ['infiniteMovies', category, activeSearch],
     async ({ pageParam = 1 }) => {
+      const now = Date.now()
+      const timeSinceLastFetch = now - lastFetchTimeRef.current
+      const MIN_FETCH_DELAY = 500 // 500ms minimum between requests
+      
+      if (timeSinceLastFetch < MIN_FETCH_DELAY) {
+        await new Promise(resolve => setTimeout(resolve, MIN_FETCH_DELAY - timeSinceLastFetch))
+      }
+      
+      lastFetchTimeRef.current = Date.now()
+      
       const url = activeSearch
         ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}`
         : `/api/allMovies?category=${category}&page=${pageParam}`
@@ -57,8 +68,10 @@ export default function Home() {
       return res.json()
     },
     {
-      staleTime: 1000 * 60 * 5,
-      cacheTime: 1000 * 60 * 30,
+      staleTime: 1000 * 60 * 10,
+      cacheTime: 1000 * 60 * 60,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
       getNextPageParam: (lastPage, pages) => {
         if (!lastPage?.results?.length) return undefined
         const totalPages = lastPage?.total_pages || 1
@@ -72,6 +85,7 @@ export default function Home() {
     localStorage.setItem('category', selectedCategory)
     isRestoredRef.current = true
     sessionStorage.removeItem('homeScrollPos')
+    lastFetchTimeRef.current = 0 // Reset fetch throttle on category change
   }, [])
 
   const moviesList = useMemo(() => {
@@ -241,7 +255,7 @@ export default function Home() {
               next={fetchNextPage}
               hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
               dataLength={moviesList.length}
-              scrollThreshold={0.8}
+              scrollThreshold={0.95}
               loader={
                 <Text textAlign='center' color='gray.500' p='1rem'>
                   Loading more movies...

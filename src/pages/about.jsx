@@ -10,3 +10,10 @@ export default function About() {
     </InfoPage>
   )
 }
+
+export async function getStaticProps() {
+  return {
+    props: {},
+    revalidate: 86400
+  }
+}

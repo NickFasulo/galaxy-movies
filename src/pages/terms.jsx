@@ -11,3 +11,10 @@ export default function Terms() {
     </InfoPage>
   )
 }
+
+export async function getStaticProps() {
+  return {
+    props: {},
+    revalidate: 86400
+  }
+}

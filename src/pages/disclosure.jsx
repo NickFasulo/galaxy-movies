@@ -21,3 +21,10 @@ export default function Disclosure() {
     </InfoPage>
   )
 }
+
+export async function getStaticProps() {
+  return {
+    props: {},
+    revalidate: 86400
+  }
+}

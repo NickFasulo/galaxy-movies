@@ -11,3 +11,10 @@ export default function Privacy() {
     </InfoPage>
   )
 }
+
+export async function getStaticProps() {
+  return {
+    props: {},
+    revalidate: 86400
+  }
+}

@@ -45,7 +45,7 @@ export default async function handler(req) {
       poster ? toJpegDataUri(poster) : Promise.resolve(null),
     ])
 
-  return new ImageResponse(
+  const imageResponse = new ImageResponse(
     (
       <div
         style={{
@@ -234,4 +234,9 @@ export default async function handler(req) {
       ],
     }
   )
+
+  imageResponse.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  imageResponse.headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+
+  return imageResponse
 }
