@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import {
   Box,
   IconButton,
@@ -12,11 +13,13 @@ import {
   useDisclosure,
   ScaleFade,
   Spinner,
-  Tooltip
+  Tooltip,
+  Link
 } from '@chakra-ui/react'
 import { ChatIcon, CloseIcon, SmallCloseIcon, StarIcon } from '@chakra-ui/icons'
 
 export default function ChatWidget() {
+  const router = useRouter()
   const { isOpen, onToggle, onClose } = useDisclosure()
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState('')
@@ -68,6 +71,52 @@ export default function ChatWidget() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const processContentWithLinks = useCallback((content) => {
+    if (!content) return content
+
+    // Simple pattern to match movie titles in quotes like "Movie Title" or with years
+    const moviePattern = /"([^"]+)"\s*\((\d{4})\)|"([^"]+)"/g
+    
+    return content.replace(moviePattern, (match, titleWithYear, year, titleOnly) => {
+      const title = titleWithYear || titleOnly
+      // Return a placeholder that we'll replace with actual links
+      return `__MOVIE_LINK__${title}__${year || ''}__`
+    })
+  }, [])
+
+  const renderContentWithLinks = useCallback((content) => {
+    if (!content) return content
+
+    const parts = content.split('__MOVIE_LINK__')
+    const renderedParts = []
+    
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        // This is a movie link placeholder
+        const [title, year] = parts[i].split('__')
+        renderedParts.push(
+          <Link
+            key={`movie-${i}`}
+            href={`/?search=${encodeURIComponent(title)}`}
+            color="blue.500"
+            fontWeight="bold"
+            textDecoration="underline"
+            onClick={(e) => {
+              e.preventDefault()
+              router.push(`/?search=${encodeURIComponent(title)}`)
+            }}
+          >
+            "{title}"{year && ` (${year})`}
+          </Link>
+        )
+      } else {
+        renderedParts.push(parts[i])
+      }
+    }
+    
+    return renderedParts
+  }, [router])
 
   const handleSendMessage = useCallback(async (messageText = inputValue) => {
     if (!messageText.trim() || isLoading) return
@@ -139,6 +188,14 @@ export default function ChatWidget() {
         }
       }
 
+      // Process content to add movie links after streaming is complete
+      const processedContent = processContentWithLinks(aiMessage.content)
+      setMessages(prev => {
+        const newMessages = [...prev]
+        newMessages[newMessages.length - 1] = { ...aiMessage, content: processedContent }
+        return newMessages
+      })
+
       // Track session after successful message
       if (!sessionId && messageCountRef.current >= 2) {
         try {
@@ -180,7 +237,7 @@ export default function ChatWidget() {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [inputValue, messages, isLoading])
+  }, [inputValue, messages, isLoading, processContentWithLinks])
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -317,7 +374,7 @@ export default function ChatWidget() {
                     boxShadow="sm"
                   >
                     <Text fontSize="sm" whiteSpace="pre-wrap">
-                      {message.content}
+                      {message.role === 'assistant' ? renderContentWithLinks(message.content) : message.content}
                     </Text>
                   </Box>
                 ))}
