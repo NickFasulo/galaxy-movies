@@ -97,7 +97,7 @@ function middleware(options = {}) {
         resetTime: rateLimitResult.resetTime
       })
     }
-    
+
     res.setHeader('X-RateLimit-Limit', RATE_LIMITS[limitType].requests)
     res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining)
     
