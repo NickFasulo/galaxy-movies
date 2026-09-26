@@ -75,12 +75,10 @@ export default function ChatWidget() {
   const processContentWithLinks = useCallback((content) => {
     if (!content) return content
 
-    // Simple pattern to match movie titles in quotes like "Movie Title" or with years
     const moviePattern = /"([^"]+)"\s*\((\d{4})\)|"([^"]+)"/g
     
     return content.replace(moviePattern, (match, titleWithYear, year, titleOnly) => {
       const title = titleWithYear || titleOnly
-      // Return a placeholder that we'll replace with actual links
       return `__MOVIE_LINK__${title}__${year || ''}__`
     })
   }, [])
@@ -93,7 +91,6 @@ export default function ChatWidget() {
     
     for (let i = 0; i < parts.length; i++) {
       if (i % 2 === 1) {
-        // This is a movie link placeholder
         const [title, year] = parts[i].split('__')
         renderedParts.push(
           <Link
@@ -188,7 +185,6 @@ export default function ChatWidget() {
         }
       }
 
-      // Process content to add movie links after streaming is complete
       const processedContent = processContentWithLinks(aiMessage.content)
       setMessages(prev => {
         const newMessages = [...prev]
@@ -196,7 +192,6 @@ export default function ChatWidget() {
         return newMessages
       })
 
-      // Track session after successful message
       if (!sessionId && messageCountRef.current >= 2) {
         try {
           const response = await fetch('/api/chatAnalytics', {

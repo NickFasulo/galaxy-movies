@@ -51,7 +51,7 @@ async function trackChatSession(sessionData) {
   if (kv) {
     try {
       await kv.hset(`chat_session:${sessionId}`, analyticsData)
-      await kv.expire(`chat_session:${sessionId}`, 60 * 60 * 24 * 30) // 30 days
+      await kv.expire(`chat_session:${sessionId}`, 60 * 60 * 24 * 30)
       
       await kv.incr('analytics:total_sessions')
       await kv.incrby('analytics:total_messages', sessionData.messageCount || 0)
@@ -83,7 +83,7 @@ async function recordFeedback(feedbackData) {
   if (kv) {
     try {
       await kv.hset(`chat_feedback:${feedbackId}`, feedback)
-      await kv.expire(`chat_feedback:${feedbackId}`, 60 * 60 * 24 * 90) // 90 days
+      await kv.expire(`chat_feedback:${feedbackId}`, 60 * 60 * 24 * 90)
       
       if (feedback.rating) {
         await kv.incrby('analytics:total_rating', feedback.rating)
@@ -155,8 +155,8 @@ async function getCostEstimate() {
   
   const pricing = {
     'gpt-4o-mini': {
-      input: 0.00015, // per 1K tokens
-      output: 0.0006  // per 1K tokens
+      input: 0.00015,
+      output: 0.0006
     }
   }
 

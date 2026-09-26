@@ -112,12 +112,12 @@ export class PlatformIntelligence {
 
   filterMoviesBySubscription(movies) {
     if (this.userSubscriptions.size === 0) {
-      return movies // No subscription filter applied
+      return movies
     }
 
     return movies.filter(movie => {
       const availability = this.providerAvailability.get(movie.id)
-      if (!availability) return true // Assume available if we don't have data
+      if (!availability) return true
 
       const flatrateProviders = availability.flatrate || []
       return flatrateProviders.some(provider => 
@@ -144,7 +144,7 @@ export class PlatformIntelligence {
     providers.forEach(provider => {
       const providerName = provider.provider_name.toLowerCase()
       if (!this.userSubscriptions.has(providerName)) {
-        const cost = knownCosts[providerName] || 12.99 // Default estimate
+        const cost = knownCosts[providerName] || 12.99
         totalCost += cost
         newSubscriptions.push({ name: provider.provider_name, cost })
       }

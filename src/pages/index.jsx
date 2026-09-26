@@ -51,7 +51,7 @@ export default function Home() {
     async ({ pageParam = 1 }) => {
       const now = Date.now()
       const timeSinceLastFetch = now - lastFetchTimeRef.current
-      const MIN_FETCH_DELAY = 500 // 500ms minimum between requests
+      const MIN_FETCH_DELAY = 500
       
       if (timeSinceLastFetch < MIN_FETCH_DELAY) {
         await new Promise(resolve => setTimeout(resolve, MIN_FETCH_DELAY - timeSinceLastFetch))
@@ -85,7 +85,7 @@ export default function Home() {
     localStorage.setItem('category', selectedCategory)
     isRestoredRef.current = true
     sessionStorage.removeItem('homeScrollPos')
-    lastFetchTimeRef.current = 0 // Reset fetch throttle on category change
+    lastFetchTimeRef.current = 0
   }, [])
 
   const moviesList = useMemo(() => {

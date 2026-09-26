@@ -280,7 +280,7 @@ export function createVotingSystem(movies) {
       if (!votingData) return false
 
       if (votingData.voters.has(memberId)) {
-        return false // Already voted
+        return false
       }
 
       votingData.voters.add(memberId)

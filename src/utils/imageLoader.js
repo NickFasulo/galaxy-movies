@@ -1,12 +1,9 @@
 export default function imageLoader({ src, width, quality }) {
-  // Handle local images or non-TMDB URLs
   if (!src.startsWith('/')) {
     return src
   }
 
-  // Map requested width to TMDB size endpoints
-  // TMDB available sizes: w92, w154, w185, w342, w500, w780, w1280, original
-  let tmdbSize = 'w500' // default
+  let tmdbSize = 'w500'
   
   if (width <= 92) {
     tmdbSize = 'w92'
@@ -26,6 +23,5 @@ export default function imageLoader({ src, width, quality }) {
     tmdbSize = 'original'
   }
 
-  // Construct TMDB URL with appropriate size
   return `https://image.tmdb.org/t/p/${tmdbSize}${src}`
 }

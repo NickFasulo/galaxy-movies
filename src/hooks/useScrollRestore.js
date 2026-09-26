@@ -19,7 +19,6 @@ export const useScrollRestore = () => {
 
     const onRouteChangeStart = () => {
       const url = router.asPath
-      // Exclude the homepage '/' as it handles its own scroll restoration
       if (url !== '/') {
         scrollPositions.current[url] = window.scrollY
       }

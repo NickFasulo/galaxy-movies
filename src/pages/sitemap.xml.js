@@ -48,7 +48,7 @@ export async function getServerSideProps({ res }) {
     ),
   ]
 
-  const movieEntries = new Map()   // id → lastmod
+  const movieEntries = new Map()
   const personIds = new Set()
   const companyIds = new Set()
 
