@@ -4,6 +4,7 @@ import { ChakraProvider } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import { tiun } from '@tiun/sdk'
+import ChatWidget from '../components/ChatWidget'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }) {
@@ -23,6 +24,7 @@ function MyApp({ Component, pageProps }) {
       <Hydrate state={pageProps.dehydratedState}>
         <ChakraProvider>
           <Component {...pageProps} />
+          <ChatWidget />
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </ChakraProvider>
       </Hydrate>

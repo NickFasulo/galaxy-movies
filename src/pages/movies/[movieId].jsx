@@ -121,7 +121,6 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     subtitle: ogSubtitle,
     ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
   }).toString()}`
-  // ISO 8601 duration: PT{h}H{m}M
   const isoDuration = movie.runtime
     ? `PT${Math.floor(movie.runtime / 60)}H${movie.runtime % 60}M`
     : undefined

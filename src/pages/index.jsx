@@ -51,7 +51,7 @@ export default function Home() {
     async ({ pageParam = 1 }) => {
       const now = Date.now()
       const timeSinceLastFetch = now - lastFetchTimeRef.current
-      const MIN_FETCH_DELAY = 500 // 500ms minimum between requests
+      const MIN_FETCH_DELAY = 500
       
       if (timeSinceLastFetch < MIN_FETCH_DELAY) {
         await new Promise(resolve => setTimeout(resolve, MIN_FETCH_DELAY - timeSinceLastFetch))
@@ -85,7 +85,7 @@ export default function Home() {
     localStorage.setItem('category', selectedCategory)
     isRestoredRef.current = true
     sessionStorage.removeItem('homeScrollPos')
-    lastFetchTimeRef.current = 0 // Reset fetch throttle on category change
+    lastFetchTimeRef.current = 0
   }, [])
 
   const moviesList = useMemo(() => {
@@ -319,8 +319,9 @@ export default function Home() {
             icon={<ArrowUpIcon boxSize={8} />}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             position='fixed'
-            right={{ base: '1rem', md: '2rem' }}
-            bottom={{ base: '4.5rem', md: '5rem' }}
+            size='lg'
+            right='1.5rem'
+            bottom='7rem'
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'
