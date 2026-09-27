@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/router'
 import {
   Box,
   IconButton,
@@ -7,37 +6,30 @@ import {
   Input,
   Text,
   VStack,
-  HStack,
-  Badge,
   Button,
   useDisclosure,
   ScaleFade,
   Spinner,
-  Tooltip,
-  Link
+  HStack
 } from '@chakra-ui/react'
-import { ChatIcon, CloseIcon, SmallCloseIcon, StarIcon } from '@chakra-ui/icons'
+import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
 
 export default function ChatWidget() {
-  const router = useRouter()
   const { isOpen, onToggle, onClose } = useDisclosure()
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [isGroupMode, setIsGroupMode] = useState(false)
   const [sessionId, setSessionId] = useState(null)
   const sessionStartTimeRef = useRef(null)
   const messageCountRef = useRef(0)
-  const featuresUsedRef = useRef([])
   const messagesEndRef = useRef(null)
   const abortControllerRef = useRef(null)
 
   const quickActions = [
     { label: 'What should I watch tonight?', query: 'What should I watch tonight?' },
     { label: 'Comedy recommendations', query: 'Suggest some good comedy movies' },
-    { label: 'Recent releases', query: 'What are the best recent movies?' },
-    { label: 'Group decision help', query: 'Help us decide what to watch for a group' }
+    { label: 'Recent releases', query: 'What are the best recent movies?' }
   ]
 
   useEffect(() => {
@@ -71,95 +63,6 @@ export default function ChatWidget() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
-
-  const processContentWithLinks = useCallback(async (content) => {
-    if (!content) return content
-
-    // Clean up markdown-style links that might appear
-    let cleanedContent = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    
-    // Clean up any leftover brackets from markdown
-    cleanedContent = cleanedContent.replace(/\[|\]/g, '')
-    
-    // Pattern to match movie titles in quotes like "Movie Title" or with years
-    const moviePattern = /"([^"]+)"\s*\((\d{4})\)|"([^"]+)"/g
-    
-    const movieMatches = []
-    
-    let match
-    while ((match = moviePattern.exec(cleanedContent)) !== null) {
-      const title = match[1] || match[3]
-      const year = match[2] || ''
-      if (title) {
-        movieMatches.push({ title, year, fullMatch: match[0] })
-      }
-    }
-
-    // Search for each movie to get its ID
-    for (const movieMatch of movieMatches) {
-      try {
-        const searchQuery = movieMatch.year ? `${movieMatch.title} ${movieMatch.year}` : movieMatch.title
-        const response = await fetch(
-          `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false`
-        )
-        
-        if (response.ok) {
-          const data = await response.json()
-          if (data.results && data.results.length > 0) {
-            const movie = data.results[0]
-            movieMatch.movieId = movie.id
-          }
-        }
-      } catch (error) {
-        console.error('Error searching for movie:', error)
-      }
-    }
-
-    // Replace movie titles with link placeholders
-    let processedContent = cleanedContent
-    movieMatches.forEach(movieMatch => {
-      if (movieMatch.movieId) {
-        processedContent = processedContent.replace(
-          movieMatch.fullMatch, 
-          `__MOVIE_LINK__${movieMatch.movieId}__${movieMatch.title}__${movieMatch.year}__`
-        )
-      }
-    })
-
-    return processedContent
-  }, [])
-
-  const renderContentWithLinks = useCallback((content) => {
-    if (!content) return content
-
-    const parts = content.split('__MOVIE_LINK__')
-    const renderedParts = []
-    
-    for (let i = 0; i < parts.length; i++) {
-      if (i % 2 === 1) {
-        const [movieId, title, year] = parts[i].split('__')
-        renderedParts.push(
-          <Link
-            key={`movie-${i}`}
-            href={`/movies/${movieId}`}
-            color="blue.500"
-            fontWeight="bold"
-            textDecoration="underline"
-            onClick={(e) => {
-              e.preventDefault()
-              router.push(`/movies/${movieId}`)
-            }}
-          >
-            "{title}"{year && ` (${year})`}
-          </Link>
-        )
-      } else {
-        renderedParts.push(parts[i])
-      }
-    }
-    
-    return renderedParts
-  }, [router])
 
   const handleSendMessage = useCallback(async (messageText = inputValue) => {
     if (!messageText.trim() || isLoading) return
@@ -231,13 +134,6 @@ export default function ChatWidget() {
         }
       }
 
-      const processedContent = await processContentWithLinks(aiMessage.content)
-      setMessages(prev => {
-        const newMessages = [...prev]
-        newMessages[newMessages.length - 1] = { ...aiMessage, content: processedContent }
-        return newMessages
-      })
-
       if (!sessionId && messageCountRef.current >= 2) {
         try {
           const response = await fetch('/api/chatAnalytics', {
@@ -247,8 +143,7 @@ export default function ChatWidget() {
               action: 'track_session',
               data: {
                 messageCount: messageCountRef.current,
-                duration: sessionStartTimeRef.current ? Date.now() - sessionStartTimeRef.current : 0,
-                featuresUsed: featuresUsedRef.current
+                duration: sessionStartTimeRef.current ? Date.now() - sessionStartTimeRef.current : 0
               }
             })
           })
@@ -278,7 +173,7 @@ export default function ChatWidget() {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [inputValue, messages, isLoading, processContentWithLinks])
+  }, [inputValue, messages, isLoading])
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -287,13 +182,7 @@ export default function ChatWidget() {
     }
   }
 
-  const handleClearChat = () => {
-    setMessages([])
-    sessionStorage.removeItem('chatMessages')
-    sessionStartTimeRef.current = Date.now()
-    messageCountRef.current = 0
-    featuresUsedRef.current = []
-  }
+
 
   const handleQuickAction = (query) => {
     handleSendMessage(query)
@@ -330,38 +219,8 @@ export default function ChatWidget() {
               <Flex align="center" gap="2">
                 <ChatIcon />
                 <Text fontWeight="bold">Galaxy Movie Assistant</Text>
-                {isGroupMode && (
-                  <Badge colorScheme="purple" size="sm">Group Mode</Badge>
-                )}
               </Flex>
               <HStack spacing="2">
-                <Tooltip label="Clear chat">
-                  <IconButton
-                    icon={<SmallCloseIcon />}
-                    size="sm"
-                    variant="ghost"
-                    color="white"
-                    _hover={{ bg: 'whiteAlpha.200' }}
-                    onClick={handleClearChat}
-                    aria-label="Clear chat"
-                  />
-                </Tooltip>
-                <Tooltip label="Toggle group mode">
-                  <IconButton
-                    icon={<StarIcon />}
-                    size="sm"
-                    variant="ghost"
-                    color={isGroupMode ? "yellow.300" : "white"}
-                    _hover={{ bg: 'whiteAlpha.200' }}
-                    onClick={() => {
-                      setIsGroupMode(!isGroupMode)
-                      if (!isGroupMode && !featuresUsedRef.current.includes('group_mode')) {
-                        featuresUsedRef.current.push('group_mode')
-                      }
-                    }}
-                    aria-label="Toggle group mode"
-                  />
-                </Tooltip>
                 <IconButton
                   icon={<CloseIcon />}
                   size="sm"
@@ -415,7 +274,7 @@ export default function ChatWidget() {
                     boxShadow="sm"
                   >
                     <Text fontSize="sm" whiteSpace="pre-wrap">
-                      {message.role === 'assistant' ? renderContentWithLinks(message.content) : message.content}
+                      {message.content}
                     </Text>
                   </Box>
                 ))}
