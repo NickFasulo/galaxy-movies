@@ -17,6 +17,10 @@ export default function Disclosure() {
         Provider availability and pricing can change. We do not accept
         payment for editorial ratings or movie information.
       </InfoParagraph>
+      <InfoParagraph>
+        As an Amazon Associate, Galaxy Movies earns from qualifying
+        purchases.
+      </InfoParagraph>
       <BackButton />
     </InfoPage>
   )

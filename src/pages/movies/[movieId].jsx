@@ -290,7 +290,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} />
+              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} />
             </Box>
 
           </Flex>

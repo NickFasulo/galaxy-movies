@@ -1,8 +1,44 @@
 import Image from 'next/image'
 import NextLink from 'next/link'
 import { Box, Flex, Text, Tooltip, Link } from '@chakra-ui/react'
+import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
 
-export default function WatchProviders({ watchProviders }) {
+function ProviderIcon({ provider, movieTitle }) {
+  const icon = (
+    <Box position='relative' width='32px' height='32px'>
+      <Image
+        src={provider.logo_path}
+        alt={provider.provider_name}
+        fill
+        style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
+      />
+    </Box>
+  )
+
+  if (isAmazonProvider(provider.provider_name)) {
+    return (
+      <Tooltip key={provider.provider_id} label={`${provider.provider_name} (affiliate link)`} hasArrow placement='top'>
+        <Link
+          href={buildAmazonAffiliateLink(movieTitle)}
+          isExternal
+          rel='sponsored nofollow noopener'
+          _hover={{ transform: 'scale(1.05)' }}
+          transition='transform 0.15s'
+        >
+          {icon}
+        </Link>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
+      {icon}
+    </Tooltip>
+  )
+}
+
+export default function WatchProviders({ watchProviders, movieTitle }) {
   if (!watchProviders) return null
 
   const flatrate = watchProviders.flatrate || []
@@ -32,16 +68,7 @@ export default function WatchProviders({ watchProviders }) {
             </Text>
             <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
               {flatrate.map((provider) => (
-                <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
-                  <Box position='relative' width='32px' height='32px'>
-                    <Image
-                      src={provider.logo_path}
-                      alt={provider.provider_name}
-                      fill
-                      style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
-                    />
-                  </Box>
-                </Tooltip>
+                <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
               ))}
             </Flex>
           </Box>
@@ -55,16 +82,7 @@ export default function WatchProviders({ watchProviders }) {
               {[...rent, ...buy]
                 .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
                 .map((provider) => (
-                  <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
-                    <Box position='relative' width='32px' height='32px'>
-                      <Image
-                        src={provider.logo_path}
-                        alt={provider.provider_name}
-                        fill
-                        style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
-                      />
-                    </Box>
-                  </Tooltip>
+                  <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
                 ))}
             </Flex>
           </Box>
