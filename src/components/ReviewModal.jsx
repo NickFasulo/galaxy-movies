@@ -11,6 +11,7 @@ import {
   useDisclosure
 } from '@chakra-ui/react'
 import { track } from '@vercel/analytics'
+import CustomSpinner from './CustomSpinner'
 
 export default function ReviewModal({ modalData }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -81,17 +82,21 @@ export default function ReviewModal({ modalData }) {
         <ModalContent>
           <ModalHeader>
             <Text textAlign='center'>
-              Movie Bot's Synopsis
+              Galaxy Bot's Synopsis
             </Text>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody
+            minH='200px'
+            display='flex'
+            flexDirection='column'
+            justifyContent={loading ? 'center' : 'flex-start'}
+            alignItems={loading ? 'center' : 'stretch'}
+          >
             {loading
-              ? <Text textAlign='center'>
-                  'Synopsis loading...'
-                </Text>
+              ? <CustomSpinner height='120px' />
               : error
                 ? <Text textAlign='center'>
-                    'The synopsis could not be generated. Please try again.'
+                    The synopsis could not be generated. Please try again.
                   </Text>
                 : movieReview}
           </ModalBody>
