@@ -218,7 +218,7 @@ export default function ChatWidget() {
             >
               <Flex align="center" gap="2">
                 <ChatIcon />
-                <Text fontWeight="bold">Galaxy Movie Assistant</Text>
+                <Text fontWeight="bold">Galaxy Bot</Text>
               </Flex>
               <HStack spacing="2">
                 <IconButton
@@ -242,7 +242,7 @@ export default function ChatWidget() {
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
                   <Text color="gray.600" textAlign="center" fontSize="sm">
-                    👋 Hi! I'm your Galaxy Movie Assistant. I can help you:
+                    👋 Hi! I'm your movie search assistant. Let me know what you are looking for.
                   </Text>
                   <VStack spacing="2" align="stretch">
                     {quickActions.map((action, index) => (

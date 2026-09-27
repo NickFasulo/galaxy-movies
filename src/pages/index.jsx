@@ -319,8 +319,9 @@ export default function Home() {
             icon={<ArrowUpIcon boxSize={8} />}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             position='fixed'
-            right={{ base: '1rem', md: '2rem' }}
-            bottom={{ base: '4.5rem', md: '5rem' }}
+            size='lg'
+            right='1.5rem'
+            bottom='7rem'
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'
