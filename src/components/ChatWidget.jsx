@@ -72,15 +72,61 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const processContentWithLinks = useCallback((content) => {
+  const processContentWithLinks = useCallback(async (content) => {
     if (!content) return content
 
+    // Clean up markdown-style links that might appear
+    let cleanedContent = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    
+    // Clean up any leftover brackets from markdown
+    cleanedContent = cleanedContent.replace(/\[|\]/g, '')
+    
+    // Pattern to match movie titles in quotes like "Movie Title" or with years
     const moviePattern = /"([^"]+)"\s*\((\d{4})\)|"([^"]+)"/g
     
-    return content.replace(moviePattern, (match, titleWithYear, year, titleOnly) => {
-      const title = titleWithYear || titleOnly
-      return `__MOVIE_LINK__${title}__${year || ''}__`
+    const movieMatches = []
+    
+    let match
+    while ((match = moviePattern.exec(cleanedContent)) !== null) {
+      const title = match[1] || match[3]
+      const year = match[2] || ''
+      if (title) {
+        movieMatches.push({ title, year, fullMatch: match[0] })
+      }
+    }
+
+    // Search for each movie to get its ID
+    for (const movieMatch of movieMatches) {
+      try {
+        const searchQuery = movieMatch.year ? `${movieMatch.title} ${movieMatch.year}` : movieMatch.title
+        const response = await fetch(
+          `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&include_adult=false`
+        )
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.results && data.results.length > 0) {
+            const movie = data.results[0]
+            movieMatch.movieId = movie.id
+          }
+        }
+      } catch (error) {
+        console.error('Error searching for movie:', error)
+      }
+    }
+
+    // Replace movie titles with link placeholders
+    let processedContent = cleanedContent
+    movieMatches.forEach(movieMatch => {
+      if (movieMatch.movieId) {
+        processedContent = processedContent.replace(
+          movieMatch.fullMatch, 
+          `__MOVIE_LINK__${movieMatch.movieId}__${movieMatch.title}__${movieMatch.year}__`
+        )
+      }
     })
+
+    return processedContent
   }, [])
 
   const renderContentWithLinks = useCallback((content) => {
@@ -91,17 +137,17 @@ export default function ChatWidget() {
     
     for (let i = 0; i < parts.length; i++) {
       if (i % 2 === 1) {
-        const [title, year] = parts[i].split('__')
+        const [movieId, title, year] = parts[i].split('__')
         renderedParts.push(
           <Link
             key={`movie-${i}`}
-            href={`/?search=${encodeURIComponent(title)}`}
+            href={`/movies/${movieId}`}
             color="blue.500"
             fontWeight="bold"
             textDecoration="underline"
             onClick={(e) => {
               e.preventDefault()
-              router.push(`/?search=${encodeURIComponent(title)}`)
+              router.push(`/movies/${movieId}`)
             }}
           >
             "{title}"{year && ` (${year})`}
@@ -185,7 +231,7 @@ export default function ChatWidget() {
         }
       }
 
-      const processedContent = processContentWithLinks(aiMessage.content)
+      const processedContent = await processContentWithLinks(aiMessage.content)
       setMessages(prev => {
         const newMessages = [...prev]
         newMessages[newMessages.length - 1] = { ...aiMessage, content: processedContent }
