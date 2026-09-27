@@ -226,11 +226,10 @@ export default function Home() {
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 
       <Box position='relative' zIndex={1} h='100%' pb='4rem'>
-        <Box my={{ base: '2rem', md: '3rem' }}>
           <h1 className='title'>
             <span>Galaxy Movies</span>
           </h1>
-        </Box>
+          <Text textAlign='center' color='gray.600' fontSize='sm' mt='1em' mb='0.5rem'>Discover movies at warp speed</Text>
 
         <SearchBar
           category={category}
