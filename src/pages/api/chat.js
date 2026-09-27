@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
 import { extractQuotedMovieMentions, resolveMovieMentions } from '../../utils/movieSearch'
+const { isBot } = require('../../utils/rateLimiter')
 
 let openai
 let redis
@@ -72,6 +73,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)
+  }
+
+  if (isBot(req.headers['user-agent'])) {
+    return res.status(403).json({ error: 'Bot access denied' })
   }
 
   const { messages = [] } = req.body

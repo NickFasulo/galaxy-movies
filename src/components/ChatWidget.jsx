@@ -295,7 +295,7 @@ export default function ChatWidget() {
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
                   <Text color="gray.600" textAlign="center" fontSize="sm">
-                    👋 Hi! I'm your movie search assistant. Let me know what you are looking for.
+                    👋 Hi! I'm your movie search assistant. What are you looking for?
                   </Text>
                   <VStack spacing="2" align="stretch">
                     {quickActions.map((action, index) => (
