@@ -101,22 +101,24 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     )
   }
 
-  const backdropUrl = movie.backdrop_path 
-    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` 
+  const backdropPath = movie.backdrop_path || null
+  const posterPath = movie.poster_path || null
+  const backdropUrl = backdropPath
+    ? `https://image.tmdb.org/t/p/original${backdropPath}`
     : '/backdrop_fallback.webp'
-  const posterUrl = movie.poster_path 
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+  const posterUrl = posterPath
+    ? `https://image.tmdb.org/t/p/w500${posterPath}`
     : '/poster_fallback.webp'
-  const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
-  const [posterSrc, setPosterSrc] = useState(posterUrl)
+  const [backdropSrc, setBackdropSrc] = useState(backdropPath || '/backdrop_fallback.webp')
+  const [posterSrc, setPosterSrc] = useState(posterPath || '/poster_fallback.webp')
 
   useEffect(() => {
-    setBackdropSrc(backdropUrl)
-  }, [backdropUrl])
+    setBackdropSrc(backdropPath || '/backdrop_fallback.webp')
+  }, [backdropPath])
 
   useEffect(() => {
-    setPosterSrc(posterUrl)
-  }, [posterUrl])
+    setPosterSrc(posterPath || '/poster_fallback.webp')
+  }, [posterPath])
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/movies/${movie.id}`
@@ -243,7 +245,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             priority
             sizes='100vw'
             onError={() => setBackdropSrc('/backdrop_fallback.webp')}
-            unoptimized={backdropSrc.startsWith('/')}
+            unoptimized={backdropSrc === '/backdrop_fallback.webp'}
           />
         </Box>
         <Box
@@ -277,7 +279,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                 sizes='(max-width: 768px) 100vw, 320px'
                 onError={() => setPosterSrc('/poster_fallback.webp')}
                 style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
-                unoptimized={posterSrc.startsWith('/')}
+                unoptimized={posterSrc === '/poster_fallback.webp'}
               />
             </Box>
 
