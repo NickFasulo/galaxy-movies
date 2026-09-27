@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Flex,
   Wrap,
@@ -109,6 +109,14 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     : '/poster_fallback.webp'
   const [backdropSrc, setBackdropSrc] = useState(backdropUrl)
   const [posterSrc, setPosterSrc] = useState(posterUrl)
+
+  useEffect(() => {
+    setBackdropSrc(backdropUrl)
+  }, [backdropUrl])
+
+  useEffect(() => {
+    setPosterSrc(posterUrl)
+  }, [posterUrl])
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/movies/${movie.id}`

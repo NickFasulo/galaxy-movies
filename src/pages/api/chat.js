@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
+import { extractQuotedMovieMentions, resolveMovieMentions } from '../../utils/movieSearch'
 
 let openai
 let redis
@@ -96,9 +97,9 @@ export default async function handler(req, res) {
   }
 
   const cacheKey = getConversationCacheKey(messages)
-  const cachedResponse = chatCache.get(cacheKey)
-  if (cachedResponse) {
-    return res.status(200).json({ response: cachedResponse, cached: true })
+  const cachedEntry = chatCache.get(cacheKey)
+  if (cachedEntry) {
+    return res.status(200).json({ response: cachedEntry.text, links: cachedEntry.links, cached: true })
   }
 
   if (!process.env.OPENAI_API_KEY) {
@@ -167,11 +168,27 @@ Keep responses conversational but focused on actionable movie recommendations.`
       }
     }
 
+    let links = []
+    if (fullResponse.trim()) {
+      try {
+        const mentions = extractQuotedMovieMentions(fullResponse)
+        if (mentions.length > 0) {
+          links = await resolveMovieMentions(mentions)
+        }
+      } catch (error) {
+        console.error('Error resolving movie links:', error)
+      }
+    }
+
+    if (links.length > 0) {
+      res.write(`data: ${JSON.stringify({ links })}\n\n`)
+    }
+
     res.write('data: [DONE]\n\n')
     res.end()
 
     if (fullResponse.trim()) {
-      chatCache.set(cacheKey, fullResponse)
+      chatCache.set(cacheKey, { text: fullResponse, links })
     }
 
   } catch (error) {

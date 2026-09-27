@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import NextLink from 'next/link'
 import {
   Box,
   IconButton,
@@ -7,6 +8,7 @@ import {
   Text,
   VStack,
   Button,
+  Link,
   useDisclosure,
   ScaleFade,
   Spinner,
@@ -14,9 +16,41 @@ import {
 } from '@chakra-ui/react'
 import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function renderMessageContent(content, links) {
+  if (!links || links.length === 0) {
+    return content
+  }
+
+  const pattern = new RegExp(`(${links.map((link) => escapeRegExp(link.match)).join('|')})`, 'g')
+  const parts = content.split(pattern)
+
+  return parts.map((part, index) => {
+    const link = links.find((l) => l.match === part)
+    if (!link) return part
+
+    return (
+      <Link
+        key={index}
+        as={NextLink}
+        href={`/movies/${link.movieId}`}
+        color="blue.500"
+        fontWeight="semibold"
+        _hover={{ textDecoration: 'underline' }}
+      >
+        {part}
+      </Link>
+    )
+  })
+}
+
 export default function ChatWidget() {
   const { isOpen, onToggle, onClose } = useDisclosure()
   const [messages, setMessages] = useState([])
+  const [messageLinks, setMessageLinks] = useState({})
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -42,6 +76,15 @@ export default function ChatWidget() {
       }
     }
 
+    const savedLinks = sessionStorage.getItem('chatMessageLinks')
+    if (savedLinks) {
+      try {
+        setMessageLinks(JSON.parse(savedLinks))
+      } catch (e) {
+        console.error('Error loading saved message links:', e)
+      }
+    }
+
     const savedSessionId = sessionStorage.getItem('chatSessionId')
     if (savedSessionId) {
       setSessionId(savedSessionId)
@@ -55,6 +98,12 @@ export default function ChatWidget() {
       sessionStorage.setItem('chatMessages', JSON.stringify(messages))
     }
   }, [messages])
+
+  useEffect(() => {
+    if (Object.keys(messageLinks).length > 0) {
+      sessionStorage.setItem('chatMessageLinks', JSON.stringify(messageLinks))
+    }
+  }, [messageLinks])
 
   useEffect(() => {
     scrollToBottom()
@@ -96,6 +145,7 @@ export default function ChatWidget() {
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let aiMessage = { role: 'assistant', content: '' }
+      const assistantIndex = messages.length + 1
 
       setMessages(prev => [...prev, aiMessage])
 
@@ -126,6 +176,9 @@ export default function ChatWidget() {
                   newMessages[newMessages.length - 1] = aiMessage
                   return newMessages
                 })
+              }
+              if (parsed.links && parsed.links.length > 0) {
+                setMessageLinks(prev => ({ ...prev, [assistantIndex]: parsed.links }))
               }
             } catch (e) {
               console.error('Error parsing stream data:', e)
@@ -274,7 +327,7 @@ export default function ChatWidget() {
                     boxShadow="sm"
                   >
                     <Text fontSize="sm" whiteSpace="pre-wrap">
-                      {message.content}
+                      {renderMessageContent(message.content, messageLinks[index])}
                     </Text>
                   </Box>
                 ))}

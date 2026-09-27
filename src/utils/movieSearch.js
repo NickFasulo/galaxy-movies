@@ -187,3 +187,44 @@ export async function getSmartRecommendations(query, limit = 5) {
     return results.results.slice(0, limit).map(formatMovieForChat)
   }
 }
+
+const QUOTED_TITLE_PATTERN = /"([^"]+?)\s\((\d{4})\)"/g
+
+export function extractQuotedMovieMentions(text, maxMentions = 5) {
+  if (!text) return []
+
+  const seen = new Set()
+  const mentions = []
+  let match
+
+  while ((match = QUOTED_TITLE_PATTERN.exec(text)) !== null) {
+    const [fullMatch, title, year] = match
+    const key = `${title.trim().toLowerCase()}|${year}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    mentions.push({ match: fullMatch, title: title.trim(), year })
+    if (mentions.length >= maxMentions) break
+  }
+
+  return mentions
+}
+
+export async function resolveMovieMentions(mentions) {
+  const resolved = await Promise.all(
+    mentions.map(async (mention) => {
+      try {
+        const { results } = await searchMoviesByQuery(mention.title, 1)
+        const bestMatch = results.find((movie) =>
+          movie.release_date && movie.release_date.startsWith(mention.year)
+        ) || results[0]
+
+        return bestMatch ? { match: mention.match, movieId: bestMatch.id } : null
+      } catch (error) {
+        console.error(`Error resolving movie mention "${mention.title}":`, error)
+        return null
+      }
+    })
+  )
+
+  return resolved.filter(Boolean)
+}
