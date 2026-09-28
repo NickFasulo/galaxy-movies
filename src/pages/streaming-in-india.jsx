@@ -1,29 +1,38 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { Box, Heading, Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
-import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
-import HreflangTags from '../../components/HreflangTags'
+import { Box, Heading, Text, UnorderedList, ListItem } from '@chakra-ui/react'
+import MovieGrid from '../components/MovieGrid'
+import { fetchDiscoverMovies } from '../utils/tmdb'
+import BreadcrumbSchema from '../components/BreadcrumbSchema'
+import HreflangTags from '../components/HreflangTags'
+import BackButton from '../components/BackButton'
 
-export async function getServerSideProps({ params, res }) {
-  const category = movieCategories[params.category]
-  if (!category) return { notFound: true }
-
+export async function getServerSideProps({ res }) {
   try {
-    const data = await fetchDiscoverMovies({ category: params.category })
+    const data = await fetchDiscoverMovies({ category: 'popular', region: 'IN' })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { category: params.category, ...category, movies: data.results } }
+    return { props: { movies: data.results.slice(0, 10) } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { category: params.category, ...category, movies: [], dataError: true } }
+    return { props: { movies: [], dataError: true } }
   }
 }
 
-export default function BrowsePage({ category, title, description, movies, dataError }) {
+const INDIA_PROVIDERS = [
+  { key: 'netflix', label: 'Netflix' },
+  { key: 'amazon-prime-video', label: 'Amazon Prime Video' },
+  { key: 'jiohotstar', label: 'JioHotstar' },
+  { key: 'zee5', label: 'ZEE5' },
+  { key: 'sonyliv', label: 'SonyLIV' },
+  { key: 'apple-tv', label: 'Apple TV' }
+]
+
+export default function StreamingInIndia({ movies, dataError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/browse/${category}`
+  const canonicalUrl = `${siteUrl}/streaming-in-india`
+  const title = 'Where to Watch Movies Online in India'
+  const description = 'A guide to the top streaming platforms available in India — Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more — plus popular movies to watch right now.'
   const featuredPoster = movies?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
     : null
@@ -40,7 +49,7 @@ export default function BrowsePage({ category, title, description, movies, dataE
     description,
     url: canonicalUrl,
     numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    itemListElement: movies?.map((movie, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
@@ -55,8 +64,7 @@ export default function BrowsePage({ category, title, description, movies, dataE
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Browse', url: `${siteUrl}/browse` },
-    { name: title, url: canonicalUrl }
+    { name: 'Streaming in India', url: canonicalUrl }
   ]
 
   return (
@@ -91,17 +99,31 @@ export default function BrowsePage({ category, title, description, movies, dataE
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Link href='/'>← Galaxy Movies</Link>
           <Heading as='h1' mt={8}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+
+          <Heading as='h2' size='md' mt={8} mb={3}>Top streaming platforms in India</Heading>
+          <UnorderedList spacing={2} color='gray.600'>
+            {INDIA_PROVIDERS.map((provider) => (
+              <ListItem key={provider.key}>
+                <Link href={`/streaming/${provider.key}`}>{provider.label}</Link>
+              </ListItem>
+            ))}
+          </UnorderedList>
+
+          <Heading as='h2' size='md' mt={10} mb={4}>Popular movies to watch now</Heading>
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : <MovieGrid movies={movies} />}
-          <Text textAlign='center' mt={8}>
-            Browse <Link href='/browse/popular'>popular</Link>,{' '}
-            <Link href='/browse/now-playing'>now playing</Link>, or{' '}
-            <Link href='/browse/upcoming'>upcoming</Link> movies.
+            <Text mt={4}>Movie data is temporarily unavailable. Please try again later.</Text>
+          ) : (
+            <MovieGrid movies={movies} />
+          )}
+
+          <Text textAlign='center' mt={8} color='gray.600'>
+            Check each movie page for current provider availability — it changes by region and over time.
           </Text>
+          <Box mt='1.5rem'>
+            <BackButton />
+          </Box>
         </Box>
       </Box>
     </>

@@ -4,6 +4,7 @@ import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
 import { fetchDiscoverMovies, movieGenres } from '../../utils/tmdb'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
+import HreflangTags from '../../components/HreflangTags'
 
 export async function getServerSideProps({ params, res }) {
   const genre = movieGenres[params.genre]
@@ -65,6 +66,7 @@ export default function GenrePage({ genre, title, movies, dataError }) {
         <title>{`${title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+        <HreflangTags canonicalUrl={canonicalUrl} />
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />

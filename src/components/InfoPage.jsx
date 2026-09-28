@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Box, Heading, Text } from '@chakra-ui/react'
+import HreflangTags from './HreflangTags'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
@@ -18,6 +19,7 @@ export default function InfoPage({ title, description, children }) {
         <title>{`${title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+        <HreflangTags canonicalUrl={canonicalUrl} />
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />

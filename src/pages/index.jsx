@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
+import HreflangTags from '../components/HreflangTags'
 
 export default function Home() {
   const router = useRouter()
@@ -192,6 +193,7 @@ export default function Home() {
         <title>{pageTitle}</title>
         <meta name='description' content={pageDescription} />
         <link rel='canonical' href={siteUrl} />
+        <HreflangTags canonicalUrl={siteUrl} />
         <link rel='icon' href='/favicon.ico' />
 
         <meta property='og:type' content='website' />
@@ -303,6 +305,7 @@ export default function Home() {
               >
                 <Text textAlign='center' color='gray.600' fontSize='sm'>
                   <Link href='/about'>About</Link> ·{' '}
+                  <Link href='/streaming'>Streaming</Link> ·{' '}
                   <Link href='/privacy'>Privacy</Link> ·{' '}
                   <Link href='/terms'>Terms</Link> ·{' '}
                   <Link href='/contact'>Contact</Link>

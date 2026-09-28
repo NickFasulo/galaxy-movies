@@ -34,6 +34,8 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/privacy`, today),
     urlEntry(`${siteUrl}/terms`, today),
     urlEntry(`${siteUrl}/contact`, today),
+    urlEntry(`${siteUrl}/streaming`, today),
+    urlEntry(`${siteUrl}/streaming-in-india`, today),
   ]
 
   const listingEntries = [
