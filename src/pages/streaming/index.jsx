@@ -84,7 +84,6 @@ export default function StreamingIndex({ region }) {
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <BackButton />
           <Heading as='h1' mt={8}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
 
@@ -141,6 +140,9 @@ export default function StreamingIndex({ region }) {
           <Text textAlign='center' mt={10} color='gray.600'>
             Availability changes by region and over time. Check each movie page for current provider information.
           </Text>
+          <Box mt='1.5rem'>
+            <BackButton />
+          </Box>
         </Box>
       </Box>
     </>
