@@ -15,6 +15,7 @@ import {
   HStack
 } from '@chakra-ui/react'
 import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
+import { TbMessageX } from 'react-icons/tb'
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -241,6 +242,18 @@ export default function ChatWidget() {
     handleSendMessage(query)
   }
 
+  const handleClearChat = () => {
+    abortControllerRef.current?.abort()
+    setMessages([])
+    setMessageLinks({})
+    setInputValue('')
+    setIsLoading(false)
+    setIsStreaming(false)
+    messageCountRef.current = 0
+    sessionStorage.removeItem('chatMessages')
+    sessionStorage.removeItem('chatMessageLinks')
+  }
+
   return (
     <>
       <Box
@@ -274,6 +287,17 @@ export default function ChatWidget() {
                 <Text fontWeight="bold">Galaxy Bot</Text>
               </Flex>
               <HStack spacing="2">
+                <IconButton
+                  icon={<TbMessageX size="18" />}
+                  size="sm"
+                  variant="ghost"
+                  color="white"
+                  _hover={{ bg: 'whiteAlpha.200' }}
+                  onClick={handleClearChat}
+                  isDisabled={messages.length === 0}
+                  aria-label="Clear chat"
+                  title="Clear chat"
+                />
                 <IconButton
                   icon={<CloseIcon />}
                   size="sm"

@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
-import { extractQuotedMovieMentions, resolveMovieMentions } from '../../utils/movieSearch'
+import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat } from '../../utils/movieSearch'
 const { isBot } = require('../../utils/rateLimiter')
 
 let openai
@@ -10,6 +10,34 @@ let redis
 const chatCache = new LRUCache({ max: 1000, ttl: 1000 * 60 * 30 })
 
 const localRequestLimits = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
+
+const recentReleasesCache = new LRUCache({ max: 1, ttl: 1000 * 60 * 60 })
+
+const RECENT_RELEASES_KEYWORDS = [
+  'recent movie', 'recent release', 'recently released', 'new movie', 'newest movie',
+  'new release', 'latest movie', 'latest release', 'just released', 'now playing',
+  'in theaters now', 'currently in theaters', 'best recent', "what's new", 'this year'
+]
+
+function isRecentReleasesQuery(text) {
+  const lower = text.toLowerCase()
+  return RECENT_RELEASES_KEYWORDS.some((keyword) => lower.includes(keyword))
+}
+
+async function getRecentReleasesContext() {
+  const cached = recentReleasesCache.get('context')
+  if (cached) return cached
+
+  const { results } = await getRecentReleases(1)
+  const context = results
+    .slice(0, 8)
+    .map(formatMovieForChat)
+    .map((movie) => `"${movie.title} (${movie.year})" - rating ${movie.rating}/10 - ${movie.overview}`)
+    .join('\n')
+
+  recentReleasesCache.set('context', context)
+  return context
+}
 
 const MAX_REQUESTS_PER_HOUR = 20
 const MAX_CONVERSATION_LENGTH = 10
@@ -115,10 +143,26 @@ export default async function handler(req, res) {
     openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
     const limitedMessages = messages.slice(-MAX_CONVERSATION_LENGTH)
-    
+
+    let recentReleasesContext = ''
+    if (isRecentReleasesQuery(lastMessage.content)) {
+      try {
+        recentReleasesContext = await getRecentReleasesContext()
+      } catch (error) {
+        console.error('Error fetching recent releases for grounding:', error)
+      }
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+
     const systemMessage = {
       role: 'system',
       content: `You are a helpful movie discovery assistant for Galaxy Movies. Your goal is to help users find movies they'll enjoy based on their preferences, mood, or specific criteria.
+
+Today's date is ${today}. Your own knowledge of movies may be outdated, so do not assume you know what counts as "recent" — rely on the verified data provided below when it's available.${recentReleasesContext ? `
+
+Here is a verified list of movies actually in theaters or recently released as of today. Use ONLY these when the user asks about recent, new, or currently popular releases:
+${recentReleasesContext}` : ''}
 
 Key capabilities:
 - Recommend movies based on genre, mood, time period, actors, directors, or themes

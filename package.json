@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": false,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npx kill-port 3000 && next dev",
     "dev:clean": "powershell -NoProfile -Command \"if (Test-Path .next) { Remove-Item .next -Recurse -Force }; npm.cmd run dev\"",
     "build": "next build",
+    "prestart": "npx kill-port 3000",
+    "start": "next start",
     "check": "npm run build",
-    "lhci": "npm run build && lhci autorun --config=./lighthouserc.cjs",
-    "start": "next start"
+    "lhci": "npm run build && lhci autorun --config=./lighthouserc.cjs"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.0.17",
@@ -32,7 +33,8 @@
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
-    "@next/bundle-analyzer": "^15.0.3"
+    "@next/bundle-analyzer": "^15.0.3",
+    "kill-port": "^2.0.1"
   },
   "overrides": {
     "tar": "^7.4.3",

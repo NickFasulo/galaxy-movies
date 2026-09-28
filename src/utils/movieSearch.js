@@ -92,6 +92,32 @@ export async function getTrendingMovies(timeWindow = 'day', page = 1) {
   }
 }
 
+export async function getRecentReleases(page = 1) {
+  try {
+    const now = new Date()
+    const ninetyDaysAgo = new Date(now)
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    const data = await fetchTmdb('/discover/movie', {
+      page,
+      include_adult: false,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 10,
+      'primary_release_date.gte': ninetyDaysAgo.toISOString().split('T')[0],
+      'primary_release_date.lte': now.toISOString().split('T')[0]
+    })
+
+    return {
+      results: (data.results || []).filter(movie => movie.poster_path),
+      total_pages: data.total_pages,
+      total_results: data.total_results
+    }
+  } catch (error) {
+    console.error('Error getting recent releases:', error)
+    return { results: [], total_pages: 0, total_results: 0 }
+  }
+}
+
 export async function getSimilarMovies(movieId, page = 1) {
   try {
     const data = await fetchTmdb(`/movie/${movieId}/similar`, { page })
