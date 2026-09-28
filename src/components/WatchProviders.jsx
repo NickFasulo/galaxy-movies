@@ -2,6 +2,22 @@ import Image from 'next/image'
 import NextLink from 'next/link'
 import { Box, Flex, Text, Tooltip, Link } from '@chakra-ui/react'
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
+import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
+
+function SurfsharkLink() {
+  return (
+    <Link
+      href={SURFSHARK_AFFILIATE_LINK}
+      isExternal
+      rel='sponsored nofollow noopener'
+      fontSize='xs'
+      color='gray.400'
+      _hover={{ color: 'white' }}
+    >
+      {SURFSHARK_LINK_TEXT} ↗
+    </Link>
+  )
+}
 
 function ProviderIcon({ provider, movieTitle }) {
   const icon = (
@@ -39,14 +55,11 @@ function ProviderIcon({ provider, movieTitle }) {
 }
 
 export default function WatchProviders({ watchProviders, movieTitle }) {
-  if (!watchProviders) return null
-
-  const flatrate = watchProviders.flatrate || []
-  const rent = watchProviders.rent || []
-  const buy = watchProviders.buy || []
-  const streamLink = watchProviders.link
-
-  if (!flatrate.length && !rent.length && !buy.length) return null
+  const flatrate = watchProviders?.flatrate || []
+  const rent = watchProviders?.rent || []
+  const buy = watchProviders?.buy || []
+  const streamLink = watchProviders?.link
+  const hasProviders = flatrate.length > 0 || rent.length > 0 || buy.length > 0
 
   return (
     <>
@@ -61,30 +74,42 @@ export default function WatchProviders({ watchProviders, movieTitle }) {
             </Link>
           )}
         </Flex>
-        {flatrate.length > 0 && (
-          <Box mb={2}>
-            <Text color='gray.300' fontSize='xs' mb={1.5}>
-              Stream
-            </Text>
-            <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
-              {flatrate.map((provider) => (
-                <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
-              ))}
-            </Flex>
-          </Box>
-        )}
-        {(rent.length > 0 || buy.length > 0) && (
+        {hasProviders ? (
+          <>
+            {flatrate.length > 0 && (
+              <Box mb={2}>
+                <Text color='gray.300' fontSize='xs' mb={1.5}>
+                  Stream
+                </Text>
+                <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
+                  {flatrate.map((provider) => (
+                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
+                  ))}
+                </Flex>
+              </Box>
+            )}
+            {(rent.length > 0 || buy.length > 0) && (
+              <Box mb={2}>
+                <Text color='gray.300' fontSize='xs' mb={1.5}>
+                  Rent / Buy
+                </Text>
+                <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
+                  {[...rent, ...buy]
+                    .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
+                    .map((provider) => (
+                      <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
+                    ))}
+                </Flex>
+              </Box>
+            )}
+            <SurfsharkLink />
+          </>
+        ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
-              Rent / Buy
+              Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
-              {[...rent, ...buy]
-                .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
-                .map((provider) => (
-                  <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
-                ))}
-            </Flex>
+            <SurfsharkLink />
           </Box>
         )}
       </Box>
