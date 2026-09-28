@@ -5,6 +5,7 @@ import MovieGrid from '../components/MovieGrid'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import BreadcrumbSchema from '../components/BreadcrumbSchema'
 import HreflangTags from '../components/HreflangTags'
+import BackButton from '../components/BackButton'
 
 export async function getServerSideProps({ res }) {
   try {
@@ -98,7 +99,7 @@ export default function StreamingInIndia({ movies, dataError }) {
       </Head>
       <Box minH='100vh' py={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Link href='/'>← Galaxy Movies</Link>
+          <BackButton />
           <Heading as='h1' mt={8}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
 
