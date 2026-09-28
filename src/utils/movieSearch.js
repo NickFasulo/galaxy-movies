@@ -1,4 +1,4 @@
-import { fetchTmdb, movieGenres, streamingProviders } from './tmdb'
+import { fetchTmdb, movieGenres, getProviderId } from './tmdb'
 
 export async function searchMoviesByQuery(query, page = 1) {
   try {
@@ -44,10 +44,11 @@ export async function discoverMoviesWithFilters(filters = {}, page = 1) {
     }
 
     if (filters.provider) {
-      const providerId = streamingProviders[filters.provider]?.id
+      const region = filters.region || 'US'
+      const providerId = getProviderId(filters.provider, region)
       if (providerId) {
         params.with_watch_providers = providerId
-        params.watch_region = filters.region || 'US'
+        params.watch_region = region
       }
     }
 
@@ -142,7 +143,9 @@ export function parseNaturalLanguageQuery(query) {
     'netflix': 'netflix', 'amazon': 'amazon-prime-video',
     'prime': 'amazon-prime-video', 'hulu': 'hulu',
     'disney': 'disney-plus', 'disney+': 'disney-plus',
-    'apple tv': 'apple-tv', 'max': 'max', 'hbo': 'max'
+    'apple tv': 'apple-tv', 'max': 'max', 'hbo': 'max',
+    'jiohotstar': 'jiohotstar', 'hotstar': 'jiohotstar', 'jiocinema': 'jiohotstar',
+    'zee5': 'zee5', 'sonyliv': 'sonyliv', 'sony liv': 'sonyliv'
   }
 
   for (const [keyword, provider] of Object.entries(providerKeywords)) {

@@ -19,9 +19,11 @@ import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
 import ActorAvatar from '../../components/ActorAvatar'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
+import HreflangTags from '../../components/HreflangTags'
 import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
+import { detectRegion } from '../../utils/region'
 
 export const getServerSideProps = async (context) => {
   const { movieId } = context.query
@@ -51,7 +53,7 @@ export const getServerSideProps = async (context) => {
     const releaseDatesData = releaseDatesRes.ok ? await releaseDatesRes.json() : { results: [] }
     const usRelease = releaseDatesData.results?.find((r) => r.iso_3166_1 === 'US')
     const cert = usRelease?.release_dates?.find((d) => d.certification)?.certification || 'NR'
-    const countryCode = context.req.headers['x-vercel-ip-country'] || 'US'
+    const countryCode = detectRegion(context.req)
     const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
     const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
     const directorObj = creditsData.crew?.find((person) => person.job === 'Director')
@@ -160,7 +162,8 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
       ratingCount: movie.vote_count,
       bestRating: 10,
       worstRating: 0
-    } : undefined
+    } : undefined,
+    contentRating: ageRating || undefined
   }
 
   const videoObjectData = videoKey ? {
@@ -186,6 +189,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         <title>{`${movie.title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+        <HreflangTags canonicalUrl={canonicalUrl} />
 
         <meta property='og:type' content='video.movie' />
         <meta property='og:site_name' content='Galaxy Movies' />

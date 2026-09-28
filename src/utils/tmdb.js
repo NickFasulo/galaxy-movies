@@ -57,16 +57,36 @@ export const movieGenres = {
   thriller: { id: 53, title: 'Thriller Movies' }
 }
 
+// TMDB's watch-provider catalog is region-scoped: the same real-world service can
+// have a different provider_id per `watch_region` (e.g. Amazon Prime Video is id 9
+// in the US catalog but id 119 in the India catalog). `ids.default` is used when a
+// region-specific id isn't listed. `regions`, when present, restricts which regions
+// the service is actually offered in (used for display copy, not just querying).
 export const streamingProviders = {
-  netflix: { id: 8, title: 'Netflix Movies' },
-  'amazon-prime-video': { id: 9, title: 'Amazon Prime Video Movies' },
-  hulu: { id: 15, title: 'Hulu Movies' },
-  'disney-plus': { id: 337, title: 'Disney+ Movies' },
-  'apple-tv': { id: 2, title: 'Apple TV Movies' },
-  max: { id: 1899, title: 'Max Movies' }
+  netflix: { title: 'Netflix Movies', ids: { default: 8 } },
+  'amazon-prime-video': { title: 'Amazon Prime Video Movies', ids: { default: 9, IN: 119 } },
+  hulu: { title: 'Hulu Movies', ids: { default: 15 }, regions: ['US'] },
+  'disney-plus': { title: 'Disney+ Movies', ids: { default: 337 }, regions: ['US'] },
+  'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
+  max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
+  jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
+  zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
+  sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] }
 }
 
-export async function fetchDiscoverMovies({ category, genreId, providerId, page = 1 }) {
+export function getProviderId(providerKey, region = 'US') {
+  const provider = streamingProviders[providerKey]
+  if (!provider) return null
+  return provider.ids[region] ?? provider.ids.default
+}
+
+export function isProviderAvailableInRegion(providerKey, region = 'US') {
+  const provider = streamingProviders[providerKey]
+  if (!provider) return false
+  return !provider.regions || provider.regions.includes(region)
+}
+
+export async function fetchDiscoverMovies({ category, genreId, providerId, region, page = 1 }) {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
@@ -93,7 +113,7 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, page 
   }
   if (providerId) {
     params.with_watch_providers = providerId
-    params.watch_region = 'US'
+    params.watch_region = region || 'US'
   }
 
   const data = await fetchTmdb('/discover/movie', params)

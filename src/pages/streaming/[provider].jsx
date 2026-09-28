@@ -2,28 +2,41 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
-import { fetchDiscoverMovies, streamingProviders } from '../../utils/tmdb'
+import { fetchDiscoverMovies, streamingProviders, getProviderId, isProviderAvailableInRegion } from '../../utils/tmdb'
+import { detectRegion } from '../../utils/region'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
+import HreflangTags from '../../components/HreflangTags'
 
-export async function getServerSideProps({ params, res }) {
+const REGION_NAMES = { US: 'the United States', IN: 'India' }
+
+export async function getServerSideProps({ params, req, res }) {
   const provider = streamingProviders[params.provider]
   if (!provider) return { notFound: true }
 
+  const region = detectRegion(req)
+  const availableInRegion = isProviderAvailableInRegion(params.provider, region)
+  const providerId = getProviderId(params.provider, region)
+
   try {
-    const data = await fetchDiscoverMovies({ providerId: provider.id })
+    const data = await fetchDiscoverMovies({ providerId, region })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { provider: params.provider, ...provider, movies: data.results } }
+    return { props: { provider: params.provider, ...provider, movies: data.results, region, availableInRegion } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { provider: params.provider, ...provider, movies: [], dataError: true } }
+    return { props: { provider: params.provider, ...provider, movies: [], dataError: true, region, availableInRegion } }
   }
 }
 
-export default function StreamingPage({ provider, title, movies, dataError }) {
+export default function StreamingPage({ provider, title, movies, dataError, region, availableInRegion, regions }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/streaming/${provider}`
-  const description = `Explore movies currently available on ${title.replace(' Movies', '')} in the United States.`
+  const providerLabel = title.replace(' Movies', '')
+  const regionName = REGION_NAMES[region] || 'your region'
+  const homeRegionNames = (regions || []).map((r) => REGION_NAMES[r] || r).join(' and ')
+  const description = availableInRegion
+    ? `Explore movies currently available on ${providerLabel} in ${regionName}.`
+    : `Explore movies currently available on ${providerLabel}. ${providerLabel} is primarily available in ${homeRegionNames}; availability may vary in ${regionName}.`
   const featuredPoster = movies?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
     : null
@@ -65,6 +78,7 @@ export default function StreamingPage({ provider, title, movies, dataError }) {
         <title>{`${title} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
+        <HreflangTags canonicalUrl={canonicalUrl} />
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />
