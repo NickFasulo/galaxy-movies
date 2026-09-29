@@ -19,9 +19,7 @@ export default function Disclosure() {
       </InfoParagraph>
       <InfoParagraph>
         As an Amazon Associate, Galaxy Movies earns from qualifying
-        purchases. Visitors outside the United States may be directed to
-        their local Amazon marketplace (e.g. amazon.in) for a better
-        shopping experience; those links do not currently earn a commission.
+        purchases.
       </InfoParagraph>
       <BackButton />
     </InfoPage>
