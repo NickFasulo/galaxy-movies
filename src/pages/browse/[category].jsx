@@ -69,6 +69,7 @@ export default function BrowsePage({ category, title, description, movies, dataE
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:locale' content='en_US' />
         <meta property='og:title' content={`${title} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />

@@ -142,6 +142,8 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
         <link rel='canonical' href={canonicalUrl} />
 
         <meta property='og:type' content='profile' />
+        <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:locale' content='en_US' />
         <meta property='og:title' content={`${person.name} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />

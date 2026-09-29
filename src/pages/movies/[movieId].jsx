@@ -142,6 +142,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     '@type': 'Movie',
     name: movie.title,
     description,
+    inLanguage: movie.original_language || 'en',
     image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
     datePublished: movie.release_date || undefined,
     duration: isoDuration,
@@ -171,6 +172,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
     '@type': 'VideoObject',
     name: `${movie.title} Trailer`,
     description: `Watch the official trailer for ${movie.title}`,
+    inLanguage: 'en',
     thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
     uploadDate: movie.release_date || undefined,
     contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
@@ -193,6 +195,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
 
         <meta property='og:type' content='video.movie' />
         <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:locale' content='en_US' />
         <meta property='og:title' content={`${movie.title} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />

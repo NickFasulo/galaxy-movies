@@ -24,6 +24,13 @@ function urlEntry(loc, lastmod) {
     : `  <url><loc>${escapedLoc}</loc></url>`
 }
 
+// How many discover-listing pages (~20 movies each) to pull per category/genre, and how many
+// distinct movies to sample credits from for person/company discovery. Bounded to keep sitemap
+// generation fast; the response is cached for a day (see Cache-Control below) so this cost is
+// only paid once per day, not per request.
+const PAGES_PER_LIST = 2
+const CREDITS_SAMPLE_SIZE = 60
+
 export async function getServerSideProps({ res }) {
   const today = new Date().toISOString().split('T')[0]
 
@@ -55,13 +62,18 @@ export async function getServerSideProps({ res }) {
   const companyIds = new Set()
 
   try {
+    const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
     const categories = Object.keys(movieCategories)
     const categoryResults = await Promise.all(
-      categories.map(category => fetchDiscoverMovies({ category }))
+      categories.flatMap(category =>
+        pageRange.map(page => fetchDiscoverMovies({ category, page }))
+      )
     )
 
     const genreResults = await Promise.all(
-      Object.values(movieGenres).map(genre => fetchDiscoverMovies({ genreId: genre.id }))
+      Object.values(movieGenres).flatMap(genre =>
+        pageRange.map(page => fetchDiscoverMovies({ genreId: genre.id, page }))
+      )
     )
 
     const allMovies = [
@@ -75,26 +87,38 @@ export async function getServerSideProps({ res }) {
         const lastmod = formatDate(movie.release_date) || today
         movieEntries.set(movie.id, lastmod)
       }
-
-      for (const company of movie.production_companies || []) {
-        if (company?.id) companyIds.add(company.id)
-      }
     }
 
-    const firstCategoryMovies = categoryResults.flatMap(d => d?.results || []).slice(0, 20)
-    const creditResults = await Promise.allSettled(
-      firstCategoryMovies.map(movie =>
+    // /discover/movie doesn't return production_companies or full credits, so we fetch movie
+    // details (with credits appended in the same request) for a bounded sample of movies to
+    // discover person/company pages worth listing.
+    const creditsSampleMovies = Array.from(movieEntries.keys())
+      .slice(0, CREDITS_SAMPLE_SIZE)
+      .map(id => allMovies.find(movie => movie.id === id))
+      .filter(Boolean)
+    const detailResults = await Promise.allSettled(
+      creditsSampleMovies.map(movie =>
         fetch(
-          `https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${process.env.TMDB_API_KEY}`
+          `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits`
         ).then(r => r.ok ? r.json() : null)
       )
     )
 
-    for (const result of creditResults) {
+    // Only key crew roles are included alongside top cast to avoid flooding the sitemap with
+    // pages for every VFX/sound/production crew member on each film.
+    const KEY_CREW_JOBS = new Set(['Director', 'Writer', 'Screenplay', 'Story', 'Producer'])
+
+    for (const result of detailResults) {
       if (result.status !== 'fulfilled' || !result.value) continue
-      const { cast = [], crew = [] } = result.value
-      for (const person of [...cast.slice(0, 10), ...crew]) {
+      const { credits, production_companies = [] } = result.value
+      const { cast = [], crew = [] } = credits || {}
+      const keyCrew = crew.filter(person => KEY_CREW_JOBS.has(person.job))
+
+      for (const person of [...cast.slice(0, 10), ...keyCrew]) {
         if (person?.id) personIds.add(person.id)
+      }
+      for (const company of production_companies) {
+        if (company?.id) companyIds.add(company.id)
       }
     }
   } catch (error) {

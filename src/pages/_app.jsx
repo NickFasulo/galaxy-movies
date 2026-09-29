@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from 'react'
+import Head from 'next/head'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
@@ -23,6 +24,9 @@ function MyApp({ Component, pageProps }) {
     <QueryClientProvider client={queryClient}>
       <Hydrate state={pageProps.dehydratedState}>
         <ChakraProvider>
+          <Head>
+            <meta name='viewport' content='width=device-width, initial-scale=1' />
+          </Head>
           <Component {...pageProps} />
           <ChatWidget />
           {process.env.NODE_ENV === 'production' && <Analytics />}

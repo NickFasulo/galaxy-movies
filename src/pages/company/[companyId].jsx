@@ -128,6 +128,7 @@ export default function Company({ company, movies, companyError }) {
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:locale' content='en_US' />
         <meta property='og:title' content={`${company.name} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />

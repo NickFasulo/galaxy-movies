@@ -11,8 +11,24 @@ import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import HreflangTags from '../components/HreflangTags'
+import { fetchDiscoverMovies } from '../utils/tmdb'
 
-export default function Home() {
+// Server-render the first page of the default ("popular") view so crawlers get real
+// movie content/links in the initial HTML. `/api/allMovies` (used for client-side
+// pagination) blocks bot user agents, including Googlebot's own JS-triggered fetches,
+// so relying on client-side fetching alone leaves this page's content invisible to Google.
+export async function getServerSideProps({ res }) {
+  try {
+    const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
+    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+    return { props: { initialMovies: data.results || [], initialTotalPages: data.total_pages || 1 } }
+  } catch (error) {
+    console.error('Error fetching initial movies for homepage SSR:', error)
+    return { props: { initialMovies: [], initialTotalPages: 1 } }
+  }
+}
+
+export default function Home({ initialMovies, initialTotalPages }) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
@@ -39,6 +55,12 @@ export default function Home() {
   }, [searchInput])
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
+
+  // Only seed react-query's cache with the server-fetched page when the query key
+  // matches what was actually server-rendered (default category, no search active).
+  const initialInfiniteData = (category === 'popular' && !activeSearch)
+    ? { pages: [{ results: initialMovies, total_pages: initialTotalPages }], pageParams: [1] }
+    : undefined
 
   const {
     data,
@@ -69,6 +91,7 @@ export default function Home() {
       return res.json()
     },
     {
+      initialData: initialInfiniteData,
       staleTime: 1000 * 60 * 10,
       cacheTime: 1000 * 60 * 60,
       refetchOnWindowFocus: false,
@@ -161,6 +184,7 @@ export default function Home() {
     name: 'Galaxy Movies',
     url: siteUrl,
     description: pageDescription,
+    inLanguage: 'en',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -177,6 +201,7 @@ export default function Home() {
     name: 'Galaxy Movies',
     url: siteUrl,
     description: pageDescription,
+    inLanguage: 'en',
     applicationCategory: 'Entertainment',
     operatingSystem: 'All',
     browserRequirements: 'Requires JavaScript',
@@ -198,6 +223,7 @@ export default function Home() {
 
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />
+        <meta property='og:locale' content='en_US' />
         <meta property='og:title' content={pageTitle} />
         <meta property='og:description' content={pageDescription} />
         <meta property='og:url' content={siteUrl} />
