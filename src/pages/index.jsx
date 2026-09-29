@@ -236,6 +236,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
         <meta name='impact-site-verification' value='1ad17b76-2079-4639-9f17-f65f40948c6b' />
         <meta name="google-adsense-account" content="ca-pub-7970999589560353" />
         <meta name="google-site-verification" content="dI9IyHQELzpq29cGmnFHM5lAXtVXJFovinLzCWl2NlM" />
+        <meta name="mitgo-verification" content="dd8a3d12-ce6e-4f62-a56f-79c7a28cbb8d" />
 
         <script
           type='application/ld+json'
@@ -257,7 +258,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
           <h1 className='title'>
             <span>Galaxy Movies</span>
           </h1>
-          <Text textAlign='center' color='gray.600' fontSize='sm' mt='1em' mb='0.5rem'>Discover movies at warp speed</Text>
+          <Text textAlign='center' color='gray.600' fontSize='sm' mt='1em' mb='0.5rem'>Warp speed movie discovery</Text>
 
         <SearchBar
           category={category}
