@@ -28,11 +28,17 @@ const INDIA_PROVIDERS = [
   { key: 'apple-tv', label: 'Apple TV' }
 ]
 
+const INDIAN_LANGUAGE_CATEGORIES = [
+  { key: 'bollywood', label: 'Bollywood (Hindi) Movies' },
+  { key: 'tamil', label: 'Tamil Movies' },
+  { key: 'telugu', label: 'Telugu Movies' }
+]
+
 export default function StreamingInIndia({ movies, dataError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/streaming-in-india`
   const title = 'Where to Watch Movies Online in India'
-  const description = 'A guide to the top streaming platforms available in India — Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more — plus popular movies to watch right now.'
+  const description = 'A guide to the top streaming platforms available in India — Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more — plus Bollywood, Tamil, and Telugu movies to watch right now.'
   const featuredPoster = movies?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
     : null
@@ -108,6 +114,15 @@ export default function StreamingInIndia({ movies, dataError }) {
             {INDIA_PROVIDERS.map((provider) => (
               <ListItem key={provider.key}>
                 <Link href={`/streaming/${provider.key}`}>{provider.label}</Link>
+              </ListItem>
+            ))}
+          </UnorderedList>
+
+          <Heading as='h2' size='md' mt={10} mb={3}>Bollywood, Tamil &amp; Telugu movies</Heading>
+          <UnorderedList spacing={2} color='gray.600'>
+            {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
+              <ListItem key={category.key}>
+                <Link href={`/browse/${category.key}`}>{category.label}</Link>
               </ListItem>
             ))}
           </UnorderedList>

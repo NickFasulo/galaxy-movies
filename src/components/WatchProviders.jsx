@@ -19,7 +19,7 @@ function SurfsharkLink() {
   )
 }
 
-function ProviderIcon({ provider, movieTitle }) {
+function ProviderIcon({ provider, movieTitle, region }) {
   const icon = (
     <Box position='relative' width='32px' height='32px'>
       <Image
@@ -35,7 +35,7 @@ function ProviderIcon({ provider, movieTitle }) {
     return (
       <Tooltip key={provider.provider_id} label={`${provider.provider_name}`} hasArrow placement='top'>
         <Link
-          href={buildAmazonAffiliateLink(movieTitle)}
+          href={buildAmazonAffiliateLink(movieTitle, region)}
           isExternal
           rel='sponsored nofollow noopener'
           _hover={{ transform: 'scale(1.05)' }}
@@ -54,7 +54,7 @@ function ProviderIcon({ provider, movieTitle }) {
   )
 }
 
-export default function WatchProviders({ watchProviders, movieTitle }) {
+export default function WatchProviders({ watchProviders, movieTitle, region }) {
   const flatrate = watchProviders?.flatrate || []
   const rent = watchProviders?.rent || []
   const buy = watchProviders?.buy || []
@@ -83,7 +83,7 @@ export default function WatchProviders({ watchProviders, movieTitle }) {
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
                   {flatrate.map((provider) => (
-                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
+                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} region={region} />
                   ))}
                 </Flex>
               </Box>
@@ -97,7 +97,7 @@ export default function WatchProviders({ watchProviders, movieTitle }) {
                   {[...rent, ...buy]
                     .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
                     .map((provider) => (
-                      <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} />
+                      <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} region={region} />
                     ))}
                 </Flex>
               </Box>

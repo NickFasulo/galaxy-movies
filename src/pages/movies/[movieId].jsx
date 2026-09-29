@@ -74,7 +74,8 @@ export const getServerSideProps = async (context) => {
         watchProviders: userProviders,
         director,
         topCast,
-        ageRating: cert
+        ageRating: cert,
+        region: countryCode
       }
     }
   } catch (error) {
@@ -87,7 +88,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, region }) {
   if (movieError) {
     return (
       <>
@@ -297,7 +298,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} />
+              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} region={region} />
             </Box>
 
           </Flex>

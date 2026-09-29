@@ -37,6 +37,24 @@ export const movieCategories = {
     title: 'Upcoming Movies',
     description: 'Explore upcoming movies and keep track of what is coming soon.',
     sortBy: 'popularity.desc'
+  },
+  bollywood: {
+    title: 'Bollywood Movies',
+    description: 'Discover popular Hindi-language Bollywood movies, from new releases to all-time favorites.',
+    sortBy: 'popularity.desc',
+    language: 'hi'
+  },
+  tamil: {
+    title: 'Tamil Movies',
+    description: 'Explore popular Tamil-language movies from Kollywood cinema.',
+    sortBy: 'popularity.desc',
+    language: 'ta'
+  },
+  telugu: {
+    title: 'Telugu Movies',
+    description: 'Explore popular Telugu-language movies from Tollywood cinema.',
+    sortBy: 'popularity.desc',
+    language: 'te'
   }
 }
 
@@ -106,6 +124,11 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params['primary_release_date.lte'] = today
   } else if (category === 'upcoming') {
     params['primary_release_date.gte'] = today
+  }
+
+  const categoryLanguage = category && movieCategories[category]?.language
+  if (categoryLanguage) {
+    params.with_original_language = categoryLanguage
   }
 
   if (genreId) {

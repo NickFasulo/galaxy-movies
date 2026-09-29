@@ -7,7 +7,10 @@ module.exports = {
       numberOfRuns: 1,
       url: [
         'http://localhost:3000/',
-        'http://localhost:3000/movies/969681'
+        'http://localhost:3000/movies/969681',
+        'http://localhost:3000/streaming',
+        'http://localhost:3000/streaming-in-india',
+        'http://localhost:3000/browse/bollywood'
       ],
       settings: {
         preset: 'desktop',

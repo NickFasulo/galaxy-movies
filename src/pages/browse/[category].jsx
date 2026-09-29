@@ -101,7 +101,10 @@ export default function BrowsePage({ category, title, description, movies, dataE
           <Text textAlign='center' mt={8}>
             Browse <Link href='/browse/popular'>popular</Link>,{' '}
             <Link href='/browse/now-playing'>now playing</Link>, or{' '}
-            <Link href='/browse/upcoming'>upcoming</Link> movies.
+            <Link href='/browse/upcoming'>upcoming</Link> movies, or explore{' '}
+            <Link href='/browse/bollywood'>Bollywood</Link>,{' '}
+            <Link href='/browse/tamil'>Tamil</Link>, and{' '}
+            <Link href='/browse/telugu'>Telugu</Link> cinema.
           </Text>
         </Box>
       </Box>
