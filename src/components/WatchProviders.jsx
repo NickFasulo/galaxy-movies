@@ -33,7 +33,7 @@ function ProviderIcon({ provider, movieTitle }) {
 
   if (isAmazonProvider(provider.provider_name)) {
     return (
-      <Tooltip key={provider.provider_id} label={`${provider.provider_name} (affiliate link)`} hasArrow placement='top'>
+      <Tooltip key={provider.provider_id} label={`${provider.provider_name}`} hasArrow placement='top'>
         <Link
           href={buildAmazonAffiliateLink(movieTitle)}
           isExternal

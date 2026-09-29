@@ -13,7 +13,7 @@ export function useHoverBackground() {
     hoverTimerRef.current = setTimeout(() => {
       setHoveredBg(backdropPath)
       setIsBgVisible(true)
-    }, 750)
+    }, 500)
   }, [])
 
   const handleCardMouseLeave = useCallback(() => {
