@@ -12,7 +12,6 @@ import {
   Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
-import ReviewModal from '../../components/ReviewModal'
 import VideoModal from '../../components/VideoModal'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
@@ -24,6 +23,7 @@ import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
+import { getOrGenerateMovieReview } from '../../utils/movieReview'
 
 export const getServerSideProps = async (context) => {
   const { movieId } = context.query
@@ -55,10 +55,21 @@ export const getServerSideProps = async (context) => {
     const cert = usRelease?.release_dates?.find((d) => d.certification)?.certification || 'NR'
     const countryCode = detectRegion(context.req)
     const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
-    const validVideoKey = await getFirstPlayableKey(movieData.videos?.results)
     const directorObj = creditsData.crew?.find((person) => person.job === 'Director')
     const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
     const topCast = creditsData.cast?.slice(0, 15) || []
+
+    const [validVideoKey, aiSynopsis] = await Promise.all([
+      getFirstPlayableKey(movieData.videos?.results),
+      movieData.overview
+        ? getOrGenerateMovieReview({
+            movieId: movieData.id,
+            title: movieData.title,
+            overview: movieData.overview,
+            genres: movieData.genres?.map((g) => g.name) || []
+          })
+        : null
+    ])
 
     if (context.res) {
       context.res.setHeader(
@@ -74,7 +85,8 @@ export const getServerSideProps = async (context) => {
         watchProviders: userProviders,
         director,
         topCast,
-        ageRating: cert
+        ageRating: cert,
+        aiSynopsis: aiSynopsis || null
       }
     }
   } catch (error) {
@@ -87,7 +99,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis }) {
   if (movieError) {
     return (
       <>
@@ -164,7 +176,12 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
       bestRating: 10,
       worstRating: 0
     } : undefined,
-    contentRating: ageRating || undefined
+    contentRating: ageRating || undefined,
+    review: aiSynopsis ? {
+      '@type': 'Review',
+      author: { '@type': 'Organization', name: 'Galaxy Movies' },
+      reviewBody: aiSynopsis
+    } : undefined
   }
 
   const videoObjectData = videoKey ? {
@@ -361,6 +378,30 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               {movie.overview || 'Description unavailable.'}
             </Text>
 
+            {aiSynopsis && (
+              <Box
+                bg='blackAlpha.500'
+                border='1px solid'
+                borderColor='whiteAlpha.200'
+                borderRadius='1rem'
+                p={4}
+              >
+                <Text
+                  color='gray.400'
+                  fontSize='xs'
+                  fontWeight='bold'
+                  textTransform='uppercase'
+                  textAlign={{ base: 'center', md: 'left' }}
+                  mb={2}
+                >
+                  Galaxy Bot's Take
+                </Text>
+                <Text color='white' fontSize='sm' whiteSpace='pre-wrap'>
+                  {aiSynopsis}
+                </Text>
+              </Box>
+            )}
+
             <Flex
               direction={{ base: 'column', md: 'row' }}
               align={{ base: 'center', md: 'flex-end' }}
@@ -369,7 +410,6 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               w='100%'
               py={{ base: '1rem', md: 0 }}
             >
-              <ReviewModal modalData={movie} />
               <VideoModal videoKey={videoKey} />
               <BackButton />
             </Flex>
