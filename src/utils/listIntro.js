@@ -1,0 +1,128 @@
+import OpenAI from 'openai'
+import { Redis } from '@upstash/redis'
+import { LRUCache } from 'lru-cache'
+
+let openai
+let redis
+
+const INTRO_CACHE_VERSION = 'v1'
+const INTRO_TTL_SECONDS = 60 * 60 * 24 * 180
+const MAX_SAMPLE_TITLES = 5
+
+const memoryIntroCache = new LRUCache({ max: 100, ttl: INTRO_TTL_SECONDS * 1000 })
+
+const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 10
+
+function getRedis() {
+  if (redis) return redis
+  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
+    return null
+  }
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
+    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN
+  })
+  return redis
+}
+
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) return null
+  openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return openai
+}
+
+function introCacheKey(slug) {
+  return `ai_list_intro:${INTRO_CACHE_VERSION}:${slug}`
+}
+
+async function isWithinGlobalBudget(kv) {
+  const windowId = Math.floor(Date.now() / 60000)
+  const key = `ai_list_intro_global_rl:${windowId}`
+  try {
+    const count = await kv.incr(key)
+    if (count === 1) await kv.expire(key, 120)
+    return count <= MAX_GLOBAL_GENERATIONS_PER_MINUTE
+  } catch (err) {
+    console.error('Redis error checking AI list-intro generation budget, failing open:', err)
+    return true
+  }
+}
+
+async function readCache(kv, key) {
+  if (kv) {
+    try {
+      return await kv.get(key)
+    } catch (err) {
+      console.error('Redis get error for list-intro cache:', err)
+      return null
+    }
+  }
+  return memoryIntroCache.get(key) || null
+}
+
+async function writeCache(kv, key, value) {
+  if (kv) {
+    try {
+      await kv.set(key, value, { ex: INTRO_TTL_SECONDS })
+      return
+    } catch (err) {
+      console.error('Redis set error for list-intro cache:', err)
+    }
+  }
+  memoryIntroCache.set(key, value)
+}
+
+/**
+ * Returns a cached, editorial intro paragraph for a curated list page — unique
+ * written copy explaining the collection's angle, not a restatement of any single
+ * movie's TMDB overview. Generates and persists it via OpenAI on first request.
+ * Safe to call from getServerSideProps: cache hits are essentially free and
+ * instant, and generation is capped globally so misconfiguration can't spike cost.
+ */
+export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitles = [] }) {
+  if (!slug || !title) return null
+
+  const kv = getRedis()
+  const key = introCacheKey(slug)
+
+  const cached = await readCache(kv, key)
+  if (cached) return cached
+
+  const client = getOpenAI()
+  if (!client) return null
+
+  if (kv && !(await isWithinGlobalBudget(kv))) {
+    console.warn(`AI list-intro generation budget exceeded; skipping generation for list ${slug}`)
+    return null
+  }
+
+  const examples = sampleTitles.slice(0, MAX_SAMPLE_TITLES).join(', ')
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 220,
+      temperature: 0.6,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Write a short (2-3 sentence) editorial intro for a curated movie collection page. Explain the angle/appeal of the collection itself. Do not describe or rate any single movie in detail, and do not invent facts about specific films.'
+        },
+        {
+          role: 'user',
+          content: `Collection title: "${title}". One-line description: "${tagline}". A few movies currently in it: ${examples || 'varies'}. Write the intro.`
+        }
+      ]
+    })
+
+    const introText = completion.choices[0]?.message?.content?.trim()
+    if (!introText) return null
+
+    await writeCache(kv, key, introText)
+    return introText
+  } catch (err) {
+    console.error(`Error generating AI intro for list ${slug}:`, err)
+    return null
+  }
+}

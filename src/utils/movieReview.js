@@ -6,14 +6,11 @@ let openai
 let redis
 
 const REVIEW_CACHE_VERSION = 'v1'
-const REVIEW_TTL_SECONDS = 60 * 60 * 24 * 90 // 90 days — long-lived since overviews rarely change
+const REVIEW_TTL_SECONDS = 60 * 60 * 24 * 90
 const MAX_OVERVIEW_LENGTH = 1200
 
-// Fallback in-memory cache used only when Redis isn't configured (e.g. local dev).
 const memoryReviewCache = new LRUCache({ max: 500, ttl: REVIEW_TTL_SECONDS * 1000 })
 
-// Hard ceiling on OpenAI generations per minute across all requests, so a burst of
-// crawler traffic hitting many never-before-seen movies at once can't run up cost.
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
 
 function getRedis() {

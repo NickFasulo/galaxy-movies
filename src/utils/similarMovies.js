@@ -6,17 +6,13 @@ let openai
 let redis
 
 const SIMILAR_CACHE_VERSION = 'v1'
-const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 90 // 90 days — same rationale as the synopsis cache
+const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 90
 const MAX_OVERVIEW_LENGTH = 300
 const MAX_CANDIDATES = 8
 const MAX_RESULTS = 5
 
-// Fallback in-memory cache used only when Redis isn't configured (e.g. local dev).
 const memorySimilarCache = new LRUCache({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
 
-// Hard ceiling on OpenAI generations per minute across all requests, so a burst of
-// crawler traffic hitting many never-before-seen movies at once can't run up cost.
-// Kept as its own budget bucket, separate from the synopsis generator's.
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
 
 function getRedis() {

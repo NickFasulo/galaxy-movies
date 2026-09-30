@@ -13,10 +13,6 @@ import HoverBackground, { useHoverBackground } from '../components/HoverBackgrou
 import HreflangTags from '../components/HreflangTags'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 
-// Server-render the first page of the default ("popular") view so crawlers get real
-// movie content/links in the initial HTML. `/api/allMovies` (used for client-side
-// pagination) blocks bot user agents, including Googlebot's own JS-triggered fetches,
-// so relying on client-side fetching alone leaves this page's content invisible to Google.
 export async function getServerSideProps({ res }) {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
@@ -56,8 +52,6 @@ export default function Home({ initialMovies, initialTotalPages }) {
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
 
-  // Only seed react-query's cache with the server-fetched page when the query key
-  // matches what was actually server-rendered (default category, no search active).
   const initialInfiniteData = (category === 'popular' && !activeSearch)
     ? { pages: [{ results: initialMovies, total_pages: initialTotalPages }], pageParams: [1] }
     : undefined
@@ -331,8 +325,6 @@ export default function Home({ initialMovies, initialTotalPages }) {
                 bg='white'
               >
                 <Text textAlign='center' color='gray.600' fontSize='sm'>
-                  <Link href='/about'>About</Link> ·{' '}
-                  <Link href='/streaming'>Streaming</Link> ·{' '}
                   <Link href='/privacy'>Privacy</Link> ·{' '}
                   <Link href='/terms'>Terms</Link> ·{' '}
                   <Link href='/contact'>Contact</Link>

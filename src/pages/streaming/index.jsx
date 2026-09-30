@@ -95,6 +95,11 @@ export default function StreamingIndex({ region }) {
             </Text>
           )}
 
+          <Text maxW='42rem' mt={2} color='gray.600' fontStyle='italic'>
+            Want to see what's new? Check out{' '}
+            <Link href='/new-on-streaming'>new releases streaming now</Link>.
+          </Text>
+
           <Heading as='h2' size='md' mt={10} mb={4}>Available in India</Heading>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
             {indiaProviders.map((provider) => (

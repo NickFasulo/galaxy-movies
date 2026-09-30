@@ -1,4 +1,5 @@
 import { fetchDiscoverMovies, movieCategories, movieGenres, streamingProviders } from '../utils/tmdb'
+import { curatedLists } from '../utils/curatedLists'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
@@ -24,10 +25,6 @@ function urlEntry(loc, lastmod) {
     : `  <url><loc>${escapedLoc}</loc></url>`
 }
 
-// How many discover-listing pages (~20 movies each) to pull per category/genre, and how many
-// distinct movies to sample credits from for person/company discovery. Bounded to keep sitemap
-// generation fast; the response is cached for a day (see Cache-Control below) so this cost is
-// only paid once per day, not per request.
 const PAGES_PER_LIST = 2
 const CREDITS_SAMPLE_SIZE = 60
 
@@ -43,6 +40,8 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/contact`, today),
     urlEntry(`${siteUrl}/streaming`, today),
     urlEntry(`${siteUrl}/streaming-in-india`, today),
+    urlEntry(`${siteUrl}/new-on-streaming`, today),
+    urlEntry(`${siteUrl}/lists`, today),
   ]
 
   const listingEntries = [
@@ -54,6 +53,9 @@ export async function getServerSideProps({ res }) {
     ),
     ...Object.keys(streamingProviders).map(provider =>
       urlEntry(`${siteUrl}/streaming/${provider}`, today)
+    ),
+    ...Object.keys(curatedLists).map(slug =>
+      urlEntry(`${siteUrl}/lists/${slug}`, today)
     ),
   ]
 
@@ -89,9 +91,6 @@ export async function getServerSideProps({ res }) {
       }
     }
 
-    // /discover/movie doesn't return production_companies or full credits, so we fetch movie
-    // details (with credits appended in the same request) for a bounded sample of movies to
-    // discover person/company pages worth listing.
     const creditsSampleMovies = Array.from(movieEntries.keys())
       .slice(0, CREDITS_SAMPLE_SIZE)
       .map(id => allMovies.find(movie => movie.id === id))
@@ -104,8 +103,6 @@ export async function getServerSideProps({ res }) {
       )
     )
 
-    // Only key crew roles are included alongside top cast to avoid flooding the sitemap with
-    // pages for every VFX/sound/production crew member on each film.
     const KEY_CREW_JOBS = new Set(['Director', 'Writer', 'Screenplay', 'Story', 'Producer'])
 
     for (const result of detailResults) {

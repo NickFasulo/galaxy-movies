@@ -1,15 +1,25 @@
 import { useMemo, useEffect } from 'react'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import { tiun } from '@tiun/sdk'
 import ChatWidget from '../components/ChatWidget'
+import Header from '../components/Header'
+import Footer from '../components/Footer'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }) {
   const queryClient = useMemo(() => new QueryClient(), [])
+  const router = useRouter()
+  // The homepage keeps its own fixed-position legal pill instead of this footer
+  // (see Footer.jsx for why infinite scroll makes a normal footer awkward there).
+  const isHome = router.pathname === '/'
+  // These are the only routes that use a full-bleed dark page background;
+  // Header/Footer text color adapts so it stays readable on them.
+  const isDark = /^\/(movies|person|company)\//.test(router.pathname)
 
   useScrollRestore()
 
@@ -27,7 +37,9 @@ function MyApp({ Component, pageProps }) {
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
+          <Header isHome={isHome} isDark={isDark} />
           <Component {...pageProps} />
+          {!isHome && <Footer isDark={isDark} />}
           <ChatWidget />
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </ChakraProvider>
