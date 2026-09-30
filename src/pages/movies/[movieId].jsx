@@ -17,6 +17,7 @@ import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
 import ActorAvatar from '../../components/ActorAvatar'
+import SimilarMovies from '../../components/SimilarMovies'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import timeFormatter from '../../utils/timeFormatter'
@@ -24,16 +25,18 @@ import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
+import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 
 export const getServerSideProps = async (context) => {
   const { movieId } = context.query
 
   try {
-    const [movieRes, providersRes, creditsRes, releaseDatesRes] = await Promise.all([
+    const [movieRes, providersRes, creditsRes, releaseDatesRes, recommendationsRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`),
       fetch(`https://api.themoviedb.org/3/movie/${movieId}/watch/providers?api_key=${process.env.TMDB_API_KEY}`),
       fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${process.env.TMDB_API_KEY}`),
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${process.env.TMDB_API_KEY}`)
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${process.env.TMDB_API_KEY}`),
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}/recommendations?api_key=${process.env.TMDB_API_KEY}`)
     ])
 
     if (!movieRes.ok) {
@@ -59,7 +62,11 @@ export const getServerSideProps = async (context) => {
     const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
     const topCast = creditsData.cast?.slice(0, 15) || []
 
-    const [validVideoKey, aiSynopsis] = await Promise.all([
+    const recommendationsData = recommendationsRes.ok ? await recommendationsRes.json() : { results: [] }
+    const recommendationCandidates = (recommendationsData.results || [])
+      .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== movieData.id)
+
+    const [validVideoKey, aiSynopsis, similarMovies] = await Promise.all([
       getFirstPlayableKey(movieData.videos?.results),
       movieData.overview
         ? getOrGenerateMovieReview({
@@ -68,7 +75,16 @@ export const getServerSideProps = async (context) => {
             overview: movieData.overview,
             genres: movieData.genres?.map((g) => g.name) || []
           })
-        : null
+        : null,
+      recommendationCandidates.length > 0
+        ? getOrGenerateSimilarMovies({
+            movieId: movieData.id,
+            title: movieData.title,
+            overview: movieData.overview,
+            genres: movieData.genres?.map((g) => g.name) || [],
+            candidates: recommendationCandidates
+          })
+        : []
     ])
 
     if (context.res) {
@@ -86,7 +102,8 @@ export const getServerSideProps = async (context) => {
         director,
         topCast,
         ageRating: cert,
-        aiSynopsis: aiSynopsis || null
+        aiSynopsis: aiSynopsis || null,
+        similarMovies: similarMovies || []
       }
     }
   } catch (error) {
@@ -99,7 +116,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis, similarMovies }) {
   if (movieError) {
     return (
       <>
@@ -414,6 +431,35 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               <BackButton />
             </Flex>
 
+            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
+              <Flex align='center'>
+                <StarIcon boxSize={5} color='gold' />
+                <Text
+                  fontSize='lg'
+                  ml={2}
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  textAlign='center'
+                >
+                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
+                </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                {productionCompany ? (
+                  <Link href={`/company/${productionCompany.id}`} passHref>
+                    <Box
+                      as='span'
+                      cursor='pointer'
+                      transition='all 0.2s ease-in-out'
+                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
+                    >
+                      <ProductionLogo company={productionCompany} />
+                    </Box>
+                  </Link>
+                ) : null}
+              </Flex>
+            </Flex>
+
             {topCast.length > 0 && (
               <Box mb={4}>
                 <Text
@@ -463,34 +509,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               </Box>
             )}
 
-            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
-              <Flex align='center'>
-                <StarIcon boxSize={5} color='gold' />
-                <Text
-                  fontSize='lg'
-                  ml={2}
-                  color='white'
-                  textShadow='2px 0 4px black'
-                  textAlign='center'
-                >
-                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
-                </Text>
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                {productionCompany ? (
-                  <Link href={`/company/${productionCompany.id}`} passHref>
-                    <Box
-                      as='span'
-                      cursor='pointer'
-                      transition='all 0.2s ease-in-out'
-                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
-                    >
-                      <ProductionLogo company={productionCompany} />
-                    </Box>
-                  </Link>
-                ) : null}
-              </Flex>
-            </Flex>
+            <SimilarMovies movies={similarMovies} />
           </Flex>
 
         </Flex>
