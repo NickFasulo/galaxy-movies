@@ -9,7 +9,7 @@ export default function Footer({ isDark = false }) {
   const bg = isDark ? '#14181c' : 'transparent'
 
   return (
-    <Box as='footer' bg={bg}>
+    <Box as='footer' bg={bg} mt='auto'>
       <Text textAlign='center' fontSize='sm' color={textColor} py={2}>
         <Link as={NextLink} href='/privacy'>Privacy</Link> ·{' '}
         <Link as={NextLink} href='/terms'>Terms</Link> ·{' '}

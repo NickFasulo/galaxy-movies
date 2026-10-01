@@ -17,7 +17,7 @@ export default function Header({ isHome = false, isDark = false }) {
       right={0}
       zIndex={isDark ? 30 : undefined}
     >
-      <Flex maxW='70rem' mx='auto' px={6} py={2} align='center' justify={isHome ? 'flex-end' : 'space-between'}>
+      <Flex maxW='70rem' mx='auto' px={6} py={4} minH='4.25rem' align='center' justify={isHome ? 'flex-end' : 'space-between'}>
         {!isHome && (
           <Link as={NextLink} href='/' _hover={{ textDecoration: 'none' }}>
             <Box

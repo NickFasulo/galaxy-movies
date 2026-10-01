@@ -2,7 +2,7 @@ import { useMemo, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
-import { ChakraProvider } from '@chakra-ui/react'
+import { ChakraProvider, Flex } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import { tiun } from '@tiun/sdk'
@@ -33,9 +33,11 @@ function MyApp({ Component, pageProps }) {
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
-          <Header isHome={isHome} isDark={isDark} />
-          <Component {...pageProps} />
-          {!isHome && <Footer isDark={isDark} />}
+          <Flex direction='column' minH='100vh'>
+            <Header isHome={isHome} isDark={isDark} />
+            <Component {...pageProps} />
+            {!isHome && <Footer isDark={isDark} />}
+          </Flex>
           <ChatWidget />
           {process.env.NODE_ENV === 'production' && (
             <Analytics

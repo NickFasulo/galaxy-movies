@@ -286,8 +286,10 @@ export default function Home({ initialMovies, initialTotalPages }) {
             >
               <SimpleGrid
                 my={{ base: '3rem', md: '5rem' }}
-                mx={{ base: '1rem', md: '5rem' }}
-                spacing={{ base: 8, md: 12 }}
+                mx={{ base: '1rem', md: '5rem', xl: 'auto' }}
+                maxW={{ xl: '80rem' }}
+                spacingX={{ base: 8, md: 12, xl: 4 }}
+                spacingY={{ base: 8, md: 12 }}
                 columns={{ base: 2, md: 5 }}
                 minH='100vh'
               >
