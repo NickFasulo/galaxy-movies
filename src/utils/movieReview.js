@@ -72,12 +72,8 @@ async function writeCache(kv, key, value) {
   memoryReviewCache.set(key, value)
 }
 
-/**
- * Returns a cached AI-generated synopsis/review for a movie, generating and persisting
- * one via OpenAI on first request if none exists yet. Safe to call from
- * getServerSideProps: cache hits are essentially free and instant, and generation is
- * capped globally so a burst of first-time views can't spike OpenAI spend.
- */
+// Cache-first and safe to call from getServerSideProps — OpenAI generation is
+// capped globally so a crawler burst can't spike spend.
 export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [] }) {
   if (!movieId || !title || !overview) return null
 

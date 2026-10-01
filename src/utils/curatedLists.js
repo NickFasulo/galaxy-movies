@@ -1,16 +1,6 @@
-// Editorial "collections" — curated angles that a raw TMDB/IMDb/JustWatch listing
-// doesn't offer. Each entry maps to its own indexable page at /lists/[slug] and is
-// backed entirely by TMDB discover filters (genre ids, runtime, rating, vote count,
-// release-date range, sort order, and — below — keyword ids). Keyword ids are not
-// guessed: each was looked up via TMDB's /search/keyword endpoint and spot-checked
-// against /discover/movie to confirm it returns a sane, on-topic result set before
-// being added here (see PR/commit notes). Using an unverified keyword id risks
-// silently returning an empty or irrelevant list, which is worse than not having
-// the list at all.
-//
-// `group` buckets entries for the /lists index page ('mood' vs 'curated') but both
-// groups share the same page template — a mood pick is just a curated collection
-// with a different framing.
+// TMDB keyword ids below were verified via /search/keyword + spot-checked against
+// /discover/movie — do not add lists with unverified ids (they silently return
+// empty or irrelevant results).
 export const curatedLists = {
   'cozy-night-in': {
     title: 'Cozy Night In Movies',
@@ -115,7 +105,6 @@ export const curatedLists = {
     }
   },
 
-  // Keyword-based collections — verified TMDB keyword ids (see header note above).
   'heist-movies': {
     title: 'Best Heist Movies',
     tagline: 'Elaborate cons, big scores, and crews with a plan — or the confidence to fake one.',

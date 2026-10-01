@@ -72,13 +72,8 @@ async function writeCache(kv, key, value) {
   memoryIntroCache.set(key, value)
 }
 
-/**
- * Returns a cached, editorial intro paragraph for a curated list page — unique
- * written copy explaining the collection's angle, not a restatement of any single
- * movie's TMDB overview. Generates and persists it via OpenAI on first request.
- * Safe to call from getServerSideProps: cache hits are essentially free and
- * instant, and generation is capped globally so misconfiguration can't spike cost.
- */
+// Cache-first and safe to call from getServerSideProps — OpenAI generation is
+// capped globally so a crawler burst can't spike spend.
 export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitles = [] }) {
   if (!slug || !title) return null
 

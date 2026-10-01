@@ -1,10 +1,5 @@
-/**
- * HreflangTags Component
- * Emits hreflang alternates for a canonical URL that serves the same English
- * content to both US and India audiences (region-aware rendering happens
- * server-side; the URL itself doesn't change per locale).
- * @param {string} canonicalUrl - The canonical URL for the current page
- */
+// All hreflang entries point to the same URL intentionally — regional
+// differences are rendered server-side, not via separate locale URLs.
 export default function HreflangTags({ canonicalUrl }) {
   if (!canonicalUrl) return null
 

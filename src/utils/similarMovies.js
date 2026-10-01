@@ -74,15 +74,8 @@ async function writeCache(kv, key, value) {
   memorySimilarCache.set(key, value)
 }
 
-/**
- * Returns a cached, AI-curated "more like this" list for a movie — up to
- * MAX_RESULTS picks from `candidates` (TMDB's /recommendations results), each with
- * a short written reason tailored to the source movie rather than just a bare list.
- * Generates and persists the picks via OpenAI on first request; the enriched result
- * (title/poster/reason) is cached as-is, so cache hits need no further TMDB lookups.
- * Safe to call from getServerSideProps: cache hits are essentially free and instant,
- * and generation is capped globally so a burst of first-time views can't spike spend.
- */
+// Cache-first and safe to call from getServerSideProps — OpenAI generation is
+// capped globally so a crawler burst can't spike spend.
 export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [] }) {
   if (!movieId || !title || candidates.length === 0) return []
 

@@ -2,11 +2,7 @@ import NextLink from 'next/link'
 import { Box, Flex, Link, Menu, MenuButton, MenuItem, MenuList } from '@chakra-ui/react'
 import { ChevronDownIcon } from '@chakra-ui/icons'
 
-// Rendered once, site-wide, from _app.jsx.
-// The brand logo is omitted on the homepage, which already has its own large
-// version of it as the page's h1. Nav text color is conditional on the page's
-// background (isDark, for the full-bleed dark movie/person/company pages) —
-// the logo itself always carries its own navy/white box, so it doesn't need it.
+// isHome: hide the logo (the homepage's h1 already is the logo)
 export default function Header({ isHome = false, isDark = false }) {
   const textColor = isDark ? 'whiteAlpha.900' : 'gray.700'
 
@@ -14,9 +10,7 @@ export default function Header({ isHome = false, isDark = false }) {
     <Box
       as='header'
       bg='transparent'
-      // On the dark backdrop pages (movies/person/company) the header overlays
-      // the backdrop image instead of pushing it down. On light pages it stays
-      // in normal flow so it doesn't cover page content.
+      // absolute on backdrop pages so it overlays the image, not pushes it down
       position={isDark ? 'absolute' : 'static'}
       top={0}
       left={0}

@@ -146,10 +146,6 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
   }
 }
 
-// Powers /lists/[slug] editorial collections (see utils/curatedLists.js). Unlike
-// fetchDiscoverMovies, the caller supplies the full TMDB discover filter set
-// directly (genre/runtime/rating/date params etc.) since each list defines its
-// own criteria rather than picking from the fixed category/genre/provider shapes.
 export async function fetchListMovies(discoverParams = {}, page = 1) {
   const params = {
     page,

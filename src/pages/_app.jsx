@@ -14,11 +14,7 @@ import '../styles/globals.css'
 function MyApp({ Component, pageProps }) {
   const queryClient = useMemo(() => new QueryClient(), [])
   const router = useRouter()
-  // The homepage keeps its own fixed-position legal pill instead of this footer
-  // (see Footer.jsx for why infinite scroll makes a normal footer awkward there).
   const isHome = router.pathname === '/'
-  // These are the only routes that use a full-bleed dark page background;
-  // Header/Footer text color adapts so it stays readable on them.
   const isDark = /^\/(movies|person|company)\//.test(router.pathname)
 
   useScrollRestore()

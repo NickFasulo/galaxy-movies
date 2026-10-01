@@ -1,9 +1,3 @@
-/**
- * BreadcrumbSchema Component
- * Generates structured data for breadcrumb navigation
- * @param {Array} items - Array of breadcrumb items with name and url
- * @returns {JSX.Element} Script tag with JSON-LD structured data
- */
 export default function BreadcrumbSchema({ items }) {
   if (!items || items.length === 0) return null
 
