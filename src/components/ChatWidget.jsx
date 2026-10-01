@@ -38,7 +38,7 @@ function renderMessageContent(content, links) {
         key={index}
         as={NextLink}
         href={`/movies/${link.movieId}`}
-        color="blue.500"
+        color="blue.300"
         fontWeight="semibold"
         _hover={{ textDecoration: 'underline' }}
       >
@@ -264,7 +264,7 @@ export default function ChatWidget() {
       >
         <ScaleFade in={isOpen} unmountOnExit>
           <Box
-            bg="white"
+            bg="#1f252b"
             borderRadius="xl"
             boxShadow="2xl"
             width={{ base: '90vw', md: '400px' }}
@@ -273,7 +273,7 @@ export default function ChatWidget() {
             flexDirection="column"
             overflow="hidden"
             borderWidth="1px"
-            borderColor="gray.200"
+            borderColor="whiteAlpha.200"
           >
             <Flex
               justify="space-between"
@@ -314,11 +314,11 @@ export default function ChatWidget() {
               flex="1"
               overflowY="auto"
               p="4"
-              bg="gray.50"
+              bg="#14181c"
             >
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
-                  <Text color="gray.600" textAlign="center" fontSize="sm">
+                  <Text color="gray.400" textAlign="center" fontSize="sm">
                     👋 Hi! I'm your movie search assistant. What are you looking for?
                   </Text>
                   <VStack spacing="2" align="stretch">
@@ -327,6 +327,10 @@ export default function ChatWidget() {
                         key={index}
                         size="sm"
                         variant="outline"
+                        bg='#1f252b'
+                        color='white'
+                        borderColor='whiteAlpha.300'
+                        _hover={{ bg: '#2a3138' }}
                         onClick={() => handleQuickAction(action.query)}
                         textAlign="left"
                         justifyContent="flex-start"
@@ -342,8 +346,8 @@ export default function ChatWidget() {
                 {messages.map((message, index) => (
                   <Box
                     key={index}
-                    bg={message.role === 'user' ? 'blue.500' : 'white'}
-                    color={message.role === 'user' ? 'white' : 'gray.800'}
+                    bg={message.role === 'user' ? 'blue.500' : '#2a3138'}
+                    color='white'
                     p="3"
                     borderRadius="lg"
                     maxWidth="85%"
@@ -357,8 +361,8 @@ export default function ChatWidget() {
                 ))}
                 {isStreaming && (
                   <Box
-                    bg="white"
-                    color="gray.800"
+                    bg="#2a3138"
+                    color="white"
                     p="3"
                     borderRadius="lg"
                     maxWidth="85%"
@@ -373,7 +377,7 @@ export default function ChatWidget() {
               </VStack>
             </Box>
 
-            <Flex p="3" bg="white" borderTop="1px" borderColor="gray.200">
+            <Flex p="3" bg="#1f252b" borderTop="1px" borderColor="whiteAlpha.200">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -382,9 +386,17 @@ export default function ChatWidget() {
                 mr="2"
                 disabled={isLoading}
                 size="sm"
+                bg="#14181c"
+                color="white"
+                borderColor="whiteAlpha.300"
+                _placeholder={{ color: 'gray.400' }}
               />
               <Button
-                colorScheme="blue"
+                bg='#1f252b'
+                color='white'
+                border='1px solid'
+                borderColor='whiteAlpha.300'
+                _hover={{ bg: '#2a3138' }}
                 size="sm"
                 onClick={() => handleSendMessage()}
                 disabled={isLoading || !inputValue.trim()}

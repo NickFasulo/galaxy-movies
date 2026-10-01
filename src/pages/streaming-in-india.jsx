@@ -104,25 +104,25 @@ export default function StreamingInIndia({ movies, dataError }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' mt={8}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+          <Heading as='h1'>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
           <Heading as='h2' size='md' mt={8} mb={3}>Top streaming platforms in India</Heading>
-          <UnorderedList spacing={2} color='gray.600'>
+          <UnorderedList spacing={2} color='gray.400'>
             {INDIA_PROVIDERS.map((provider) => (
               <ListItem key={provider.key}>
-                <Link href={`/streaming/${provider.key}`}>{provider.label}</Link>
+                <Link href={`/streaming/${provider.key}`} style={{ color: '#90cdf4' }}>{provider.label}</Link>
               </ListItem>
             ))}
           </UnorderedList>
 
           <Heading as='h2' size='md' mt={10} mb={3}>Bollywood, Tamil &amp; Telugu movies</Heading>
-          <UnorderedList spacing={2} color='gray.600'>
+          <UnorderedList spacing={2} color='gray.400'>
             {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
               <ListItem key={category.key}>
-                <Link href={`/browse/${category.key}`}>{category.label}</Link>
+                <Link href={`/browse/${category.key}`} style={{ color: '#90cdf4' }}>{category.label}</Link>
               </ListItem>
             ))}
           </UnorderedList>
@@ -134,7 +134,7 @@ export default function StreamingInIndia({ movies, dataError }) {
             <MovieGrid movies={movies} />
           )}
 
-          <Text textAlign='center' mt={8} color='gray.600'>
+          <Text textAlign='center' mt={8} color='gray.400'>
             Check each movie page for current provider availability — it changes by region and over time.
           </Text>
           <Box mt='1.5rem'>

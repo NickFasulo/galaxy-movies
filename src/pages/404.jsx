@@ -11,23 +11,25 @@ export default function NotFoundPage() {
         <meta name='description' content="The page you're looking for doesn't exist or may have moved." />
         <meta name='robots' content='noindex, follow' />
       </Head>
-      <Box maxW='48rem' mx='auto' px={6} py={12} textAlign='center'>
-        <Heading as='h1' mt={8} mb={4}>Page Not Found</Heading>
-        <Text mb={8} color='gray.600'>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={12}>
+      <Box maxW='48rem' mx='auto' px={6} textAlign='center'>
+        <Heading as='h1' mb={4}>Page Not Found</Heading>
+        <Text mb={8} color='gray.400'>
           We couldn&apos;t find the page you were looking for. It may have been moved, or the link might be incorrect.
         </Text>
         <Flex wrap='wrap' gap={4} justify='center' align='center'>
           <Link href='/'>
-            <Button as='span' colorScheme='blue'>Go Home</Button>
+            <Button as='span' bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}>Go Home</Button>
           </Link>
           <Link href='/browse/popular'>
-            <Button as='span'>Browse Movies</Button>
+            <Button as='span' bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}>Browse Movies</Button>
           </Link>
           <Link href='/streaming'>
-            <Button as='span'>Streaming Guide</Button>
+            <Button as='span' bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}>Streaming Guide</Button>
           </Link>
           <BackButton />
         </Flex>
+      </Box>
       </Box>
     </>
   )

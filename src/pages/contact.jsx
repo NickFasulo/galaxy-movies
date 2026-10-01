@@ -53,7 +53,7 @@ export default function Contact() {
             id="name"
             name="name"
             required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
           />
         </div>
 
@@ -64,7 +64,7 @@ export default function Contact() {
             id="email"
             name="email"
             required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
           />
         </div>
 
@@ -75,7 +75,7 @@ export default function Contact() {
             id="subject"
             name="subject"
             placeholder="e.g., Inaccurate streaming info"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
           />
         </div>
 
@@ -87,7 +87,7 @@ export default function Contact() {
             rows={5}
             required
             placeholder="Please include movie title and page URL if reporting inaccurate information."
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
           />
         </div>
 
@@ -97,9 +97,9 @@ export default function Contact() {
           style={{
             padding: '0.75rem',
             borderRadius: '4px',
-            backgroundColor: status === 'submitting' ? '#aaa' : '#0070f3',
+            backgroundColor: status === 'submitting' ? '#2a3138' : '#1f252b',
             color: '#fff',
-            border: 'none',
+            border: '1px solid #3a424a',
             cursor: status === 'submitting' ? 'not-allowed' : 'pointer'
           }}
         >
@@ -107,7 +107,7 @@ export default function Contact() {
         </button>
 
         {result && (
-          <p style={{ marginTop: '0.5rem', color: status === 'error' ? 'red' : 'green' }}>
+          <p style={{ marginTop: '0.5rem', color: status === 'error' ? '#fc8181' : '#68d391' }}>
             {result}
           </p>
         )}

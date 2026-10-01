@@ -83,19 +83,19 @@ export default function StreamingIndex({ region }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' mt={8}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+          <Heading as='h1'>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
           {region === 'IN' && (
-            <Text maxW='42rem' mt={2} color='gray.600' fontStyle='italic'>
+            <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
               Looking for streaming options in India specifically? See our{' '}
               <Link href='/streaming-in-india'>streaming in India guide</Link>.
             </Text>
           )}
 
-          <Text maxW='42rem' mt={2} color='gray.600' fontStyle='italic'>
+          <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
             Want to see what's new? Check out{' '}
             <Link href='/new-on-streaming'>new releases streaming now</Link>.
           </Text>
@@ -110,8 +110,8 @@ export default function StreamingIndex({ region }) {
                   p={4}
                   borderRadius='0.75rem'
                   border='1px solid'
-                  borderColor='gray.200'
-                  _hover={{ borderColor: 'gray.400' }}
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
                   h='100%'
                 >
                   <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
@@ -130,8 +130,8 @@ export default function StreamingIndex({ region }) {
                   p={4}
                   borderRadius='0.75rem'
                   border='1px solid'
-                  borderColor='gray.200'
-                  _hover={{ borderColor: 'gray.400' }}
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
                   h='100%'
                 >
                   <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
@@ -143,7 +143,7 @@ export default function StreamingIndex({ region }) {
             ))}
           </SimpleGrid>
 
-          <Text textAlign='center' mt={10} color='gray.600'>
+          <Text textAlign='center' mt={10} color='gray.400'>
             Availability changes by region and over time. Check each movie page for current provider information.
           </Text>
           <Box mt='1.5rem'>

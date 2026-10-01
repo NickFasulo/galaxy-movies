@@ -36,9 +36,11 @@ export default function InfoPage({ title, description, children }) {
         <meta name='twitter:description' content={description} />
         <meta name='twitter:image' content={ogImage} />
       </Head>
-      <Box maxW='48rem' mx='auto' px={6} py={12}>
-        <Heading as='h1' mt={8} mb={6}>{title}</Heading>
-        {children}
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={12}>
+        <Box maxW='48rem' mx='auto' px={6}>
+          <Heading as='h1' mb={6}>{title}</Heading>
+          {children}
+        </Box>
       </Box>
     </>
   )

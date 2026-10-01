@@ -19,6 +19,7 @@ export default function BackButton() {
       width={{ base: '8rem', md: '7rem' }}
       leftIcon={<ArrowBackIcon />}
       onClick={handleBack}
+      bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}
     >
       Back
     </Button>

@@ -15,7 +15,7 @@ function MyApp({ Component, pageProps }) {
   const queryClient = useMemo(() => new QueryClient(), [])
   const router = useRouter()
   const isHome = router.pathname === '/'
-  const isDark = /^\/(movies|person|company)\//.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|404$|streaming|lists|new-on-streaming|genre\/|browse\/|$)/.test(router.pathname)
 
   useScrollRestore()
 
@@ -33,7 +33,7 @@ function MyApp({ Component, pageProps }) {
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
-          <Flex direction='column' minH='100vh'>
+          <Flex direction='column' minH='100vh' bg={isDark ? '#14181c' : undefined}>
             <Header isHome={isHome} isDark={isDark} />
             <Component {...pageProps} />
             {!isHome && <Footer isDark={isDark} />}

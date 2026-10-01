@@ -102,12 +102,12 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' mt={8}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.600'>{tagline}</Text>
+          <Heading as='h1'>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.400'>{tagline}</Text>
           {intro && (
-            <Text maxW='42rem' mt={4} color='gray.700'>{intro}</Text>
+            <Text maxW='42rem' mt={4} color='gray.300'>{intro}</Text>
           )}
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>

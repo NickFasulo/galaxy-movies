@@ -26,6 +26,7 @@ export default function VideoModal({ videoKey }) {
         width={{ base: '8rem', md: '7rem' }}
         onClick={onOpen}
         aria-label="Watch trailer"
+        bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}
       >
         <Icon as={BsCaretRightFill} boxSize={6} />
       </Button>

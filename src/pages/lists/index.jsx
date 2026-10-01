@@ -52,12 +52,12 @@ export default function ListsIndex() {
         p={4}
         borderRadius='0.75rem'
         border='1px solid'
-        borderColor='gray.200'
-        _hover={{ borderColor: 'gray.400' }}
+        borderColor='whiteAlpha.300'
+        _hover={{ borderColor: 'whiteAlpha.600' }}
         h='100%'
       >
         <Text fontWeight='semibold'>{entry.title}</Text>
-        <Text fontSize='sm' color='gray.600' mt={1}>{entry.tagline}</Text>
+        <Text fontSize='sm' color='gray.400' mt={1}>{entry.tagline}</Text>
       </Flex>
     </Link>
   )
@@ -93,10 +93,10 @@ export default function ListsIndex() {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' mt={8}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+          <Heading as='h1'>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
           <Heading as='h2' size='md' mt={10} mb={4}>Mood Picks</Heading>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>

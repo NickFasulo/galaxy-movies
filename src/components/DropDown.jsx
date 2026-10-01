@@ -61,20 +61,20 @@ export default function DropDown({ category, changeCategory }) {
 
   return (
     <Menu>
-      <MenuButton as={Button} rightIcon={<ChevronDownIcon />} minWidth='8.9rem'>
+      <MenuButton as={Button} rightIcon={<ChevronDownIcon />} minWidth='8.9rem' bg='#1f252b' color='white' _hover={{ bg: '#2a3138' }} _active={{ bg: '#2a3138' }}>
         {currentLabel}
       </MenuButton>
-      <MenuList maxH='20rem' overflowY='auto'>
+      <MenuList maxH='20rem' overflowY='auto' bg='#1f252b' borderColor='whiteAlpha.200' color='white'>
         <MenuGroup title='Feeds'>
-          <MenuItem onClick={() => changeCategory('popular')}>Popular</MenuItem>
-          <MenuItem onClick={() => changeCategory('top_rated')}>Top Rated</MenuItem>
-          <MenuItem onClick={() => changeCategory('now_playing')}>Now Playing</MenuItem>
-          <MenuItem onClick={() => changeCategory('upcoming')}>Upcoming</MenuItem>
+          <MenuItem onClick={() => changeCategory('popular')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Popular</MenuItem>
+          <MenuItem onClick={() => changeCategory('top_rated')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Top Rated</MenuItem>
+          <MenuItem onClick={() => changeCategory('now_playing')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Now Playing</MenuItem>
+          <MenuItem onClick={() => changeCategory('upcoming')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Upcoming</MenuItem>
         </MenuGroup>
-        <MenuDivider />
+        <MenuDivider borderColor='whiteAlpha.200' />
         <MenuGroup title='Genres'>
           {GENRES.map((genre) => (
-            <MenuItem key={genre.value} onClick={() => changeCategory(genre.value)}>
+            <MenuItem key={genre.value} onClick={() => changeCategory(genre.value)} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>
               {genre.label}
             </MenuItem>
           ))}

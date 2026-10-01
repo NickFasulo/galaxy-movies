@@ -51,9 +51,9 @@ export default function SearchBar({
       position='sticky'
       top={0}
       zIndex={20}
-      background={isSticky ? 'white' : 'transparent'}
+      background={isSticky ? '#14181c' : 'transparent'}
       borderBottom={isSticky ? '1px solid' : 'none'}
-      borderColor='gray.200'
+      borderColor='whiteAlpha.200'
       transition='background 0.2s ease-in-out, border-bottom 0.2s ease-in-out'
     >
       <Flex justify='center' align='center' width='100%'>
@@ -68,7 +68,10 @@ export default function SearchBar({
             value={searchInput}
             onChange={handleInputChange}
             placeholder='Search movies...'
-            background='white'
+            background='#1f252b'
+            color='white'
+            borderColor='whiteAlpha.300'
+            _placeholder={{ color: 'gray.400' }}
             flex='1'
           />
           <Box

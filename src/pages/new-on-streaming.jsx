@@ -111,10 +111,10 @@ export default function NewOnStreaming({ region, sections, dataError }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box minH='100vh' py={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' mt={8}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.600'>{description}</Text>
+          <Heading as='h1' ml={{ base: '1rem', md: '5rem' }}>{title}</Heading>
+          <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
 
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
@@ -123,7 +123,7 @@ export default function NewOnStreaming({ region, sections, dataError }) {
           ) : (
             sections.map((section) => (
               <Box key={section.key} mt={10}>
-                <Heading as='h2' size='md' mb={4}>
+                <Heading as='h2' size='md' mb={4} ml={{ base: '1rem', md: '5rem' }}>
                   <Link href={`/streaming/${section.key}`}>{section.label}</Link>
                 </Heading>
                 <MovieGrid movies={section.movies} />
@@ -131,7 +131,7 @@ export default function NewOnStreaming({ region, sections, dataError }) {
             ))
           )}
 
-          <Text textAlign='center' mt={10} color='gray.600'>
+          <Text textAlign='center' mt={10} color='gray.400'>
             Showing movies released in the last {NEW_RELEASE_WINDOW_DAYS} days and currently available to stream. Availability changes by region and over time.
           </Text>
           <Box mt='1.5rem'>

@@ -248,11 +248,11 @@ export default function Home({ initialMovies, initialTotalPages }) {
 
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 
-      <Box position='relative' zIndex={1} h='100%' pb='4rem'>
+      <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
           <h1 className='title'>
             <span>Galaxy Movies</span>
           </h1>
-          <Text textAlign='center' color='gray.600' fontSize='sm' mt='1em' mb='0.5rem'>Warp speed movie discovery</Text>
+          <Text textAlign='center' color='gray.400' fontSize='sm' mt='1em' mb='0.5rem'>Warp speed movie discovery</Text>
 
         <SearchBar
           category={category}
@@ -324,9 +324,9 @@ export default function Home({ initialMovies, initialTotalPages }) {
                 py='0.25rem'
                 px='0.5rem'
                 w='fit-content'
-                bg='white'
+                bg='#1f252b'
               >
-                <Text textAlign='center' color='gray.600' fontSize='sm'>
+                <Text textAlign='center' color='whiteAlpha.900' fontSize='sm'>
                   <Link href='/privacy'>Privacy</Link> ·{' '}
                   <Link href='/terms'>Terms</Link> ·{' '}
                   <Link href='/contact'>Contact</Link>
@@ -348,6 +348,11 @@ export default function Home({ initialMovies, initialTotalPages }) {
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'
+            bg='#1f252b'
+            color='white'
+            border='1px solid'
+            borderColor='whiteAlpha.300'
+            _hover={{ bg: '#2a3138' }}
           />
         )}
       </Box>
