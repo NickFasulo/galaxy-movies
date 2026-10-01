@@ -1,5 +1,6 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
+import { Box } from '@chakra-ui/react'
 
 export default function Terms() {
   return (
@@ -7,7 +8,9 @@ export default function Terms() {
       <InfoParagraph>Galaxy Movies is provided for personal, informational use. Movie descriptions, ratings, release dates, and availability are provided as-is.</InfoParagraph>
       <InfoParagraph>You are responsible for checking the terms, pricing, availability, and age requirements of any third-party service before making a purchase or subscription.</InfoParagraph>
       <InfoParagraph>Do not use the site to scrape, disrupt, or overload the service or its data providers.</InfoParagraph>
-      <BackButton />
+      <Box textAlign={{ base: 'center', md: 'left' }}>
+        <BackButton />
+      </Box>
     </InfoPage>
   )
 }

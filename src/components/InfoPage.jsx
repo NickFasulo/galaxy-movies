@@ -38,7 +38,7 @@ export default function InfoPage({ title, description, children }) {
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={12}>
         <Box maxW='48rem' mx='auto' px={6}>
-          <Heading as='h1' mb={6}>{title}</Heading>
+          <Heading as='h1' mb={6} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           {children}
         </Box>
       </Box>

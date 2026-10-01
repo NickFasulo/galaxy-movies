@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Box } from '@chakra-ui/react'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
 
@@ -113,9 +114,9 @@ export default function Contact() {
         )}
       </form>
 
-      <div style={{ marginTop: '2rem' }}>
+      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
         <BackButton />
-      </div>
+      </Box>
     </InfoPage>
   )
 }

@@ -95,20 +95,20 @@ export default function ListsIndex() {
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
-          <Heading as='h2' size='md' mt={10} mb={4}>Mood Picks</Heading>
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Mood Picks</Heading>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
             {moodLists.map(renderCard)}
           </SimpleGrid>
 
-          <Heading as='h2' size='md' mt={10} mb={4}>Curated Collections</Heading>
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Curated Collections</Heading>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
             {curatedEntries.map(renderCard)}
           </SimpleGrid>
 
-          <Box mt='1.5rem'>
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

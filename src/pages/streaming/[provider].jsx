@@ -105,7 +105,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
@@ -113,7 +113,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
           <Text textAlign='center' mt={8} color='gray.400'>
             Availability changes by region and over time. Check the movie page for current provider information.
           </Text>
-          <Box mt='1.5rem'>
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

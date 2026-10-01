@@ -1,5 +1,6 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
+import { Box } from '@chakra-ui/react'
 
 export default function Disclosure() {
   return (
@@ -21,7 +22,9 @@ export default function Disclosure() {
         As an Amazon Associate, Galaxy Movies earns from qualifying
         purchases.
       </InfoParagraph>
-      <BackButton />
+      <Box textAlign={{ base: 'center', md: 'left' }}>
+        <BackButton />
+      </Box>
     </InfoPage>
   )
 }

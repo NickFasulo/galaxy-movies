@@ -1,6 +1,6 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
-import { Flex } from '@chakra-ui/react'
+import { Box, Flex } from '@chakra-ui/react'
 
 export default function About() {
   return (
@@ -19,7 +19,9 @@ export default function About() {
           <img src="https://www.shipnlaunch.com/badges/featured-dark.svg" alt="Featured on ShipNLaunch" width="240" height="56" />
         </a>
       </Flex>
-      <BackButton />
+      <Box textAlign={{ base: 'center', md: 'left' }}>
+        <BackButton />
+      </Box>
     </InfoPage>
   )
 }

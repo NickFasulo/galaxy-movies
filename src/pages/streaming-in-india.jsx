@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { Box, Heading, Text, UnorderedList, ListItem } from '@chakra-ui/react'
+import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import BreadcrumbSchema from '../components/BreadcrumbSchema'
@@ -106,28 +106,50 @@ export default function StreamingInIndia({ movies, dataError }) {
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
-          <Heading as='h2' size='md' mt={8} mb={3}>Top streaming platforms in India</Heading>
-          <UnorderedList spacing={2} color='gray.400'>
+          <Heading as='h2' size='md' mt={8} mb={4} textAlign={{ base: 'center', md: 'left' }}>Top streaming platforms in India</Heading>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
             {INDIA_PROVIDERS.map((provider) => (
-              <ListItem key={provider.key}>
-                <Link href={`/streaming/${provider.key}`} style={{ color: '#90cdf4' }}>{provider.label}</Link>
-              </ListItem>
+              <Link key={provider.key} href={`/streaming/${provider.key}`}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  p={4}
+                  borderRadius='0.75rem'
+                  border='1px solid'
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
+                  h='100%'
+                >
+                  <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
+                </Flex>
+              </Link>
             ))}
-          </UnorderedList>
+          </SimpleGrid>
 
-          <Heading as='h2' size='md' mt={10} mb={3}>Bollywood, Tamil &amp; Telugu movies</Heading>
-          <UnorderedList spacing={2} color='gray.400'>
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
             {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
-              <ListItem key={category.key}>
-                <Link href={`/browse/${category.key}`} style={{ color: '#90cdf4' }}>{category.label}</Link>
-              </ListItem>
+              <Link key={category.key} href={`/browse/${category.key}`}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  p={4}
+                  borderRadius='0.75rem'
+                  border='1px solid'
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
+                  h='100%'
+                >
+                  <Text fontWeight='medium' textAlign='center'>{category.label}</Text>
+                </Flex>
+              </Link>
             ))}
-          </UnorderedList>
+          </SimpleGrid>
 
-          <Heading as='h2' size='md' mt={10} mb={4}>Popular movies to watch now</Heading>
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Popular movies to watch now</Heading>
           {dataError ? (
             <Text mt={4}>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : (
@@ -137,7 +159,7 @@ export default function StreamingInIndia({ movies, dataError }) {
           <Text textAlign='center' mt={8} color='gray.400'>
             Check each movie page for current provider availability — it changes by region and over time.
           </Text>
-          <Box mt='1.5rem'>
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

@@ -1,10 +1,10 @@
 import Head from 'next/head'
-import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
 import { fetchDiscoverMovies, movieGenres } from '../../utils/tmdb'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
+import BackButton from '../../components/BackButton'
 
 export async function getServerSideProps({ params, res }) {
   const genre = movieGenres[params.genre]
@@ -93,12 +93,14 @@ export default function GenrePage({ genre, title, movies, dataError }) {
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Link href='/'>← Galaxy Movies</Link>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : <MovieGrid movies={movies} />}
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
+            <BackButton />
+          </Box>
         </Box>
       </Box>
     </>

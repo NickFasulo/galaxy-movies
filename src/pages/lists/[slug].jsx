@@ -104,7 +104,7 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{tagline}</Text>
           {intro && (
             <Text maxW='42rem' mt={4} color='gray.300'>{intro}</Text>
@@ -116,7 +116,7 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
           ) : (
             <MovieGrid movies={movies} />
           )}
-          <Box mt='1.5rem'>
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

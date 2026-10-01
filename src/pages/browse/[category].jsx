@@ -5,6 +5,7 @@ import MovieGrid from '../../components/MovieGrid'
 import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
+import BackButton from '../../components/BackButton'
 
 export async function getServerSideProps({ params, res }) {
   const category = movieCategories[params.category]
@@ -92,8 +93,7 @@ export default function BrowsePage({ category, title, description, movies, dataE
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Link href='/'>← Galaxy Movies</Link>
-          <Heading as='h1'>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
@@ -106,6 +106,9 @@ export default function BrowsePage({ category, title, description, movies, dataE
             <Link href='/browse/tamil'>Tamil</Link>, and{' '}
             <Link href='/browse/telugu'>Telugu</Link> cinema.
           </Text>
+          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
+            <BackButton />
+          </Box>
         </Box>
       </Box>
     </>
