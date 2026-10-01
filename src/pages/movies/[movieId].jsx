@@ -124,7 +124,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
           <title>Movie unavailable | Galaxy Movies</title>
           <meta name='description' content={movieError} />
         </Head>
-        <Box minH='100vh' p={8} textAlign='center'>
+        <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
           <Text mt={20}>{movieError}</Text>
           <Link href='/'>Return to Galaxy Movies</Link>
         </Box>
@@ -395,6 +395,35 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               {movie.overview || 'Description unavailable.'}
             </Text>
 
+            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
+              <Flex align='center'>
+                <StarIcon boxSize={5} color='gold' />
+                <Text
+                  fontSize='lg'
+                  ml={2}
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  textAlign='center'
+                >
+                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
+                </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                {productionCompany ? (
+                  <Link href={`/company/${productionCompany.id}`} passHref>
+                    <Box
+                      as='span'
+                      cursor='pointer'
+                      transition='all 0.2s ease-in-out'
+                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
+                    >
+                      <ProductionLogo company={productionCompany} />
+                    </Box>
+                  </Link>
+                ) : null}
+              </Flex>
+            </Flex>
+
             {aiSynopsis && (
               <Box
                 bg='blackAlpha.500'
@@ -429,35 +458,6 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             >
               <VideoModal videoKey={videoKey} />
               <BackButton />
-            </Flex>
-
-            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
-              <Flex align='center'>
-                <StarIcon boxSize={5} color='gold' />
-                <Text
-                  fontSize='lg'
-                  ml={2}
-                  color='white'
-                  textShadow='2px 0 4px black'
-                  textAlign='center'
-                >
-                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
-                </Text>
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                {productionCompany ? (
-                  <Link href={`/company/${productionCompany.id}`} passHref>
-                    <Box
-                      as='span'
-                      cursor='pointer'
-                      transition='all 0.2s ease-in-out'
-                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
-                    >
-                      <ProductionLogo company={productionCompany} />
-                    </Box>
-                  </Link>
-                ) : null}
-              </Flex>
             </Flex>
 
             {topCast.length > 0 && (

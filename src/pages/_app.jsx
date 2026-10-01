@@ -41,7 +41,17 @@ function MyApp({ Component, pageProps }) {
           <Component {...pageProps} />
           {!isHome && <Footer isDark={isDark} />}
           <ChatWidget />
-          {process.env.NODE_ENV === 'production' && <Analytics />}
+          {process.env.NODE_ENV === 'production' && (
+            <Analytics
+              beforeSend={(event) => {
+                if (localStorage.getItem('disableAnalytics') === 'true') {
+                  return null
+                }
+
+                return event
+              }}
+            />
+          )}
         </ChakraProvider>
       </Hydrate>
     </QueryClientProvider>

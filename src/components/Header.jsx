@@ -9,13 +9,20 @@ import { ChevronDownIcon } from '@chakra-ui/icons'
 // the logo itself always carries its own navy/white box, so it doesn't need it.
 export default function Header({ isHome = false, isDark = false }) {
   const textColor = isDark ? 'whiteAlpha.900' : 'gray.700'
-  // Header renders outside the page's own Box, so "transparent" would reveal
-  // <body>'s white background rather than a dark page's actual color — match
-  // it explicitly instead.
-  const bg = isDark ? '#14181c' : 'transparent'
 
   return (
-    <Box as='header' bg={bg}>
+    <Box
+      as='header'
+      bg='transparent'
+      // On the dark backdrop pages (movies/person/company) the header overlays
+      // the backdrop image instead of pushing it down. On light pages it stays
+      // in normal flow so it doesn't cover page content.
+      position={isDark ? 'absolute' : 'static'}
+      top={0}
+      left={0}
+      right={0}
+      zIndex={isDark ? 30 : undefined}
+    >
       <Flex maxW='70rem' mx='auto' px={6} py={2} align='center' justify={isHome ? 'flex-end' : 'space-between'}>
         {!isHome && (
           <Link as={NextLink} href='/' _hover={{ textDecoration: 'none' }}>

@@ -150,7 +150,7 @@ export default function Company({ company, movies, companyError }) {
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
 
-      <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} px={{ base: 4, md: 12 }}>
+      <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} pt={{ base: 14, md: 16 }} px={{ base: 4, md: 12 }}>
         <Box maxW='1200px' mx='auto'>
           <Flex
             direction={{ base: 'column', md: 'row' }}
