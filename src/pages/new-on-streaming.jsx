@@ -111,7 +111,7 @@ export default function NewOnStreaming({ region, sections, dataError }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' ml={{ base: '1rem', md: '5rem' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>

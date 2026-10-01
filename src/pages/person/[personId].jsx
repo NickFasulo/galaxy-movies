@@ -72,7 +72,7 @@ export const getServerSideProps = async (context) => {
 export default function PersonDetails({ person, directedMovies, actingMovies, error }) {
   if (error) {
     return (
-      <Box minH='100vh' bg='#14181c' p={8} textAlign='center' color='white'>
+      <Box minH='100vh' bg='transparent' p={8} textAlign='center' color='white'>
         <Text mt={20}>{error}</Text>
         <Link href='/'>Return to Galaxy Movies</Link>
       </Box>
@@ -165,7 +165,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
 
-      <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '4.5rem', md: '5.5rem' }} px='1rem'>
+      <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '4.5rem', md: '5.5rem' }} px='1rem'>
         <Flex justify='center'>
           <Flex
             direction={{ base: 'column', md: 'row' }}

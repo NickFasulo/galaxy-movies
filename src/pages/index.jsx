@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
+import TopBackdrop from '../components/TopBackdrop'
 import HreflangTags from '../components/HreflangTags'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 
@@ -247,6 +248,13 @@ export default function Home({ initialMovies, initialTotalPages }) {
       </Head>
 
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
+
+      <TopBackdrop
+        top='-4.25rem'
+        zIndex={0}
+        opacity={isBgVisible && hoveredBg ? 0 : 1}
+        transition='opacity 0.6s ease-in-out'
+      />
 
       <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
           <h1 className='title'>

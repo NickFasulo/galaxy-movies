@@ -318,7 +318,7 @@ export default function ChatWidget() {
             >
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
-                  <Text color="gray.400" textAlign="center" fontSize="sm">
+                  <Text color="whiteAlpha.900" textAlign="center" fontSize="sm">
                     👋 Hi! I'm your movie search assistant. What are you looking for?
                   </Text>
                   <VStack spacing="2" align="stretch">

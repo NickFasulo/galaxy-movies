@@ -37,7 +37,7 @@ export function useHoverBackground() {
 
 export default function HoverBackground({ hoveredBg, isBgVisible }) {
   const backgroundImage = hoveredBg ? `url(https://image.tmdb.org/t/p/w1280${hoveredBg})` : 'none'
-  
+
   return (
     <Box
       display={{ base: 'none', md: 'block' }}

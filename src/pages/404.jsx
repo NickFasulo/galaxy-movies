@@ -11,7 +11,7 @@ export default function NotFoundPage() {
         <meta name='description' content="The page you're looking for doesn't exist or may have moved." />
         <meta name='robots' content='noindex, follow' />
       </Head>
-      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={12}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={12}>
       <Box maxW='48rem' mx='auto' px={6} textAlign='center'>
         <Heading as='h1' mb={4}>Page Not Found</Heading>
         <Text mb={8} color='gray.400'>

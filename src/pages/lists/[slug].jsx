@@ -102,7 +102,7 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1'>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{tagline}</Text>

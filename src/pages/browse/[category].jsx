@@ -90,7 +90,7 @@ export default function BrowsePage({ category, title, description, movies, dataE
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='#14181c' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Link href='/'>← Galaxy Movies</Link>
           <Heading as='h1'>{title}</Heading>

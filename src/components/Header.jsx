@@ -8,12 +8,13 @@ export default function Header({ isHome = false, isDark = false }) {
     <Box
       as='header'
       bg='transparent'
-      // absolute on backdrop pages so it overlays the image, not pushes it down
-      position={isDark && !isHome ? 'absolute' : 'static'}
+      // absolute on backdrop pages so it overlays the image, not pushes it down;
+      // relative on home so it stays above the page's top backdrop band
+      position={isDark ? (isHome ? 'relative' : 'absolute') : 'static'}
       top={0}
       left={0}
       right={0}
-      zIndex={isDark && !isHome ? 30 : undefined}
+      zIndex={isDark ? 30 : undefined}
     >
       <Flex maxW='70rem' mx='auto' px={6} py={4} minH='4.25rem' align='center' justify={isHome ? 'flex-end' : 'space-between'}>
         {!isHome && (

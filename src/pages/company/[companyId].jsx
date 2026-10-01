@@ -71,7 +71,7 @@ export default function Company({ company, movies, companyError }) {
           <title>Company unavailable | Galaxy Movies</title>
           <meta name='description' content={companyError} />
         </Head>
-        <Box minH='100vh' p={8} textAlign='center' bg='#14181c' color='white'>
+        <Box minH='100vh' p={8} textAlign='center' bg='transparent' color='white'>
           <Text mt={20}>{companyError}</Text>
           <Link href='/' passHref>
             <ChakraLink color='teal.300' mt={4} display='inline-block'>
@@ -150,7 +150,7 @@ export default function Company({ company, movies, companyError }) {
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
 
-      <Box position='relative' minH='100vh' bg='#14181c' color='white' py={{ base: 8, md: 12 }} pt={{ base: 14, md: 16 }} px={{ base: 4, md: 12 }}>
+      <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: 8, md: 12 }} pt={{ base: 14, md: 16 }} px={{ base: 4, md: 12 }}>
         <Box maxW='1200px' mx='auto'>
           <Flex
             direction={{ base: 'column', md: 'row' }}
