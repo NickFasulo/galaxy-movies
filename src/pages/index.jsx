@@ -260,7 +260,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
           <h1 className='title'>
             <span>Galaxy Movies</span>
           </h1>
-          <Text textAlign='center' color='gray.400' fontSize='sm' mt='1em' mb='0.5rem'>Warp speed movie discovery</Text>
+          <Text textAlign='center' color='gray.400' fontSize='sm' my='1rem'>Warp speed movie discovery</Text>
 
         <SearchBar
           category={category}

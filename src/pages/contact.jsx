@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box } from '@chakra-ui/react'
+import { Box, Button } from '@chakra-ui/react'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
 
@@ -92,20 +92,18 @@ export default function Contact() {
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={status === 'submitting'}
-          style={{
-            padding: '0.75rem',
-            borderRadius: '4px',
-            backgroundColor: status === 'submitting' ? '#2a3138' : '#1f252b',
-            color: '#fff',
-            border: '1px solid #3a424a',
-            cursor: status === 'submitting' ? 'not-allowed' : 'pointer'
-          }}
+        <Button
+          type='submit'
+          isDisabled={status === 'submitting'}
+          p='0.75rem'
+          bg={status === 'submitting' ? '#2a3138' : '#1f252b'}
+          color='white'
+          border='1px solid'
+          borderColor='whiteAlpha.300'
+          _hover={{ bg: '#2a3138' }}
         >
           {status === 'submitting' ? 'Sending...' : 'Send Message'}
-        </button>
+        </Button>
 
         {result && (
           <p style={{ marginTop: '0.5rem', color: status === 'error' ? '#fc8181' : '#68d391' }}>

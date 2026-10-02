@@ -465,6 +465,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               gap='2rem'
               w='100%'
               py={{ base: '1rem', md: 0 }}
+              my='1rem'
             >
               <VideoModal videoKey={videoKey} />
               <BackButton />
