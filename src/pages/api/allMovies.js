@@ -19,23 +19,25 @@ const GENRE_MAP = {
   western: 37
 }
 
-const { isBot, getClientIP, checkRateLimit: checkGlobalRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
 export default async function handler(req, res) {
   const ip = getClientIP(req)
   const userAgent = req.headers['user-agent']
-  
+
   if (isBot(userAgent)) {
     return res.status(403).json({ message: 'Bot access denied' })
   }
-  
-  const rateLimitResult = checkGlobalRateLimit(ip, 'api')
-  if (!rateLimitResult.allowed) {
-    res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
-    return res.status(429).json({ message: rateLimitResult.reason })
+
+  const allowed = await checkDistributedRateLimit(ip, {
+    keyPrefix: 'movies_rl',
+    maxRequests: 50,
+    windowSeconds: 60 * 60
+  })
+  if (!allowed) {
+    res.setHeader('Retry-After', String(60 * 60))
+    return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
   }
-  
-  res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining)
   const { category = 'popular', page = 1, search = '' } = req.query
   const apiKey = process.env.TMDB_API_KEY
 

@@ -1,5 +1,6 @@
 import { LRUCache } from 'lru-cache'
 import { Redis } from '@upstash/redis'
+const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
 let redis
 
@@ -25,13 +26,6 @@ function getRedis() {
     token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN,
   })
   return redis
-}
-
-function getClientIdentifier(req) {
-  const forwardedFor = req.headers['x-forwarded-for']
-  return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0])?.trim()
-    || req.socket.remoteAddress
-    || 'unknown'
 }
 
 async function trackChatSession(sessionData) {
@@ -194,11 +188,24 @@ async function getCostEstimate() {
 }
 
 export default async function handler(req, res) {
+  if (isBot(req.headers['user-agent'])) {
+    return res.status(403).json({ error: 'Bot access denied' })
+  }
+
   if (req.method === 'POST') {
+    const clientId = getClientIP(req)
+    const allowed = await checkDistributedRateLimit(clientId, {
+      keyPrefix: 'analytics_rl',
+      maxRequests: 60,
+      windowSeconds: 60 * 60
+    })
+    if (!allowed) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' })
+    }
+
     const { action, data } = req.body
 
     if (action === 'track_session') {
-      const clientId = getClientIdentifier(req)
       const sessionId = await trackChatSession({
         ...data,
         clientId
@@ -215,6 +222,11 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    const secret = process.env.CRON_SECRET
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
     const { timeframe } = req.query
     
     if (req.query.action === 'stats') {

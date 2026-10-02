@@ -139,8 +139,10 @@ export default function ChatWidget() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to get response')
+        const errorData = await response.json().catch(() => ({}))
+        const error = new Error(errorData.error || 'Failed to get response')
+        error.status = response.status
+        throw error
       }
 
       const reader = response.body.getReader()
@@ -219,7 +221,9 @@ export default function ChatWidget() {
         console.error('Error sending message:', error)
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.'
+          content: error.status === 429
+            ? "You've reached the hourly chat limit. Please come back later for more recommendations."
+            : 'Sorry, I encountered an error. Please try again.'
         }])
       }
     } finally {

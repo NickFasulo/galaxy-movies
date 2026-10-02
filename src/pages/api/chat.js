@@ -1,15 +1,11 @@
 import OpenAI from 'openai'
 import { LRUCache } from 'lru-cache'
-import { Redis } from '@upstash/redis'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat } from '../../utils/movieSearch'
-const { isBot } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
 let openai
-let redis
 
 const chatCache = new LRUCache({ max: 1000, ttl: 1000 * 60 * 30 })
-
-const localRequestLimits = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
 
 const recentReleasesCache = new LRUCache({ max: 1, ttl: 1000 * 60 * 60 })
 
@@ -51,47 +47,6 @@ export const config = {
   }
 }
 
-function getRedis() {
-  if (redis) return redis
-  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
-    return null
-  }
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
-    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN,
-  })
-  return redis
-}
-
-function getClientIdentifier(req) {
-  const forwardedFor = req.headers['x-forwarded-for']
-  return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0])?.trim()
-    || req.socket.remoteAddress
-    || 'unknown'
-}
-
-async function checkRateLimit(clientId) {
-  const kv = getRedis()
-
-  if (kv) {
-    try {
-      const key = `chat_rl:${clientId}`
-      const count = await kv.incr(key)
-      if (count === 1) {
-        await kv.expire(key, RATE_LIMIT_WINDOW_SECONDS)
-      }
-      return count <= MAX_REQUESTS_PER_HOUR
-    } catch (err) {
-      console.error('Redis rate limit error, failing open:', err)
-      return true
-    }
-  }
-
-  const count = (localRequestLimits.get(clientId) || 0) + 1
-  localRequestLimits.set(clientId, count)
-  return count <= MAX_REQUESTS_PER_HOUR
-}
-
 function getConversationCacheKey(messages) {
   const lastMessage = messages[messages.length - 1]
   return `chat:${lastMessage.role}:${lastMessage.content.substring(0, 50)}`
@@ -122,8 +77,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Message content too long (max 500 characters)' })
   }
 
-  const clientId = getClientIdentifier(req)
-  const allowed = await checkRateLimit(clientId)
+  const clientId = getClientIP(req)
+  const allowed = await checkDistributedRateLimit(clientId, {
+    keyPrefix: 'chat_rl',
+    maxRequests: MAX_REQUESTS_PER_HOUR,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS
+  })
   if (!allowed) {
     res.setHeader('Retry-After', String(RATE_LIMIT_WINDOW_SECONDS))
     return res.status(429).json({ error: 'Chat request limit reached. Please try again later.' })
