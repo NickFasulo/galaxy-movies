@@ -18,6 +18,24 @@ const BOT_PATTERNS = [
   /geckodriver/i
 ]
 
+// Legit crawlers let through even though their UA matches BOT_PATTERNS: search
+// engines (in case any page ever fetches client-side during render) and social
+// link-preview bots. Trivially spoofable — real verification happens at the edge.
+const ALLOWED_BOT_PATTERNS = [
+  /googlebot/i,
+  /bingbot/i,
+  /duckduckbot/i,
+  /slurp/i,
+  /facebookexternalhit|facebot/i,
+  /twitterbot/i,
+  /slackbot/i,
+  /discordbot/i,
+  /linkedinbot/i,
+  /telegrambot/i,
+  /whatsapp/i,
+  /mitgo/i
+]
+
 const distributedFallbackCounts = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
 
 let redis
@@ -35,8 +53,9 @@ function getRedis() {
 
 function isBot(userAgent) {
   if (!userAgent) return true
-  
+
   const ua = userAgent.toLowerCase()
+  if (ALLOWED_BOT_PATTERNS.some(pattern => pattern.test(ua))) return false
   return BOT_PATTERNS.some(pattern => pattern.test(ua))
 }
 
