@@ -2,25 +2,34 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
 import { curatedLists } from '../../utils/curatedLists'
+import { getGeneratedLists } from '../../utils/generatedLists'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import BackButton from '../../components/BackButton'
 
 export async function getServerSideProps({ res }) {
+  const generated = await getGeneratedLists()
+  const generatedLists = Object.entries(generated).map(([slug, list]) => ({
+    slug,
+    title: list.title,
+    tagline: list.tagline
+  }))
+
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
-  return { props: {} }
+  return { props: { generatedLists } }
 }
 
-export default function ListsIndex() {
+export default function ListsIndex({ generatedLists = [] }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/lists`
   const title = 'Curated Movie Lists & Mood Picks'
   const description = 'Editorial movie collections for every mood — from cozy night-in picks to mind-bending thrillers and underrated 90s gems.'
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({ title, subtitle: description }).toString()}`
 
-  const entries = Object.entries(curatedLists).map(([slug, list]) => ({ slug, ...list }))
-  const moodLists = entries.filter((entry) => entry.group === 'mood')
-  const curatedEntries = entries.filter((entry) => entry.group === 'curated')
+  const staticEntries = Object.entries(curatedLists).map(([slug, list]) => ({ slug, ...list }))
+  const moodLists = staticEntries.filter((entry) => entry.group === 'mood')
+  const curatedOnly = staticEntries.filter((entry) => entry.group === 'curated')
+  const entries = [...staticEntries, ...generatedLists]
 
   const itemListData = {
     '@context': 'https://schema.org',
@@ -105,8 +114,17 @@ export default function ListsIndex() {
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Curated Collections</Heading>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-            {curatedEntries.map(renderCard)}
+            {curatedOnly.map(renderCard)}
           </SimpleGrid>
+
+          {generatedLists.length > 0 && (
+            <>
+              <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Fresh Collections</Heading>
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                {generatedLists.map(renderCard)}
+              </SimpleGrid>
+            </>
+          )}
 
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />

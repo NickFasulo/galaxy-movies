@@ -1,5 +1,6 @@
 import { fetchDiscoverMovies, movieCategories, movieGenres, streamingProviders } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
+import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets } from '../utils/contentOpportunities'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
@@ -31,6 +32,7 @@ const CREDITS_SAMPLE_SIZE = 60
 
 export async function getServerSideProps({ res }) {
   const today = new Date().toISOString().split('T')[0]
+  const generatedLists = await getGeneratedLists()
 
   const staticEntries = [
     urlEntry(`${siteUrl}/`, today),
@@ -59,6 +61,9 @@ export async function getServerSideProps({ res }) {
       urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`, today)
     ),
     ...Object.keys(curatedLists).map(slug =>
+      urlEntry(`${siteUrl}/lists/${slug}`, today)
+    ),
+    ...Object.keys(generatedLists).map(slug =>
       urlEntry(`${siteUrl}/lists/${slug}`, today)
     ),
   ]

@@ -4,16 +4,19 @@ import MovieGrid from '../../components/MovieGrid'
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-import { fetchListMovies } from '../../utils/tmdb'
+import { fetchListMovies, fetchRecommendedMovies } from '../../utils/tmdb'
 import { getCuratedList } from '../../utils/curatedLists'
+import { getGeneratedList } from '../../utils/generatedLists'
 import { getOrGenerateListIntro } from '../../utils/listIntro'
 
 export async function getServerSideProps({ params, res }) {
-  const list = getCuratedList(params.slug)
+  const list = getCuratedList(params.slug) || (await getGeneratedList(params.slug))
   if (!list) return { notFound: true }
 
   try {
-    const data = await fetchListMovies(list.params)
+    const data = list.type === 'similar'
+      ? await fetchRecommendedMovies(list.movieId)
+      : await fetchListMovies(list.params)
     const movies = data.results || []
 
     const intro = await getOrGenerateListIntro({

@@ -160,3 +160,21 @@ export async function fetchListMovies(discoverParams = {}, page = 1) {
     results: (data.results || []).filter(movie => movie.poster_path)
   }
 }
+
+export async function fetchRecommendedMovies(movieId, page = 1) {
+  const data = await fetchTmdb(`/movie/${movieId}/recommendations`, { page })
+  return {
+    ...data,
+    results: (data.results || []).filter(movie => movie.poster_path)
+  }
+}
+
+export async function searchMovieByTitle(title) {
+  const data = await fetchTmdb('/search/movie', { query: title, include_adult: 'false' })
+  return (data.results || []).find(movie => movie.poster_path) || null
+}
+
+export async function searchKeywordId(name) {
+  const data = await fetchTmdb('/search/keyword', { query: name })
+  return data.results?.[0]?.id || null
+}
