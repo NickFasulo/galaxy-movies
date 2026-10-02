@@ -83,7 +83,7 @@ export default function StreamingIndex({ region }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
@@ -146,7 +146,7 @@ export default function StreamingIndex({ region }) {
           <Text textAlign='center' mt={10} color='gray.400'>
             Availability changes by region and over time. Check each movie page for current provider information.
           </Text>
-          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
+          <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

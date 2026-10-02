@@ -1,11 +1,13 @@
 import Head from 'next/head'
-import { Box, Heading, Text } from '@chakra-ui/react'
+import Link from 'next/link'
+import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
 import BackButton from '../../components/BackButton'
 import { fetchDiscoverMovies, streamingProviders, getProviderId, isProviderAvailableInRegion } from '../../utils/tmdb'
 import { detectRegion } from '../../utils/region'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
+import { providerGenreSlugs, getProviderGenreTarget } from '../../utils/contentOpportunities'
 
 const REGION_NAMES = { US: 'the United States', IN: 'India' }
 
@@ -71,6 +73,9 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
     { name: 'Streaming', url: `${siteUrl}/streaming` },
     { name: title, url: canonicalUrl }
   ]
+  const genreTargets = providerGenreSlugs
+    .map((genreKey) => getProviderGenreTarget(provider, genreKey))
+    .filter(Boolean)
 
   return (
     <>
@@ -103,17 +108,38 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : <MovieGrid movies={movies} />}
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+            Browse {providerLabel} by Genre
+          </Heading>
+          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+            {genreTargets.map((target) => (
+              <Link key={target.genreKey} href={`/streaming/${provider}/${target.genreKey}`}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  minH='4rem'
+                  p={4}
+                  borderRadius='0.75rem'
+                  border='1px solid'
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
+                >
+                  <Text fontWeight='medium' textAlign='center'>{target.genreLabel}</Text>
+                </Flex>
+              </Link>
+            ))}
+          </SimpleGrid>
           <Text textAlign='center' mt={8} color='gray.400'>
             Availability changes by region and over time. Check the movie page for current provider information.
           </Text>
-          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
+          <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

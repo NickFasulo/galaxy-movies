@@ -1,5 +1,6 @@
 import { fetchDiscoverMovies, movieCategories, movieGenres, streamingProviders } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
+import { getProviderGenreTargets } from '../utils/contentOpportunities'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
@@ -53,6 +54,9 @@ export async function getServerSideProps({ res }) {
     ),
     ...Object.keys(streamingProviders).map(provider =>
       urlEntry(`${siteUrl}/streaming/${provider}`, today)
+    ),
+    ...getProviderGenreTargets().map(({ providerKey, genreKey }) =>
+      urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`, today)
     ),
     ...Object.keys(curatedLists).map(slug =>
       urlEntry(`${siteUrl}/lists/${slug}`, today)

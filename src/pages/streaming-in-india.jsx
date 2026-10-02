@@ -104,7 +104,7 @@ export default function StreamingInIndia({ movies, dataError }) {
         />
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
-      <Box flex='1' bg='transparent' color='white' pt={{ base: '4.5rem', md: '5.5rem' }} pb={{ base: 6, md: 10 }}>
+      <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
@@ -159,7 +159,7 @@ export default function StreamingInIndia({ movies, dataError }) {
           <Text textAlign='center' mt={8} color='gray.400'>
             Check each movie page for current provider availability — it changes by region and over time.
           </Text>
-          <Box mt='1.5rem' textAlign={{ base: 'center', md: 'left' }}>
+          <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
         </Box>

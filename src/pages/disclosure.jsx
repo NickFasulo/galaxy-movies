@@ -22,7 +22,7 @@ export default function Disclosure() {
         As an Amazon Associate, Galaxy Movies earns from qualifying
         purchases.
       </InfoParagraph>
-      <Box textAlign={{ base: 'center', md: 'left' }}>
+      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
         <BackButton />
       </Box>
     </InfoPage>

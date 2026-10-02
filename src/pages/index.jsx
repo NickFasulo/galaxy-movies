@@ -352,7 +352,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
             position='fixed'
             size='lg'
             right='1.5rem'
-            bottom='7rem'
+            bottom={{ base: '5em', md: '6rem' }}
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'

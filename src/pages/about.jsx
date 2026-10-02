@@ -11,7 +11,7 @@ export default function About() {
       <InfoParagraph>
         Movie information and availability data are supplied by The Movie Database. Availability may vary by country and can change over time.
       </InfoParagraph>
-      <Flex wrap="wrap" gap="1.5rem" alignItems="center" mb={4}>
+      <Flex wrap="wrap" gap="1.5rem" alignItems="center" justify={{ base: 'center', md: 'flex-start' }} my='2rem'>
         <a href="https://launchaf.com/" target="_blank" rel="noopener" data-launchaf-badge="true">
           <img src="https://launchaf.com/api/badge/light?v=launchaf-blue-2026-2" alt="Featured on LaunchAF" width="200" height="56" />
         </a>
@@ -19,7 +19,7 @@ export default function About() {
           <img src="https://www.shipnlaunch.com/badges/featured-dark.svg" alt="Featured on ShipNLaunch" width="240" height="56" />
         </a>
       </Flex>
-      <Box textAlign={{ base: 'center', md: 'left' }}>
+      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
         <BackButton />
       </Box>
     </InfoPage>
