@@ -1,13 +1,12 @@
 @font-face {
   font-family: 'SpaceRanger';
-  src: url('../asset/space-ranger-font/SpaceRangerLaserItalic-J7an.otf')
-    format('opentype');
+  src: url('/fonts/SpaceRangerLaserItalic-J7an.otf') format('opentype');
   font-display: swap;
 }
 
 @font-face {
   font-family: 'Halftone';
-  src: url('../asset/space-ranger-font/SpaceRanger-EMJl.otf') format('opentype');
+  src: url('/fonts/SpaceRanger-EMJl.otf') format('opentype');
   font-display: swap;
 }
 
