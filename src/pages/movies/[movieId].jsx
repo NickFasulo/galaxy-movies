@@ -26,6 +26,7 @@ import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
+import { getProviderAffiliateLinks } from '../../utils/takeads'
 
 export const getServerSideProps = async (context) => {
   const { movieId } = context.query
@@ -66,7 +67,10 @@ export const getServerSideProps = async (context) => {
     const recommendationCandidates = (recommendationsData.results || [])
       .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== movieData.id)
 
-    const [validVideoKey, aiSynopsis, similarMovies] = await Promise.all([
+    const providerNames = ['flatrate', 'rent', 'buy']
+      .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
+
+    const [validVideoKey, aiSynopsis, similarMovies, providerAffiliateLinks] = await Promise.all([
       getFirstPlayableKey(movieData.videos?.results),
       movieData.overview
         ? getOrGenerateMovieReview({
@@ -84,7 +88,8 @@ export const getServerSideProps = async (context) => {
             genres: movieData.genres?.map((g) => g.name) || [],
             candidates: recommendationCandidates
           })
-        : []
+        : [],
+      getProviderAffiliateLinks(providerNames)
     ])
 
     if (context.res) {
@@ -103,7 +108,8 @@ export const getServerSideProps = async (context) => {
         topCast,
         ageRating: cert,
         aiSynopsis: aiSynopsis || null,
-        similarMovies: similarMovies || []
+        similarMovies: similarMovies || [],
+        providerAffiliateLinks
       }
     }
   } catch (error) {
@@ -116,7 +122,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis, similarMovies }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks }) {
   if (movieError) {
     return (
       <>
@@ -341,7 +347,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} />
+              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} affiliateLinks={providerAffiliateLinks} />
             </Box>
 
           </Flex>
