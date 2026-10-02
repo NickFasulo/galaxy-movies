@@ -9,7 +9,7 @@ export default function TopBackdrop(props) {
       right={0}
       h={{ base: '14rem', md: '22rem' }}
       pointerEvents='none'
-      bgImage="url('/backdrop_fallback.webp')"
+      bgImage={{ base: "url('/backdrop_fallback.webp')", md: "url('/backdrop_fallback_lg.webp')" }}
       bgSize='cover'
       bgPosition='center 20%'
       _before={{

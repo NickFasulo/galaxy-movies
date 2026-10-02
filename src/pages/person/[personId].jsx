@@ -80,7 +80,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
 
   const profilePath = person.profile_path 
     ? `https://image.tmdb.org/t/p/w500${person.profile_path}` 
-    : '/poster_fallback.webp'
+    : '/profile_fallback.webp'
   const [profileSrc, setProfileSrc] = useState(profilePath)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/person/${person.id}`
@@ -192,7 +192,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
                     fill
                     priority
                     sizes='(max-width: 768px) 100vw, 320px'
-                    onError={() => setProfileSrc('/poster_fallback.webp')}
+                    onError={() => setProfileSrc('/profile_fallback.webp')}
                     style={{
                       objectFit: 'cover',
                       borderRadius: '1rem',

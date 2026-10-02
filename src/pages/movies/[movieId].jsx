@@ -279,15 +279,25 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             }
           }}
         >
-          <Image
-            src={backdropSrc}
-            alt={movie.title || 'Movie Backdrop'}
-            fill
-            priority
-            sizes='100vw'
-            onError={() => setBackdropSrc('/backdrop_fallback.webp')}
-            unoptimized={backdropSrc === '/backdrop_fallback.webp'}
-          />
+          {backdropSrc === '/backdrop_fallback.webp' ? (
+            <img
+              src='/backdrop_fallback_lg.webp'
+              srcSet='/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'
+              sizes='100vw'
+              alt={movie.title || 'Movie Backdrop'}
+              fetchpriority='high'
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            />
+          ) : (
+            <Image
+              src={backdropSrc}
+              alt={movie.title || 'Movie Backdrop'}
+              fill
+              priority
+              sizes='100vw'
+              onError={() => setBackdropSrc('/backdrop_fallback.webp')}
+            />
+          )}
         </Box>
         <Box
           position='absolute'
