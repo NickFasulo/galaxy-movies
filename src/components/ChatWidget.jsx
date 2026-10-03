@@ -16,6 +16,7 @@ import {
 } from '@chakra-ui/react'
 import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
 import { TbMessageX } from 'react-icons/tb'
+import { buildTasteProfile } from '../utils/userData'
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -133,7 +134,8 @@ export default function ChatWidget() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage]
+          messages: [...messages, userMessage],
+          tasteProfile: buildTasteProfile()
         }),
         signal: abortControllerRef.current.signal
       })

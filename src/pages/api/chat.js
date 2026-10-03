@@ -47,9 +47,29 @@ export const config = {
   }
 }
 
-function getConversationCacheKey(messages) {
+function getConversationCacheKey(messages, tasteProfile) {
   const lastMessage = messages[messages.length - 1]
-  return `chat:${lastMessage.role}:${lastMessage.content.substring(0, 50)}`
+  const tasteFingerprint = tasteProfile
+    ? (tasteProfile.topRated.join('|') + tasteProfile.disliked.join('|')).substring(0, 80)
+    : ''
+  return `chat:${lastMessage.role}:${lastMessage.content.substring(0, 50)}:${tasteFingerprint}`
+}
+
+// Caps each field so a crafted body can't inflate the prompt — this is injected
+// into the system message, so treat it as untrusted input.
+function sanitizeTasteProfile(tp) {
+  if (!tp || typeof tp !== 'object') return null
+  const list = (v, n) => Array.isArray(v)
+    ? v.filter((s) => typeof s === 'string').map((s) => s.substring(0, 80)).slice(0, n)
+    : []
+  const profile = {
+    topRated: list(tp.topRated, 10),
+    disliked: list(tp.disliked, 5),
+    watchlist: list(tp.watchlist, 15),
+    services: list(tp.services, 8)
+  }
+  const hasAny = Object.values(profile).some((arr) => arr.length > 0)
+  return hasAny ? profile : null
 }
 
 export default async function handler(req, res) {
@@ -62,7 +82,8 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Bot access denied' })
   }
 
-  const { messages = [] } = req.body
+  const { messages = [], tasteProfile: rawTasteProfile } = req.body
+  const tasteProfile = sanitizeTasteProfile(rawTasteProfile)
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' })
@@ -88,7 +109,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Chat request limit reached. Please try again later.' })
   }
 
-  const cacheKey = getConversationCacheKey(messages)
+  const cacheKey = getConversationCacheKey(messages, tasteProfile)
   const cachedEntry = chatCache.get(cacheKey)
   if (cachedEntry) {
     return res.status(200).json({ response: cachedEntry.text, links: cachedEntry.links, cached: true })
@@ -114,6 +135,21 @@ export default async function handler(req, res) {
 
     const today = new Date().toISOString().split('T')[0]
 
+    let tasteContext = ''
+    if (tasteProfile) {
+      const parts = []
+      if (tasteProfile.topRated.length) parts.push(`- Movies they loved: ${tasteProfile.topRated.join(', ')}`)
+      if (tasteProfile.disliked.length) parts.push(`- Movies they disliked: ${tasteProfile.disliked.join(', ')}`)
+      if (tasteProfile.watchlist.length) parts.push(`- On their watchlist: ${tasteProfile.watchlist.join(', ')}`)
+      if (tasteProfile.services.length) parts.push(`- Streaming services they subscribe to: ${tasteProfile.services.join(', ')}`)
+      if (parts.length) {
+        tasteContext = `
+
+The user's taste profile — personalize recommendations accordingly. Do not recommend titles they already disliked or rated; prefer titles matching their highly-rated picks and available on their services when relevant:
+${parts.join('\n')}`
+      }
+    }
+
     const systemMessage = {
       role: 'system',
       content: `You are a helpful movie discovery assistant for Galaxy Movies. Your goal is to help users find movies they'll enjoy based on their preferences, mood, or specific criteria.
@@ -121,7 +157,7 @@ export default async function handler(req, res) {
 Today's date is ${today}. Your own knowledge of movies may be outdated, so do not assume you know what counts as "recent" — rely on the verified data provided below when it's available.${recentReleasesContext ? `
 
 Here is a verified list of movies actually in theaters or recently released as of today. Use ONLY these when the user asks about recent, new, or currently popular releases:
-${recentReleasesContext}` : ''}
+${recentReleasesContext}` : ''}${tasteContext}
 
 Key capabilities:
 - Recommend movies based on genre, mood, time period, actors, directors, or themes

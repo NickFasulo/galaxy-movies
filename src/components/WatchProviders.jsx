@@ -2,8 +2,10 @@ import Image from 'next/image'
 import NextLink from 'next/link'
 import { Box, Flex, Text, Tooltip, Link } from '@chakra-ui/react'
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
-import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
+// import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
 
+// Affiliate monetization disabled — uncomment SurfsharkLink + its usages to re-enable.
+// eslint-disable-next-line no-unused-vars
 function SurfsharkLink() {
   return (
     <Link
@@ -19,9 +21,15 @@ function SurfsharkLink() {
   )
 }
 
-function ProviderIcon({ provider, movieTitle, affiliateLink }) {
+function ProviderIcon({ provider, movieTitle, affiliateLink, isMine }) {
   const icon = (
-    <Box position='relative' width='32px' height='32px'>
+    <Box
+      position='relative'
+      width='32px'
+      height='32px'
+      borderRadius='0.375rem'
+      {...(isMine ? { boxShadow: '0 0 0 2px #48bb78' } : {})}
+    >
       <Image
         src={provider.logo_path}
         alt={provider.provider_name}
@@ -58,7 +66,7 @@ function ProviderIcon({ provider, movieTitle, affiliateLink }) {
   )
 }
 
-export default function WatchProviders({ watchProviders, movieTitle, affiliateLinks = {} }) {
+export default function WatchProviders({ watchProviders, movieTitle, affiliateLinks = {}, myProviderIds }) {
   const flatrate = watchProviders?.flatrate || []
   const rent = watchProviders?.rent || []
   const buy = watchProviders?.buy || []
@@ -87,7 +95,7 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
                   {flatrate.map((provider) => (
-                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} />
+                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} />
                   ))}
                 </Flex>
               </Box>
@@ -106,14 +114,14 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
                 </Flex>
               </Box>
             )}
-            <SurfsharkLink />
+            {/* <SurfsharkLink /> */}
           </>
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <SurfsharkLink />
+            {/* <SurfsharkLink /> */}
           </Box>
         )}
       </Box>

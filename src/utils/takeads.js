@@ -71,8 +71,10 @@ export async function resolveTakeadsLinks(iris = []) {
 
 export async function getProviderAffiliateLinks(providerNames = []) {
   const names = [...new Set(providerNames)].filter(Boolean)
-  const resolved = await resolveTakeadsLinks(names.map(getProviderHomePage))
+  // Affiliate monetization disabled — link provider icons directly to provider
+  // homepages instead of Takeads tracking links (uncomment to re-enable).
+  // const resolved = await resolveTakeadsLinks(names.map(getProviderHomePage))
   return Object.fromEntries(
-    names.map((name) => [name, resolved[getProviderHomePage(name)] || null])
+    names.map((name) => [name, /* resolved[getProviderHomePage(name)] || */ getProviderHomePage(name)])
   )
 }

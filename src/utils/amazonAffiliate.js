@@ -8,8 +8,8 @@ export function buildAmazonAffiliateLink(movieTitle = '') {
   const query = `${movieTitle} (movie)`.trim()
   const params = new URLSearchParams({
     k: query,
-    i: 'instant-video',
-    tag: AMAZON_ASSOCIATE_TAG
+    i: 'instant-video'
+    // tag: AMAZON_ASSOCIATE_TAG — affiliate monetization disabled (uncomment to re-enable)
   })
   return `https://www.amazon.com/s?${params.toString()}`
 }

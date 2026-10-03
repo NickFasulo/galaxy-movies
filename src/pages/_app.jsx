@@ -1,11 +1,10 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
 import { ChakraProvider, Flex, Box } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
-import { tiun } from '@tiun/sdk'
 import ChatWidget from '../components/ChatWidget'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -20,13 +19,6 @@ function MyApp({ Component, pageProps }) {
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/')
 
   useScrollRestore()
-
-  useEffect(() => {
-    tiun.init({
-      snippetId: '8DpSIcwNMglV5Rh9FZlygzxprSzvMosIOLu4jcu6',
-      language: 'en'
-    })
-  }, [])
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -7,7 +7,7 @@ import { fetchDiscoverMovies, streamingProviders, getProviderId, isProviderAvail
 import { detectRegion } from '../../utils/region'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-import SurfsharkBanner from '../../components/SurfsharkBanner'
+// import SurfsharkBanner from '../../components/SurfsharkBanner' // affiliate monetization disabled
 import { providerGenreSlugs, getProviderGenreTarget } from '../../utils/contentOpportunities'
 
 const REGION_NAMES = { US: 'the United States', IN: 'India' }
@@ -113,11 +113,11 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
-          <SurfsharkBanner
+          {/* <SurfsharkBanner
             message={availableInRegion
               ? `${providerLabel}'s catalog differs by country — a VPN can unlock titles available in other regions.`
               : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
-          />
+          /> */}
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : <MovieGrid movies={movies} />}

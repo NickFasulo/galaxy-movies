@@ -47,6 +47,9 @@ export default function Header({ isHome = false, isDark = false }) {
               <MenuItem as={NextLink} href='/new-on-streaming' bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>New Releases</MenuItem>
             </MenuList>
           </Menu>
+          <Link as={NextLink} href='/watchlist' color='whiteAlpha.900' _hover={{ textDecoration: 'underline' }}>
+            My List
+          </Link>
           <Link as={NextLink} href='/about' color='whiteAlpha.900' _hover={{ textDecoration: 'underline' }}>
             About
           </Link>

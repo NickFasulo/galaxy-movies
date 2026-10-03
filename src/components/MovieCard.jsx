@@ -3,8 +3,9 @@ import Image from 'next/image'
 import { useState, memo } from 'react'
 import { ChakraBox } from './ChakraBox'
 import { WrapItem, Box, Skeleton, Text } from '@chakra-ui/react'
+import WatchlistButton from './WatchlistButton'
 
-function MovieCard({ movie, priority = false }) {
+function MovieCard({ movie, priority = false, badge = null }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const posterUrl = movie.poster_path
 
@@ -54,6 +55,14 @@ function MovieCard({ movie, priority = false }) {
             </Skeleton>
           </Box>
         </Link>
+        <Box position='absolute' top={2} right={2} zIndex={2}>
+          <WatchlistButton movie={movie} />
+        </Box>
+        {badge && (
+          <Box position='absolute' bottom={2} left={2} zIndex={2}>
+            {badge}
+          </Box>
+        )}
       </ChakraBox>
     </WrapItem>
   )

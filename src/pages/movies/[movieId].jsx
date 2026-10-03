@@ -13,6 +13,8 @@ import {
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import VideoModal from '../../components/VideoModal'
+import WatchlistButton from '../../components/WatchlistButton'
+import RatingWidget from '../../components/RatingWidget'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
@@ -24,6 +26,8 @@ import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
+import { useUserData } from '../../hooks/useUserData'
+import { getProviderId } from '../../utils/tmdb'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
@@ -156,6 +160,11 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
   useEffect(() => {
     setPosterSrc(posterPath || '/poster_fallback.webp')
   }, [posterPath])
+
+  const { services } = useUserData()
+  const myProviderIds = new Set(
+    services.providers.map((key) => getProviderId(key, services.region)).filter(Boolean)
+  )
   const productionCompany = movie.production_companies?.find(company => company.logo_path)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/movies/${movie.id}`
@@ -347,7 +356,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} affiliateLinks={providerAffiliateLinks} />
+              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} affiliateLinks={providerAffiliateLinks} myProviderIds={myProviderIds} />
             </Box>
 
           </Flex>
@@ -425,6 +434,9 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
                 </Text>
               </Flex>
               <Flex align='center' justify='flex-end'>
+                <RatingWidget movie={movie} />
+              </Flex>
+              <Flex align='center' justify='flex-end'>
                 {productionCompany ? (
                   <Link href={`/company/${productionCompany.id}`} passHref>
                     <Box
@@ -474,6 +486,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
               my='1rem'
             >
               <VideoModal videoKey={videoKey} />
+              <WatchlistButton movie={movie} withLabel />
               <BackButton />
             </Flex>
 
