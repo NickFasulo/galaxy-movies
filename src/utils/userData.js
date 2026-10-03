@@ -29,9 +29,24 @@ function normalize(raw) {
   }
 }
 
+// localStorage can throw on read AND write (private mode, disabled cookies,
+// sandboxed iframes) — fall back to memory so the feature still works per-session.
+let memoryFallback = null
+let storageDisabled = false
+
+function readRaw() {
+  if (storageDisabled) return memoryFallback
+  try {
+    return window.localStorage.getItem(STORAGE_KEY)
+  } catch {
+    storageDisabled = true
+    return memoryFallback
+  }
+}
+
 export function getUserData() {
   if (typeof window === 'undefined') return EMPTY_USER_DATA
-  const raw = window.localStorage.getItem(STORAGE_KEY)
+  const raw = readRaw()
   if (raw === cache.raw) return cache.data
   const data = normalize(raw)
   cache = { raw, data }
@@ -40,7 +55,7 @@ export function getUserData() {
 
 export function getUserDataRaw() {
   if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(STORAGE_KEY)
+  return readRaw()
 }
 
 const listeners = new Set()
@@ -63,7 +78,12 @@ export function subscribeUserData(listener) {
 
 function writeUserData(next) {
   const raw = JSON.stringify(next)
-  window.localStorage.setItem(STORAGE_KEY, raw)
+  try {
+    window.localStorage.setItem(STORAGE_KEY, raw)
+  } catch {
+    storageDisabled = true
+    memoryFallback = raw
+  }
   cache = { raw, data: next }
   listeners.forEach((listener) => listener())
 }
