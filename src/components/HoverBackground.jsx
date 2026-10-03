@@ -48,7 +48,7 @@ export default function HoverBackground({ hoveredBg, isBgVisible }) {
       h='100vh'
       zIndex={0}
       pointerEvents='none'
-      opacity={isBgVisible && hoveredBg ? 0.25 : 0}
+      opacity={isBgVisible && hoveredBg ? 0.30 : 0}
       transition='opacity 0.6s ease-in-out'
       bgImage={backgroundImage}
       bgPosition='center'
