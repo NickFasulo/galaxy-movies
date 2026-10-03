@@ -28,7 +28,7 @@ export default function VideoModal({ videoKey }) {
         aria-label="Watch trailer"
         bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}
       >
-        <Icon as={BsCaretRightFill} boxSize={6} />
+        <Icon as={BsCaretRightFill} boxSize={{ base: 6, md: 5 }} />
       </Button>
       <Modal
         isOpen={isOpen}

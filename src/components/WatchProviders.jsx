@@ -126,9 +126,9 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
         )}
       </Box>
 
-      <Text color='gray.500' fontSize='xs' mt={2} textAlign='center'>
+      {/* <Text color='gray.500' fontSize='xs' mt={2} textAlign='center'>
         <NextLink href='/disclosure'>Affiliate disclosure</NextLink>
-      </Text>
+      </Text> */}
     </>
   )
 }

@@ -1,44 +1,14 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { Badge, Box, Heading, Text } from '@chakra-ui/react'
-import { useQuery } from 'react-query'
+import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import ServicesPicker from '../components/ServicesPicker'
 import WaitlistForm from '../components/WaitlistForm'
 import BackButton from '../components/BackButton'
 import { useUserData } from '../hooks/useUserData'
-import { getProviderId } from '../utils/tmdb'
 
 export default function Watchlist() {
-  const data = useUserData()
-  const { watchlist, services } = data
-  const ids = watchlist.map((item) => item.id)
-
-  const myProviderIds = new Set(
-    services.providers.map((key) => getProviderId(key, services.region)).filter(Boolean)
-  )
-
-  const { data: providerData } = useQuery(
-    ['watchProviders', services.region, ids.join(',')],
-    async () => {
-      const resp = await fetch(`/api/watchProviders?region=${services.region}&ids=${ids.join(',')}`)
-      if (!resp.ok) throw new Error('Provider lookup failed')
-      return resp.json()
-    },
-    { enabled: ids.length > 0 && myProviderIds.size > 0, staleTime: 1000 * 60 * 60 }
-  )
-
-  const streamingIds = new Set(
-    Object.entries(providerData?.results || {})
-      .filter(([, providerIds]) => providerIds.some((id) => myProviderIds.has(id)))
-      .map(([id]) => Number(id))
-  )
-
-  const getBadge = (movie) => streamingIds.has(movie.id) ? (
-    <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
-      Now streaming
-    </Badge>
-  ) : null
+  const { watchlist } = useUserData()
 
   return (
     <>
@@ -53,6 +23,10 @@ export default function Watchlist() {
             Movies you've saved. Your list lives on this device — no account needed.
           </Text>
 
+          <Box mt={6}>
+            <ServicesPicker />
+          </Box>
+
           {watchlist.length === 0 ? (
             <Text mt={10} color='gray.400' textAlign='center'>
               Nothing saved yet.{' '}
@@ -62,24 +36,13 @@ export default function Watchlist() {
               and hit the bookmark to save it here.
             </Text>
           ) : (
-            <MovieGrid movies={watchlist} getBadge={getBadge} />
+            <MovieGrid movies={watchlist} />
           )}
 
-          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
-            My Streaming Services
-          </Heading>
-          <ServicesPicker />
-
-          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
-            Streaming Alerts
-          </Heading>
-          <Box maxW='36rem'>
+          <Box mt={10} maxW='36rem'>
             <WaitlistForm />
           </Box>
 
-          <Text textAlign='center' mt={8} color='gray.400'>
-            Availability changes by region and over time. Check each movie page for current provider information.
-          </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>

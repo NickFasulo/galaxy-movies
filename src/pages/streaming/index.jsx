@@ -16,7 +16,7 @@ export default function StreamingIndex({ region }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/streaming`
   const title = 'Where to Watch Movies by Streaming Service'
-  const description = 'Browse movies by streaming service, including Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more.'
+  const description = 'Browse movies by streaming service, including Netflix, Amazon Prime Video, Hulu, JioHotstar, ZEE5, SonyLIV, and more.'
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({ title, subtitle: description }).toString()}`
 
   const providers = Object.entries(streamingProviders).map(([key, provider]) => ({
@@ -100,26 +100,6 @@ export default function StreamingIndex({ region }) {
             <Link href='/new-on-streaming'>new releases streaming now</Link>.
           </Text>
 
-          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in India</Heading>
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-            {indiaProviders.map((provider) => (
-              <Link key={provider.key} href={`/streaming/${provider.key}`}>
-                <Flex
-                  align='center'
-                  justify='center'
-                  p={4}
-                  borderRadius='0.75rem'
-                  border='1px solid'
-                  borderColor='whiteAlpha.300'
-                  _hover={{ borderColor: 'whiteAlpha.600' }}
-                  h='100%'
-                >
-                  <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
-                </Flex>
-              </Link>
-            ))}
-          </SimpleGrid>
-
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in the United States</Heading>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
             {usProviders.map((provider) => (
@@ -138,6 +118,26 @@ export default function StreamingIndex({ region }) {
                   {provider.regions && (
                     <Badge ml={2} colorScheme='gray' fontSize='2xs'>US only</Badge>
                   )}
+                </Flex>
+              </Link>
+            ))}
+          </SimpleGrid>
+
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in India</Heading>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+            {indiaProviders.map((provider) => (
+              <Link key={provider.key} href={`/streaming/${provider.key}`}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  p={4}
+                  borderRadius='0.75rem'
+                  border='1px solid'
+                  borderColor='whiteAlpha.300'
+                  _hover={{ borderColor: 'whiteAlpha.600' }}
+                  h='100%'
+                >
+                  <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
                 </Flex>
               </Link>
             ))}

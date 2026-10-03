@@ -30,7 +30,7 @@ export default function ServicesPicker() {
 
   return (
     <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='1rem' p={4}>
-      <Flex align='center' justify='space-between' wrap='wrap' gap={3} mb={3}>
+      <Flex align='center' justify='space-between' wrap='wrap' gap={3}>
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>
           My streaming services
         </Text>
@@ -48,6 +48,9 @@ export default function ServicesPicker() {
           ))}
         </Flex>
       </Flex>
+      <Text color='gray.500' fontSize='xs' mb='0.75rem'>
+        Pick your subscriptions to see which saved movies are streaming for you.
+      </Text>
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
         {visibleProviders.map((provider) => (
           <Checkbox
@@ -61,11 +64,6 @@ export default function ServicesPicker() {
           </Checkbox>
         ))}
       </SimpleGrid>
-      {providers.length === 0 && (
-        <Text color='gray.500' fontSize='xs' mt={2}>
-          Pick your subscriptions to see which saved movies are streaming for you.
-        </Text>
-      )}
     </Box>
   )
 }

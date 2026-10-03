@@ -95,12 +95,7 @@ export default function Contact() {
         <Button
           type='submit'
           isDisabled={status === 'submitting'}
-          p='0.75rem'
-          bg={status === 'submitting' ? '#2a3138' : '#1f252b'}
-          color='white'
-          border='1px solid'
-          borderColor='whiteAlpha.300'
-          _hover={{ bg: '#2a3138' }}
+          colorScheme='blue'
         >
           {status === 'submitting' ? 'Sending...' : 'Send Message'}
         </Button>

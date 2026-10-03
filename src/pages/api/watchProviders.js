@@ -2,7 +2,7 @@ import { LRUCache } from 'lru-cache'
 const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
 // Server-side proxy for TMDB watch/providers — keeps TMDB_API_KEY off the client.
-// Batched so a watchlist page can check many movies in one request.
+// Batched so poster grids can check many movies in one request.
 const providerCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 6 })
 
 const MAX_IDS = 50
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   const clientId = getClientIP(req)
   const allowed = await checkDistributedRateLimit(clientId, {
     keyPrefix: 'wp_rl',
-    maxRequests: 60,
+    maxRequests: 120,
     windowSeconds: 60 * 60
   })
   if (!allowed) {

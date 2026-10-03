@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from 'react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Box, Flex, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Flex, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
@@ -12,7 +12,14 @@ import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import TopBackdrop from '../components/TopBackdrop'
 import HreflangTags from '../components/HreflangTags'
+import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { fetchDiscoverMovies } from '../utils/tmdb'
+
+const nowStreamingBadge = (
+  <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
+    Now streaming
+  </Badge>
+)
 
 export async function getServerSideProps({ res }) {
   try {
@@ -123,6 +130,8 @@ export default function Home({ initialMovies, initialTotalPages }) {
     }
     return uniqueMovies
   }, [data])
+
+  const isStreaming = useStreamingBadges(moviesList)
 
   const hasReachedEnd = Boolean(
     data?.pages?.length &&
@@ -307,7 +316,11 @@ export default function Home({ initialMovies, initialTotalPages }) {
                     onMouseEnter={() => handleCardMouseEnter(movie.backdrop_path)}
                     onMouseLeave={handleCardMouseLeave}
                   >
-                    <MovieCard movie={movie} priority={index < 5} />
+                    <MovieCard
+                      movie={movie}
+                      priority={index < 5}
+                      badge={isStreaming(movie) ? nowStreamingBadge : null}
+                    />
                   </Box>
                 ))}
               </SimpleGrid>
