@@ -1,8 +1,8 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Heading, Text } from '@chakra-ui/react'
 import { useQuery } from 'react-query'
-import MovieCard from '../components/MovieCard'
+import MovieGrid from '../components/MovieGrid'
 import ServicesPicker from '../components/ServicesPicker'
 import WaitlistForm from '../components/WaitlistForm'
 import BackButton from '../components/BackButton'
@@ -34,11 +34,11 @@ export default function Watchlist() {
       .map(([id]) => Number(id))
   )
 
-  const nowStreamingBadge = (
+  const getBadge = (movie) => streamingIds.has(movie.id) ? (
     <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
       Now streaming
     </Badge>
-  )
+  ) : null
 
   return (
     <>
@@ -53,10 +53,6 @@ export default function Watchlist() {
             Movies you've saved. Your list lives on this device — no account needed.
           </Text>
 
-          <Box mt={6}>
-            <ServicesPicker />
-          </Box>
-
           {watchlist.length === 0 ? (
             <Text mt={10} color='gray.400' textAlign='center'>
               Nothing saved yet.{' '}
@@ -66,21 +62,24 @@ export default function Watchlist() {
               and hit the bookmark to save it here.
             </Text>
           ) : (
-            <SimpleGrid columns={{ base: 2, md: 5 }} spacing={6} mt={8}>
-              {watchlist.map((movie) => (
-                <MovieCard
-                  key={movie.id}
-                  movie={movie}
-                  badge={streamingIds.has(movie.id) ? nowStreamingBadge : null}
-                />
-              ))}
-            </SimpleGrid>
+            <MovieGrid movies={watchlist} getBadge={getBadge} />
           )}
 
-          <Box mt={10} maxW='36rem'>
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+            My Streaming Services
+          </Heading>
+          <ServicesPicker />
+
+          <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+            Streaming Alerts
+          </Heading>
+          <Box maxW='36rem'>
             <WaitlistForm />
           </Box>
 
+          <Text textAlign='center' mt={8} color='gray.400'>
+            Availability changes by region and over time. Check each movie page for current provider information.
+          </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>
