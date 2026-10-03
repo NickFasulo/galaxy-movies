@@ -15,7 +15,7 @@ function MyApp({ Component, pageProps }) {
   const queryClient = useMemo(() => new QueryClient(), [])
   const router = useRouter()
   const isHome = router.pathname === '/'
-  const isDark = /^\/(movies\/|person\/|company\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|404$|streaming|lists|new-on-streaming|genre\/|browse\/|watchlist$|$)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|404$|streaming|lists|new-on-streaming|genre\/|browse\/|watchlist$|email-status$|$)/.test(router.pathname)
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/')
 
   useScrollRestore()

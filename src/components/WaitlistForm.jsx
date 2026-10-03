@@ -20,7 +20,8 @@ export default function WaitlistForm() {
         const body = await resp.json().catch(() => ({}))
         throw new Error(body.error || 'Something went wrong')
       }
-      setStatus('done')
+      const body = await resp.json()
+      setStatus(body.pending ? 'pending' : 'done')
     } catch (err) {
       setError(err.message)
       setStatus('idle')
@@ -32,9 +33,11 @@ export default function WaitlistForm() {
       <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
         Streaming alerts — coming soon
       </Text>
-      {status === 'done' ? (
+      {status === 'done' || status === 'pending' ? (
         <Text color='green.300' fontSize='sm'>
-          You're on the list. We'll email you when alerts launch.
+          {status === 'pending'
+            ? 'Check your inbox — we sent a confirmation link to verify your email.'
+            : "You're on the list. We'll email you when alerts launch."}
         </Text>
       ) : (
         <>
