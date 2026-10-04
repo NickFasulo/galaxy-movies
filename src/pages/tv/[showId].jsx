@@ -16,6 +16,7 @@ import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import VideoModal from '../../components/VideoModal'
 import WatchlistButton from '../../components/WatchlistButton'
 import RatingWidget from '../../components/RatingWidget'
+import TopBackdrop from '../../components/TopBackdrop'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
@@ -280,6 +281,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, watc
         <BreadcrumbSchema items={breadcrumbItems} />
       </Head>
       <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
+      <TopBackdrop display={{ base: 'block', md: 'none' }} zIndex={0} />
       <Box
         position='absolute'
         top={{ base: 'auto', md: 0 }}
@@ -288,6 +290,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, watc
         right={0}
         h={{ base: '400px', md: '500px' }}
         zIndex={0}
+        display={{ base: backdropSrc === '/backdrop_fallback.webp' ? 'none' : 'block', md: 'block' }}
       >
         <Box
           position='relative'
