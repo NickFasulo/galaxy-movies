@@ -10,7 +10,9 @@ module.exports = {
         'http://localhost:3000/movies/969681',
         'http://localhost:3000/streaming',
         'http://localhost:3000/streaming-in-india',
-        'http://localhost:3000/browse/bollywood'
+        'http://localhost:3000/browse/bollywood',
+        'http://localhost:3000/tv',
+        'http://localhost:3000/tv/1399'
       ],
       settings: {
         preset: 'desktop',
