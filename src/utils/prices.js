@@ -1,9 +1,8 @@
 import { getRedis } from './redis'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
-const ITUNES_BASE = 'https://itunes.apple.com'
 const WM_ID_TTL_SECONDS = 60 * 60 * 24 * 7
-const SEARCH_TYPE = { movie: 1, tv: 2 }
+const SEARCH_FIELD = { movie: 'tmdb_movie_id', tv: 'tmdb_tv_id' }
 
 // Watchmode free tier only serves US sources — skip upstream calls elsewhere.
 const WATCHMODE_REGIONS = ['US']
@@ -24,14 +23,6 @@ export function sameStore(a = '', b = '') {
   return PROVIDER_GROUPS.some((re) => re.test(a) && re.test(b))
 }
 
-const normalizeTitle = (value = '') =>
-  value
-    .toLowerCase()
-    .replace(/\(\d{4}\)/g, '')
-    .replace(/[^a-z0-9 ]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-
 async function resolveWatchmodeId(tmdbId, mediaType) {
   const apiKey = process.env.WATCHMODE_API_KEY
   if (!apiKey) return null
@@ -46,7 +37,7 @@ async function resolveWatchmodeId(tmdbId, mediaType) {
   }
 
   try {
-    const url = `${WATCHMODE_BASE}/search/?search_field=tmdb_id&search_value=${tmdbId}&search_type=${SEARCH_TYPE[mediaType] || 1}`
+    const url = `${WATCHMODE_BASE}/search/?search_field=${SEARCH_FIELD[mediaType] || SEARCH_FIELD.movie}&search_value=${tmdbId}`
     const resp = await fetch(url, { headers: { 'X-API-Key': apiKey } })
     if (!resp.ok) return null
     const data = await resp.json()
@@ -91,61 +82,6 @@ function toWatchmodeOffers(sources = []) {
     }))
 }
 
-function pickItunesMatch(results, title, year, kind) {
-  const want = normalizeTitle(title)
-  const candidates = results.filter((r) => (kind ? r.kind === kind : true))
-  for (const result of candidates) {
-    const resultTitle = normalizeTitle(result.trackName || result.collectionName)
-    if (resultTitle !== want && !resultTitle.startsWith(want)) continue
-    if (year) {
-      const resultYear = Number((result.releaseDate || '').slice(0, 4))
-      if (resultYear && Math.abs(resultYear - year) > 1) continue
-    }
-    return result
-  }
-  return null
-}
-
-async function fetchItunesMovieOffers(title, year, region) {
-  const url = `${ITUNES_BASE}/search?term=${encodeURIComponent(title)}&media=movie&entity=movie&country=${region}&limit=5`
-  const resp = await fetch(url)
-  if (!resp.ok) return []
-  const data = await resp.json()
-  const match = pickItunesMatch(data.results || [], title, year, 'feature-movie')
-  if (!match) return []
-
-  const offers = []
-  const push = (type, format, price) => {
-    if (price != null) {
-      offers.push({ provider: 'Apple TV', store: 'itunes', type, format, price, currency: match.currency || 'USD', url: match.trackViewUrl })
-    }
-  }
-  push('rent', 'SD', match.trackRentalPrice)
-  push('rent', 'HD', match.trackHdRentalPrice)
-  push('buy', 'SD', match.trackPrice)
-  push('buy', 'HD', match.trackHdPrice)
-  return offers
-}
-
-async function fetchItunesTvOffers(title, year, region) {
-  const url = `${ITUNES_BASE}/search?term=${encodeURIComponent(title)}&media=tvShow&entity=tvSeason&country=${region}&limit=5`
-  const resp = await fetch(url)
-  if (!resp.ok) return []
-  const data = await resp.json()
-  const match = pickItunesMatch(data.results || [], title, year)
-  if (!match?.collectionPrice) return []
-
-  return [{
-    provider: 'Apple TV (season)',
-    store: 'itunes',
-    type: 'buy',
-    format: 'HD',
-    price: match.collectionPrice,
-    currency: match.currency || 'USD',
-    url: match.collectionViewUrl || match.trackViewUrl
-  }]
-}
-
 function dedupeOffers(offers) {
   const seen = new Map()
   for (const offer of offers) {
@@ -163,20 +99,17 @@ const cheapestOf = (offers, type) =>
     .filter((o) => o.type === type && o.price != null)
     .sort((a, b) => a.price - b.price)[0] || null
 
-export async function getPriceOffers({ tmdbId, mediaType = 'movie', title, year, region = 'US' }) {
+export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US' }) {
   const wmId = WATCHMODE_REGIONS.includes(region)
     ? await resolveWatchmodeId(tmdbId, mediaType)
     : null
 
-  const [sources, details, itunesOffers] = await Promise.all([
+  const [sources, details] = await Promise.all([
     wmId ? fetchWatchmodeJson(`/title/${wmId}/sources/?regions=${region}`) : null,
-    wmId ? fetchWatchmodeJson(`/title/${wmId}/details`) : null,
-    title
-      ? (mediaType === 'tv' ? fetchItunesTvOffers(title, year, region) : fetchItunesMovieOffers(title, year, region)).catch(() => [])
-      : Promise.resolve([])
+    wmId ? fetchWatchmodeJson(`/title/${wmId}/details`) : null
   ])
 
-  const offers = dedupeOffers([...(sources ? toWatchmodeOffers(sources) : []), ...itunesOffers])
+  const offers = dedupeOffers(sources ? toWatchmodeOffers(sources) : [])
 
   return {
     region,

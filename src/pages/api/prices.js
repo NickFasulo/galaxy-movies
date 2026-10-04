@@ -3,8 +3,8 @@ import { getRedis } from '../../utils/redis'
 import { getPriceOffers } from '../../utils/prices'
 const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
-// Server-side proxy for Watchmode + iTunes pricing — keeps WATCHMODE_API_KEY
-// off the client and caches hard, since free-tier Watchmode quota is monthly.
+// Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
+// client and caches hard, since free-tier Watchmode quota is monthly.
 const priceCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 const PRICE_TTL_SECONDS = 60 * 60 * 24
 
@@ -27,10 +27,6 @@ export default async function handler(req, res) {
 
   const mediaType = req.query.type === 'tv' ? 'tv' : 'movie'
   const region = /^[A-Z]{2}$/.test(req.query.region || '') ? req.query.region : 'US'
-  const title = String(req.query.title || '').slice(0, 200).trim()
-  const yearMatch = String(req.query.year || '').match(/^\d{4}$/)
-  const year = yearMatch ? Number(yearMatch[0]) : null
-
   const clientId = getClientIP(req)
   const allowed = await checkDistributedRateLimit(clientId, {
     keyPrefix: 'price_rl',
@@ -60,7 +56,7 @@ export default async function handler(req, res) {
 
   let payload
   try {
-    payload = { cacheKey, ...(await getPriceOffers({ tmdbId, mediaType, title, year, region })) }
+    payload = { cacheKey, ...(await getPriceOffers({ tmdbId, mediaType, region })) }
   } catch (err) {
     console.error('Price lookup failed:', err)
     payload = { region, fetchedAt: Date.now(), ...EMPTY }

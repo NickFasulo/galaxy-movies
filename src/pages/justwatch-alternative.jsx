@@ -36,12 +36,17 @@ export async function getStaticProps() {
 
 const COMPARISON_ROWS = [
   { feature: 'Where-to-watch availability', galaxy: 'Yes — stream, rent and buy options on every movie and TV page', justwatch: 'Yes — the largest availability database, ~140 countries' },
+  { feature: 'Rent/buy price comparison', galaxy: 'Yes — per-title rental and purchase prices across stores, with the cheapest option highlighted', justwatch: 'Yes — deepest coverage across more stores and countries' },
+  { feature: 'Deep links into each provider', galaxy: 'Yes — provider icons take you to the title itself, not the homepage', justwatch: 'Yes' },
+  { feature: 'Free & ad-supported browsing', galaxy: 'Yes — a dedicated page of movies and shows streaming free with ads', justwatch: 'Yes' },
   { feature: 'AI recommendation assistant', galaxy: 'Yes — Galaxy Bot picks by mood, group, time limit and availability', justwatch: 'No' },
   { feature: 'AI-generated synopses', galaxy: 'Yes — instant objective summary on every movie', justwatch: 'No' },
+  { feature: 'Franchise collections', galaxy: 'Yes — every movie in a franchise, in order', justwatch: 'Yes' },
+  { feature: 'Coming soon / leaving alerts', galaxy: 'Yes — weekly streaming changes digest plus coming-soon listings per service', justwatch: 'Yes — notifications with an account' },
+  { feature: 'Region picker', galaxy: 'Yes — switch countries on any title page to see availability there', justwatch: 'Yes' },
   { feature: 'Movies and TV shows', galaxy: 'Yes', justwatch: 'Yes' },
   { feature: 'Curated lists', galaxy: 'Yes — themed lists updated regularly', justwatch: 'Limited' },
   { feature: 'Watchlist', galaxy: 'Yes', justwatch: 'Yes' },
-  { feature: 'Rent/buy price comparison', galaxy: 'Basic provider listing', justwatch: 'Yes — deepest price coverage' },
   { feature: 'Mobile apps', galaxy: 'Web only', justwatch: 'iOS and Android' },
   { feature: 'Account required', galaxy: 'No', justwatch: 'No' },
   { feature: 'Price', galaxy: 'Free', justwatch: 'Free' }
@@ -50,7 +55,7 @@ const COMPARISON_ROWS = [
 const FAQ_ITEMS = [
   {
     question: 'Is Galaxy Movies a good JustWatch alternative?',
-    answer: 'If you mainly want to decide what to watch, yes. Galaxy Movies combines where-to-watch lookup with Galaxy Bot, an AI assistant that recommends movies and shows by mood, who you are watching with, and how much time you have. If you need availability for a niche country or deep rent/buy price comparison, JustWatch covers more ground.'
+    answer: 'Yes for most people. Galaxy Movies covers where to stream, rent and buy — including real rental and purchase prices and the cheapest option on each title — plus a dedicated free-with-ads page, franchise collections, and Galaxy Bot, an AI assistant that recommends by mood, who you are watching with, and how much time you have. If you need availability for a niche country or prices across every storefront, JustWatch still covers more ground.'
   },
   {
     question: 'Is Galaxy Movies free?',
@@ -62,7 +67,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Where does Galaxy Movies get its data?',
-    answer: 'Movie, TV and watch-provider data comes from The Movie Database (TMDB). Availability varies by country and changes over time, so always confirm on the provider before you commit.'
+    answer: 'Movie, TV and watch-provider data comes from The Movie Database (TMDB); rental and purchase prices and provider deep links come from Watchmode. Availability varies by country and changes over time, so always confirm on the provider before you commit.'
   }
 ]
 
@@ -162,24 +167,27 @@ export default function JustWatchAlternative({ movies, dataError }) {
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Where JustWatch is still the better tool</Heading>
           <Text maxW='60rem'>
-            JustWatch indexes more streaming providers across more countries than any other guide, and its rent/buy
-            price comparison is the deepest around. If you need availability in a country Galaxy Movies does not
-            cover, or you are comparing rental prices across storefronts, use JustWatch. Galaxy Movies is a
-            discovery tool first, not a pricing database.
+            JustWatch indexes more streaming providers across more countries than any other guide, and its price
+            comparison spans more storefronts worldwide. Galaxy Movies&apos; price coverage is focused on the US
+            today. If you need availability in a country we do not cover well, or you are comparing prices across
+            every possible store, use JustWatch.
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>What Galaxy Movies adds</Heading>
           <Text maxW='60rem'>
-            Instead of filtering a catalog, you describe the situation — a genre, a mood, a runtime limit, who is
-            in the room — and Galaxy Bot narrows it to a pick, with an instant AI synopsis so you can sanity-check
-            it before committing. Every movie and show page shows where it is streaming, and the site is built for
-            speed: search and page transitions stay under a blink.
+            Every movie and show page shows where it is streaming — plus real rental and purchase prices across
+            stores, deep links straight to the title on each provider, and the cheapest legal way to watch called
+            out. A weekly digest email tracks what is arriving on and leaving your services, and a dedicated page
+            surfaces everything streaming free with ads. On top of that, instead of filtering a catalog, you
+            describe the situation — a genre, a mood, a runtime limit, who is in the room — and Galaxy Bot narrows
+            it to a pick, with an instant AI synopsis so you can sanity-check it before committing.
           </Text>
           <Text maxW='60rem' mt={4} color='gray.400' fontStyle='italic'>
-            Browse by <Link href='/streaming'>streaming service</Link>, <Link href='/genre/action'>genre</Link>, or{' '}
-            <Link href='/lists'>curated list</Link>, check <Link href='/new-on-streaming'>what is new on streaming</Link>,
-            or see the <Link href='/streaming-in-india'>India streaming guide</Link> for Bollywood, Tamil and Telugu
-            coverage.
+            Browse by <Link href='/streaming'>streaming service</Link>, <Link href='/genre/action'>genre</Link>,{' '}
+            <Link href='/lists'>curated list</Link>, or <Link href='/collections'>franchise collection</Link> — check{' '}
+            <Link href='/new-on-streaming'>what is new and coming soon</Link>, see what is{' '}
+            <Link href='/free'>streaming free with ads</Link>, or open the{' '}
+            <Link href='/streaming-in-india'>India streaming guide</Link> for Bollywood, Tamil and Telugu coverage.
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Frequently asked questions</Heading>
