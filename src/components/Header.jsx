@@ -51,6 +51,8 @@ export default function Header({ isHome = false, isDark = false }) {
               <MenuItem as={NextLink} href='/streaming' {...menuItemProps}>Streaming</MenuItem>
               <MenuItem as={NextLink} href='/tv' {...menuItemProps}>TV Shows</MenuItem>
               <MenuItem as={NextLink} href='/lists' {...menuItemProps}>Lists</MenuItem>
+              <MenuItem as={NextLink} href='/collections' {...menuItemProps}>Collections</MenuItem>
+              <MenuItem as={NextLink} href='/free' {...menuItemProps}>Free to Watch</MenuItem>
               <MenuItem as={NextLink} href='/new-on-streaming' {...menuItemProps}>New Releases</MenuItem>
             </MenuList>
           </Menu>
@@ -76,6 +78,8 @@ export default function Header({ isHome = false, isDark = false }) {
               <MenuItem as={NextLink} href='/streaming' {...menuItemProps}>Streaming</MenuItem>
               <MenuItem as={NextLink} href='/tv' {...menuItemProps}>TV Shows</MenuItem>
               <MenuItem as={NextLink} href='/lists' {...menuItemProps}>Lists</MenuItem>
+              <MenuItem as={NextLink} href='/collections' {...menuItemProps}>Collections</MenuItem>
+              <MenuItem as={NextLink} href='/free' {...menuItemProps}>Free to Watch</MenuItem>
               <MenuItem as={NextLink} href='/new-on-streaming' {...menuItemProps}>New Releases</MenuItem>
               <MenuItem as={NextLink} href='/watchlist' {...menuItemProps}>My List</MenuItem>
               <MenuItem as={NextLink} href='/about' {...menuItemProps}>About</MenuItem>

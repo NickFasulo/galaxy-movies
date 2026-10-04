@@ -406,6 +406,29 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
                   </Link>
                 </Text>
               )}
+              {movie.belongs_to_collection && (
+                <Text
+                  fontSize='sm'
+                  color='gray.400'
+                  textShadow='0 0 4px black'
+                  mt={1}
+                  textAlign={{ base: 'center', md: 'left' }}
+                >
+                  Part of the{' '}
+                  <Link href={`/collections/${movie.belongs_to_collection.id}`} passHref>
+                    <Text
+                      as='span'
+                      color='white'
+                      fontWeight='semibold'
+                      _hover={{ textDecoration: 'underline' }}
+                      cursor='pointer'
+                    >
+                      {movie.belongs_to_collection.name}
+                    </Text>
+                  </Link>{' '}
+                  collection
+                </Text>
+              )}
             </Box>
 
             <Flex

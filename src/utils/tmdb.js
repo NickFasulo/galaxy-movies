@@ -310,3 +310,7 @@ export async function searchKeywordId(name) {
   const data = await fetchTmdb('/search/keyword', { query: name })
   return data.results?.[0]?.id || null
 }
+
+export async function fetchCollection(collectionId) {
+  return fetchTmdb(`/collection/${collectionId}`)
+}

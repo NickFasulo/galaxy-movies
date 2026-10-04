@@ -2,6 +2,7 @@ import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, movieGenres, tvC
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
+import { franchiseCollectionIds } from '../utils/franchises'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
@@ -46,8 +47,11 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/streaming-in-india`, today),
     urlEntry(`${siteUrl}/justwatch-alternative`, today),
     urlEntry(`${siteUrl}/new-on-streaming`, today),
+    urlEntry(`${siteUrl}/free`, today),
+    urlEntry(`${siteUrl}/collections`, today),
     urlEntry(`${siteUrl}/lists`, today),
     urlEntry(`${siteUrl}/tv`, today),
+    ...franchiseCollectionIds.map((id) => urlEntry(`${siteUrl}/collections/${id}`, today)),
   ]
 
   const listingEntries = [
