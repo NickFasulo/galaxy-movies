@@ -16,8 +16,10 @@ const escapeHtml = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const prettyDate = (stamp) =>
-  /^\d{8}$/.test(stamp || '') ? `${MONTHS[Number(stamp.slice(4, 6)) - 1]} ${Number(stamp.slice(6, 8))}` : ''
+const prettyDate = (stamp) => {
+  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
+  return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : ''
+}
 
 const titlePath = (t) => `/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`
 

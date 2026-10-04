@@ -7,6 +7,10 @@ const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/r
 // client and caches hard, since free-tier Watchmode quota is monthly.
 const priceCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 const PRICE_TTL_SECONDS = 60 * 60 * 24
+// Empty results are usually transient (upstream hiccup, missing key) — don't
+// poison the day-long cache with them.
+const EMPTY_TTL_SECONDS = 60 * 10
+const EMPTY_TTL_MS = EMPTY_TTL_SECONDS * 1000
 
 const EMPTY = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null } }
 
@@ -62,10 +66,11 @@ export default async function handler(req, res) {
     payload = { region, fetchedAt: Date.now(), ...EMPTY }
   }
 
-  priceCache.set(cacheKey, payload)
+  const isEmpty = !payload.offers?.length && !payload.extras?.criticScore
+  priceCache.set(cacheKey, payload, { ttl: isEmpty ? EMPTY_TTL_MS : undefined })
   if (kv) {
     try {
-      await kv.set(cacheKey, payload, { ex: PRICE_TTL_SECONDS })
+      await kv.set(cacheKey, payload, { ex: isEmpty ? EMPTY_TTL_SECONDS : PRICE_TTL_SECONDS })
     } catch {}
   }
 

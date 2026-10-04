@@ -44,8 +44,8 @@ export async function getServerSideProps({ req, res }) {
     const sections = results.filter((section) => section.movies.length > 0)
     const changes = await withTimeout(
       getProviderChanges(sections.map((section) => section.key)),
-      null,
-      2000
+      2000,
+      {}
     ) || {}
 
     res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400')
@@ -60,9 +60,9 @@ export async function getServerSideProps({ req, res }) {
 const CHANGE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function formatChangeDate(stamp) {
-  if (!/^\d{8}$/.test(stamp || '')) return ''
-  const month = CHANGE_MONTHS[Number(stamp.slice(4, 6)) - 1]
-  return `${month} ${Number(stamp.slice(6, 8))}`
+  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
+  if (!m) return ''
+  return `${CHANGE_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}`
 }
 
 function ChangeList({ label, items, showDate = false }) {
