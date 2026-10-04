@@ -13,13 +13,14 @@ import { StarIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
+import { normalizeTvTitle } from '../../utils/tmdb'
 
 export const getServerSideProps = async (context) => {
   const { personId } = context.query
 
   try {
     const res = await fetch(
-      `https://api.themoviedb.org/3/person/${personId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=movie_credits`
+      `https://api.themoviedb.org/3/person/${personId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=movie_credits,tv_credits`
     )
 
     if (!res.ok) {
@@ -44,6 +45,22 @@ export const getServerSideProps = async (context) => {
       new Map(castList.map((m) => [m.id, m])).values()
     ).sort((a, b) => b.popularity - a.popularity)
 
+    // tv_credits include one entry per episode — dedupe and cap so prolific
+    // guest stars don't produce hundreds of cards.
+    const tvCreditList = [
+      ...(person.tv_credits?.cast || []),
+      ...(person.tv_credits?.crew || [])
+    ]
+    const uniqueTvShows = Array.from(
+      new Map(tvCreditList.map((m) => [m.id, m])).values()
+    )
+      .sort((a, b) => b.popularity - a.popularity)
+      .slice(0, 24)
+      .map((c) => ({
+        ...normalizeTvTitle(c),
+        character: c.character || c.roles?.[0]?.character || c.job || c.jobs?.[0]?.job || ''
+      }))
+
     if (context.res) {
       context.res.setHeader(
         'Cache-Control',
@@ -55,7 +72,8 @@ export const getServerSideProps = async (context) => {
       props: {
         person,
         directedMovies: uniqueDirected,
-        actingMovies: uniqueActing
+        actingMovies: uniqueActing,
+        tvShows: uniqueTvShows
       }
     }
   } catch (error) {
@@ -68,7 +86,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function PersonDetails({ person, directedMovies, actingMovies, error }) {
+export default function PersonDetails({ person, directedMovies, actingMovies, tvShows, error }) {
   if (error) {
     return (
       <Box minH='100vh' bg='transparent' p={8} textAlign='center' color='white'>
@@ -110,7 +128,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
   }
 
   const age = getAge()
-  const totalCredits = (directedMovies?.length || 0) + (actingMovies?.length || 0)
+  const totalCredits = (directedMovies?.length || 0) + (actingMovies?.length || 0) + (tvShows?.length || 0)
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -241,7 +259,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
 
                     <Box>
                       <Text color='gray.400' fontWeight='bold'>Known Credits</Text>
-                      <Text color='white'>{totalCredits} movies</Text>
+                      <Text color='white'>{totalCredits} credits</Text>
                     </Box>
                   </Flex>
                 </Box>
@@ -329,6 +347,32 @@ export default function PersonDetails({ person, directedMovies, actingMovies, er
                   </SimpleGrid>
                 </Box>
               )}
+
+              {tvShows?.length > 0 && (
+                <Box mt={2}>
+                  <Text
+                    color='gray.400'
+                    fontSize='xs'
+                    fontWeight='bold'
+                    textTransform='uppercase'
+                    textShadow='0 0 4px black'
+                    display='flex'
+                    alignItems='center'
+                    gap={3}
+                    mb={4}
+                    _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                    _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                  >
+                    TV Shows ({tvShows.length})
+                  </Text>
+
+                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
+                    {tvShows.map((show) => (
+                      <MovieCard key={show.id} movie={show} showRole={true} />
+                    ))}
+                  </SimpleGrid>
+                </Box>
+              )}
             </Flex>
           </Flex>
         </Flex>
@@ -344,7 +388,7 @@ function MovieCard({ movie, showRole }) {
   const [imgSrc, setImgSrc] = useState(posterPath)
 
   return (
-    <Link href={`/movies/${movie.id}`} passHref>
+    <Link href={movie.mediaType === 'tv' ? `/tv/${movie.id}` : `/movies/${movie.id}`} passHref>
       <Box
         bg='rgba(255, 255, 255, 0.05)'
         borderRadius='xl'

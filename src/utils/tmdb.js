@@ -260,6 +260,39 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
   }
 }
 
+export async function fetchListTv(discoverParams = {}, page = 1) {
+  const params = {
+    page,
+    include_adult: 'false',
+    'vote_count.gte': 50,
+    ...discoverParams
+  }
+
+  const data = await fetchTmdb('/discover/tv', params)
+  return {
+    ...data,
+    results: (data.results || [])
+      .filter(show => show.poster_path)
+      .map(normalizeTvTitle)
+  }
+}
+
+export async function fetchRecommendedTv(showId, page = 1) {
+  const data = await fetchTmdb(`/tv/${showId}/recommendations`, { page })
+  return {
+    ...data,
+    results: (data.results || [])
+      .filter(show => show.poster_path)
+      .map(normalizeTvTitle)
+  }
+}
+
+export async function searchTvByTitle(title) {
+  const data = await fetchTmdb('/search/tv', { query: title, include_adult: 'false' })
+  const show = (data.results || []).find(s => s.poster_path) || null
+  return show ? normalizeTvTitle(show) : null
+}
+
 export async function fetchRecommendedMovies(movieId, page = 1) {
   const data = await fetchTmdb(`/movie/${movieId}/recommendations`, { page })
   return {

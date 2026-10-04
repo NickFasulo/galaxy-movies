@@ -38,7 +38,7 @@ function renderMessageContent(content, links) {
       <Link
         key={index}
         as={NextLink}
-        href={`/movies/${link.movieId}`}
+        href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}
         color="blue.300"
         fontWeight="semibold"
         _hover={{ textDecoration: 'underline' }}
@@ -325,7 +325,7 @@ export default function ChatWidget() {
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
                   <Text color="whiteAlpha.900" textAlign="center" fontSize="sm">
-                    👋 Hi! I'm your movie search assistant. What are you looking for?
+                    👋 Hi! I'm your movie and TV show assistant. What are you looking for?
                   </Text>
                   <VStack spacing="2" align="stretch">
                     {quickActions.map((action, index) => (
@@ -388,7 +388,7 @@ export default function ChatWidget() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask about movies..."
+                placeholder="Ask about movies or shows..."
                 mr="2"
                 disabled={isLoading}
                 size="sm"

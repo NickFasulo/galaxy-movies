@@ -5,7 +5,7 @@ import { isWatchlisted, toggleWatchlist } from '../utils/userData'
 
 export default function WatchlistButton({ movie, withLabel = false, ...props }) {
   const data = useUserData()
-  const saved = isWatchlisted(movie.id, data)
+  const saved = isWatchlisted(movie.id, data, movie.mediaType || 'movie')
   const label = saved ? 'Saved to My List' : 'Save to My List'
 
   const handleClick = (e) => {

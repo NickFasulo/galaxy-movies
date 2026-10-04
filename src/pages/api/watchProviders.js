@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   }
 
   const region = /^[A-Z]{2}$/.test(req.query.region || '') ? req.query.region : 'US'
+  const mediaType = req.query.type === 'tv' ? 'tv' : 'movie'
   const ids = String(req.query.ids || '')
     .split(',')
     .map((s) => s.trim())
@@ -40,14 +41,14 @@ export default async function handler(req, res) {
 
   const results = {}
   const uncached = ids.filter((id) => {
-    const hit = providerCache.get(`${region}:${id}`)
+    const hit = providerCache.get(`${mediaType}:${region}:${id}`)
     if (hit) results[id] = hit
     return !hit
   })
 
   await Promise.all(uncached.map(async (id) => {
     try {
-      const resp = await fetch(`https://api.themoviedb.org/3/movie/${id}/watch/providers?api_key=${process.env.TMDB_API_KEY}`)
+      const resp = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/watch/providers?api_key=${process.env.TMDB_API_KEY}`)
       if (!resp.ok) {
         results[id] = []
         return
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
       const data = await resp.json()
       const flatrate = data.results?.[region]?.flatrate || []
       const providerIds = flatrate.map((p) => p.provider_id)
-      providerCache.set(`${region}:${id}`, providerIds)
+      providerCache.set(`${mediaType}:${region}:${id}`, providerIds)
       results[id] = providerIds
     } catch {
       results[id] = []

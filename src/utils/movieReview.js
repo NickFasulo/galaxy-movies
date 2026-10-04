@@ -31,8 +31,11 @@ function getOpenAI() {
   return openai
 }
 
-function reviewCacheKey(movieId) {
-  return `ai_review:${REVIEW_CACHE_VERSION}:${movieId}`
+// tv keys are namespaced — movie and tv ids overlap in TMDB.
+function reviewCacheKey(movieId, mediaType = 'movie') {
+  return mediaType === 'tv'
+    ? `ai_review:${REVIEW_CACHE_VERSION}:tv:${movieId}`
+    : `ai_review:${REVIEW_CACHE_VERSION}:${movieId}`
 }
 
 async function isWithinGlobalBudget(kv) {
@@ -74,12 +77,12 @@ async function writeCache(kv, key, value) {
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [] }) {
+export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie' }) {
   if (!movieId || !title || !overview) return null
 
   const trimmedOverview = overview.slice(0, MAX_OVERVIEW_LENGTH)
   const kv = getRedis()
-  const key = reviewCacheKey(movieId)
+  const key = reviewCacheKey(movieId, mediaType)
 
   const cached = await readCache(kv, key)
   if (cached) return cached
@@ -92,6 +95,8 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
     return null
   }
 
+  const noun = mediaType === 'tv' ? 'TV show' : 'movie'
+
   try {
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -101,11 +106,11 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
         {
           role: 'system',
           content:
-            'Write a concise, spoiler-free, clearly subjective movie recommendation. Do not invent facts or claim to be a professional critic.'
+            `Write a concise, spoiler-free, clearly subjective ${noun} recommendation. Do not invent facts or claim to be a professional critic.`
         },
         {
           role: 'user',
-          content: `Give a short review of the ${genres.join(', ') || 'movie'} "${title}" based only on this overview. Include who may enjoy it and one potential drawback: ${trimmedOverview}`
+          content: `Give a short review of the ${genres.join(', ') || noun} "${title}" based only on this overview. Include who may enjoy it and one potential drawback: ${trimmedOverview}`
         }
       ]
     })

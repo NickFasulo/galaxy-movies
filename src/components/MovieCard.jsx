@@ -72,11 +72,9 @@ function MovieCard({ movie, priority = false, badge = null }) {
             TV
           </Badge>
         )}
-        {!isTv && (
-          <Box position='absolute' top={2} right={2} zIndex={2}>
-            <WatchlistButton movie={movie} />
-          </Box>
-        )}
+        <Box position='absolute' top={2} right={2} zIndex={2}>
+          <WatchlistButton movie={movie} />
+        </Box>
         {badge && (
           <Box position='absolute' bottom={2} left={2} zIndex={2}>
             {badge}

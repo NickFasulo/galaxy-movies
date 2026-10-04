@@ -2,10 +2,14 @@ import OpenAI from 'openai'
 import { topicSeeds } from '../../../utils/topicSeeds'
 import {
   fetchListMovies,
+  fetchListTv,
   fetchRecommendedMovies,
+  fetchRecommendedTv,
   movieGenres,
+  tvGenres,
   searchKeywordId,
-  searchMovieByTitle
+  searchMovieByTitle,
+  searchTvByTitle
 } from '../../../utils/tmdb'
 import { MIN_INDEXABLE_MOVIES } from '../../../utils/contentOpportunities'
 import {
@@ -39,7 +43,31 @@ const DISCOVER_PARAM_ALLOWLIST = new Set([
   'sort_by'
 ])
 
+// /discover/tv supports a different param set — no runtime filter, and air
+// dates use first_air_date.* rather than primary_release_date.*.
+const TV_DISCOVER_PARAM_ALLOWLIST = new Set([
+  'with_genres',
+  'with_keywords',
+  'vote_average.gte',
+  'vote_average.lte',
+  'vote_count.gte',
+  'vote_count.lte',
+  'first_air_date.gte',
+  'first_air_date.lte',
+  'with_original_language',
+  'with_origin_country',
+  'with_networks',
+  'with_type',
+  'air_date.gte',
+  'air_date.lte',
+  'sort_by'
+])
+
 const GENRE_ID_LIST = Object.entries(movieGenres)
+  .map(([slug, genre]) => `${genre.id}=${slug}`)
+  .join(', ')
+
+const TV_GENRE_ID_LIST = Object.entries(tvGenres)
   .map(([slug, genre]) => `${genre.id}=${slug}`)
   .join(', ')
 
@@ -87,10 +115,11 @@ async function resolveKeywordsParam(rawValue) {
   return resolved.length ? resolved.join('|') : null
 }
 
-async function sanitizeDiscoverParams(rawParams = {}) {
+async function sanitizeDiscoverParams(rawParams = {}, media = 'movie') {
+  const allowlist = media === 'tv' ? TV_DISCOVER_PARAM_ALLOWLIST : DISCOVER_PARAM_ALLOWLIST
   const params = {}
   for (const [key, value] of Object.entries(rawParams)) {
-    if (!DISCOVER_PARAM_ALLOWLIST.has(key) || value === undefined || value === null || value === '') continue
+    if (!allowlist.has(key) || value === undefined || value === null || value === '') continue
     if (key === 'with_keywords') {
       const resolved = await resolveKeywordsParam(value)
       if (resolved) params[key] = resolved
@@ -105,6 +134,10 @@ async function draftDiscoverList(seed) {
   const client = getOpenAI()
   if (!client) return { error: 'OPENAI_API_KEY is not configured' }
 
+  const isTv = seed.media === 'tv'
+  const allowlist = isTv ? TV_DISCOVER_PARAM_ALLOWLIST : DISCOVER_PARAM_ALLOWLIST
+  const genreIdList = isTv ? TV_GENRE_ID_LIST : GENRE_ID_LIST
+
   const completion = await client.chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 300,
@@ -114,10 +147,10 @@ async function draftDiscoverList(seed) {
       {
         role: 'system',
         content:
-          'You design a TMDB /discover/movie filter set for a movie collection page targeting a search keyword. Reply with JSON: {"title": string, "tagline": string, "params": object}. ' +
+          `You design a TMDB /discover/${isTv ? 'tv' : 'movie'} filter set for a ${isTv ? 'TV show' : 'movie'} collection page targeting a search keyword. Reply with JSON: {"title": string, "tagline": string, "params": object}. ` +
           'Title: 4-9 natural words containing the core phrase of the keyword. Tagline: one plain sentence under 25 words. ' +
-          `params may only use these keys: ${[...DISCOVER_PARAM_ALLOWLIST].join(', ')}. ` +
-          `with_genres takes TMDB genre ids (${GENRE_ID_LIST}). ` +
+          `params may only use these keys: ${[...allowlist].join(', ')}. ` +
+          `with_genres takes TMDB ${isTv ? 'TV ' : ''}genre ids (${genreIdList}). ` +
           'with_keywords takes TMDB keyword names as an array (they get resolved to ids; only use well-known ones). ' +
           'Always include vote_count.gte >= 100 and sort_by. Prefer narrow-but-safe filters over broad ones.'
       },
@@ -140,7 +173,7 @@ async function draftDiscoverList(seed) {
     return { error: 'Generator returned an incomplete draft' }
   }
 
-  const params = await sanitizeDiscoverParams(draft.params)
+  const params = await sanitizeDiscoverParams(draft.params, seed.media)
   if (Object.keys(params).length === 0) {
     return { error: 'Draft had no usable discover params' }
   }
@@ -172,11 +205,14 @@ export default async function handler(req, res) {
   const results = []
   const existingSignatures = new Set(
     [...Object.values(curatedLists), ...Object.values(generated)]
-      .map((list) => list.params && paramsSignature(list.params))
+      .map((list) => list.params && `${list.media || 'movie'}|${paramsSignature(list.params)}`)
       .filter(Boolean)
   )
+  // movie and tv ids overlap in TMDB — source ids are namespaced by media.
   const existingMovieIds = new Set(
-    Object.values(generated).map((list) => list.movieId).filter(Boolean)
+    Object.values(generated)
+      .filter((list) => list.movieId)
+      .map((list) => `${list.media || 'movie'}:${list.movieId}`)
   )
 
   for (const seed of batch) {
@@ -187,31 +223,38 @@ export default async function handler(req, res) {
     }
 
     try {
+      const isTv = seed.media === 'tv'
       if (seed.type === 'similar') {
-        const movie = await searchMovieByTitle(seed.movieTitle)
-        if (!movie) {
-          await setSeedStatus(seed.slug, { status: 'rejected', reason: `No TMDB match for "${seed.movieTitle}"` })
-          results.push({ slug: seed.slug, status: 'rejected', reason: 'movie not found' })
+        const sourceTitle = seed.showTitle || seed.movieTitle
+        const source = isTv
+          ? await searchTvByTitle(sourceTitle)
+          : await searchMovieByTitle(sourceTitle)
+        if (!source) {
+          await setSeedStatus(seed.slug, { status: 'rejected', reason: `No TMDB match for "${sourceTitle}"` })
+          results.push({ slug: seed.slug, status: 'rejected', reason: 'title not found' })
           continue
         }
-        if (existingMovieIds.has(movie.id)) {
-          await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Duplicate source movie' })
-          results.push({ slug: seed.slug, status: 'rejected', reason: 'duplicate movie' })
+        const sourceKey = `${isTv ? 'tv' : 'movie'}:${source.id}`
+        if (existingMovieIds.has(sourceKey)) {
+          await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Duplicate source title' })
+          results.push({ slug: seed.slug, status: 'rejected', reason: 'duplicate source' })
           continue
         }
 
-        const data = await fetchRecommendedMovies(movie.id)
+        const data = isTv
+          ? await fetchRecommendedTv(source.id)
+          : await fetchRecommendedMovies(source.id)
         if ((data.results || []).length < MIN_INDEXABLE_MOVIES) {
           await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Too few recommendations' })
           results.push({ slug: seed.slug, status: 'rejected', reason: 'thin recommendations' })
           continue
         }
 
-        const title = `Movies Like ${movie.title}`
+        const title = `${isTv ? 'Shows' : 'Movies'} Like ${source.title}`
         const tagline = await draftTagline({
           title,
           keyword: seed.keyword,
-          context: `Source movie: ${movie.title} (${movie.release_date?.slice(0, 4) || 'n/a'}).`
+          context: `Source ${isTv ? 'show' : 'movie'}: ${source.title} (${source.release_date?.slice(0, 4) || 'n/a'}).`
         })
         if (!tagline) {
           results.push({ slug: seed.slug, status: 'skipped', reason: 'tagline generation failed' })
@@ -220,11 +263,12 @@ export default async function handler(req, res) {
 
         const saved = await saveGeneratedList(seed.slug, {
           type: 'similar',
+          media: isTv ? 'tv' : 'movie',
           title,
           tagline,
           group: 'generated',
-          movieId: movie.id,
-          movieTitle: movie.title,
+          movieId: source.id,
+          movieTitle: source.title,
           keyword: seed.keyword,
           createdAt: Date.now()
         })
@@ -242,22 +286,25 @@ export default async function handler(req, res) {
           continue
         }
 
-        const signature = paramsSignature(draft.params)
+        const signature = `${isTv ? 'tv' : 'movie'}|${paramsSignature(draft.params)}`
         if (existingSignatures.has(signature)) {
           await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Duplicate discover params' })
           results.push({ slug: seed.slug, status: 'rejected', reason: 'duplicate params' })
           continue
         }
 
-        const data = await fetchListMovies(draft.params)
+        const data = isTv
+          ? await fetchListTv(draft.params)
+          : await fetchListMovies(draft.params)
         if ((data.results || []).length < MIN_INDEXABLE_MOVIES) {
-          await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Too few matching movies' })
+          await setSeedStatus(seed.slug, { status: 'rejected', reason: 'Too few matching titles' })
           results.push({ slug: seed.slug, status: 'rejected', reason: 'thin results' })
           continue
         }
 
         const saved = await saveGeneratedList(seed.slug, {
           type: 'discover',
+          media: isTv ? 'tv' : 'movie',
           title: draft.title,
           tagline: draft.tagline,
           group: 'generated',

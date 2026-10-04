@@ -33,8 +33,11 @@ function getOpenAI() {
   return openai
 }
 
-function cacheKey(movieId) {
-  return `ai_similar:${SIMILAR_CACHE_VERSION}:${movieId}`
+// tv keys are namespaced — movie and tv ids overlap in TMDB.
+function cacheKey(movieId, mediaType = 'movie') {
+  return mediaType === 'tv'
+    ? `ai_similar:${SIMILAR_CACHE_VERSION}:tv:${movieId}`
+    : `ai_similar:${SIMILAR_CACHE_VERSION}:${movieId}`
 }
 
 async function isWithinGlobalBudget(kv) {
@@ -76,11 +79,11 @@ async function writeCache(kv, key, value) {
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [] }) {
+export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie' }) {
   if (!movieId || !title || candidates.length === 0) return []
 
   const kv = getRedis()
-  const key = cacheKey(movieId)
+  const key = cacheKey(movieId, mediaType)
 
   const cached = await readCache(kv, key)
   if (cached) return cached
@@ -92,6 +95,8 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
     console.warn(`AI similar-movies generation budget exceeded; skipping generation for movie ${movieId}`)
     return []
   }
+
+  const noun = mediaType === 'tv' ? 'TV show' : 'movie'
 
   const trimmedCandidates = candidates.slice(0, MAX_CANDIDATES).map((candidate) => ({
     id: candidate.id,
@@ -109,12 +114,12 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
         {
           role: 'system',
           content:
-            'You recommend which candidate movies best suit a fan of a given movie. Pick up to 5 of the best-fitting candidates and, for each, write one short reason (under 20 words) tied to specific tone, theme, or style overlap with the source movie — not just a shared genre label. Only use candidates from the provided list; do not invent movies. Respond with only a JSON object of the shape {"recommendations": [{"id": number, "reason": string}]}, ranked best-first. If none fit well, return an empty array.'
+            `You recommend which candidate ${noun}s best suit a fan of a given ${noun}. Pick up to 5 of the best-fitting candidates and, for each, write one short reason (under 20 words) tied to specific tone, theme, or style overlap with the source ${noun} — not just a shared genre label. Only use candidates from the provided list; do not invent ${noun}s. Respond with only a JSON object of the shape {"recommendations": [{"id": number, "reason": string}]}, ranked best-first. If none fit well, return an empty array.`
         },
         {
           role: 'user',
           content: JSON.stringify({
-            sourceMovie: {
+            sourceTitle: {
               title,
               genres,
               overview: (overview || '').slice(0, MAX_OVERVIEW_LENGTH)
@@ -140,7 +145,8 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
           title: candidate.title,
           posterPath: candidate.poster_path || null,
           releaseDate: candidate.release_date || null,
-          reason: pick.reason.trim()
+          reason: pick.reason.trim(),
+          mediaType
         }
       })
 

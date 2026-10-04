@@ -139,10 +139,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
     return uniqueMovies
   }, [data])
 
-  // Streaming badges query movie watch-provider endpoints only — TV badge
-  // parity is phase 2, so shows are filtered out of the lookup.
-  const movieOnlyList = useMemo(() => moviesList.filter(m => m.mediaType !== 'tv'), [moviesList])
-  const isStreaming = useStreamingBadges(movieOnlyList)
+  const isStreaming = useStreamingBadges(moviesList)
 
   const hasReachedEnd = Boolean(
     data?.pages?.length &&

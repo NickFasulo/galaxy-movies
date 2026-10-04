@@ -95,38 +95,44 @@ function update(mutator) {
 
 export function toggleWatchlist(movie) {
   update((data) => {
-    const exists = data.watchlist.some((item) => item.id === movie.id)
+    const mediaType = movie.mediaType || 'movie'
+    const matches = (item) => item.id === movie.id && (item.mediaType || 'movie') === mediaType
+    const exists = data.watchlist.some(matches)
     return {
       ...data,
       watchlist: exists
-        ? data.watchlist.filter((item) => item.id !== movie.id)
+        ? data.watchlist.filter((item) => !matches(item))
         : [{
             id: movie.id,
-            title: movie.title,
+            mediaType,
+            title: movie.title || movie.name,
             poster_path: movie.poster_path || null,
-            year: (movie.release_date || '').slice(0, 4) || null,
+            year: (movie.release_date || movie.first_air_date || '').slice(0, 4) || null,
             added_at: new Date().toISOString()
           }, ...data.watchlist]
     }
   })
 }
 
-export function isWatchlisted(id, data = getUserData()) {
-  return data.watchlist.some((item) => item.id === id)
+export function isWatchlisted(id, data = getUserData(), mediaType = 'movie') {
+  return data.watchlist.some((item) => item.id === id && (item.mediaType || 'movie') === mediaType)
 }
 
-// rating is 1..10; null/undefined removes the rating
-export function setRating(id, rating, title) {
+// rating is 1..10; null/undefined removes the rating.
+// tv ratings are namespaced ('tv:{id}') since movie/tv ids overlap in TMDB.
+export function setRating(id, rating, title, mediaType = 'movie') {
   update((data) => {
     const ratings = { ...data.ratings }
-    if (rating == null) delete ratings[id]
-    else ratings[id] = { rating, title }
+    const key = mediaType === 'tv' ? `tv:${id}` : id
+    if (rating == null) delete ratings[key]
+    else ratings[key] = { rating, title, mediaType }
     return { ...data, ratings }
   })
 }
 
-export function getRating(id, data = getUserData()) {
-  return data.ratings[id]?.rating || null
+export function getRating(id, data = getUserData(), mediaType = 'movie') {
+  const key = mediaType === 'tv' ? `tv:${id}` : id
+  return data.ratings[key]?.rating || null
 }
 
 export function setServices(region, providers) {

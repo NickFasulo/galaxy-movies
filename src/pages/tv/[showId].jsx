@@ -9,32 +9,39 @@ import {
   Badge,
   Heading,
   Text,
-  Box
+  Box,
+  Link as ChakraLink
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import VideoModal from '../../components/VideoModal'
+import WatchlistButton from '../../components/WatchlistButton'
+import RatingWidget from '../../components/RatingWidget'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
 import ActorAvatar from '../../components/ActorAvatar'
+import SimilarMovies from '../../components/SimilarMovies'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
 import { useUserData } from '../../hooks/useUserData'
-import { getProviderId } from '../../utils/tmdb'
+import { getProviderId, normalizeTvTitle } from '../../utils/tmdb'
+import { getOrGenerateMovieReview } from '../../utils/movieReview'
+import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
 
 export const getServerSideProps = async (context) => {
   const { showId } = context.query
 
   try {
-    const [showRes, providersRes, creditsRes, contentRatingsRes] = await Promise.all([
+    const [showRes, providersRes, creditsRes, contentRatingsRes, recommendationsRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`),
       fetch(`https://api.themoviedb.org/3/tv/${showId}/watch/providers?api_key=${process.env.TMDB_API_KEY}`),
       fetch(`https://api.themoviedb.org/3/tv/${showId}/aggregate_credits?api_key=${process.env.TMDB_API_KEY}`),
-      fetch(`https://api.themoviedb.org/3/tv/${showId}/content_ratings?api_key=${process.env.TMDB_API_KEY}`)
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/content_ratings?api_key=${process.env.TMDB_API_KEY}`),
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/recommendations?api_key=${process.env.TMDB_API_KEY}`)
     ])
 
     if (!showRes.ok) {
@@ -62,8 +69,34 @@ export const getServerSideProps = async (context) => {
     const providerNames = ['flatrate', 'rent', 'buy']
       .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
-    const [validVideoKey, providerAffiliateLinks] = await Promise.all([
+    const recommendationsData = recommendationsRes.ok ? await recommendationsRes.json() : { results: [] }
+    const recommendationCandidates = (recommendationsData.results || [])
+      .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== showData.id)
+      .map(normalizeTvTitle)
+
+    const showGenres = showData.genres?.map((g) => g.name) || []
+
+    const [validVideoKey, aiSynopsis, similarShows, providerAffiliateLinks] = await Promise.all([
       getFirstPlayableKey(showData.videos?.results),
+      showData.overview
+        ? getOrGenerateMovieReview({
+            movieId: showData.id,
+            title: showData.name,
+            overview: showData.overview,
+            genres: showGenres,
+            mediaType: 'tv'
+          })
+        : null,
+      recommendationCandidates.length > 0
+        ? getOrGenerateSimilarMovies({
+            movieId: showData.id,
+            title: showData.name,
+            overview: showData.overview,
+            genres: showGenres,
+            candidates: recommendationCandidates,
+            mediaType: 'tv'
+          })
+        : [],
       getProviderAffiliateLinks(providerNames)
     ])
 
@@ -82,6 +115,8 @@ export const getServerSideProps = async (context) => {
         creators,
         topCast,
         ageRating: cert,
+        aiSynopsis: aiSynopsis || null,
+        similarShows: similarShows || [],
         providerAffiliateLinks
       }
     }
@@ -95,7 +130,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function TvShow({ show, showError, videoKey, watchProviders, creators, topCast, ageRating, providerAffiliateLinks }) {
+export default function TvShow({ show, showError, videoKey, watchProviders, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks }) {
   if (showError) {
     return (
       <>
@@ -132,6 +167,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
     services.providers.map((key) => getProviderId(key, services.region)).filter(Boolean)
   )
   const network = show.networks?.find((n) => n.logo_path)
+  const listItem = normalizeTvTitle(show)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/tv/${show.id}`
   const description = show.overview || `Where to watch ${show.name}.`
@@ -297,7 +333,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
         />
       </Box>
 
-      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '4rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
+      <Flex position='relative' zIndex={1} direction='column' align='center' minH='100vh' pt={{ base: '4rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
 
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
@@ -397,6 +433,13 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
               {show.overview || 'Description unavailable.'}
             </Text>
 
+            {aiSynopsis && (
+              <Box p={4} bg='whiteAlpha.100' borderRadius='md' borderLeft='3px solid' borderColor='purple.400'>
+                <Text fontSize='sm' fontWeight='semibold' color='white' mb={1}>Galaxy Bot&apos;s Take</Text>
+                <Text fontSize='sm' color='whiteAlpha.800'>{aiSynopsis}</Text>
+              </Box>
+            )}
+
             <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
               <Flex align='center'>
                 <StarIcon boxSize={5} color='gold' />
@@ -409,9 +452,16 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
                 >
                   {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
                 </Text>
+                <RatingWidget movie={listItem} />
               </Flex>
               <Flex align='center' justify='flex-end'>
-                {network ? <ProductionLogo company={network} /> : null}
+                {network ? (
+                  <Link href={`/network/${network.id}`} passHref legacyBehavior>
+                    <ChakraLink>
+                      <ProductionLogo company={network} />
+                    </ChakraLink>
+                  </Link>
+                ) : null}
               </Flex>
             </Flex>
 
@@ -425,6 +475,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
               my='1rem'
             >
               <VideoModal videoKey={videoKey} />
+              <WatchlistButton movie={listItem} withLabel />
               <BackButton />
             </Flex>
 
@@ -480,6 +531,9 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
           </Flex>
 
         </Flex>
+        <Box w='100%'>
+          <SimilarMovies movies={similarShows} />
+        </Box>
       </Flex>
       </Box>
     </>

@@ -49,5 +49,25 @@ export const topicSeeds = [
   { slug: 'movies-to-watch-high', keyword: 'movies to watch high', type: 'discover', hint: 'Visually trippy or absurdly funny films — stoner-comedy keywords, surreal animated or psychedelic picks.' },
   { slug: 'scary-movies-to-watch', keyword: 'scary movies to watch', type: 'discover', hint: 'The scariest well-regarded horror films — horror genre with strong ratings.' },
   { slug: 'classic-movies-to-watch', keyword: 'classic movies to watch', type: 'discover', hint: 'Essential pre-1990 classics that still hold up — high vote average, high vote counts.' },
-  { slug: 'mind-bending-horror-movies', keyword: 'mind bending horror movies', type: 'discover', hint: 'Horror films with psychological or reality-twisting angles — psychological-horror / surreal keywords where possible.' }
+  { slug: 'mind-bending-horror-movies', keyword: 'mind bending horror movies', type: 'discover', hint: 'Horror films with psychological or reality-twisting angles — psychological-horror / surreal keywords where possible.' },
+
+  // media: 'tv' seeds run the same pipeline against /discover/tv and
+  // /tv/{id}/recommendations — TMDB tv genre ids differ from movie ids.
+  { slug: 'shows-like-breaking-bad', keyword: 'shows like breaking bad', type: 'similar', media: 'tv', showTitle: 'Breaking Bad' },
+  { slug: 'shows-like-game-of-thrones', keyword: 'shows like game of thrones', type: 'similar', media: 'tv', showTitle: 'Game of Thrones' },
+  { slug: 'shows-like-the-office', keyword: 'shows like the office', type: 'similar', media: 'tv', showTitle: 'The Office' },
+  { slug: 'shows-like-stranger-things', keyword: 'shows like stranger things', type: 'similar', media: 'tv', showTitle: 'Stranger Things' },
+  { slug: 'shows-like-succession', keyword: 'shows like succession', type: 'similar', media: 'tv', showTitle: 'Succession' },
+  { slug: 'shows-like-true-detective', keyword: 'shows like true detective', type: 'similar', media: 'tv', showTitle: 'True Detective' },
+  { slug: 'shows-like-fleabag', keyword: 'shows like fleabag', type: 'similar', media: 'tv', showTitle: 'Fleabag' },
+  { slug: 'shows-like-the-bear', keyword: 'shows like the bear', type: 'similar', media: 'tv', showTitle: 'The Bear' },
+  { slug: 'shows-like-dark', keyword: 'shows like dark', type: 'similar', media: 'tv', showTitle: 'Dark' },
+  { slug: 'shows-like-severance', keyword: 'shows like severance', type: 'similar', media: 'tv', showTitle: 'Severance' },
+
+  { slug: 'underrated-tv-shows', keyword: 'underrated tv shows', type: 'discover', media: 'tv', hint: 'Well-reviewed series most people missed — high vote average, moderate-to-low vote counts.' },
+  { slug: 'binge-worthy-tv-shows', keyword: 'binge worthy tv shows', type: 'discover', media: 'tv', hint: 'Addictive multi-season series — high popularity and strong ratings.' },
+  { slug: 'best-miniseries', keyword: 'best miniseries', type: 'discover', media: 'tv', hint: 'Top-rated limited series — with_type 2 (Miniseries), high vote average.' },
+  { slug: 'feel-good-tv-shows', keyword: 'feel good tv shows', type: 'discover', media: 'tv', hint: 'Warm, uplifting comedies and light dramas — crowd-pleasing and well-reviewed.' },
+  { slug: 'crime-shows-to-watch', keyword: 'crime shows to watch', type: 'discover', media: 'tv', hint: 'Acclaimed crime dramas and procedurals — crime genre with strong ratings.' },
+  { slug: 'british-tv-shows-to-watch', keyword: 'british tv shows to watch', type: 'discover', media: 'tv', hint: 'Well-regarded UK series — with_origin_country GB, high vote average.' }
 ]

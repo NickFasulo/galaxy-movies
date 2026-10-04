@@ -6,13 +6,14 @@ import { getRating, setRating } from '../utils/userData'
 
 export default function RatingWidget({ movie }) {
   const data = useUserData()
-  const rating = getRating(movie.id, data)
+  const mediaType = movie.mediaType || 'movie'
+  const rating = getRating(movie.id, data, mediaType)
   const [hovered, setHovered] = useState(null)
   const { isOpen, onToggle, onClose } = useDisclosure()
   const shown = hovered ?? rating ?? 0
 
   const pick = (n) => {
-    setRating(movie.id, n === rating ? null : n, movie.title)
+    setRating(movie.id, n === rating ? null : n, movie.title || movie.name, mediaType)
     onClose()
   }
 
@@ -25,7 +26,7 @@ export default function RatingWidget({ movie }) {
           align='center'
           gap={1}
           onClick={onToggle}
-          aria-label={rating ? `Your rating: ${rating}/10` : 'Rate this movie'}
+          aria-label={rating ? `Your rating: ${rating}/10` : `Rate this ${mediaType === 'tv' ? 'show' : 'movie'}`}
           color={rating ? 'white' : 'gray.400'}
           fontSize='xs'
           _hover={{ color: 'white' }}

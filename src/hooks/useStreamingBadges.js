@@ -4,6 +4,8 @@ import { useUserData } from './useUserData'
 import { getProviderId } from '../utils/tmdb'
 
 // api/watchProviders truncates to MAX_IDS=50 — chunk so long lists (home feed) stay covered.
+// Movie and TV ids overlap in TMDB, so chunks are split per media type and
+// membership is keyed `type:id`.
 const CHUNK = 50
 
 export function useStreamingBadges(movies) {
@@ -14,18 +16,25 @@ export function useStreamingBadges(movies) {
   ), [services])
 
   const chunks = useMemo(() => {
+    const byType = { movie: [], tv: [] }
+    for (const m of movies) {
+      byType[m.mediaType === 'tv' ? 'tv' : 'movie'].push(m)
+    }
     const out = []
-    for (let i = 0; i < movies.length; i += CHUNK) {
-      out.push(movies.slice(i, i + CHUNK).map((m) => m.id).join(','))
+    for (const type of ['movie', 'tv']) {
+      const list = byType[type]
+      for (let i = 0; i < list.length; i += CHUNK) {
+        out.push({ type, ids: list.slice(i, i + CHUNK).map((m) => m.id).join(',') })
+      }
     }
     return out
   }, [movies])
 
   const results = useQueries(
-    chunks.map((ids) => ({
-      queryKey: ['watchProviders', services.region, ids],
+    chunks.map(({ type, ids }) => ({
+      queryKey: ['watchProviders', type, services.region, ids],
       queryFn: async () => {
-        const resp = await fetch(`/api/watchProviders?region=${services.region}&ids=${ids}`)
+        const resp = await fetch(`/api/watchProviders?region=${services.region}&ids=${ids}&type=${type}`)
         if (!resp.ok) throw new Error('Provider lookup failed')
         return resp.json()
       },
@@ -35,11 +44,12 @@ export function useStreamingBadges(movies) {
   )
 
   const streamingIds = new Set()
-  for (const r of results) {
+  results.forEach((r, i) => {
+    const type = chunks[i]?.type || 'movie'
     for (const [id, providerIds] of Object.entries(r.data?.results || {})) {
-      if (providerIds.some((pid) => myProviderIds.has(pid))) streamingIds.add(Number(id))
+      if (providerIds.some((pid) => myProviderIds.has(pid))) streamingIds.add(`${type}:${id}`)
     }
-  }
+  })
 
-  return (movie) => streamingIds.has(movie.id)
+  return (movie) => streamingIds.has(`${movie.mediaType === 'tv' ? 'tv' : 'movie'}:${movie.id}`)
 }

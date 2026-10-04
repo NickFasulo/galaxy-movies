@@ -29,6 +29,7 @@ function urlEntry(loc, lastmod) {
 
 const PAGES_PER_LIST = 2
 const CREDITS_SAMPLE_SIZE = 60
+const TV_CREDITS_SAMPLE_SIZE = 30
 
 export async function getServerSideProps({ res }) {
   const today = new Date().toISOString().split('T')[0]
@@ -85,6 +86,7 @@ export async function getServerSideProps({ res }) {
   const showEntries = new Map()
   const personIds = new Set()
   const companyIds = new Set()
+  const networkIds = new Set()
 
   try {
     const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
@@ -166,6 +168,31 @@ export async function getServerSideProps({ res }) {
         if (company?.id) companyIds.add(company.id)
       }
     }
+
+    const creditsSampleShows = Array.from(showEntries.keys())
+      .slice(0, TV_CREDITS_SAMPLE_SIZE)
+      .map(id => allShows.find(show => show.id === id))
+      .filter(Boolean)
+    const tvDetailResults = await Promise.allSettled(
+      creditsSampleShows.map(show =>
+        fetch(
+          `https://api.themoviedb.org/3/tv/${show.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=aggregate_credits`
+        ).then(r => r.ok ? r.json() : null)
+      )
+    )
+
+    for (const result of tvDetailResults) {
+      if (result.status !== 'fulfilled' || !result.value) continue
+      const { aggregate_credits, networks = [], created_by = [] } = result.value
+      const { cast = [] } = aggregate_credits || {}
+
+      for (const person of [...cast.slice(0, 10), ...created_by]) {
+        if (person?.id) personIds.add(person.id)
+      }
+      for (const network of networks) {
+        if (network?.id) networkIds.add(network.id)
+      }
+    }
   } catch (error) {
     console.error('Error fetching data for sitemap:', error)
   }
@@ -186,6 +213,10 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/company/${id}`, today)
   )
 
+  const dynamicNetworkEntries = Array.from(networkIds, id =>
+    urlEntry(`${siteUrl}/network/${id}`, today)
+  )
+
   const allEntries = [
     ...staticEntries,
     ...listingEntries,
@@ -193,6 +224,7 @@ export async function getServerSideProps({ res }) {
     ...dynamicShowEntries,
     ...dynamicPersonEntries,
     ...dynamicCompanyEntries,
+    ...dynamicNetworkEntries,
   ]
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

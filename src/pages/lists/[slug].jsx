@@ -4,7 +4,7 @@ import MovieGrid from '../../components/MovieGrid'
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-import { fetchListMovies, fetchRecommendedMovies } from '../../utils/tmdb'
+import { fetchListMovies, fetchListTv, fetchRecommendedMovies, fetchRecommendedTv } from '../../utils/tmdb'
 import { getCuratedList } from '../../utils/curatedLists'
 import { getGeneratedList } from '../../utils/generatedLists'
 import { getOrGenerateListIntro } from '../../utils/listIntro'
@@ -14,9 +14,10 @@ export async function getServerSideProps({ params, res }) {
   if (!list) return { notFound: true }
 
   try {
+    const isTv = list.media === 'tv'
     const data = list.type === 'similar'
-      ? await fetchRecommendedMovies(list.movieId)
-      : await fetchListMovies(list.params)
+      ? (isTv ? await fetchRecommendedTv(list.movieId) : await fetchRecommendedMovies(list.movieId))
+      : (isTv ? await fetchListTv(list.params) : await fetchListMovies(list.params))
     const movies = data.results || []
 
     const intro = await getOrGenerateListIntro({
@@ -59,9 +60,9 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Movie',
+        '@type': movie.mediaType === 'tv' ? 'TVSeries' : 'Movie',
         name: movie.title,
-        url: `${siteUrl}/movies/${movie.id}`,
+        url: `${siteUrl}/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`,
         image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
         datePublished: movie.release_date || undefined
       }

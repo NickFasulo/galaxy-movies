@@ -1,21 +1,19 @@
 import { fetchTmdb } from './tmdb'
 
-async function searchMoviesByQuery(query, page = 1) {
+async function searchMultiByQuery(query, page = 1) {
   try {
-    const data = await fetchTmdb('/search/movie', {
+    const data = await fetchTmdb('/search/multi', {
       query,
       page,
       include_adult: false
     })
 
-    return {
-      results: (data.results || []).filter(movie => movie.poster_path),
-      total_pages: data.total_pages,
-      total_results: data.total_results
-    }
+    return (data.results || []).filter(
+      (item) => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path
+    )
   } catch (error) {
-    console.error('Error searching movies:', error)
-    return { results: [], total_pages: 0, total_results: 0 }
+    console.error('Error searching titles:', error)
+    return []
   }
 }
 
@@ -81,14 +79,17 @@ export async function resolveMovieMentions(mentions) {
   const resolved = await Promise.all(
     mentions.map(async (mention) => {
       try {
-        const { results } = await searchMoviesByQuery(mention.title, 1)
-        const bestMatch = results.find((movie) =>
-          movie.release_date && movie.release_date.startsWith(mention.year)
-        ) || results[0]
+        const results = await searchMultiByQuery(mention.title, 1)
+        const bestMatch = results.find((item) => {
+          const date = item.release_date || item.first_air_date
+          return date && date.startsWith(mention.year)
+        }) || results[0]
 
-        return bestMatch ? { match: mention.match, movieId: bestMatch.id } : null
+        return bestMatch
+          ? { match: mention.match, movieId: bestMatch.id, mediaType: bestMatch.media_type }
+          : null
       } catch (error) {
-        console.error(`Error resolving movie mention "${mention.title}":`, error)
+        console.error(`Error resolving title mention "${mention.title}":`, error)
         return null
       }
     })
