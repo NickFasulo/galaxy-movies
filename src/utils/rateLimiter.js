@@ -1,5 +1,5 @@
 const { LRUCache } = require('lru-cache')
-const { Redis } = require('@upstash/redis')
+const { getRedis } = require('./redis')
 
 const BOT_PATTERNS = [
   /bot/i,
@@ -37,19 +37,6 @@ const ALLOWED_BOT_PATTERNS = [
 ]
 
 const distributedFallbackCounts = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
-
-let redis
-function getRedis() {
-  if (redis) return redis
-  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
-    return null
-  }
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
-    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN,
-  })
-  return redis
-}
 
 function isBot(userAgent) {
   if (!userAgent) return true

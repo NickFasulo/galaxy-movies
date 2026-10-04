@@ -1,8 +1,6 @@
 import { LRUCache } from 'lru-cache'
-import { Redis } from '@upstash/redis'
+import { getRedis } from '../../utils/redis'
 const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
-
-let redis
 
 const analyticsCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 
@@ -14,18 +12,6 @@ export const config = {
       sizeLimit: '5kb'
     }
   }
-}
-
-function getRedis() {
-  if (redis) return redis
-  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
-    return null
-  }
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
-    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN,
-  })
-  return redis
 }
 
 async function trackChatSession(sessionData) {

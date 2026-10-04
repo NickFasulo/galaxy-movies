@@ -1,7 +1,5 @@
-import { Redis } from '@upstash/redis'
+import { getRedis } from './redis'
 import { curatedLists } from './curatedLists'
-
-let redis
 
 const LIST_KEY = 'content:list'
 const LIST_INDEX_KEY = 'content:lists:index'
@@ -10,18 +8,6 @@ const RUN_LOG_KEY = 'content:runs'
 const MAX_RUN_LOG_ENTRIES = 50
 
 export const MAX_GENERATED_LISTS = 100
-
-function getRedis() {
-  if (redis) return redis
-  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
-    return null
-  }
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
-    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN
-  })
-  return redis
-}
 
 export function paramsSignature(params = {}) {
   return Object.keys(params)

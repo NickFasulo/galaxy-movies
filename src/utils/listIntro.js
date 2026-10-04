@@ -1,9 +1,8 @@
 import OpenAI from 'openai'
-import { Redis } from '@upstash/redis'
+import { getRedis } from './redis'
 import { LRUCache } from 'lru-cache'
 
 let openai
-let redis
 
 const INTRO_CACHE_VERSION = 'v1'
 const INTRO_TTL_SECONDS = 60 * 60 * 24 * 180
@@ -12,18 +11,6 @@ const MAX_SAMPLE_TITLES = 5
 const memoryIntroCache = new LRUCache({ max: 100, ttl: INTRO_TTL_SECONDS * 1000 })
 
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 10
-
-function getRedis() {
-  if (redis) return redis
-  if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
-    return null
-  }
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
-    token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN
-  })
-  return redis
-}
 
 function getOpenAI() {
   if (!process.env.OPENAI_API_KEY) return null

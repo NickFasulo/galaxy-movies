@@ -31,6 +31,7 @@ import { getProviderId } from '../../utils/tmdb'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
+import { withTimeout } from '../../utils/withTimeout'
 
 export const getServerSideProps = async (context) => {
   const { movieId } = context.query
@@ -75,23 +76,23 @@ export const getServerSideProps = async (context) => {
       .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
     const [validVideoKey, aiSynopsis, similarMovies, providerAffiliateLinks] = await Promise.all([
-      getFirstPlayableKey(movieData.videos?.results),
+      withTimeout(getFirstPlayableKey(movieData.videos?.results), 3000, null),
       movieData.overview
-        ? getOrGenerateMovieReview({
+        ? withTimeout(getOrGenerateMovieReview({
             movieId: movieData.id,
             title: movieData.title,
             overview: movieData.overview,
             genres: movieData.genres?.map((g) => g.name) || []
-          })
+          }), 4500, null)
         : null,
       recommendationCandidates.length > 0
-        ? getOrGenerateSimilarMovies({
+        ? withTimeout(getOrGenerateSimilarMovies({
             movieId: movieData.id,
             title: movieData.title,
             overview: movieData.overview,
             genres: movieData.genres?.map((g) => g.name) || [],
             candidates: recommendationCandidates
-          })
+          }), 4500, [])
         : [],
       getProviderAffiliateLinks(providerNames)
     ])
@@ -108,6 +109,8 @@ export const getServerSideProps = async (context) => {
         movie: movieData,
         videoKey: validVideoKey || null,
         watchProviders: userProviders,
+        watchProvidersByRegion: providersData.results || {},
+        detectedRegion: countryCode,
         director,
         topCast,
         ageRating: cert,
@@ -126,7 +129,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks }) {
+export default function Movie({ movie, movieError, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks }) {
   if (movieError) {
     return (
       <>
@@ -356,7 +359,17 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} movieTitle={movie.title} affiliateLinks={providerAffiliateLinks} myProviderIds={myProviderIds} />
+              <WatchProviders
+                watchProviders={watchProviders}
+                allWatchProviders={watchProvidersByRegion}
+                detectedRegion={detectedRegion}
+                movieTitle={movie.title}
+                affiliateLinks={providerAffiliateLinks}
+                myProviderIds={myProviderIds}
+                tmdbId={movie.id}
+                mediaType='movie'
+                releaseYear={Number((movie.release_date || '').slice(0, 4)) || null}
+              />
             </Box>
 
           </Flex>

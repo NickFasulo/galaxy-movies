@@ -31,6 +31,7 @@ import { getProviderId, normalizeTvTitle } from '../../utils/tmdb'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
+import { withTimeout } from '../../utils/withTimeout'
 
 export const getServerSideProps = async (context) => {
   const { showId } = context.query
@@ -77,25 +78,25 @@ export const getServerSideProps = async (context) => {
     const showGenres = showData.genres?.map((g) => g.name) || []
 
     const [validVideoKey, aiSynopsis, similarShows, providerAffiliateLinks] = await Promise.all([
-      getFirstPlayableKey(showData.videos?.results),
+      withTimeout(getFirstPlayableKey(showData.videos?.results), 3000, null),
       showData.overview
-        ? getOrGenerateMovieReview({
+        ? withTimeout(getOrGenerateMovieReview({
             movieId: showData.id,
             title: showData.name,
             overview: showData.overview,
             genres: showGenres,
             mediaType: 'tv'
-          })
+          }), 4500, null)
         : null,
       recommendationCandidates.length > 0
-        ? getOrGenerateSimilarMovies({
+        ? withTimeout(getOrGenerateSimilarMovies({
             movieId: showData.id,
             title: showData.name,
             overview: showData.overview,
             genres: showGenres,
             candidates: recommendationCandidates,
             mediaType: 'tv'
-          })
+          }), 4500, [])
         : [],
       getProviderAffiliateLinks(providerNames)
     ])
@@ -112,6 +113,8 @@ export const getServerSideProps = async (context) => {
         show: showData,
         videoKey: validVideoKey || null,
         watchProviders: userProviders,
+        watchProvidersByRegion: providersData.results || {},
+        detectedRegion: countryCode,
         creators,
         topCast,
         ageRating: cert,
@@ -130,7 +133,7 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function TvShow({ show, showError, videoKey, watchProviders, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks }) {
+export default function TvShow({ show, showError, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks }) {
   if (showError) {
     return (
       <>
@@ -357,7 +360,17 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
             </Wrap>
 
             <Box w='20rem' maxH='300px' overflowY='auto'>
-              <WatchProviders watchProviders={watchProviders} movieTitle={show.name} affiliateLinks={providerAffiliateLinks} myProviderIds={myProviderIds} />
+              <WatchProviders
+                watchProviders={watchProviders}
+                allWatchProviders={watchProvidersByRegion}
+                detectedRegion={detectedRegion}
+                movieTitle={show.name}
+                affiliateLinks={providerAffiliateLinks}
+                myProviderIds={myProviderIds}
+                tmdbId={show.id}
+                mediaType='tv'
+                releaseYear={Number((show.first_air_date || '').slice(0, 4)) || null}
+              />
             </Box>
 
           </Flex>

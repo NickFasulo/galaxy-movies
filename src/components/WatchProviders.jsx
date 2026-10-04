@@ -1,7 +1,10 @@
 import Image from 'next/image'
-import NextLink from 'next/link'
-import { Box, Flex, Text, Tooltip, Link } from '@chakra-ui/react'
+import { useMemo, useState } from 'react'
+import { Box, Flex, Text, Tooltip, Link, Select } from '@chakra-ui/react'
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
+import { sameStore } from '../utils/prices'
+import { usePrices } from '../hooks/usePrices'
+import { useUserData } from '../hooks/useUserData'
 // import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
 
 // Affiliate monetization disabled — uncomment SurfsharkLink + its usages to re-enable.
@@ -21,27 +24,35 @@ function SurfsharkLink() {
   )
 }
 
-function ProviderIcon({ provider, movieTitle, affiliateLink, isMine }) {
+function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }) {
+  const caption = offer?.price != null ? `$${offer.price.toFixed(2)}` : null
   const icon = (
-    <Box
-      position='relative'
-      width='32px'
-      height='32px'
-      borderRadius='0.375rem'
-      {...(isMine ? { boxShadow: '0 0 0 2px #48bb78' } : {})}
-    >
-      <Image
-        src={provider.logo_path}
-        alt={provider.provider_name}
-        fill
-        style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
-      />
-    </Box>
+    <Flex direction='column' align='center' w='32px'>
+      <Box
+        position='relative'
+        width='32px'
+        height='32px'
+        borderRadius='0.375rem'
+        {...(isMine ? { boxShadow: '0 0 0 2px #48bb78' } : {})}
+      >
+        <Image
+          src={provider.logo_path}
+          alt={provider.provider_name}
+          fill
+          style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
+        />
+      </Box>
+      {caption && (
+        <Text fontSize='2xs' color='gray.400' mt={0.5} lineHeight={1} noOfLines={1}>
+          {caption}
+        </Text>
+      )}
+    </Flex>
   )
 
-  const href = isAmazonProvider(provider.provider_name)
+  const href = offer?.url || (isAmazonProvider(provider.provider_name)
     ? buildAmazonAffiliateLink(movieTitle)
-    : affiliateLink
+    : affiliateLink)
 
   if (href) {
     return (
@@ -66,22 +77,91 @@ function ProviderIcon({ provider, movieTitle, affiliateLink, isMine }) {
   )
 }
 
-export default function WatchProviders({ watchProviders, movieTitle, affiliateLinks = {}, myProviderIds }) {
-  const flatrate = watchProviders?.flatrate || []
-  const rent = watchProviders?.rent || []
-  const buy = watchProviders?.buy || []
-  const streamLink = watchProviders?.link
-  const hasProviders = flatrate.length > 0 || rent.length > 0 || buy.length > 0
+// Cheapest offer for a provider across a given offer type — rent preferred,
+// then buy, then anything with a deep link.
+function bestOfferFor(providerName, offers) {
+  const matching = offers.filter((o) => sameStore(o.provider, providerName))
+  const ranked = matching
+    .filter((o) => o.type === 'rent' || o.type === 'buy')
+    .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
+  return ranked[0] || matching.find((o) => o.url) || null
+}
+
+const formatPrice = (offer) =>
+  offer ? `$${offer.price.toFixed(2)} on ${offer.provider}` : null
+
+export default function WatchProviders({
+  watchProviders,
+  allWatchProviders,
+  detectedRegion,
+  movieTitle,
+  affiliateLinks = {},
+  myProviderIds,
+  tmdbId,
+  mediaType = 'movie',
+  releaseYear
+}) {
+  const { services } = useUserData()
+  const [chosenRegion, setChosenRegion] = useState(null)
+
+  const regionOptions = useMemo(() => Object.keys(allWatchProviders || {}).sort(), [allWatchProviders])
+  const defaultRegion = regionOptions.includes(services.region)
+    ? services.region
+    : detectedRegion || 'US'
+  const activeRegion = chosenRegion || defaultRegion
+
+  const bucket = allWatchProviders?.[activeRegion] || watchProviders || {}
+  const flatrate = bucket.flatrate || []
+  const rent = bucket.rent || []
+  const buy = bucket.buy || []
+  const freeAds = [...(bucket.free || []), ...(bucket.ads || [])]
+    .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
+  const streamLink = bucket.link
+  const hasProviders = flatrate.length > 0 || rent.length > 0 || buy.length > 0 || freeAds.length > 0
+
+  const { data: priceData } = usePrices({
+    tmdbId,
+    mediaType,
+    title: movieTitle,
+    year: releaseYear,
+    region: activeRegion
+  })
+  const offers = priceData?.offers || []
+  const cheapestRent = priceData?.cheapest?.rent
+  const cheapestBuy = priceData?.cheapest?.buy
+  const criticScore = priceData?.extras?.criticScore
+
+  const seasonNotes = mediaType === 'tv'
+    ? offers
+        .filter((o) => o.type === 'sub' && o.seasons)
+        .map((o) => `${o.provider}: ${o.seasons} season${o.seasons === 1 ? '' : 's'}`)
+    : []
 
   return (
     <>
       <Box p={3} bg='blackAlpha.600' borderRadius='1rem' border='1px solid' borderColor='whiteAlpha.200'>
-        <Flex align='center' justify='space-between' mb={2}>
-          <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>
+        <Flex align='center' justify='space-between' mb={2} gap={2}>
+          <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' flexShrink={0}>
             Where to Watch
           </Text>
+          {regionOptions.length > 1 && (
+            <Select
+              size='xs'
+              w='auto'
+              value={activeRegion}
+              onChange={(e) => setChosenRegion(e.target.value)}
+              color='gray.300'
+              borderColor='whiteAlpha.300'
+              aria-label='Availability region'
+              sx={{ option: { color: 'black' } }}
+            >
+              {regionOptions.map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </Select>
+          )}
           {streamLink && (
-            <Link href={streamLink} isExternal fontSize='xs' color='gray.400' _hover={{ color: 'white' }}>
+            <Link href={streamLink} isExternal fontSize='xs' color='gray.400' _hover={{ color: 'white' }} flexShrink={0}>
               JustWatch ↗
             </Link>
           )}
@@ -93,9 +173,26 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
                 <Text color='gray.300' fontSize='xs' mb={1.5}>
                   Stream
                 </Text>
-                <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
+                <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {flatrate.map((provider) => (
-                    <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} />
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} />
+                  ))}
+                </Flex>
+                {seasonNotes.length > 0 && (
+                  <Text color='gray.500' fontSize='2xs' mt={1.5}>
+                    {seasonNotes.join(' · ')}
+                  </Text>
+                )}
+              </Box>
+            )}
+            {freeAds.length > 0 && (
+              <Box mb={2}>
+                <Text color='gray.300' fontSize='xs' mb={1.5}>
+                  Watch free
+                </Text>
+                <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
+                  {freeAds.map((provider) => (
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} />
                   ))}
                 </Flex>
               </Box>
@@ -105,14 +202,27 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
                 <Text color='gray.300' fontSize='xs' mb={1.5}>
                   Rent / Buy
                 </Text>
-                <Flex wrap='wrap' gap={{ base: 4, md: 2 }}>
+                <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {[...rent, ...buy]
                     .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
                     .map((provider) => (
-                      <ProviderIcon key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} />
+                      <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} />
                     ))}
                 </Flex>
+                {(cheapestRent || cheapestBuy) && (
+                  <Text color='gray.500' fontSize='2xs' mt={1.5}>
+                    {[
+                      cheapestRent && `Rent from ${formatPrice(cheapestRent)}`,
+                      cheapestBuy && `Buy from ${formatPrice(cheapestBuy)}`
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
               </Box>
+            )}
+            {offers.some((o) => o.price != null) && (
+              <Text color='gray.600' fontSize='2xs' mt={1}>
+                Prices via Watchmode · Apple
+              </Text>
             )}
             {/* <SurfsharkLink /> */}
           </>
@@ -124,11 +234,12 @@ export default function WatchProviders({ watchProviders, movieTitle, affiliateLi
             {/* <SurfsharkLink /> */}
           </Box>
         )}
+        {criticScore != null && (
+          <Text color='gray.500' fontSize='2xs' mt={2}>
+            Critics score: {criticScore}/100
+          </Text>
+        )}
       </Box>
-
-      {/* <Text color='gray.500' fontSize='xs' mt={2} textAlign='center'>
-        <NextLink href='/disclosure'>Affiliate disclosure</NextLink>
-      </Text> */}
     </>
   )
 }
