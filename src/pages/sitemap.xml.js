@@ -44,6 +44,7 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/contact`, today),
     urlEntry(`${siteUrl}/streaming`, today),
     urlEntry(`${siteUrl}/streaming-in-india`, today),
+    urlEntry(`${siteUrl}/justwatch-alternative`, today),
     urlEntry(`${siteUrl}/new-on-streaming`, today),
     urlEntry(`${siteUrl}/lists`, today),
     urlEntry(`${siteUrl}/tv`, today),
