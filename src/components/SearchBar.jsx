@@ -67,7 +67,7 @@ export default function SearchBar({
           <Input
             value={searchInput}
             onChange={handleInputChange}
-            placeholder='Search movies...'
+            placeholder='Search movies & shows...'
             background='#1f252b'
             color='white'
             borderColor='whiteAlpha.300'

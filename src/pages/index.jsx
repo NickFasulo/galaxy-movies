@@ -21,6 +21,9 @@ const nowStreamingBadge = (
   </Badge>
 )
 
+// Feed values that route to non-movie TMDB media via the `media` query param.
+const MEDIA_FOR_CATEGORY = { tv: 'tv', trending: 'trending' }
+
 export async function getServerSideProps({ res }) {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
@@ -84,9 +87,13 @@ export default function Home({ initialMovies, initialTotalPages }) {
       
       lastFetchTimeRef.current = Date.now()
       
+      const media = MEDIA_FOR_CATEGORY[category]
+      const mediaParam = media ? `&media=${media}` : ''
       const url = activeSearch
-        ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}`
-        : `/api/allMovies?category=${category}&page=${pageParam}`
+        ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}${mediaParam}`
+        : media
+          ? `/api/allMovies?media=${media}&page=${pageParam}`
+          : `/api/allMovies?category=${category}&page=${pageParam}`
 
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load movies')
@@ -122,8 +129,9 @@ export default function Home({ initialMovies, initialTotalPages }) {
     for (const page of data.pages) {
       if (!page.results) continue
       for (const movie of page.results) {
-        if (movie?.id && !seenIds.has(movie.id)) {
-          seenIds.add(movie.id)
+        const key = `${movie?.mediaType || 'movie'}:${movie?.id}`
+        if (movie?.id && !seenIds.has(key)) {
+          seenIds.add(key)
           uniqueMovies.push(movie)
         }
       }
@@ -131,7 +139,10 @@ export default function Home({ initialMovies, initialTotalPages }) {
     return uniqueMovies
   }, [data])
 
-  const isStreaming = useStreamingBadges(moviesList)
+  // Streaming badges query movie watch-provider endpoints only — TV badge
+  // parity is phase 2, so shows are filtered out of the lookup.
+  const movieOnlyList = useMemo(() => moviesList.filter(m => m.mediaType !== 'tv'), [moviesList])
+  const isStreaming = useStreamingBadges(movieOnlyList)
 
   const hasReachedEnd = Boolean(
     data?.pages?.length &&

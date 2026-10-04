@@ -100,6 +100,11 @@ export default function StreamingIndex({ region }) {
             <Link href='/new-on-streaming'>new releases streaming now</Link>.
           </Text>
 
+          <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
+            Looking for TV shows?{' '}
+            <Link href='/tv'>Browse shows by streaming service and genre</Link>.
+          </Text>
+
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in the United States</Heading>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
             {usProviders.map((provider) => (

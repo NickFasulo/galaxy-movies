@@ -75,6 +75,53 @@ export const movieGenres = {
   thriller: { id: 53, title: 'Thriller Movies' }
 }
 
+export const tvCategories = {
+  popular: {
+    title: 'Popular TV Shows',
+    description: 'Browse popular TV shows and discover what audiences are watching now.'
+  },
+  'airing-today': {
+    title: 'TV Shows Airing Today',
+    description: 'Find shows with new episodes airing today and worth catching tonight.'
+  },
+  'on-the-air': {
+    title: 'TV Shows On the Air',
+    description: 'Explore shows currently airing new episodes this week.'
+  },
+  'top-rated': {
+    title: 'Top Rated TV Shows',
+    description: 'Discover the highest-rated TV shows of all time, ranked by audience scores.'
+  }
+}
+
+// TV genre ids are a separate TMDB namespace from movie genres — several slugs
+// that share a name map to different ids (e.g. sci-fi: 878 movie / 10765 tv).
+export const tvGenres = {
+  'action-adventure': { id: 10759, title: 'Action & Adventure Shows' },
+  animation: { id: 16, title: 'Animated Shows' },
+  comedy: { id: 35, title: 'Comedy Shows' },
+  crime: { id: 80, title: 'Crime Shows' },
+  documentary: { id: 99, title: 'Documentary Shows' },
+  drama: { id: 18, title: 'Drama Shows' },
+  family: { id: 10751, title: 'Family Shows' },
+  kids: { id: 10762, title: 'Kids Shows' },
+  mystery: { id: 9648, title: 'Mystery Shows' },
+  reality: { id: 10764, title: 'Reality Shows' },
+  'sci-fi-fantasy': { id: 10765, title: 'Sci-Fi & Fantasy Shows' },
+  'war-politics': { id: 10768, title: 'War & Politics Shows' },
+  western: { id: 37, title: 'Western Shows' }
+}
+
+// Normalizes TMDB tv results to the movie-shaped fields cards/grids consume.
+export function normalizeTvTitle(show) {
+  return {
+    ...show,
+    title: show.name,
+    release_date: show.first_air_date,
+    mediaType: 'tv'
+  }
+}
+
 // TMDB's watch-provider catalog is region-scoped: the same real-world service can
 // have a different provider_id per `watch_region` (e.g. Amazon Prime Video is id 9
 // in the US catalog but id 119 in the India catalog). `ids.default` is used when a
@@ -158,6 +205,58 @@ export async function fetchListMovies(discoverParams = {}, page = 1) {
   return {
     ...data,
     results: (data.results || []).filter(movie => movie.poster_path)
+  }
+}
+
+export async function fetchDiscoverTv({ category, genreId, providerId, region, page = 1 }) {
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]
+  const daysAgo = (n) => {
+    const d = new Date(now)
+    d.setDate(d.getDate() - n)
+    return d.toISOString().split('T')[0]
+  }
+  const daysAhead = (n) => {
+    const d = new Date(now)
+    d.setDate(d.getDate() + n)
+    return d.toISOString().split('T')[0]
+  }
+
+  const params = {
+    page,
+    include_adult: 'false',
+    'vote_count.gte': 10
+  }
+
+  if (category === 'airing-today') {
+    params['air_date.gte'] = today
+    params['air_date.lte'] = today
+    params.sort_by = 'popularity.desc'
+  } else if (category === 'on-the-air') {
+    params['air_date.gte'] = daysAgo(7)
+    params['air_date.lte'] = daysAhead(7)
+    params.sort_by = 'popularity.desc'
+  } else if (category === 'top-rated') {
+    params.sort_by = 'vote_average.desc'
+    params['vote_count.gte'] = 200
+  } else {
+    params.sort_by = 'popularity.desc'
+  }
+
+  if (genreId) {
+    params.with_genres = genreId
+  }
+  if (providerId) {
+    params.with_watch_providers = providerId
+    params.watch_region = region || 'US'
+  }
+
+  const data = await fetchTmdb('/discover/tv', params)
+  return {
+    ...data,
+    results: (data.results || [])
+      .filter(show => show.poster_path)
+      .map(normalizeTvTitle)
   }
 }
 

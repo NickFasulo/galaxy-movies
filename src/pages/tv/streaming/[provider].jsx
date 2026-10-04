@@ -1,14 +1,13 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
-import BackButton from '../../components/BackButton'
-import { fetchDiscoverMovies, streamingProviders, getProviderId, isProviderAvailableInRegion } from '../../utils/tmdb'
-import { detectRegion } from '../../utils/region'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
-import HreflangTags from '../../components/HreflangTags'
-// import SurfsharkBanner from '../../components/SurfsharkBanner' // affiliate monetization disabled
-import { providerGenreSlugs, getProviderGenreTarget } from '../../utils/contentOpportunities'
+import MovieGrid from '../../../components/MovieGrid'
+import BackButton from '../../../components/BackButton'
+import { fetchDiscoverTv, streamingProviders, getProviderId, isProviderAvailableInRegion } from '../../../utils/tmdb'
+import { detectRegion } from '../../../utils/region'
+import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
+import HreflangTags from '../../../components/HreflangTags'
+import { tvProviderGenreSlugs, getTvProviderGenreTarget } from '../../../utils/contentOpportunities'
 
 const REGION_NAMES = { US: 'the United States', IN: 'India' }
 
@@ -21,30 +20,31 @@ export async function getServerSideProps({ params, req, res }) {
   const providerId = getProviderId(params.provider, region)
 
   try {
-    const data = await fetchDiscoverMovies({ providerId, region })
+    const data = await fetchDiscoverTv({ providerId, region })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { provider: params.provider, ...provider, movies: data.results, region, availableInRegion } }
+    return { props: { provider: params.provider, ...provider, shows: data.results, region, availableInRegion } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { provider: params.provider, ...provider, movies: [], dataError: true, region, availableInRegion } }
+    return { props: { provider: params.provider, ...provider, shows: [], dataError: true, region, availableInRegion } }
   }
 }
 
-export default function StreamingPage({ provider, title, movies, dataError, region, availableInRegion, regions }) {
+export default function TvStreamingPage({ provider, title, shows, dataError, region, availableInRegion, regions }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/streaming/${provider}`
+  const canonicalUrl = `${siteUrl}/tv/streaming/${provider}`
   const providerLabel = title.replace(' Movies', '')
+  const showsTitle = `${providerLabel} Shows`
   const regionName = REGION_NAMES[region] || 'your region'
   const homeRegionNames = (regions || []).map((r) => REGION_NAMES[r] || r).join(' and ')
   const description = availableInRegion
-    ? `Explore movies currently available on ${providerLabel} in ${regionName}.`
-    : `Explore movies currently available on ${providerLabel}. ${providerLabel} is primarily available in ${homeRegionNames}; availability may vary in ${regionName}.`
-  const featuredPoster = movies?.[0]?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
+    ? `Explore TV shows currently streaming on ${providerLabel} in ${regionName}.`
+    : `Explore TV shows currently streaming on ${providerLabel}. ${providerLabel} is primarily available in ${homeRegionNames}; availability may vary in ${regionName}.`
+  const featuredPoster = shows?.[0]?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${shows[0].poster_path}`
     : null
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title,
+    title: showsTitle,
     subtitle: description,
     ...(featuredPoster ? { poster: featuredPoster } : {})
   }).toString()}`
@@ -52,36 +52,36 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
   const itemListData = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: title,
+    name: showsTitle,
     description,
     url: canonicalUrl,
-    numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    numberOfItems: shows?.length || 0,
+    itemListElement: shows?.slice(0, 10).map((show, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Movie',
-        name: movie.title,
-        url: `${siteUrl}/movies/${movie.id}`,
-        image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-        datePublished: movie.release_date || undefined
+        '@type': 'TVSeries',
+        name: show.name || show.title,
+        url: `${siteUrl}/tv/${show.id}`,
+        image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+        startDate: show.first_air_date || show.release_date || undefined
       }
     })) || []
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Streaming', url: `${siteUrl}/streaming` },
-    { name: title, url: canonicalUrl }
+    { name: 'TV Shows', url: `${siteUrl}/tv` },
+    { name: showsTitle, url: canonicalUrl }
   ]
-  const genreTargets = providerGenreSlugs
-    .map((genreKey) => getProviderGenreTarget(provider, genreKey))
+  const genreTargets = tvProviderGenreSlugs
+    .map((genreKey) => getTvProviderGenreTarget(provider, genreKey))
     .filter(Boolean)
 
   return (
     <>
       <Head>
-        <title>{`${title} | Galaxy Movies`}</title>
+        <title>{`${showsTitle} | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
         <HreflangTags canonicalUrl={canonicalUrl} />
@@ -89,7 +89,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
         <meta property='og:type' content='website' />
         <meta property='og:site_name' content='Galaxy Movies' />
         <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={`${title} | Galaxy Movies`} />
+        <meta property='og:title' content={`${showsTitle} | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
         <meta property='og:image' content={ogImage} />
@@ -97,7 +97,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
         <meta property='og:image:height' content='630' />
 
         <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={`${title} | Galaxy Movies`} />
+        <meta name='twitter:title' content={`${showsTitle} | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
         <meta name='twitter:image' content={ogImage} />
 
@@ -111,26 +111,23 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{showsTitle}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
-            Looking for shows instead? Browse{' '}
-            <Link href={`/tv/streaming/${provider}`}>{providerLabel} shows</Link>.
+            Looking for movies instead? Browse{' '}
+            <Link href={`/streaming/${provider}`}>{providerLabel} movies</Link>.
           </Text>
-          {/* <SurfsharkBanner
-            message={availableInRegion
-              ? `${providerLabel}'s catalog differs by country — a VPN can unlock titles available in other regions.`
-              : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
-          /> */}
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : <MovieGrid movies={movies} />}
+            <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
+          ) : shows.length === 0 ? (
+            <Text mt={10} color='gray.500'>No shows currently found for this service in your region.</Text>
+          ) : <MovieGrid movies={shows} />}
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
-            Browse {providerLabel} by Genre
+            Browse {providerLabel} Shows by Genre
           </Heading>
           <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
             {genreTargets.map((target) => (
-              <Link key={target.genreKey} href={`/streaming/${provider}/${target.genreKey}`}>
+              <Link key={target.genreKey} href={`/tv/streaming/${provider}/${target.genreKey}`}>
                 <Flex
                   align='center'
                   justify='center'
@@ -147,7 +144,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
             ))}
           </SimpleGrid>
           <Text textAlign='center' mt={8} color='gray.400'>
-            Availability changes by region and over time. Check the movie page for current provider information.
+            Availability changes by region and over time. Check the show page for current provider information.
           </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />

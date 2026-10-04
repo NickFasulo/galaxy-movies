@@ -49,6 +49,7 @@ export default function Header({ isHome = false, isDark = false }) {
             </MenuButton>
             <MenuList minW='10rem' bg='#1f252b' borderColor='whiteAlpha.200' color='white'>
               <MenuItem as={NextLink} href='/streaming' {...menuItemProps}>Streaming</MenuItem>
+              <MenuItem as={NextLink} href='/tv' {...menuItemProps}>TV Shows</MenuItem>
               <MenuItem as={NextLink} href='/lists' {...menuItemProps}>Lists</MenuItem>
               <MenuItem as={NextLink} href='/new-on-streaming' {...menuItemProps}>New Releases</MenuItem>
             </MenuList>
@@ -73,6 +74,7 @@ export default function Header({ isHome = false, isDark = false }) {
             />
             <MenuList minW='10rem' bg='#1f252b' borderColor='whiteAlpha.200' color='white'>
               <MenuItem as={NextLink} href='/streaming' {...menuItemProps}>Streaming</MenuItem>
+              <MenuItem as={NextLink} href='/tv' {...menuItemProps}>TV Shows</MenuItem>
               <MenuItem as={NextLink} href='/lists' {...menuItemProps}>Lists</MenuItem>
               <MenuItem as={NextLink} href='/new-on-streaming' {...menuItemProps}>New Releases</MenuItem>
               <MenuItem as={NextLink} href='/watchlist' {...menuItemProps}>My List</MenuItem>

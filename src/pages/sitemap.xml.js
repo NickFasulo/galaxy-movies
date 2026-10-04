@@ -1,7 +1,7 @@
-import { fetchDiscoverMovies, movieCategories, movieGenres, streamingProviders } from '../utils/tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
-import { getProviderGenreTargets } from '../utils/contentOpportunities'
+import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
@@ -45,6 +45,7 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/streaming-in-india`, today),
     urlEntry(`${siteUrl}/new-on-streaming`, today),
     urlEntry(`${siteUrl}/lists`, today),
+    urlEntry(`${siteUrl}/tv`, today),
   ]
 
   const listingEntries = [
@@ -60,6 +61,18 @@ export async function getServerSideProps({ res }) {
     ...getProviderGenreTargets().map(({ providerKey, genreKey }) =>
       urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`, today)
     ),
+    ...Object.keys(tvCategories).map(category =>
+      urlEntry(`${siteUrl}/tv/browse/${category}`, today)
+    ),
+    ...Object.keys(tvGenres).map(genre =>
+      urlEntry(`${siteUrl}/tv/genre/${genre}`, today)
+    ),
+    ...Object.keys(streamingProviders).map(provider =>
+      urlEntry(`${siteUrl}/tv/streaming/${provider}`, today)
+    ),
+    ...getTvProviderGenreTargets().map(({ providerKey, genreKey }) =>
+      urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`, today)
+    ),
     ...Object.keys(curatedLists).map(slug =>
       urlEntry(`${siteUrl}/lists/${slug}`, today)
     ),
@@ -69,6 +82,7 @@ export async function getServerSideProps({ res }) {
   ]
 
   const movieEntries = new Map()
+  const showEntries = new Map()
   const personIds = new Set()
   const companyIds = new Set()
 
@@ -87,9 +101,26 @@ export async function getServerSideProps({ res }) {
       )
     )
 
+    const tvCategoryResults = await Promise.all(
+      Object.keys(tvCategories).flatMap(category =>
+        pageRange.map(page => fetchDiscoverTv({ category, page }))
+      )
+    )
+
+    const tvGenreResults = await Promise.all(
+      Object.values(tvGenres).flatMap(genre =>
+        pageRange.map(page => fetchDiscoverTv({ genreId: genre.id, page }))
+      )
+    )
+
     const allMovies = [
       ...categoryResults.flatMap(d => d?.results || []),
       ...genreResults.flatMap(d => d?.results || []),
+    ]
+
+    const allShows = [
+      ...tvCategoryResults.flatMap(d => d?.results || []),
+      ...tvGenreResults.flatMap(d => d?.results || []),
     ]
 
     for (const movie of allMovies) {
@@ -97,6 +128,14 @@ export async function getServerSideProps({ res }) {
       if (!movieEntries.has(movie.id)) {
         const lastmod = formatDate(movie.release_date) || today
         movieEntries.set(movie.id, lastmod)
+      }
+    }
+
+    for (const show of allShows) {
+      if (!show?.id) continue
+      if (!showEntries.has(show.id)) {
+        const lastmod = formatDate(show.first_air_date || show.release_date) || today
+        showEntries.set(show.id, lastmod)
       }
     }
 
@@ -135,6 +174,10 @@ export async function getServerSideProps({ res }) {
     urlEntry(`${siteUrl}/movies/${id}`, lastmod)
   )
 
+  const dynamicShowEntries = Array.from(showEntries, ([id, lastmod]) =>
+    urlEntry(`${siteUrl}/tv/${id}`, lastmod)
+  )
+
   const dynamicPersonEntries = Array.from(personIds, id =>
     urlEntry(`${siteUrl}/person/${id}`, today)
   )
@@ -147,6 +190,7 @@ export async function getServerSideProps({ res }) {
     ...staticEntries,
     ...listingEntries,
     ...dynamicMovieEntries,
+    ...dynamicShowEntries,
     ...dynamicPersonEntries,
     ...dynamicCompanyEntries,
   ]

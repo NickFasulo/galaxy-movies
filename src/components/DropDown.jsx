@@ -15,6 +15,8 @@ const CATEGORY_LABELS = {
   top_rated: 'Top Rated',
   now_playing: 'Now Playing',
   upcoming: 'Upcoming',
+  trending: 'Trending',
+  tv: 'TV Shows',
   action: 'Action',
   adventure: 'Adventure',
   animation: 'Animation',
@@ -70,6 +72,8 @@ export default function DropDown({ category, changeCategory }) {
           <MenuItem onClick={() => changeCategory('top_rated')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Top Rated</MenuItem>
           <MenuItem onClick={() => changeCategory('now_playing')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Now Playing</MenuItem>
           <MenuItem onClick={() => changeCategory('upcoming')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Upcoming</MenuItem>
+          <MenuItem onClick={() => changeCategory('trending')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>Trending</MenuItem>
+          <MenuItem onClick={() => changeCategory('tv')} bg='transparent' _hover={{ bg: '#2a3138' }} _focus={{ bg: '#2a3138' }}>TV Shows</MenuItem>
         </MenuGroup>
         <MenuDivider borderColor='whiteAlpha.200' />
         <MenuGroup title='Genres'>

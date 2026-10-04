@@ -1,3 +1,5 @@
+import { normalizeTvTitle } from '../../utils/tmdb'
+
 const GENRE_MAP = {
   action: 28,
   adventure: 12,
@@ -21,6 +23,17 @@ const GENRE_MAP = {
 
 const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
+function normalizeResults(results) {
+  return (results || [])
+    .filter(item => {
+      if (!item.poster_path) return false
+      // /search/multi and /trending/all return mixed types; keep movie + tv only
+      if (item.media_type && item.media_type !== 'movie' && item.media_type !== 'tv') return false
+      return true
+    })
+    .map(item => (item.media_type === 'movie' ? { ...item, mediaType: 'movie' } : normalizeTvTitle(item)))
+}
+
 export default async function handler(req, res) {
   const ip = getClientIP(req)
   const userAgent = req.headers['user-agent']
@@ -38,7 +51,7 @@ export default async function handler(req, res) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
   }
-  const { category = 'popular', page = 1, search = '' } = req.query
+  const { category = 'popular', page = 1, search = '', media = 'movie' } = req.query
   const apiKey = process.env.TMDB_API_KEY
 
   if (!apiKey) {
@@ -56,7 +69,17 @@ export default async function handler(req, res) {
     let endpoint = ''
 
     if (search.trim().length > 0) {
-      endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
+      if (media === 'tv') {
+        endpoint = `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
+      } else if (media === 'trending') {
+        endpoint = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
+      } else {
+        endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
+      }
+    } else if (media === 'tv') {
+      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10`
+    } else if (media === 'trending') {
+      endpoint = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&page=${pageNum}`
     } else if (GENRE_MAP[category]) {
       endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=primary_release_date.desc&primary_release_date.lte=${todayStr}&vote_count.gte=50&with_genres=${GENRE_MAP[category]}`
     } else if (category === 'popular') {
@@ -80,6 +103,13 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json()
+
+    if (media !== 'movie') {
+      res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+      res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+      return res.status(200).json({ ...data, results: normalizeResults(data.results) })
+    }
+
     const rawMovies = data.results || []
 
     const filteredMovies = rawMovies.filter(movie => {

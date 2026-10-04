@@ -1,32 +1,32 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
-import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
-import HreflangTags from '../../components/HreflangTags'
-import BackButton from '../../components/BackButton'
+import MovieGrid from '../../../components/MovieGrid'
+import { fetchDiscoverTv, tvCategories } from '../../../utils/tmdb'
+import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
+import HreflangTags from '../../../components/HreflangTags'
+import BackButton from '../../../components/BackButton'
 
 export async function getServerSideProps({ params, res }) {
-  const category = movieCategories[params.category]
+  const category = tvCategories[params.category]
   if (!category) return { notFound: true }
 
   try {
-    const data = await fetchDiscoverMovies({ category: params.category })
+    const data = await fetchDiscoverTv({ category: params.category })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { category: params.category, ...category, movies: data.results } }
+    return { props: { category: params.category, ...category, shows: data.results } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { category: params.category, ...category, movies: [], dataError: true } }
+    return { props: { category: params.category, ...category, shows: [], dataError: true } }
   }
 }
 
-export default function BrowsePage({ category, title, description, movies, dataError }) {
+export default function TvBrowsePage({ category, title, description, shows, dataError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/browse/${category}`
-  const featuredPoster = movies?.[0]?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
+  const canonicalUrl = `${siteUrl}/tv/browse/${category}`
+  const featuredPoster = shows?.[0]?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${shows[0].poster_path}`
     : null
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title,
@@ -40,23 +40,23 @@ export default function BrowsePage({ category, title, description, movies, dataE
     name: title,
     description,
     url: canonicalUrl,
-    numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    numberOfItems: shows?.length || 0,
+    itemListElement: shows?.slice(0, 10).map((show, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Movie',
-        name: movie.title,
-        url: `${siteUrl}/movies/${movie.id}`,
-        image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-        datePublished: movie.release_date || undefined
+        '@type': 'TVSeries',
+        name: show.name || show.title,
+        url: `${siteUrl}/tv/${show.id}`,
+        image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+        startDate: show.first_air_date || show.release_date || undefined
       }
     })) || []
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Browse', url: `${siteUrl}/browse` },
+    { name: 'TV Shows', url: `${siteUrl}/tv` },
     { name: title, url: canonicalUrl }
   ]
 
@@ -96,16 +96,14 @@ export default function BrowsePage({ category, title, description, movies, dataE
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : <MovieGrid movies={movies} />}
+            <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
+          ) : <MovieGrid movies={shows} />}
           <Text textAlign='center' mt={8}>
-            Browse <Link href='/browse/popular'>popular</Link>,{' '}
-            <Link href='/browse/now-playing'>now playing</Link>, or{' '}
-            <Link href='/browse/upcoming'>upcoming</Link> movies, or explore{' '}
-            <Link href='/browse/bollywood'>Bollywood</Link>,{' '}
-            <Link href='/browse/tamil'>Tamil</Link>, and{' '}
-            <Link href='/browse/telugu'>Telugu</Link> cinema, or check out{' '}
-            <Link href='/tv'>TV shows</Link>.
+            Browse <Link href='/tv/browse/popular'>popular</Link>,{' '}
+            <Link href='/tv/browse/airing-today'>airing today</Link>,{' '}
+            <Link href='/tv/browse/on-the-air'>on the air</Link>, or{' '}
+            <Link href='/tv/browse/top-rated'>top rated</Link> shows, or explore{' '}
+            <Link href='/tv'>all TV shows</Link>.
           </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
