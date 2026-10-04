@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og'
+const { getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
 
 export const config = {
   runtime: 'edge',
@@ -8,6 +9,10 @@ async function toJpegDataUri(url) {
   try {
     const res = await fetch(url)
     if (!res.ok) return null
+    // Satori only understands png/jpeg/gif; TMDB's CDN serves webp even for .jpg
+    // paths, and a webp data URI crashes the image pipeline, so skip it.
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+    if (!['image/jpeg', 'image/png', 'image/gif'].includes(contentType)) return null
     const buf = await res.arrayBuffer()
     const bytes = new Uint8Array(buf)
     let binary = ''
@@ -15,20 +20,36 @@ async function toJpegDataUri(url) {
     for (let i = 0; i < bytes.length; i += CHUNK) {
       binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
     }
-    const contentType = res.headers.get('content-type') || 'image/jpeg'
     return `data:${contentType};base64,${btoa(binary)}`
   } catch (err) {
     return null
   }
 }
 
+// Only TMDB poster URLs are fetched server-side, so ?poster= can't be used for SSRF or as an open image proxy.
+const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
+
 export default async function handler(req) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'GET, HEAD' } })
+  }
+
+  const allowed = await checkDistributedRateLimit(getClientIP(req), {
+    keyPrefix: 'og_rl',
+    maxRequests: 300,
+    windowSeconds: 60 * 60
+  })
+  if (!allowed) {
+    return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '3600' } })
+  }
+
   const reqUrl = new URL(req.url)
   const { searchParams, origin } = reqUrl
 
-  const title = searchParams.get('title') || 'Galaxy Movies'
-  const subtitle = searchParams.get('subtitle') || 'Discover Popular & New Films'
-  const poster = searchParams.get('poster') || null
+  const title = (searchParams.get('title') || 'Galaxy Movies').slice(0, 120)
+  const subtitle = (searchParams.get('subtitle') || 'Discover Popular & New Films').slice(0, 300)
+  const posterParam = searchParams.get('poster')
+  const poster = posterParam && TMDB_POSTER_PATTERN.test(posterParam) ? posterParam : null
 
   const subtitleTrimmed =
     subtitle.length > 110 ? subtitle.slice(0, 107).trimEnd() + '…' : subtitle

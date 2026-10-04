@@ -80,6 +80,7 @@ export default function Contact() {
           />
         </div>
 
+        <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" style={{ display: 'none' }} aria-hidden="true" />
         <div>
           <label htmlFor="message" style={{ display: 'block', marginBottom: '0.25rem' }}>Message</label>
           <textarea
