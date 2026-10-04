@@ -333,7 +333,7 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
         />
       </Box>
 
-      <Flex position='relative' zIndex={1} direction='column' align='center' minH='100vh' pt={{ base: '4rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
+      <Flex position='relative' zIndex={1} direction='column' align='center' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
 
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
@@ -434,9 +434,26 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
             </Text>
 
             {aiSynopsis && (
-              <Box p={4} bg='whiteAlpha.100' borderRadius='md' borderLeft='3px solid' borderColor='purple.400'>
-                <Text fontSize='sm' fontWeight='semibold' color='white' mb={1}>Galaxy Bot&apos;s Take</Text>
-                <Text fontSize='sm' color='whiteAlpha.800'>{aiSynopsis}</Text>
+              <Box
+                p={4}
+                bg='whiteAlpha.100'
+                borderRadius='md'
+                borderTop={{ base: '3px solid', md: 'none' }}
+                borderLeft={{ base: 'none', md: '3px solid' }}
+                borderColor='purple.400'
+              >
+                <Text
+                  fontSize='sm'
+                  fontWeight='semibold'
+                  color='white'
+                  mb={1}
+                  textAlign={{ base: 'center', md: 'left' }}
+                >
+                  Galaxy Bot&apos;s Take
+                </Text>
+                <Text fontSize='sm' color='whiteAlpha.800'>
+                  {aiSynopsis}
+                </Text>
               </Box>
             )}
 
@@ -452,6 +469,8 @@ export default function TvShow({ show, showError, videoKey, watchProviders, crea
                 >
                   {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
                 </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
                 <RatingWidget movie={listItem} />
               </Flex>
               <Flex align='center' justify='flex-end'>

@@ -10,7 +10,7 @@ function analyzeLogo(src) {
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       const aspect = img.naturalWidth / img.naturalHeight || 1
-      const width = Math.min(120, Math.max(64, Math.round(40 * aspect) + 8))
+      const width = Math.min(96, Math.max(52, Math.round(30 * aspect) + 8))
       const canvas = document.createElement('canvas')
       canvas.width = 32; canvas.height = 24
       const ctx = canvas.getContext('2d', { willReadFrequently: true })
@@ -47,7 +47,7 @@ export default function ProductionLogo({ company }) {
   }, [logoUrl])
 
   return (
-    <Box position='relative' w={`${width}px`} h='48px' bg={bg} borderRadius='lg'>
+    <Box position='relative' w={`${width}px`} h='36px' bg={bg} borderRadius='lg'>
       <Image
         alt={company.name}
         src={logoPath}

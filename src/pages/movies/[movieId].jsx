@@ -332,7 +332,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
         />
       </Box>
 
-      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '4rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
+      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
           
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
@@ -454,23 +454,23 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, dir
 
             {aiSynopsis && (
               <Box
-                bg='blackAlpha.500'
-                border='1px solid'
-                borderColor='whiteAlpha.200'
-                borderRadius='1rem'
                 p={4}
+                bg='whiteAlpha.100'
+                borderRadius='md'
+                borderTop={{ base: '3px solid', md: 'none' }}
+                borderLeft={{ base: 'none', md: '3px solid' }}
+                borderColor='purple.400'
               >
                 <Text
-                  color='gray.400'
-                  fontSize='xs'
-                  fontWeight='bold'
-                  textTransform='uppercase'
+                  fontSize='sm'
+                  fontWeight='semibold'
+                  color='white'
+                  mb={1}
                   textAlign={{ base: 'center', md: 'left' }}
-                  mb={2}
                 >
-                  Galaxy Bot's Take
+                  Galaxy Bot&apos;s Take
                 </Text>
-                <Text color='white' fontSize='sm' whiteSpace='pre-wrap'>
+                <Text fontSize='sm' color='whiteAlpha.800'>
                   {aiSynopsis}
                 </Text>
               </Box>
