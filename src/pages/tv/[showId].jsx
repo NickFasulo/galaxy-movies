@@ -36,6 +36,8 @@ import { withTimeout } from '../../utils/withTimeout'
 export const getServerSideProps = async (context) => {
   const { showId } = context.query
 
+  if (!/^\d{1,10}$/.test(String(showId))) return { notFound: true }
+
   try {
     const [showRes, providersRes, creditsRes, contentRatingsRes, recommendationsRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`),

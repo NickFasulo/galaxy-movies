@@ -1,8 +1,8 @@
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
 const { getRedis, PENDING_KEY, CONFIRMED_KEY } = require('../../utils/waitlistStore')
-const { randomUUID } = require('crypto')
+const { randomUUID, createHash } = require('crypto')
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 
 async function sendConfirmationEmail(email, token) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
@@ -56,14 +56,26 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' })
   }
 
+  // Per-address and global caps stop the form being used to mail-bomb a victim
+  // from many IPs or to flood the pending hash.
+  const emailHash = createHash('sha256').update(email).digest('hex').slice(0, 32)
+  const [emailOk, globalOk] = await Promise.all([
+    checkDistributedRateLimit(emailHash, { keyPrefix: 'waitlist_email_rl', maxRequests: 2, windowSeconds: 60 * 60 * 24 }),
+    checkGlobalBudget('waitlist', { maxRequests: 500, windowSeconds: 60 * 60 * 24 })
+  ])
+  if (!emailOk || !globalOk) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' })
+  }
+
   const kv = getRedis()
   if (!kv) {
     return res.status(503).json({ error: 'Waitlist is temporarily unavailable.' })
   }
 
   try {
+    // Same response as a fresh signup so the form can't be used to check who is subscribed.
     if (await kv.hget(CONFIRMED_KEY, email)) {
-      return res.status(200).json({ ok: true, confirmed: true })
+      return res.status(200).json({ ok: true, pending: true })
     }
 
     const token = randomUUID()

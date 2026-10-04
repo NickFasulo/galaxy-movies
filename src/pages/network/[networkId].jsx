@@ -19,6 +19,8 @@ import { normalizeTvTitle } from '../../utils/tmdb'
 export const getServerSideProps = async (context) => {
   const { networkId } = context.query
 
+  if (!/^\d{1,10}$/.test(String(networkId))) return { notFound: true }
+
   try {
     const [networkRes, showsRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/network/${networkId}?api_key=${process.env.TMDB_API_KEY}`),
@@ -215,7 +217,7 @@ export default function Network({ network, shows, networkError }) {
                 )}
               </Flex>
 
-              {network.homepage && (
+              {/^https?:\/\//i.test(network.homepage || '') && (
                 <ChakraLink
                   href={network.homepage}
                   isExternal

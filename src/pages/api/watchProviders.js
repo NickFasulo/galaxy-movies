@@ -1,11 +1,13 @@
 import { LRUCache } from 'lru-cache'
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
 
 // Server-side proxy for TMDB watch/providers — keeps TMDB_API_KEY off the client.
 // Batched so poster grids can check many movies in one request.
 const providerCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 6 })
 
 const MAX_IDS = 50
+const MAX_UNCACHED_LOOKUPS_PER_HOUR = 1500
+const GLOBAL_UNCACHED_LOOKUPS_PER_HOUR = 20000
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -45,6 +47,25 @@ export default async function handler(req, res) {
     if (hit) results[id] = hit
     return !hit
   })
+
+  if (uncached.length > 0) {
+    const [clientOk, globalOk] = await Promise.all([
+      checkDistributedRateLimit(clientId, {
+        keyPrefix: 'wp_lookup_rl',
+        maxRequests: MAX_UNCACHED_LOOKUPS_PER_HOUR,
+        windowSeconds: 60 * 60,
+        cost: uncached.length
+      }),
+      checkGlobalBudget('wp_lookup', {
+        maxRequests: GLOBAL_UNCACHED_LOOKUPS_PER_HOUR,
+        windowSeconds: 60 * 60,
+        cost: uncached.length
+      })
+    ])
+    if (!clientOk || !globalOk) {
+      return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
+    }
+  }
 
   await Promise.all(uncached.map(async (id) => {
     try {

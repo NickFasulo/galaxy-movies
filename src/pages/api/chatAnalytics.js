@@ -1,6 +1,7 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
 const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+const { isCronAuthorized } = require('../../utils/auth')
 
 const analyticsCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 
@@ -14,17 +15,28 @@ export const config = {
   }
 }
 
+const ID_PATTERN = /^[\w-]{1,64}$/
+
+const boundedInt = (value, min, max) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : min
+}
+
+const cleanString = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '')
+
 async function trackChatSession(sessionData) {
   const kv = getRedis()
-  const sessionId = sessionData.sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
   const analyticsData = {
     sessionId,
     timestamp: Date.now(),
-    messageCount: sessionData.messageCount || 0,
-    duration: sessionData.duration || 0,
-    userSatisfaction: sessionData.userSatisfaction || null,
-    featuresUsed: sessionData.featuresUsed || [],
+    messageCount: boundedInt(sessionData.messageCount, 0, 200),
+    duration: boundedInt(sessionData.duration, 0, 1000 * 60 * 60 * 24),
+    userSatisfaction: null,
+    featuresUsed: Array.isArray(sessionData.featuresUsed)
+      ? sessionData.featuresUsed.filter((f) => typeof f === 'string').slice(0, 10).map((f) => f.slice(0, 40))
+      : [],
     clientId: sessionData.clientId
   }
 
@@ -34,7 +46,7 @@ async function trackChatSession(sessionData) {
       await kv.expire(`chat_session:${sessionId}`, 60 * 60 * 24 * 30)
       
       await kv.incr('analytics:total_sessions')
-      await kv.incrby('analytics:total_messages', sessionData.messageCount || 0)
+      await kv.incrby('analytics:total_messages', analyticsData.messageCount)
       
       return sessionId
     } catch (err) {
@@ -53,11 +65,11 @@ async function recordFeedback(feedbackData) {
   const feedback = {
     feedbackId,
     timestamp: Date.now(),
-    rating: feedbackData.rating,
-    comment: feedbackData.comment || '',
-    sessionId: feedbackData.sessionId,
-    recommendationType: feedbackData.recommendationType || 'general',
-    helpful: feedbackData.helpful
+    rating: boundedInt(feedbackData.rating, 0, 5),
+    comment: cleanString(feedbackData.comment, 500),
+    sessionId: ID_PATTERN.test(feedbackData.sessionId) ? feedbackData.sessionId : '',
+    recommendationType: cleanString(feedbackData.recommendationType, 40) || 'general',
+    helpful: feedbackData.helpful === true
   }
 
   if (kv) {
@@ -182,14 +194,15 @@ export default async function handler(req, res) {
     const clientId = getClientIP(req)
     const allowed = await checkDistributedRateLimit(clientId, {
       keyPrefix: 'analytics_rl',
-      maxRequests: 60,
+      maxRequests: 30,
       windowSeconds: 60 * 60
     })
     if (!allowed) {
       return res.status(429).json({ error: 'Too many requests. Please try again later.' })
     }
 
-    const { action, data } = req.body
+    const { action } = req.body || {}
+    const data = req.body?.data && typeof req.body.data === 'object' ? req.body.data : {}
 
     if (action === 'track_session') {
       const sessionId = await trackChatSession({
@@ -208,8 +221,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    const secret = process.env.CRON_SECRET
-    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    if (!isCronAuthorized(req)) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 

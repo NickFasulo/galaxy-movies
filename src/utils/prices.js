@@ -1,7 +1,11 @@
 import { getRedis } from './redis'
+import { checkGlobalBudget } from './rateLimiter'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const WM_ID_TTL_SECONDS = 60 * 60 * 24 * 7
+// Hard daily cap on uncached title lookups: Watchmode quota is monthly, so rotating-IP
+// scraping of /api/prices must not be able to exhaust it.
+const DAILY_UPSTREAM_LOOKUP_BUDGET = Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 300
 const SEARCH_FIELD = { movie: 'tmdb_movie_id', tv: 'tmdb_tv_id' }
 
 // Watchmode free tier only serves US sources — skip upstream calls elsewhere.
@@ -100,9 +104,11 @@ const cheapestOf = (offers, type) =>
     .sort((a, b) => a.price - b.price)[0] || null
 
 export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US' }) {
-  const wmId = WATCHMODE_REGIONS.includes(region)
-    ? await resolveWatchmodeId(tmdbId, mediaType)
-    : null
+  const withinBudget = WATCHMODE_REGIONS.includes(region) && await checkGlobalBudget('watchmode', {
+    maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
+    windowSeconds: 60 * 60 * 24
+  })
+  const wmId = withinBudget ? await resolveWatchmodeId(tmdbId, mediaType) : null
 
   const [sources, details] = await Promise.all([
     wmId ? fetchWatchmodeJson(`/title/${wmId}/sources/?regions=${region}`) : null,

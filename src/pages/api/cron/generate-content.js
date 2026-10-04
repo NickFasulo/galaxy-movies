@@ -22,6 +22,7 @@ import {
   MAX_GENERATED_LISTS
 } from '../../../utils/generatedLists'
 import { curatedLists } from '../../../utils/curatedLists'
+const { isCronAuthorized } = require('../../../utils/auth')
 
 export const config = { maxDuration: 60 }
 
@@ -77,12 +78,6 @@ function getOpenAI() {
   if (!process.env.OPENAI_API_KEY) return null
   openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
-}
-
-function isAuthorized(req) {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return req.headers.authorization === `Bearer ${secret}`
 }
 
 async function draftTagline({ title, keyword, context }) {
@@ -182,7 +177,7 @@ async function draftDiscoverList(seed) {
 }
 
 export default async function handler(req, res) {
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 

@@ -1,16 +1,11 @@
 import { getRedis } from '../../../utils/redis'
 import { getProviderChanges } from '../../../utils/streamingChanges'
 const { CONFIRMED_KEY } = require('../../../utils/waitlistStore')
+const { isCronAuthorized } = require('../../../utils/auth')
 
 export const config = { maxDuration: 60 }
 
 const MAX_ITEMS = 10
-
-function isAuthorized(req) {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return req.headers.authorization === `Bearer ${secret}`
-}
 
 const escapeHtml = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -70,7 +65,7 @@ function buildEmail(siteUrl, items, email, token) {
 }
 
 export default async function handler(req, res) {
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
   if (!process.env.RESEND_API_KEY) {

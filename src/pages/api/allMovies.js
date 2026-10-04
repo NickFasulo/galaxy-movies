@@ -34,7 +34,19 @@ function normalizeResults(results) {
     .map(item => (item.media_type === 'movie' ? { ...item, mediaType: 'movie' } : normalizeTvTitle(item)))
 }
 
+const MEDIA_TYPES = new Set(['movie', 'tv', 'trending'])
+const VALID_CATEGORIES = new Set([...Object.keys(GENRE_MAP), 'popular', 'now_playing', 'upcoming', 'top_rated'])
+const MAX_SEARCH_LENGTH = 100
+const MAX_PAGE = 500
+
+const firstParam = (value) => (Array.isArray(value) ? value[0] : value)
+
 export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET'])
+    return res.status(405).end(`Method ${req.method} Not Allowed`)
+  }
+
   const ip = getClientIP(req)
   const userAgent = req.headers['user-agent']
 
@@ -51,7 +63,15 @@ export default async function handler(req, res) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
   }
-  const { category = 'popular', page = 1, search = '', media = 'movie' } = req.query
+  const category = String(firstParam(req.query.category) || 'popular')
+  const media = String(firstParam(req.query.media) || 'movie')
+  const search = String(firstParam(req.query.search) || '').slice(0, MAX_SEARCH_LENGTH)
+  const page = firstParam(req.query.page) || 1
+
+  if (!MEDIA_TYPES.has(media) || !VALID_CATEGORIES.has(category)) {
+    return res.status(400).json({ message: 'Invalid category or media type' })
+  }
+
   const apiKey = process.env.TMDB_API_KEY
 
   if (!apiKey) {
@@ -65,7 +85,7 @@ export default async function handler(req, res) {
   const ninetyDaysAgo = new Date(new Date().setDate(now.getDate() - 90)).toISOString().split('T')[0]
 
   try {
-    const pageNum = parseInt(page, 10)
+    const pageNum = Math.min(MAX_PAGE, Math.max(1, parseInt(page, 10) || 1))
     let endpoint = ''
 
     if (search.trim().length > 0) {
@@ -139,6 +159,7 @@ export default async function handler(req, res) {
       results: filteredMovies
     })
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Internal Server Error' })
+    console.error('allMovies error:', error)
+    return res.status(500).json({ message: 'Internal Server Error' })
   }
 }

@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
+import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat } from '../../utils/movieSearch'
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
 
 let openai
 
@@ -38,6 +39,9 @@ async function getRecentReleasesContext() {
 const MAX_REQUESTS_PER_HOUR = 20
 const MAX_CONVERSATION_LENGTH = 10
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60
+const MAX_MESSAGE_LENGTH = 500
+const MAX_HISTORY_MESSAGE_LENGTH = 2000
+const GLOBAL_DAILY_CHAT_BUDGET = 3000
 
 export const config = {
   api: {
@@ -48,11 +52,10 @@ export const config = {
 }
 
 function getConversationCacheKey(messages, tasteProfile) {
-  const lastMessage = messages[messages.length - 1]
-  const tasteFingerprint = tasteProfile
-    ? (tasteProfile.topRated.join('|') + tasteProfile.disliked.join('|')).substring(0, 80)
-    : ''
-  return `chat:${lastMessage.role}:${lastMessage.content.substring(0, 50)}:${tasteFingerprint}`
+  const hash = createHash('sha256')
+    .update(JSON.stringify([messages.map((m) => [m.role, m.content]), tasteProfile]))
+    .digest('hex')
+  return `chat:${hash}`
 }
 
 // Caps each field so a crafted body can't inflate the prompt — this is injected
@@ -82,21 +85,27 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Bot access denied' })
   }
 
-  const { messages = [], tasteProfile: rawTasteProfile } = req.body
+  const { messages: rawMessages, tasteProfile: rawTasteProfile } = req.body || {}
   const tasteProfile = sanitizeTasteProfile(rawTasteProfile)
 
-  if (!Array.isArray(messages) || messages.length === 0) {
+  if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required' })
   }
 
-  const lastMessage = messages[messages.length - 1]
-  if (!lastMessage || typeof lastMessage.content !== 'string' || !lastMessage.content.trim()) {
+  const rawLast = rawMessages[rawMessages.length - 1]
+  if (!rawLast || rawLast.role !== 'user' || typeof rawLast.content !== 'string' || !rawLast.content.trim()) {
     return res.status(400).json({ error: 'Valid message content is required' })
   }
 
-  if (lastMessage.content.length > 500) {
-    return res.status(400).json({ error: 'Message content too long (max 500 characters)' })
+  if (rawLast.content.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `Message content too long (max ${MAX_MESSAGE_LENGTH} characters)` })
   }
+
+  // Only user/assistant turns are accepted so a client can't smuggle in its own system prompt.
+  const messages = rawMessages
+    .slice(-MAX_CONVERSATION_LENGTH)
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_HISTORY_MESSAGE_LENGTH) }))
 
   const clientId = getClientIP(req)
   const allowed = await checkDistributedRateLimit(clientId, {
@@ -115,14 +124,20 @@ export default async function handler(req, res) {
     return res.status(200).json({ response: cachedEntry.text, links: cachedEntry.links, cached: true })
   }
 
+  const withinBudget = await checkGlobalBudget('chat', {
+    maxRequests: GLOBAL_DAILY_CHAT_BUDGET,
+    windowSeconds: 60 * 60 * 24
+  })
+  if (!withinBudget) {
+    return res.status(503).json({ error: 'AI chat is busy right now. Please try again later.' })
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return res.status(503).json({ error: 'AI chat is temporarily unavailable.' })
   }
 
   try {
     openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-    const limitedMessages = messages.slice(-MAX_CONVERSATION_LENGTH)
 
     let recentReleasesContext = ''
     if (isRecentReleasesQuery(lastMessage.content)) {
@@ -188,7 +203,7 @@ When users ask about group decision making:
 Keep responses conversational but focused on actionable movie and show recommendations.`
     }
 
-    const allMessages = [systemMessage, ...limitedMessages]
+    const allMessages = [systemMessage, ...messages]
 
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -196,6 +211,10 @@ Keep responses conversational but focused on actionable movie and show recommend
       max_tokens: 300,
       temperature: 0.7,
       stream: true
+    })
+
+    req.on('close', () => {
+      if (!res.writableEnded) stream.controller.abort()
     })
 
     res.setHeader('Content-Type', 'text/event-stream')

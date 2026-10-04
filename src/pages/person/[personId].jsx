@@ -18,6 +18,8 @@ import { normalizeTvTitle } from '../../utils/tmdb'
 export const getServerSideProps = async (context) => {
   const { personId } = context.query
 
+  if (!/^\d{1,10}$/.test(String(personId))) return { notFound: true }
+
   try {
     const res = await fetch(
       `https://api.themoviedb.org/3/person/${personId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=movie_credits,tv_credits`

@@ -19,6 +19,8 @@ import dateFormatter from '../../utils/dateFormatter'
 export const getServerSideProps = async (context) => {
   const { companyId } = context.query
 
+  if (!/^\d{1,10}$/.test(String(companyId))) return { notFound: true }
+
   try {
     const [companyRes, moviesRes] = await Promise.all([
       fetch(`https://api.themoviedb.org/3/company/${companyId}?api_key=${process.env.TMDB_API_KEY}`),
@@ -218,7 +220,7 @@ export default function Company({ company, movies, companyError }) {
                   )}
                 </Flex>
 
-                {company.homepage && (
+                {/^https?:\/\//i.test(company.homepage || '') && (
                   <ChakraLink
                     href={company.homepage}
                     isExternal
