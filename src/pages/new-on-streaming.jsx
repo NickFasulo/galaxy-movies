@@ -1,12 +1,15 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { Box, Heading, Text } from '@chakra-ui/react'
+import { Fragment } from 'react'
+import { Box, Flex, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import BackButton from '../components/BackButton'
 import BreadcrumbSchema from '../components/BreadcrumbSchema'
 import HreflangTags from '../components/HreflangTags'
 import { streamingProviders, getProviderId, isProviderAvailableInRegion, fetchListMovies } from '../utils/tmdb'
 import { detectRegion } from '../utils/region'
+import { withTimeout } from '../utils/withTimeout'
+import { getProviderChanges } from '../utils/streamingChanges'
 
 const NEW_RELEASE_WINDOW_DAYS = 45
 const MOVIES_PER_PROVIDER = 6
@@ -38,8 +41,15 @@ export async function getServerSideProps({ req, res }) {
       })
     )
 
+    const sections = results.filter((section) => section.movies.length > 0)
+    const changes = await withTimeout(
+      getProviderChanges(sections.map((section) => section.key)),
+      null,
+      2000
+    ) || {}
+
     res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400')
-    return { props: { region, sections: results.filter((section) => section.movies.length > 0) } }
+    return { props: { region, sections, changes } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
@@ -47,7 +57,36 @@ export async function getServerSideProps({ req, res }) {
   }
 }
 
-export default function NewOnStreaming({ region, sections, dataError }) {
+const CHANGE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function formatChangeDate(stamp) {
+  if (!/^\d{8}$/.test(stamp || '')) return ''
+  const month = CHANGE_MONTHS[Number(stamp.slice(4, 6)) - 1]
+  return `${month} ${Number(stamp.slice(6, 8))}`
+}
+
+function ChangeList({ label, items, showDate = false }) {
+  if (!items?.length) return null
+  return (
+    <Box mb={3}>
+      <Text fontSize='sm' color='gray.400' mb={1}>{label}</Text>
+      <Flex wrap='wrap' columnGap={2} rowGap={1} fontSize='sm' color='whiteAlpha.900'>
+        {items.map((t, i) => (
+          <Fragment key={`${t.tmdbType}-${t.tmdbId}-${t.date || t.title}`}>
+            {i > 0 && <Text as='span' color='gray.600'>·</Text>}
+            <Link href={`/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`} passHref>
+              <Text as='span' _hover={{ textDecoration: 'underline' }} cursor='pointer'>
+                {t.title}{t.year ? ` (${t.year})` : ''}{showDate && t.date ? ` — ${formatChangeDate(t.date)}` : ''}{t.season ? ` (season ${t.season})` : ''}
+              </Text>
+            </Link>
+          </Fragment>
+        ))}
+      </Flex>
+    </Box>
+  )
+}
+
+export default function NewOnStreaming({ region, sections, changes = {}, dataError }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
@@ -129,6 +168,26 @@ export default function NewOnStreaming({ region, sections, dataError }) {
                 <MovieGrid movies={section.movies} />
               </Box>
             ))
+          )}
+
+          {Object.keys(changes).length > 0 && (
+            <Box mt={14}>
+              <Heading as='h2' size='md' mb={6} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
+                Coming soon &amp; recently changed
+              </Heading>
+              <Box ml={{ base: 0, md: '5rem' }}>
+                {Object.entries(changes).map(([key, change]) => (
+                  <Box key={key} mb={8}>
+                    <Heading as='h3' size='sm' mb={3}>
+                      <Link href={`/streaming/${key}`}>{change.source}</Link>
+                    </Heading>
+                    <ChangeList label='Coming soon' items={change.coming} showDate />
+                    <ChangeList label='Just added' items={change.added} />
+                    <ChangeList label='Left recently' items={change.left} />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           )}
 
           <Text textAlign='center' mt={10} color='gray.400'>
