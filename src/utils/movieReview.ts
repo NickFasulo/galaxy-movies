@@ -1,6 +1,6 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
-import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from './openai'
 import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 import type { MediaType } from '../types/tmdb'
@@ -67,6 +67,7 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
 
   const client = getOpenAIClient()
   if (!client) return null
+  if (!(await isAiAvailable())) return null
 
   const withinBudget = await checkGlobalBudget('ai_review', {
     maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
@@ -108,6 +109,7 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
     await writeCache(kv, key, reviewText)
     return reviewText
   } catch (err) {
+    if (isQuotaError(err)) markAiUnavailable()
     console.error(`Error generating AI review for movie ${movieId}:`, err)
     return null
   }

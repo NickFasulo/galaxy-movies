@@ -1,6 +1,6 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
-import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from './openai'
 import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 import type { MediaType } from '../types/tmdb'
@@ -86,6 +86,7 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
 
   const client = getOpenAIClient()
   if (!client) return []
+  if (!(await isAiAvailable())) return []
 
   const withinBudget = await checkGlobalBudget('ai_similar', {
     maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
@@ -186,6 +187,7 @@ Respond with only a JSON object of the shape {"recommendations": [{"id": number,
     await writeCache(kv, key, enriched)
     return enriched
   } catch (err) {
+    if (isQuotaError(err)) markAiUnavailable()
     console.error(`Error generating AI similar movies for movie ${movieId}:`, err)
     return []
   }

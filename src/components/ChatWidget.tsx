@@ -63,6 +63,7 @@ export default function ChatWidget() {
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [aiAvailable, setAiAvailable] = useState<boolean | null>(null)
   const sessionStartTimeRef = useRef<number | null>(null)
   const messageCountRef = useRef(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -99,6 +100,11 @@ export default function ChatWidget() {
     }
 
     sessionStartTimeRef.current = Date.now()
+
+    fetch('/api/aiStatus')
+      .then((r) => r.json())
+      .then((d) => setAiAvailable(d.available !== false))
+      .catch(() => setAiAvailable(true))
   }, [])
 
   useEffect(() => {
@@ -149,7 +155,7 @@ export default function ChatWidget() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw Object.assign(new Error(errorData.error || 'Failed to get response'), { status: response.status })
+        throw Object.assign(new Error(errorData.error || 'Failed to get response'), { status: response.status, code: errorData.code })
       }
 
       if (!response.body) throw new Error('Empty response body')
@@ -223,7 +229,12 @@ export default function ChatWidget() {
       }
 
     } catch (caught) {
-      const error = caught as Error & { status?: number }
+      const error = caught as Error & { status?: number; code?: string }
+      if (error.status === 503 && error.code === 'ai_unavailable') {
+        setAiAvailable(false)
+        onClose()
+        return
+      }
       if (error.name === 'AbortError') {
         console.log('Request was aborted')
       } else {
@@ -240,7 +251,7 @@ export default function ChatWidget() {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [inputValue, messages, isLoading, sessionId])
+  }, [inputValue, messages, isLoading, sessionId, onClose])
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -266,6 +277,8 @@ export default function ChatWidget() {
     sessionStorage.removeItem('chatMessages')
     sessionStorage.removeItem('chatMessageLinks')
   }
+
+  if (!aiAvailable) return null
 
   return (
     <>

@@ -4,7 +4,7 @@ import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
 import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
-import { aiModel, aiParams, recordAiUsage, getOpenAIClient } from '../../utils/openai'
+import { aiModel, aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../utils/openai'
 import { getRedis } from '../../utils/redis'
 
 interface ChatTurn {
@@ -175,17 +175,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.end()
   }
 
+  const client = getOpenAIClient()
+  if (!client || !(await isAiAvailable())) {
+    return res.status(503).json({ error: 'AI chat is temporarily unavailable.', code: 'ai_unavailable' })
+  }
+
   const withinBudget = await checkGlobalBudget('chat', {
     maxRequests: GLOBAL_DAILY_CHAT_BUDGET,
     windowSeconds: 60 * 60 * 24
   })
   if (!withinBudget) {
     return res.status(503).json({ error: 'AI chat is busy right now. Please try again later.' })
-  }
-
-  const client = getOpenAIClient()
-  if (!client) {
-    return res.status(503).json({ error: 'AI chat is temporarily unavailable.' })
   }
 
   try {
@@ -317,10 +317,16 @@ ${JSON.stringify(referenceData)}`
     }
 
   } catch (error) {
+    const unavailable = isQuotaError(error)
+    if (unavailable) markAiUnavailable()
     console.error('Error in chat stream:', error)
-    
+
     if (!res.headersSent) {
-      return res.status(500).json({ error: 'Failed to generate response' })
+      return res.status(unavailable ? 503 : 500).json(
+        unavailable
+          ? { error: 'AI chat is temporarily unavailable.', code: 'ai_unavailable' }
+          : { error: 'Failed to generate response' }
+      )
     } else {
       res.write('data: [ERROR]\n\n')
       res.end()

@@ -89,3 +89,38 @@ export function getOpenAIClient(): OpenAI | null {
   client = client || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return client
 }
+
+const UNAVAILABLE_KEY = 'ai:unavailable'
+const UNAVAILABLE_TTL_SECONDS = 60 * 60
+let unavailableUntil = 0
+
+// Only billing/auth failures trip the switch — ordinary 429 rate_limit_exceeded is transient.
+export function isQuotaError(err: unknown): boolean {
+  if (!(err instanceof OpenAI.APIError)) return false
+  if (err.status === 401 || err.status === 402) return true
+  const code = err.code || (err.error as { code?: string } | undefined)?.code
+  return code === 'insufficient_quota' || code === 'billing_hard_limit_reached' || code === 'billing_not_active'
+}
+
+export function markAiUnavailable(): void {
+  unavailableUntil = Date.now() + UNAVAILABLE_TTL_SECONDS * 1000
+  const kv = getRedis()
+  if (!kv) return
+  kv.set(UNAVAILABLE_KEY, 1, { ex: UNAVAILABLE_TTL_SECONDS }).catch((err) => console.error('Redis error marking AI unavailable:', err))
+}
+
+// Key present + not tripped. Redis read errors fail open (assume available).
+export async function isAiAvailable(): Promise<boolean> {
+  if (!process.env.OPENAI_API_KEY) return false
+  if (Date.now() < unavailableUntil) return false
+  const kv = getRedis()
+  if (!kv) return true
+  try {
+    const flagged = await kv.get(UNAVAILABLE_KEY)
+    if (flagged) unavailableUntil = Date.now() + 60 * 1000
+    return !flagged
+  } catch (err) {
+    console.error('Redis error reading AI availability:', err)
+    return true
+  }
+}

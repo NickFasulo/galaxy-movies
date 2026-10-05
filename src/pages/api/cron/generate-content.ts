@@ -23,7 +23,7 @@ import {
 } from '../../../utils/generatedLists'
 import { curatedLists } from '../../../utils/curatedLists'
 import { isCronAuthorized } from '../../../utils/auth'
-import { aiParams, recordAiUsage, getOpenAIClient } from '../../../utils/openai'
+import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../../utils/openai'
 
 export const config = { maxDuration: 60 }
 
@@ -228,6 +228,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
+  if (!(await isAiAvailable())) {
+    return res.status(200).json({ skipped: true, reason: 'AI unavailable' })
+  }
+
   const generated = await getGeneratedLists()
   if (Object.keys(generated).length >= MAX_GENERATED_LISTS) {
     return res.status(200).json({ skipped: true, reason: `Registry cap reached (${MAX_GENERATED_LISTS})` })
@@ -376,6 +380,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (err) {
       console.error(`Content generation failed for seed ${seed.slug}:`, err)
       const reason = err instanceof Error ? err.message : String(err)
+      if (isQuotaError(err)) {
+        markAiUnavailable()
+        results.push({ slug: seed.slug, status: 'error', reason })
+        break
+      }
       await failSeed(seed.slug, reason)
       results.push({ slug: seed.slug, status: 'error', reason })
     }

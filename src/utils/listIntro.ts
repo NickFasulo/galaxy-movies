@@ -1,6 +1,6 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
-import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from './openai'
 import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 
@@ -61,6 +61,7 @@ export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitle
 
   const client = getOpenAIClient()
   if (!client) return null
+  if (!(await isAiAvailable())) return null
 
   const withinBudget = await checkGlobalBudget('ai_list_intro', {
     maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
@@ -98,6 +99,7 @@ export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitle
     await writeCache(kv, key, introText)
     return introText
   } catch (err) {
+    if (isQuotaError(err)) markAiUnavailable()
     console.error(`Error generating AI intro for list ${slug}:`, err)
     return null
   }
