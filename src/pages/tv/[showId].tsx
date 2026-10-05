@@ -607,7 +607,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
           </Flex>
 
         </Flex>
-        <Box w='100%'>
+        <Box w='100%' maxW='1200px' px='1rem'>
           <SimilarMovies movies={similarShows} />
         </Box>
       </Flex>
