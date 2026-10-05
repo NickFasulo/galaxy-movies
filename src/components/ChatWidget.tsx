@@ -271,7 +271,7 @@ export default function ChatWidget() {
     <>
       <Box
         position="fixed"
-        bottom="6"
+        bottom="4rem"
         right="6"
         zIndex={1000}
       >

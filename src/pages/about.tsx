@@ -9,7 +9,7 @@ export default function About() {
         Galaxy Movies helps people discover popular, new, and upcoming movies in one place.
       </InfoParagraph>
       <InfoParagraph>
-        Movie information and availability data are supplied by The Movie Database. Availability may vary by country and can change over time.
+        Movie, TV information, and watch-provider availability are supplied by The Movie Database (TMDB). Rental and purchase prices, provider deep links, and streaming catalog changes are supplied by Watchmode. Availability may vary by country and can change over time.
       </InfoParagraph>
       <Flex wrap="wrap" gap="1.5rem" alignItems="center" justify={{ base: 'center', md: 'flex-start' }} my='2rem'>
         <a href="https://launchaf.com/" target="_blank" rel="noopener" data-launchaf-badge="true">

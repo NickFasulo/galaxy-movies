@@ -1,6 +1,5 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
-import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from 'react-query'
@@ -13,6 +12,7 @@ import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import TopBackdrop from '../components/TopBackdrop'
 import HreflangTags from '../components/HreflangTags'
+import LegalLinks from '../components/LegalLinks'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import type { TitleSummary, TmdbMovie } from '../types/tmdb'
@@ -369,9 +369,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
                 bg='#1f252b'
               >
                 <Text textAlign='center' color='whiteAlpha.900' fontSize='sm'>
-                  <Link href='/privacy'>Privacy</Link> ·{' '}
-                  <Link href='/terms'>Terms</Link> ·{' '}
-                  <Link href='/contact'>Contact</Link>
+                  <LegalLinks />
                 </Text>
               </Box>
             </Flex>
@@ -386,7 +384,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
             position='fixed'
             size='lg'
             right='1.5rem'
-            bottom={{ base: '5em', md: '6rem' }}
+            bottom='9rem'
             zIndex={10}
             borderRadius='full'
             boxShadow='0 0 6px black'

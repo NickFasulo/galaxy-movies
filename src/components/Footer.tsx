@@ -1,5 +1,5 @@
-import NextLink from 'next/link'
-import { Box, Link, Text } from '@chakra-ui/react'
+import { Box, Text } from '@chakra-ui/react'
+import LegalLinks from './LegalLinks'
 
 // Excluded on the homepage in _app.jsx — its infinite scroll has no stable
 // "bottom" for an in-flow footer, so it uses its own fixed legal pill instead.
@@ -10,9 +10,7 @@ export default function Footer({ isDark = false }) {
   return (
     <Box as='footer' bg={bg} mt='auto'>
       <Text textAlign='center' fontSize='sm' color='whiteAlpha.900' py={2}>
-        <Link as={NextLink} href='/privacy'>Privacy</Link> ·{' '}
-        <Link as={NextLink} href='/terms'>Terms</Link> ·{' '}
-        <Link as={NextLink} href='/contact'>Contact</Link>
+        <LegalLinks />
       </Text>
     </Box>
   )

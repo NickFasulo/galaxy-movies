@@ -19,4 +19,4 @@ Next.js 15 Pages Router app (React 18, Chakra UI, React Query v3). All applicati
 
 ## Environment
 
-Copy `.env.example` (if present) or set: `TMDB_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `UPSTASH_REDIS_KV_REST_API_URL`, `UPSTASH_REDIS_KV_REST_API_TOKEN`, `OPENAI_API_KEY`, `WATCHMODE_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET`. Never commit `.env.local`.
+Copy `.env.example` (if present) or set: `TMDB_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `UPSTASH_REDIS_KV_REST_API_URL`, `UPSTASH_REDIS_KV_REST_API_TOKEN`, `OPENAI_API_KEY`, `WATCHMODE_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET`, `TAKEADS_PUBLIC_KEY`. Without `TAKEADS_PUBLIC_KEY`, watch-provider links fall back to plain provider homepages instead of affiliate tracking links. Optional: `WATCHMODE_DAILY_LOOKUP_BUDGET` (default 300), `RESEND_FROM`. Never commit `.env.local`.
