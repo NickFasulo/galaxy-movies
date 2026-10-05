@@ -1,3 +1,4 @@
+import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -15,8 +16,13 @@ import { StarIcon, ExternalLinkIcon } from '@chakra-ui/icons'
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
+import type { TmdbCompany, TmdbMovie, TmdbPaged } from '../../types/tmdb'
 
-export const getServerSideProps = async (context) => {
+type Props =
+  | { companyError: string }
+  | { company: TmdbCompany; movies: TmdbMovie[] }
+
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { companyId } = context.query
 
   if (!/^\d{1,10}$/.test(String(companyId))) return { notFound: true }
@@ -38,8 +44,8 @@ export const getServerSideProps = async (context) => {
       }
     }
 
-    const companyData = await companyRes.json()
-    const moviesData = moviesRes.ok ? await moviesRes.json() : { results: [] }
+    const companyData: TmdbCompany = await companyRes.json()
+    const moviesData: Partial<TmdbPaged<TmdbMovie>> = moviesRes.ok ? await moviesRes.json() : { results: [] }
 
     if (context.res) {
       context.res.setHeader(
@@ -64,8 +70,9 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Company({ company, movies, companyError }) {
-  if (companyError) {
+export default function Company(props: Props) {
+  if ('companyError' in props) {
+    const { companyError } = props
     return (
       <>
         <Head>
@@ -84,6 +91,7 @@ export default function Company({ company, movies, companyError }) {
     )
   }
 
+  const { company, movies } = props
   const logoPath = company.logo_path
   const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w500${logoPath}` : undefined
   const [hasLogoError, setHasLogoError] = useState(false)
@@ -295,7 +303,7 @@ export default function Company({ company, movies, companyError }) {
                         </Text>
                         <Flex justify='space-between' align='center' mt={2}>
                           <Text fontSize='xs' color='gray.400'>
-                            {dateFormatter(movie.release_date)?.slice(-4) || 'N/A'}
+                            {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
                           </Text>
                           <Flex align='center' gap={1}>
                             <StarIcon boxSize={3} color='gold' />

@@ -1,6 +1,8 @@
+import type { GetServerSidePropsContext } from 'next'
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
-export async function getServerSideProps({ res }) {
+export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   res.setHeader('Content-Type', 'text/plain')
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
 

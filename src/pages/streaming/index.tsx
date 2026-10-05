@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, InferGetServerSidePropsType } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Badge, Flex } from '@chakra-ui/react'
@@ -7,12 +8,12 @@ import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import BackButton from '../../components/BackButton'
 
-export async function getServerSideProps({ req, res }) {
+export async function getServerSideProps({ req, res }: GetServerSidePropsContext) {
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
   return { props: { region: detectRegion(req) } }
 }
 
-export default function StreamingIndex({ region }) {
+export default function StreamingIndex({ region }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/streaming`
   const title = 'Where to Watch Movies by Streaming Service'

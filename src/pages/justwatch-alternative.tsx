@@ -1,3 +1,4 @@
+import type { InferGetStaticPropsType } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import {
@@ -17,8 +18,9 @@ import MovieGrid from '../components/MovieGrid'
 import BreadcrumbSchema from '../components/BreadcrumbSchema'
 import HreflangTags from '../components/HreflangTags'
 import BackButton from '../components/BackButton'
+import type { TmdbMovie } from '../types/tmdb'
 
-export async function getStaticProps() {
+export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; dataError?: boolean }; revalidate: number }> {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular' })
     return {
@@ -71,7 +73,7 @@ const FAQ_ITEMS = [
   }
 ]
 
-export default function JustWatchAlternative({ movies, dataError }) {
+export default function JustWatchAlternative({ movies, dataError }: InferGetStaticPropsType<typeof getStaticProps>) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/justwatch-alternative`
   const title = 'A Free JustWatch Alternative for Deciding What to Watch'

@@ -1,3 +1,4 @@
+import type { InferGetStaticPropsType } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -7,6 +8,7 @@ import HreflangTags from '../../components/HreflangTags'
 import BackButton from '../../components/BackButton'
 import { fetchCollection } from '../../utils/tmdb'
 import { franchiseCollectionIds } from '../../utils/franchises'
+import type { TmdbCollection } from '../../types/tmdb'
 
 export async function getStaticProps() {
   const results = await Promise.allSettled(
@@ -14,7 +16,7 @@ export async function getStaticProps() {
   )
 
   const collections = results
-    .filter((r) => r.status === 'fulfilled' && r.value?.id)
+    .filter((r): r is PromiseFulfilledResult<TmdbCollection> => r.status === 'fulfilled' && Boolean(r.value?.id))
     .map((r) => ({
       id: r.value.id,
       name: r.value.name,
@@ -29,7 +31,7 @@ export async function getStaticProps() {
   }
 }
 
-export default function Collections({ collections }) {
+export default function Collections({ collections }: InferGetStaticPropsType<typeof getStaticProps>) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/collections`
   const title = 'Movie Franchise Collections'

@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
@@ -7,8 +8,14 @@ import BreadcrumbSchema from '../components/BreadcrumbSchema'
 import HreflangTags from '../components/HreflangTags'
 // import SurfsharkBanner from '../components/SurfsharkBanner' // affiliate monetization disabled
 import BackButton from '../components/BackButton'
+import type { TmdbMovie } from '../types/tmdb'
 
-export async function getServerSideProps({ res }) {
+interface Props {
+  movies: TmdbMovie[]
+  dataError?: boolean
+}
+
+export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', region: 'IN' })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
@@ -35,7 +42,7 @@ const INDIAN_LANGUAGE_CATEGORIES = [
   { key: 'telugu', label: 'Telugu Movies' }
 ]
 
-export default function StreamingInIndia({ movies, dataError }) {
+export default function StreamingInIndia({ movies, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/streaming-in-india`
   const title = 'Where to Watch Movies Online in India'

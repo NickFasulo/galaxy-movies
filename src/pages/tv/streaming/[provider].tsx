@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
@@ -7,30 +8,41 @@ import { fetchDiscoverTv, streamingProviders, getProviderId, isProviderAvailable
 import { detectRegion } from '../../../utils/region'
 import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
 import HreflangTags from '../../../components/HreflangTags'
-import { tvProviderGenreSlugs, getTvProviderGenreTarget } from '../../../utils/contentOpportunities'
+import { tvProviderGenreSlugs, getTvProviderGenreTarget, type ProviderGenreTarget } from '../../../utils/contentOpportunities'
+import type { StreamingProvider } from '../../../utils/tmdb'
+import type { NormalizedTvShow } from '../../../types/tmdb'
 
-const REGION_NAMES = { US: 'the United States', IN: 'India' }
+type Props = StreamingProvider & {
+  provider: string
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+  region: string
+  availableInRegion: boolean
+}
 
-export async function getServerSideProps({ params, req, res }) {
-  const provider = streamingProviders[params.provider]
+const REGION_NAMES: Record<string, string> = { US: 'the United States', IN: 'India' }
+
+export async function getServerSideProps({ params, req, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const slug = params?.provider ?? ''
+  const provider = streamingProviders[slug]
   if (!provider) return { notFound: true }
 
   const region = detectRegion(req)
-  const availableInRegion = isProviderAvailableInRegion(params.provider, region)
-  const providerId = getProviderId(params.provider, region)
+  const availableInRegion = isProviderAvailableInRegion(slug, region)
+  const providerId = getProviderId(slug, region)
 
   try {
     const data = await fetchDiscoverTv({ providerId, region })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { provider: params.provider, ...provider, shows: data.results, region, availableInRegion } }
+    return { props: { provider: slug, ...provider, shows: data.results, region, availableInRegion } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { provider: params.provider, ...provider, shows: [], dataError: true, region, availableInRegion } }
+    return { props: { provider: slug, ...provider, shows: [], dataError: true, region, availableInRegion } }
   }
 }
 
-export default function TvStreamingPage({ provider, title, shows, dataError, region, availableInRegion, regions }) {
+export default function TvStreamingPage({ provider, title, shows, dataError, region, availableInRegion, regions }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/tv/streaming/${provider}`
   const providerLabel = title.replace(' Movies', '')
@@ -76,7 +88,7 @@ export default function TvStreamingPage({ provider, title, shows, dataError, reg
   ]
   const genreTargets = tvProviderGenreSlugs
     .map((genreKey) => getTvProviderGenreTarget(provider, genreKey))
-    .filter(Boolean)
+    .filter((target): target is ProviderGenreTarget => Boolean(target))
 
   return (
     <>

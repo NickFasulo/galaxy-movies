@@ -1,23 +1,34 @@
 import type { MediaType } from '../types/tmdb'
 import type { TmdbParams } from './tmdb'
 
-export interface ListDef {
+interface BaseListDef {
   title: string
   tagline: string
   group: string
-  params?: TmdbParams
-  type?: 'similar' | 'discover'
   media?: MediaType
-  movieId?: number
-  movieTitle?: string
   keyword?: string
   createdAt?: number
 }
 
+export interface DiscoverListDef extends BaseListDef {
+  type?: 'discover'
+  params: TmdbParams
+  movieId?: undefined
+}
+
+export interface SimilarListDef extends BaseListDef {
+  type: 'similar'
+  movieId: number
+  movieTitle: string
+  params?: undefined
+}
+
+export type ListDef = DiscoverListDef | SimilarListDef
+
 // TMDB keyword ids below were verified via /search/keyword + spot-checked against
 // /discover/movie — do not add lists with unverified ids (they silently return
 // empty or irrelevant results).
-export const curatedLists: Record<string, ListDef> = {
+export const curatedLists: Record<string, DiscoverListDef> = {
   'cozy-night-in': {
     title: 'Cozy Night In Movies',
     tagline: 'Warm, low-commitment comfort watches for a quiet night at home.',

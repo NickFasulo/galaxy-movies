@@ -1,3 +1,4 @@
+import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -15,8 +16,13 @@ import BackButton from '../../components/BackButton'
 import MovieGrid from '../../components/MovieGrid'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import { normalizeTvTitle } from '../../utils/tmdb'
+import type { NormalizedTvShow, TmdbNetwork, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
-export const getServerSideProps = async (context) => {
+type Props =
+  | { networkError: string }
+  | { network: TmdbNetwork; shows: NormalizedTvShow[] }
+
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { networkId } = context.query
 
   if (!/^\d{1,10}$/.test(String(networkId))) return { notFound: true }
@@ -36,8 +42,8 @@ export const getServerSideProps = async (context) => {
       }
     }
 
-    const networkData = await networkRes.json()
-    const showsData = showsRes.ok ? await showsRes.json() : { results: [] }
+    const networkData: TmdbNetwork = await networkRes.json()
+    const showsData: Partial<TmdbPaged<TmdbTvShow>> = showsRes.ok ? await showsRes.json() : { results: [] }
 
     if (context.res) {
       context.res.setHeader(
@@ -62,8 +68,9 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function Network({ network, shows, networkError }) {
-  if (networkError) {
+export default function Network(props: Props) {
+  if ('networkError' in props) {
+    const { networkError } = props
     return (
       <>
         <Head>
@@ -82,6 +89,7 @@ export default function Network({ network, shows, networkError }) {
     )
   }
 
+  const { network, shows } = props
   const logoPath = network.logo_path
   const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w500${logoPath}` : undefined
   const [hasLogoError, setHasLogoError] = useState(false)

@@ -1,32 +1,43 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
-import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
-import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
-import HreflangTags from '../../components/HreflangTags'
-import BackButton from '../../components/BackButton'
+import MovieGrid from '../../../components/MovieGrid'
+import { fetchDiscoverTv, tvGenres } from '../../../utils/tmdb'
+import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
+import HreflangTags from '../../../components/HreflangTags'
+import BackButton from '../../../components/BackButton'
+import type { NormalizedTvShow } from '../../../types/tmdb'
 
-export async function getServerSideProps({ params, res }) {
-  const category = movieCategories[params.category]
-  if (!category) return { notFound: true }
+interface Props {
+  genre: string
+  id: number
+  title: string
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+}
+
+export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ genre: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const slug = params?.genre ?? ''
+  const genre = tvGenres[slug]
+  if (!genre) return { notFound: true }
 
   try {
-    const data = await fetchDiscoverMovies({ category: params.category })
+    const data = await fetchDiscoverTv({ genreId: genre.id })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { category: params.category, ...category, movies: data.results } }
+    return { props: { genre: slug, ...genre, shows: data.results } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { category: params.category, ...category, movies: [], dataError: true } }
+    return { props: { genre: slug, ...genre, shows: [], dataError: true } }
   }
 }
 
-export default function BrowsePage({ category, title, description, movies, dataError }) {
+export default function TvGenrePage({ genre, title, shows, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/browse/${category}`
-  const featuredPoster = movies?.[0]?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
+  const canonicalUrl = `${siteUrl}/tv/genre/${genre}`
+  const description = `Discover ${title.toLowerCase()}, including popular picks and shows worth watching.`
+  const featuredPoster = shows?.[0]?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${shows[0].poster_path}`
     : null
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title,
@@ -40,23 +51,23 @@ export default function BrowsePage({ category, title, description, movies, dataE
     name: title,
     description,
     url: canonicalUrl,
-    numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    numberOfItems: shows?.length || 0,
+    itemListElement: shows?.slice(0, 10).map((show, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Movie',
-        name: movie.title,
-        url: `${siteUrl}/movies/${movie.id}`,
-        image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-        datePublished: movie.release_date || undefined
+        '@type': 'TVSeries',
+        name: show.name || show.title,
+        url: `${siteUrl}/tv/${show.id}`,
+        image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+        startDate: show.first_air_date || show.release_date || undefined
       }
     })) || []
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Browse', url: `${siteUrl}/browse` },
+    { name: 'TV Shows', url: `${siteUrl}/tv` },
     { name: title, url: canonicalUrl }
   ]
 
@@ -96,17 +107,8 @@ export default function BrowsePage({ category, title, description, movies, dataE
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : <MovieGrid movies={movies} />}
-          <Text textAlign='center' mt={8}>
-            Browse <Link href='/browse/popular'>popular</Link>,{' '}
-            <Link href='/browse/now-playing'>now playing</Link>, or{' '}
-            <Link href='/browse/upcoming'>upcoming</Link> movies, or explore{' '}
-            <Link href='/browse/bollywood'>Bollywood</Link>,{' '}
-            <Link href='/browse/tamil'>Tamil</Link>, and{' '}
-            <Link href='/browse/telugu'>Telugu</Link> cinema, or check out{' '}
-            <Link href='/tv'>TV shows</Link>.
-          </Text>
+            <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
+          ) : <MovieGrid movies={shows} />}
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>

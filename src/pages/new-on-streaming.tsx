@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Fragment } from 'react'
@@ -9,12 +10,35 @@ import HreflangTags from '../components/HreflangTags'
 import { streamingProviders, getProviderId, isProviderAvailableInRegion, fetchListMovies } from '../utils/tmdb'
 import { detectRegion } from '../utils/region'
 import { withTimeout } from '../utils/withTimeout'
-import { getProviderChanges } from '../utils/streamingChanges'
+import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
+import type { MediaType, TmdbMovie } from '../types/tmdb'
+
+interface Section {
+  key: string
+  label: string
+  movies: TmdbMovie[]
+}
+
+interface Props {
+  region: string
+  sections: Section[]
+  changes?: Record<string, ProviderChanges>
+  dataError?: boolean
+}
+
+interface ChangeItem {
+  tmdbId: number | null
+  tmdbType: MediaType
+  title: string
+  year?: number | null
+  date?: string
+  season?: number | null
+}
 
 const NEW_RELEASE_WINDOW_DAYS = 45
 const MOVIES_PER_PROVIDER = 6
 
-export async function getServerSideProps({ req, res }) {
+export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   const region = detectRegion(req)
   const today = new Date()
   const windowStart = new Date(today)
@@ -42,7 +66,7 @@ export async function getServerSideProps({ req, res }) {
     )
 
     const sections = results.filter((section) => section.movies.length > 0)
-    const changes = await withTimeout(
+    const changes: Record<string, ProviderChanges> = await withTimeout(
       getProviderChanges(sections.map((section) => section.key)),
       2000,
       {}
@@ -59,13 +83,13 @@ export async function getServerSideProps({ req, res }) {
 
 const CHANGE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-function formatChangeDate(stamp) {
+function formatChangeDate(stamp: string | null | undefined) {
   const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
   if (!m) return ''
   return `${CHANGE_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}`
 }
 
-function ChangeList({ label, items, showDate = false }) {
+function ChangeList({ label, items, showDate = false }: { label: string; items?: ChangeItem[]; showDate?: boolean }) {
   if (!items?.length) return null
   return (
     <Box mb={3}>
@@ -86,7 +110,7 @@ function ChangeList({ label, items, showDate = false }) {
   )
 }
 
-export default function NewOnStreaming({ region, sections, changes = {}, dataError }) {
+export default function NewOnStreaming({ region, sections, changes = {}, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })

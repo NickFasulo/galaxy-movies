@@ -1,42 +1,43 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
+import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
+import { fetchDiscoverMovies, movieCategories } from '../../utils/tmdb'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import BackButton from '../../components/BackButton'
-import { fetchCollection } from '../../utils/tmdb'
+import type { TmdbMovie } from '../../types/tmdb'
 
-export async function getServerSideProps({ params, res }) {
-  const { collectionId } = params
-  if (!/^\d+$/.test(collectionId)) {
-    return { notFound: true }
-  }
+interface Props {
+  category: string
+  title: string
+  description: string
+  sortBy: string
+  language?: string
+  movies: TmdbMovie[]
+  dataError?: boolean
+}
+
+export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ category: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const slug = params?.category ?? ''
+  const category = movieCategories[slug]
+  if (!category) return { notFound: true }
 
   try {
-    const collection = await fetchCollection(collectionId)
-    if (!collection?.id) {
-      return { notFound: true }
-    }
-
-    const parts = (collection.parts || [])
-      .filter((movie) => movie.poster_path)
-      .sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''))
-
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
-    return { props: { collection: { id: collection.id, name: collection.name, overview: collection.overview || '' }, movies: parts } }
+    const data = await fetchDiscoverMovies({ category: slug })
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+    return { props: { category: slug, ...category, movies: data.results } }
   } catch (error) {
     console.error(error)
-    return { notFound: true }
+    res.statusCode = 502
+    return { props: { category: slug, ...category, movies: [], dataError: true } }
   }
 }
 
-export default function Collection({ collection, movies }) {
+export default function BrowsePage({ category, title, description, movies, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/collections/${collection.id}`
-  const title = `${collection.name} Movies in Order`
-  const description = collection.overview
-    ? collection.overview.slice(0, 160)
-    : `All ${movies.length} ${collection.name} movies in release order — and where each one is streaming now.`
+  const canonicalUrl = `${siteUrl}/browse/${category}`
   const featuredPoster = movies?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
     : null
@@ -52,8 +53,8 @@ export default function Collection({ collection, movies }) {
     name: title,
     description,
     url: canonicalUrl,
-    numberOfItems: movies.length,
-    itemListElement: movies.map((movie, index) => ({
+    numberOfItems: movies?.length || 0,
+    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
@@ -63,13 +64,13 @@ export default function Collection({ collection, movies }) {
         image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
         datePublished: movie.release_date || undefined
       }
-    }))
+    })) || []
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Collections', url: `${siteUrl}/collections` },
-    { name: collection.name, url: canonicalUrl }
+    { name: 'Browse', url: `${siteUrl}/browse` },
+    { name: title, url: canonicalUrl }
   ]
 
   return (
@@ -105,13 +106,19 @@ export default function Collection({ collection, movies }) {
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-          <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
-
-          <MovieGrid movies={movies} />
-
-          <Text textAlign='center' mt={8} color='gray.400'>
-            Sorted by release date — check each movie page for current streaming, rent and buy options.
+          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
+          <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
+          {dataError ? (
+            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
+          ) : <MovieGrid movies={movies} />}
+          <Text textAlign='center' mt={8}>
+            Browse <Link href='/browse/popular'>popular</Link>,{' '}
+            <Link href='/browse/now-playing'>now playing</Link>, or{' '}
+            <Link href='/browse/upcoming'>upcoming</Link> movies, or explore{' '}
+            <Link href='/browse/bollywood'>Bollywood</Link>,{' '}
+            <Link href='/browse/tamil'>Tamil</Link>, and{' '}
+            <Link href='/browse/telugu'>Telugu</Link> cinema, or check out{' '}
+            <Link href='/tv'>TV shows</Link>.
           </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />

@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
@@ -7,10 +8,18 @@ import HreflangTags from '../components/HreflangTags'
 import BackButton from '../components/BackButton'
 import { fetchListMovies, fetchListTv } from '../utils/tmdb'
 import { detectRegion } from '../utils/region'
+import type { NormalizedTvShow, TmdbMovie } from '../types/tmdb'
+
+interface Props {
+  region: string
+  movies: TmdbMovie[]
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+}
 
 const TITLE_COUNT = 15
 
-export async function getServerSideProps({ req, res }) {
+export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   const region = detectRegion(req)
   try {
     const params = {
@@ -38,7 +47,7 @@ export async function getServerSideProps({ req, res }) {
   }
 }
 
-export default function FreeStreaming({ region, movies, shows, dataError }) {
+export default function FreeStreaming({ region, movies, shows, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/free`
   const title = 'Free Movies & TV Shows to Stream Now'

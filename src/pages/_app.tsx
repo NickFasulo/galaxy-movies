@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
+import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { Hydrate, QueryClient, QueryClientProvider } from 'react-query'
+import { Hydrate, QueryClient, QueryClientProvider, type DehydratedState } from 'react-query'
 import { ChakraProvider, Flex, Box } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
@@ -11,7 +12,7 @@ import Footer from '../components/Footer'
 import TopBackdrop from '../components/TopBackdrop'
 import '../styles/globals.css'
 
-function MyApp({ Component, pageProps }) {
+function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: DehydratedState }>) {
   const queryClient = useMemo(() => new QueryClient(), [])
   const router = useRouter()
   const isHome = router.pathname === '/'

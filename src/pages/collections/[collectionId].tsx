@@ -1,45 +1,49 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
-import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-import { fetchListMovies, fetchListTv, fetchRecommendedMovies, fetchRecommendedTv } from '../../utils/tmdb'
-import { getCuratedList } from '../../utils/curatedLists'
-import { getGeneratedList } from '../../utils/generatedLists'
-import { getOrGenerateListIntro } from '../../utils/listIntro'
+import BackButton from '../../components/BackButton'
+import { fetchCollection } from '../../utils/tmdb'
+import type { TmdbMovie } from '../../types/tmdb'
 
-export async function getServerSideProps({ params, res }) {
-  const list = getCuratedList(params.slug) || (await getGeneratedList(params.slug))
-  if (!list) return { notFound: true }
+interface Props {
+  collection: { id: number; name: string; overview: string }
+  movies: TmdbMovie[]
+}
+
+export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ collectionId: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const collectionId = params?.collectionId ?? ''
+  if (!/^\d+$/.test(collectionId)) {
+    return { notFound: true }
+  }
 
   try {
-    const isTv = list.media === 'tv'
-    const data = list.type === 'similar'
-      ? (isTv ? await fetchRecommendedTv(list.movieId) : await fetchRecommendedMovies(list.movieId))
-      : (isTv ? await fetchListTv(list.params) : await fetchListMovies(list.params))
-    const movies = data.results || []
+    const collection = await fetchCollection(collectionId)
+    if (!collection?.id) {
+      return { notFound: true }
+    }
 
-    const intro = await getOrGenerateListIntro({
-      slug: params.slug,
-      title: list.title,
-      tagline: list.tagline,
-      sampleTitles: movies.slice(0, 5).map((movie) => movie.title)
-    })
+    const parts = (collection.parts || [])
+      .filter((movie) => movie.poster_path)
+      .sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''))
 
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { slug: params.slug, title: list.title, tagline: list.tagline, movies, intro: intro || null } }
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+    return { props: { collection: { id: collection.id, name: collection.name, overview: collection.overview || '' }, movies: parts } }
   } catch (error) {
     console.error(error)
-    res.statusCode = 502
-    return { props: { slug: params.slug, title: list.title, tagline: list.tagline, movies: [], dataError: true, intro: null } }
+    return { notFound: true }
   }
 }
 
-export default function CuratedListPage({ slug, title, tagline, movies, dataError, intro }) {
+export default function Collection({ collection, movies }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/lists/${slug}`
-  const description = tagline
+  const canonicalUrl = `${siteUrl}/collections/${collection.id}`
+  const title = `${collection.name} Movies in Order`
+  const description = collection.overview
+    ? collection.overview.slice(0, 160)
+    : `All ${movies.length} ${collection.name} movies in release order — and where each one is streaming now.`
   const featuredPoster = movies?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
     : null
@@ -55,24 +59,24 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
     name: title,
     description,
     url: canonicalUrl,
-    numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    numberOfItems: movies.length,
+    itemListElement: movies.map((movie, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': movie.mediaType === 'tv' ? 'TVSeries' : 'Movie',
+        '@type': 'Movie',
         name: movie.title,
-        url: `${siteUrl}/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`,
+        url: `${siteUrl}/movies/${movie.id}`,
         image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
         datePublished: movie.release_date || undefined
       }
-    })) || []
+    }))
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Lists', url: `${siteUrl}/lists` },
-    { name: title, url: canonicalUrl }
+    { name: 'Collections', url: `${siteUrl}/collections` },
+    { name: collection.name, url: canonicalUrl }
   ]
 
   return (
@@ -108,18 +112,14 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
       </Head>
       <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
         <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.400'>{tagline}</Text>
-          {intro && (
-            <Text maxW='42rem' mt={4} color='gray.300'>{intro}</Text>
-          )}
-          {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : movies.length === 0 ? (
-            <Text mt={10} color='gray.500'>No movies currently match this collection.</Text>
-          ) : (
-            <MovieGrid movies={movies} />
-          )}
+          <Heading as='h1' ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
+          <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
+
+          <MovieGrid movies={movies} />
+
+          <Text textAlign='center' mt={8} color='gray.400'>
+            Sorted by release date — check each movie page for current streaming, rent and buy options.
+          </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>

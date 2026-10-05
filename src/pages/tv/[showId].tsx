@@ -1,3 +1,4 @@
+import type { GetServerSideProps } from 'next'
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -9,7 +10,8 @@ import {
   Badge,
   Heading,
   Text,
-  Box
+  Box,
+  Link as ChakraLink
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import VideoModal from '../../components/VideoModal'
@@ -23,78 +25,108 @@ import ActorAvatar from '../../components/ActorAvatar'
 import SimilarMovies from '../../components/SimilarMovies'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-import timeFormatter from '../../utils/timeFormatter'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
 import { useUserData } from '../../hooks/useUserData'
-import { getProviderId } from '../../utils/tmdb'
+import { getProviderId, normalizeTvTitle } from '../../utils/tmdb'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
 import { withTimeout } from '../../utils/withTimeout'
+import type { SimilarTitle } from '../../utils/similarMovies'
+import type {
+  AggregateCastMember,
+  AggregateCredits,
+  ContentRatingsResponse,
+  TmdbPaged,
+  TmdbTvDetails,
+  TmdbTvShow,
+  WatchProvidersRegion,
+  WatchProvidersResponse
+} from '../../types/tmdb'
 
-export const getServerSideProps = async (context) => {
-  const { movieId } = context.query
+type Props =
+  | { showError: string }
+  | {
+      show: TmdbTvDetails
+      videoKey: string | null
+      watchProviders: WatchProvidersRegion | null
+      watchProvidersByRegion: Record<string, WatchProvidersRegion>
+      detectedRegion: string
+      creators: { id: number; name: string }[]
+      topCast: AggregateCastMember[]
+      ageRating: string
+      aiSynopsis: string | null
+      similarShows: SimilarTitle[]
+      providerAffiliateLinks: Record<string, string | null>
+    }
 
-  if (!/^\d{1,10}$/.test(String(movieId))) return { notFound: true }
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
+  const { showId } = context.query
+
+  if (!/^\d{1,10}$/.test(String(showId))) return { notFound: true }
 
   try {
-    const [movieRes, providersRes, creditsRes, releaseDatesRes, recommendationsRes] = await Promise.all([
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`),
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/watch/providers?api_key=${process.env.TMDB_API_KEY}`),
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${process.env.TMDB_API_KEY}`),
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/release_dates?api_key=${process.env.TMDB_API_KEY}`),
-      fetch(`https://api.themoviedb.org/3/movie/${movieId}/recommendations?api_key=${process.env.TMDB_API_KEY}`)
+    const [showRes, providersRes, creditsRes, contentRatingsRes, recommendationsRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=videos`),
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/watch/providers?api_key=${process.env.TMDB_API_KEY}`),
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/aggregate_credits?api_key=${process.env.TMDB_API_KEY}`),
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/content_ratings?api_key=${process.env.TMDB_API_KEY}`),
+      fetch(`https://api.themoviedb.org/3/tv/${showId}/recommendations?api_key=${process.env.TMDB_API_KEY}`)
     ])
 
-    if (!movieRes.ok) {
-      if (movieRes.status === 404) return { notFound: true }
+    if (!showRes.ok) {
+      if (showRes.status === 404) return { notFound: true }
       return {
         props: {
-          movieError: movieRes.status === 401
-            ? 'Movie data is unavailable because the configured TMDB API key was rejected.'
-            : 'Movie data is temporarily unavailable. Please try again later.'
+          showError: showRes.status === 401
+            ? 'Show data is unavailable because the configured TMDB API key was rejected.'
+            : 'Show data is temporarily unavailable. Please try again later.'
         }
       }
     }
 
-    const movieData = await movieRes.json()
-    const providersData = await providersRes.json()
-    const creditsData = creditsRes.ok ? await creditsRes.json() : { cast: [], crew: [] }
-    const releaseDatesData = releaseDatesRes.ok ? await releaseDatesRes.json() : { results: [] }
-    const usRelease = releaseDatesData.results?.find((r) => r.iso_3166_1 === 'US')
-    const cert = usRelease?.release_dates?.find((d) => d.certification)?.certification || 'NR'
+    const showData: TmdbTvDetails = await showRes.json()
+    const providersData: WatchProvidersResponse = await providersRes.json()
+    const creditsData: AggregateCredits = creditsRes.ok ? await creditsRes.json() : { cast: [], crew: [] }
+    const contentRatingsData: ContentRatingsResponse = contentRatingsRes.ok ? await contentRatingsRes.json() : { results: [] }
+    const usRating = contentRatingsData.results?.find((r) => r.iso_3166_1 === 'US')
+    const cert = usRating?.rating || 'NR'
     const countryCode = detectRegion(context.req)
     const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
-    const directorObj = creditsData.crew?.find((person) => person.job === 'Director')
-    const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
+    const creators = (showData.created_by || []).map((person) => ({ id: person.id, name: person.name }))
     const topCast = creditsData.cast?.slice(0, 15) || []
 
-    const recommendationsData = recommendationsRes.ok ? await recommendationsRes.json() : { results: [] }
-    const recommendationCandidates = (recommendationsData.results || [])
-      .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== movieData.id)
-
-    const providerNames = ['flatrate', 'rent', 'buy']
+    const providerNames = (['flatrate', 'rent', 'buy'] as const)
       .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
-    const [validVideoKey, aiSynopsis, similarMovies, providerAffiliateLinks] = await Promise.all([
-      withTimeout(getFirstPlayableKey(movieData.videos?.results), 3000, null),
-      movieData.overview
+    const recommendationsData: Partial<TmdbPaged<TmdbTvShow>> = recommendationsRes.ok ? await recommendationsRes.json() : { results: [] }
+    const recommendationCandidates = (recommendationsData.results || [])
+      .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== showData.id)
+      .map(normalizeTvTitle)
+
+    const showGenres = showData.genres?.map((g) => g.name) || []
+
+    const [validVideoKey, aiSynopsis, similarShows, providerAffiliateLinks] = await Promise.all([
+      withTimeout(getFirstPlayableKey(showData.videos?.results), 3000, null),
+      showData.overview
         ? withTimeout(getOrGenerateMovieReview({
-            movieId: movieData.id,
-            title: movieData.title,
-            overview: movieData.overview,
-            genres: movieData.genres?.map((g) => g.name) || []
+            movieId: showData.id,
+            title: showData.name,
+            overview: showData.overview,
+            genres: showGenres,
+            mediaType: 'tv'
           }), 4500, null)
         : null,
       recommendationCandidates.length > 0
         ? withTimeout(getOrGenerateSimilarMovies({
-            movieId: movieData.id,
-            title: movieData.title,
-            overview: movieData.overview,
-            genres: movieData.genres?.map((g) => g.name) || [],
-            candidates: recommendationCandidates
+            movieId: showData.id,
+            title: showData.name,
+            overview: showData.overview,
+            genres: showGenres,
+            candidates: recommendationCandidates,
+            mediaType: 'tv'
           }), 4500, [])
         : [],
       getProviderAffiliateLinks(providerNames)
@@ -109,16 +141,16 @@ export const getServerSideProps = async (context) => {
 
     return {
       props: {
-        movie: movieData,
+        show: showData,
         videoKey: validVideoKey || null,
         watchProviders: userProviders,
         watchProvidersByRegion: providersData.results || {},
         detectedRegion: countryCode,
-        director,
+        creators,
         topCast,
         ageRating: cert,
         aiSynopsis: aiSynopsis || null,
-        similarMovies: similarMovies || [],
+        similarShows: similarShows || [],
         providerAffiliateLinks
       }
     }
@@ -126,33 +158,32 @@ export const getServerSideProps = async (context) => {
     console.error(error)
     return {
       props: {
-        movieError: 'Movie data is temporarily unavailable. Please try again later.'
+        showError: 'Show data is temporarily unavailable. Please try again later.'
       }
     }
   }
 }
 
-export default function Movie({ movie, movieError, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks }) {
-  if (movieError) {
+export default function TvShow(props: Props) {
+  if ('showError' in props) {
+    const { showError } = props
     return (
       <>
         <Head>
-          <title>Movie unavailable | Galaxy Movies</title>
-          <meta name='description' content={movieError} />
+          <title>Show unavailable | Galaxy Movies</title>
+          <meta name='description' content={showError} />
         </Head>
         <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
-          <Text mt={20}>{movieError}</Text>
+          <Text mt={20}>{showError}</Text>
           <Link href='/'>Return to Galaxy Movies</Link>
         </Box>
       </>
     )
   }
 
-  const backdropPath = movie.backdrop_path || null
-  const posterPath = movie.poster_path || null
-  const backdropUrl = backdropPath
-    ? `https://image.tmdb.org/t/p/original${backdropPath}`
-    : '/backdrop_fallback.webp'
+  const { show, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks } = props
+  const backdropPath = show.backdrop_path || null
+  const posterPath = show.poster_path || null
   const posterUrl = posterPath
     ? `https://image.tmdb.org/t/p/w500${posterPath}`
     : '/poster_fallback.webp'
@@ -169,89 +200,89 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
 
   const { services } = useUserData()
   const myProviderIds = new Set(
-    services.providers.map((key) => getProviderId(key, services.region)).filter(Boolean)
+    services.providers.map((key) => getProviderId(key, services.region)).filter((id): id is number => Boolean(id))
   )
-  const productionCompany = movie.production_companies?.find(company => company.logo_path)
+  const network = show.networks?.find((n) => n.logo_path)
+  const listItem = normalizeTvTitle(show)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/movies/${movie.id}`
-  const description = movie.overview || `Where to watch ${movie.title}.`
-  const genres = movie.genres?.map(g => g.name) || []
-  const ogPoster = movie.poster_path
-  const ogSubtitle = movie.tagline || description
+  const canonicalUrl = `${siteUrl}/tv/${show.id}`
+  const description = show.overview || `Where to watch ${show.name}.`
+  const genres = show.genres?.map(g => g.name) || []
+  const ogPoster = show.poster_path
+  const ogSubtitle = description
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title: movie.title,
+    title: show.name,
     subtitle: ogSubtitle,
     ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
   }).toString()}`
-  const isoDuration = movie.runtime
-    ? `PT${Math.floor(movie.runtime / 60)}H${movie.runtime % 60}M`
-    : undefined
+
+  const seasonsLabel = show.number_of_seasons
+    ? `${show.number_of_seasons} season${show.number_of_seasons === 1 ? '' : 's'}`
+    : null
+  const episodeRuntime = show.episode_run_time?.find((mins) => mins > 0)
 
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'Movie',
-    name: movie.title,
+    '@type': 'TVSeries',
+    name: show.name,
     description,
-    inLanguage: movie.original_language || 'en',
+    inLanguage: show.original_language || 'en',
     image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
-    datePublished: movie.release_date || undefined,
-    duration: isoDuration,
+    startDate: show.first_air_date || undefined,
+    endDate: show.status === 'Ended' || show.status === 'Canceled' ? (show.last_air_date || undefined) : undefined,
     genre: genres.length > 0 ? genres : undefined,
-    director: director ? {
+    numberOfSeasons: show.number_of_seasons || undefined,
+    numberOfEpisodes: show.number_of_episodes || undefined,
+    creator: creators.length > 0 ? creators.map((person) => ({
       '@type': 'Person',
-      name: director.name,
-      url: `${siteUrl}/person/${director.id}`
-    } : undefined,
+      name: person.name,
+      url: `${siteUrl}/person/${person.id}`
+    })) : undefined,
     actor: topCast.length > 0 ? topCast.slice(0, 5).map(person => ({
       '@type': 'Person',
       name: person.name,
       url: `${siteUrl}/person/${person.id}`
     })) : undefined,
-    aggregateRating: movie.vote_count > 0 ? {
+    aggregateRating: (show.vote_count ?? 0) > 0 ? {
       '@type': 'AggregateRating',
-      ratingValue: movie.vote_average,
-      ratingCount: movie.vote_count,
+      ratingValue: show.vote_average,
+      ratingCount: show.vote_count,
       bestRating: 10,
       worstRating: 0
     } : undefined,
-    contentRating: ageRating || undefined,
-    review: aiSynopsis ? {
-      '@type': 'Review',
-      author: { '@type': 'Organization', name: 'Galaxy Movies' },
-      reviewBody: aiSynopsis
-    } : undefined
+    contentRating: ageRating || undefined
   }
 
   const videoObjectData = videoKey ? {
     '@context': 'https://schema.org',
     '@type': 'VideoObject',
-    name: `${movie.title} Trailer`,
-    description: `Watch the official trailer for ${movie.title}`,
+    name: `${show.name} Trailer`,
+    description: `Watch the official trailer for ${show.name}`,
     inLanguage: 'en',
     thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
-    uploadDate: movie.release_date || undefined,
+    uploadDate: show.first_air_date || undefined,
     contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
     embedUrl: `https://www.youtube.com/embed/${videoKey}`
   } : null
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Movies', url: `${siteUrl}/movies` },
-    { name: movie.title, url: canonicalUrl }
+    { name: 'TV Shows', url: `${siteUrl}/tv` },
+    { name: show.name, url: canonicalUrl }
   ]
 
   return (
     <>
       <Head>
-        <title>{`${movie.title} | Galaxy Movies`}</title>
+        <title>{`${show.name} (TV Series) | Galaxy Movies`}</title>
         <meta name='description' content={description} />
         <link rel='canonical' href={canonicalUrl} />
         <HreflangTags canonicalUrl={canonicalUrl} />
 
-        <meta property='og:type' content='video.movie' />
+        <meta property='og:type' content='video.tv_show' />
         <meta property='og:site_name' content='Galaxy Movies' />
         <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={`${movie.title} | Galaxy Movies`} />
+        <meta property='og:title' content={`${show.name} (TV Series) | Galaxy Movies`} />
         <meta property='og:description' content={description} />
         <meta property='og:url' content={canonicalUrl} />
         <meta property='og:image' content={ogImage} />
@@ -259,7 +290,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
         <meta property='og:image:height' content='630' />
 
         <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={`${movie.title} | Galaxy Movies`} />
+        <meta name='twitter:title' content={`${show.name} (TV Series) | Galaxy Movies`} />
         <meta name='twitter:description' content={description} />
         <meta name='twitter:image' content={ogImage} />
 
@@ -307,14 +338,15 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
               src='/backdrop_fallback_lg.webp'
               srcSet='/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'
               sizes='100vw'
-              alt={movie.title || 'Movie Backdrop'}
-              fetchpriority='high'
+              alt={show.name || 'Show Backdrop'}
+              // React 18.2 doesn't recognize camelCase fetchPriority; the lowercase attribute passes through as-is.
+              {...{ fetchpriority: 'high' }}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             />
           ) : (
             <Image
               src={backdropSrc}
-              alt={movie.title || 'Movie Backdrop'}
+              alt={show.name || 'Show Backdrop'}
               fill
               priority
               sizes='100vw'
@@ -340,14 +372,14 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
         />
       </Box>
 
-      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
+      <Flex position='relative' zIndex={1} direction='column' align='center' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
-          
+
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
             <Box position='relative' w={{ base: '20rem', md: '20rem' }} h={{ base: '30rem', md: '30rem' }}>
               <Image
                 src={posterSrc}
-                alt={movie.title || 'Movie Poster'}
+                alt={show.name || 'Show Poster'}
                 fill
                 priority
                 sizes='(max-width: 768px) 100vw, 320px'
@@ -358,7 +390,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
             </Box>
 
             <Wrap justify='center' spacing={{ base: 4, md: 2 }}>
-              {movie.genres?.map((genre) => (
+              {show.genres?.map((genre) => (
                 <WrapItem key={genre.id}><Badge>{genre.name}</Badge></WrapItem>
               ))}
             </Wrap>
@@ -368,12 +400,12 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
                 watchProviders={watchProviders}
                 allWatchProviders={watchProvidersByRegion}
                 detectedRegion={detectedRegion}
-                movieTitle={movie.title}
+                movieTitle={show.name}
                 affiliateLinks={providerAffiliateLinks}
                 myProviderIds={myProviderIds}
-                tmdbId={movie.id}
-                mediaType='movie'
-                releaseYear={Number((movie.release_date || '').slice(0, 4)) || null}
+                tmdbId={show.id}
+                mediaType='tv'
+                releaseYear={Number((show.first_air_date || '').slice(0, 4)) || null}
               />
             </Box>
 
@@ -383,13 +415,18 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
             <Box>
               <Flex align='center' justify={{ base: 'center', md: 'flex-start' }} gap={4} wrap='wrap'>
                 <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
-                  <Text as='span' display='inline-block'>{movie.title}</Text>
+                  <Text as='span' display='inline-block'>{show.name}</Text>
                 </Heading>
                 <Badge colorScheme='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid' borderColor='whiteAlpha.300' flexShrink={0}>
                   {ageRating}
                 </Badge>
+                {show.status && (
+                  <Badge colorScheme={show.status === 'Returning Series' ? 'green' : 'gray'} px={2.5} py={1} borderRadius='md' fontSize='xs' flexShrink={0}>
+                    {show.status}
+                  </Badge>
+                )}
               </Flex>
-              {director && (
+              {creators.length > 0 && (
                 <Text
                   fontSize='sm'
                   color='gray.400'
@@ -397,101 +434,53 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
                   mt={{ base: 4, md: 1 }}
                   textAlign={{ base: 'center', md: 'left' }}
                 >
-                  Directed by{' '}
-                  <Link href={`/person/${director.id}`} passHref>
-                    <Text
-                      as='span'
-                      color='white'
-                      fontWeight='semibold'
-                      _hover={{ textDecoration: 'underline' }}
-                      cursor='pointer'
-                    >
-                      {director.name}
-                    </Text>
-                  </Link>
-                </Text>
-              )}
-              {movie.belongs_to_collection && (
-                <Text
-                  fontSize='sm'
-                  color='gray.400'
-                  textShadow='0 0 4px black'
-                  mt={1}
-                  textAlign={{ base: 'center', md: 'left' }}
-                >
-                  Part of the{' '}
-                  <Link href={`/collections/${movie.belongs_to_collection.id}`} passHref>
-                    <Text
-                      as='span'
-                      color='white'
-                      fontWeight='semibold'
-                      _hover={{ textDecoration: 'underline' }}
-                      cursor='pointer'
-                    >
-                      {movie.belongs_to_collection.name}
-                    </Text>
-                  </Link>{' '}
-                  collection
+                  Created by{' '}
+                  {creators.map((person, index) => (
+                    <span key={person.id}>
+                      {index > 0 && ', '}
+                      <Link href={`/person/${person.id}`} passHref>
+                        <Text
+                          as='span'
+                          color='white'
+                          fontWeight='semibold'
+                          _hover={{ textDecoration: 'underline' }}
+                          cursor='pointer'
+                        >
+                          {person.name}
+                        </Text>
+                      </Link>
+                    </span>
+                  ))}
                 </Text>
               )}
             </Box>
 
             <Flex
-              w={{ base: '100%', md: '14rem' }}
-              justify={{ base: 'center', md: 'space-between' }}
-              gap={{ base: 4, md: 0 }}
+              w={{ base: '100%', md: 'auto' }}
+              justify={{ base: 'center', md: 'flex-start' }}
+              gap={{ base: 4, md: 6 }}
+              wrap='wrap'
             >
               <Flex align='center'>
                 <CalendarIcon color='white' />
-                <Text color='white' textShadow='0 0 4px black' ml={1.5}>{dateFormatter(movie.release_date) || 'N/A'}</Text>
+                <Text color='white' textShadow='0 0 4px black' ml={1.5}>{show.first_air_date ? dateFormatter(show.first_air_date) : 'N/A'}</Text>
               </Flex>
-              <Flex align='center'>
-                <TimeIcon color='white' />
-                <Text color='white' textShadow='0 0 4px black' ml={1.5}>{movie.runtime ? timeFormatter(movie.runtime) : 'N/A'}</Text>
-              </Flex>
+              {episodeRuntime && (
+                <Flex align='center'>
+                  <TimeIcon color='white' />
+                  <Text color='white' textShadow='0 0 4px black' ml={1.5}>~{episodeRuntime}m/ep</Text>
+                </Flex>
+              )}
+              {seasonsLabel && (
+                <Flex align='center'>
+                  <Text color='white' textShadow='0 0 4px black'>{seasonsLabel}{show.number_of_episodes ? ` · ${show.number_of_episodes} episodes` : ''}</Text>
+                </Flex>
+              )}
             </Flex>
-
-            {movie.tagline && (
-              <Text as='em' fontSize='lg' color='gray.400' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
-                "{movie.tagline}"
-              </Text>
-            )}
 
             <Text color='white' fontSize='md' textShadow='0 0 4px black' textAlign='left'>
-              {movie.overview || 'Description unavailable.'}
+              {show.overview || 'Description unavailable.'}
             </Text>
-
-            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
-              <Flex align='center'>
-                <StarIcon boxSize={5} color='gold' />
-                <Text
-                  fontSize='lg'
-                  ml={2}
-                  color='white'
-                  textShadow='2px 0 4px black'
-                  textAlign='center'
-                >
-                  {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'TBD'}
-                </Text>
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                <RatingWidget movie={movie} />
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                {productionCompany ? (
-                  <Link href={`/company/${productionCompany.id}`} passHref>
-                    <Box
-                      as='span'
-                      cursor='pointer'
-                      transition='all 0.2s ease-in-out'
-                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
-                    >
-                      <ProductionLogo company={productionCompany} />
-                    </Box>
-                  </Link>
-                ) : null}
-              </Flex>
-            </Flex>
 
             {aiSynopsis && (
               <Box
@@ -517,6 +506,33 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
               </Box>
             )}
 
+            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
+              <Flex align='center'>
+                <StarIcon boxSize={5} color='gold' />
+                <Text
+                  fontSize='lg'
+                  ml={2}
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  textAlign='center'
+                >
+                  {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
+                </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                <RatingWidget movie={listItem} />
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                {network ? (
+                  <Link href={`/network/${network.id}`} passHref legacyBehavior>
+                    <ChakraLink>
+                      <ProductionLogo company={network} />
+                    </ChakraLink>
+                  </Link>
+                ) : null}
+              </Flex>
+            </Flex>
+
             <Flex
               direction={{ base: 'column', md: 'row' }}
               align={{ base: 'center', md: 'flex-end' }}
@@ -527,7 +543,7 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
               my='1rem'
             >
               <VideoModal videoKey={videoKey} />
-              <WatchlistButton movie={movie} withLabel />
+              <WatchlistButton movie={listItem} withLabel />
               <BackButton />
             </Flex>
 
@@ -580,10 +596,12 @@ export default function Movie({ movie, movieError, videoKey, watchProviders, wat
               </Box>
             )}
 
-            <SimilarMovies movies={similarMovies} />
           </Flex>
 
         </Flex>
+        <Box w='100%'>
+          <SimilarMovies movies={similarShows} />
+        </Box>
       </Flex>
       </Box>
     </>

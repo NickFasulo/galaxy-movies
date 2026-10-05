@@ -1,3 +1,5 @@
+import type { GetServerSidePropsContext } from 'next'
+import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
 import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
@@ -6,7 +8,7 @@ import { franchiseCollectionIds } from '../utils/franchises'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
-const escapeXml = value =>
+const escapeXml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -14,14 +16,14 @@ const escapeXml = value =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | undefined) => {
   if (!dateString) return null
   const date = new Date(dateString)
   if (isNaN(date.getTime())) return null
   return date.toISOString().split('T')[0]
 }
 
-function urlEntry(loc, lastmod) {
+function urlEntry(loc: string, lastmod?: string | null) {
   const escapedLoc = escapeXml(loc)
   return lastmod
     ? `  <url><loc>${escapedLoc}</loc><lastmod>${lastmod}</lastmod></url>`
@@ -32,7 +34,7 @@ const PAGES_PER_LIST = 2
 const CREDITS_SAMPLE_SIZE = 60
 const TV_CREDITS_SAMPLE_SIZE = 30
 
-export async function getServerSideProps({ res }) {
+export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
   const generatedLists = await getGeneratedLists()
 
@@ -87,11 +89,11 @@ export async function getServerSideProps({ res }) {
     ),
   ]
 
-  const movieEntries = new Map()
-  const showEntries = new Map()
-  const personIds = new Set()
-  const companyIds = new Set()
-  const networkIds = new Set()
+  const movieEntries = new Map<number, string>()
+  const showEntries = new Map<number, string>()
+  const personIds = new Set<number>()
+  const companyIds = new Set<number>()
+  const networkIds = new Set<number>()
 
   try {
     const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
@@ -149,12 +151,12 @@ export async function getServerSideProps({ res }) {
     const creditsSampleMovies = Array.from(movieEntries.keys())
       .slice(0, CREDITS_SAMPLE_SIZE)
       .map(id => allMovies.find(movie => movie.id === id))
-      .filter(Boolean)
+      .filter((movie): movie is (typeof allMovies)[number] => Boolean(movie))
     const detailResults = await Promise.allSettled(
       creditsSampleMovies.map(movie =>
         fetch(
           `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits`
-        ).then(r => r.ok ? r.json() : null)
+        ).then((r): Promise<(TmdbMovieDetails & { credits?: Credits }) | null> => r.ok ? r.json() : Promise.resolve(null))
       )
     )
 
@@ -177,12 +179,12 @@ export async function getServerSideProps({ res }) {
     const creditsSampleShows = Array.from(showEntries.keys())
       .slice(0, TV_CREDITS_SAMPLE_SIZE)
       .map(id => allShows.find(show => show.id === id))
-      .filter(Boolean)
+      .filter((show): show is (typeof allShows)[number] => Boolean(show))
     const tvDetailResults = await Promise.allSettled(
       creditsSampleShows.map(show =>
         fetch(
           `https://api.themoviedb.org/3/tv/${show.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=aggregate_credits`
-        ).then(r => r.ok ? r.json() : null)
+        ).then((r): Promise<(TmdbTvDetails & { aggregate_credits?: AggregateCredits }) | null> => r.ok ? r.json() : Promise.resolve(null))
       )
     )
 

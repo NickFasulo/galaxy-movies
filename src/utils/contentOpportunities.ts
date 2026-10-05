@@ -5,7 +5,7 @@ export const MIN_INDEXABLE_MOVIES = 8
 export interface ProviderGenreTarget {
   providerKey: string
   genreKey: string
-  providerLabel: string | null
+  providerLabel: string
   genreLabel: string
   title: string
   description: string
@@ -49,7 +49,7 @@ export function getProviderGenreTarget(providerKey: string, genreKey: string): P
     return null
   }
 
-  const providerLabel = getProviderLabel(providerKey)
+  const providerLabel = getProviderLabel(providerKey) || ''
   const genreLabel = genre.title.replace(' Movies', '')
 
   return {
@@ -78,7 +78,7 @@ export function getTvProviderGenreTarget(providerKey: string, genreKey: string):
     return null
   }
 
-  const providerLabel = getProviderLabel(providerKey)
+  const providerLabel = getProviderLabel(providerKey) || ''
   const genreLabel = genre.title.replace(' Shows', '')
 
   return {

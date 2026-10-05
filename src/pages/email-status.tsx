@@ -3,8 +3,9 @@ import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
 import { Box } from '@chakra-ui/react'
+import { firstParam } from '../utils/query'
 
-const STATUSES = {
+const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {
     title: "You're confirmed",
     body: "Thanks — we'll email you when streaming alerts launch on Galaxy Movies."
@@ -21,7 +22,7 @@ const STATUSES = {
 
 export default function EmailStatus() {
   const { query } = useRouter()
-  const status = STATUSES[query.status] || STATUSES.error
+  const status = STATUSES[firstParam(query.status) ?? ''] || STATUSES.error
 
   return (
     <>

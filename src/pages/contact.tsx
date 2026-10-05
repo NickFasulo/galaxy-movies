@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Box, Button } from '@chakra-ui/react'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
@@ -7,12 +7,13 @@ export default function Contact() {
   const [result, setResult] = useState('')
   const [status, setStatus] = useState('idle')
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const form = e.currentTarget
     setStatus('submitting')
     setResult('Sending...')
 
-    const formData = new FormData(e.target)
+    const formData = new FormData(form)
     formData.append('access_key', '855bed76-0220-41ab-b474-c3fb18d99933')
 
     try {
@@ -26,7 +27,7 @@ export default function Contact() {
       if (data.success) {
         setStatus('success')
         setResult('Thank you! Your message has been sent.')
-        e.target.reset()
+        form.reset()
       } else {
         setStatus('error')
         setResult(data.message || 'Something went wrong. Please try again.')

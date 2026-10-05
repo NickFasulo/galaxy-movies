@@ -1,43 +1,59 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
-import MovieGrid from '../../../components/MovieGrid'
-import BackButton from '../../../components/BackButton'
-import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
-import HreflangTags from '../../../components/HreflangTags'
+import MovieGrid from '../../../../components/MovieGrid'
+import BackButton from '../../../../components/BackButton'
+import BreadcrumbSchema from '../../../../components/BreadcrumbSchema'
+import HreflangTags from '../../../../components/HreflangTags'
 import {
-  fetchDiscoverMovies,
+  fetchDiscoverTv,
   getProviderId,
   isProviderAvailableInRegion,
-  movieGenres,
+  tvGenres,
   streamingProviders
-} from '../../../utils/tmdb'
-import { detectRegion } from '../../../utils/region'
-import { getContentIndexability, getProviderGenreTarget } from '../../../utils/contentOpportunities'
+} from '../../../../utils/tmdb'
+import { detectRegion } from '../../../../utils/region'
+import { getContentIndexability, getTvProviderGenreTarget, type ProviderGenreTarget } from '../../../../utils/contentOpportunities'
+import type { NormalizedTvShow } from '../../../../types/tmdb'
 
-const REGION_NAMES = { US: 'the United States', IN: 'India' }
+interface Props {
+  provider: string
+  genre: string
+  target: ProviderGenreTarget
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+  region: string
+  availableInRegion: boolean
+  isIndexable: boolean
+  indexabilityReason: string | null
+}
 
-export async function getServerSideProps({ params, req, res }) {
-  const target = getProviderGenreTarget(params.provider, params.genre)
+const REGION_NAMES: Record<string, string> = { US: 'the United States', IN: 'India' }
+
+export async function getServerSideProps({ params, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const providerSlug = params?.provider ?? ''
+  const genreSlug = params?.genre ?? ''
+  const target = getTvProviderGenreTarget(providerSlug, genreSlug)
   if (!target) return { notFound: true }
 
   const region = detectRegion(req)
-  const providerId = getProviderId(params.provider, region)
-  const genreId = movieGenres[params.genre].id
-  const availableInRegion = isProviderAvailableInRegion(params.provider, region)
+  const providerId = getProviderId(providerSlug, region)
+  const genreId = tvGenres[genreSlug].id
+  const availableInRegion = isProviderAvailableInRegion(providerSlug, region)
 
   try {
-    const data = await fetchDiscoverMovies({ providerId, genreId, region })
-    const movies = data.results || []
-    const indexability = getContentIndexability({ movies })
+    const data = await fetchDiscoverTv({ providerId, genreId, region })
+    const shows = data.results || []
+    const indexability = getContentIndexability({ movies: shows })
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     return {
       props: {
-        provider: params.provider,
-        genre: params.genre,
+        provider: providerSlug,
+        genre: genreSlug,
         target,
-        movies,
+        shows,
         region,
         availableInRegion,
         isIndexable: indexability.isIndexable,
@@ -51,10 +67,10 @@ export async function getServerSideProps({ params, req, res }) {
     res.statusCode = 502
     return {
       props: {
-        provider: params.provider,
-        genre: params.genre,
+        provider: providerSlug,
+        genre: genreSlug,
         target,
-        movies: [],
+        shows: [],
         dataError: true,
         region,
         availableInRegion,
@@ -65,27 +81,27 @@ export async function getServerSideProps({ params, req, res }) {
   }
 }
 
-export default function ProviderGenrePage({
+export default function TvProviderGenrePage({
   provider,
   genre,
   target,
-  movies,
+  shows,
   dataError,
   region,
   availableInRegion,
   isIndexable,
   indexabilityReason
-}) {
+}: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/streaming/${provider}/${genre}`
+  const canonicalUrl = `${siteUrl}/tv/streaming/${provider}/${genre}`
   const regionName = REGION_NAMES[region] || 'your region'
   const providerConfig = streamingProviders[provider]
   const homeRegionNames = (providerConfig?.regions || []).map((r) => REGION_NAMES[r] || r).join(' and ')
   const description = availableInRegion
     ? `${target.description} Results are tuned for ${regionName}.`
     : `${target.description} ${target.providerLabel} is primarily available in ${homeRegionNames}; availability may vary in ${regionName}.`
-  const featuredPoster = movies?.[0]?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
+  const featuredPoster = shows?.[0]?.poster_path
+    ? `https://image.tmdb.org/t/p/w500${shows[0].poster_path}`
     : null
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
     title: target.title,
@@ -99,24 +115,24 @@ export default function ProviderGenrePage({
     name: target.title,
     description,
     url: canonicalUrl,
-    numberOfItems: movies?.length || 0,
-    itemListElement: movies?.slice(0, 10).map((movie, index) => ({
+    numberOfItems: shows?.length || 0,
+    itemListElement: shows?.slice(0, 10).map((show, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Movie',
-        name: movie.title,
-        url: `${siteUrl}/movies/${movie.id}`,
-        image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-        datePublished: movie.release_date || undefined
+        '@type': 'TVSeries',
+        name: show.name || show.title,
+        url: `${siteUrl}/tv/${show.id}`,
+        image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+        startDate: show.first_air_date || show.release_date || undefined
       }
     })) || []
   }
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
-    { name: 'Streaming', url: `${siteUrl}/streaming` },
-    { name: target.providerLabel, url: `${siteUrl}/streaming/${provider}` },
+    { name: 'TV Shows', url: `${siteUrl}/tv` },
+    { name: target.providerLabel, url: `${siteUrl}/tv/streaming/${provider}` },
     { name: target.genreLabel, url: canonicalUrl }
   ]
 
@@ -158,17 +174,17 @@ export default function ProviderGenrePage({
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
           <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
             Browse all{' '}
-            <Link href={`/streaming/${provider}`}>{target.providerLabel} movies</Link>
+            <Link href={`/tv/streaming/${provider}`}>{target.providerLabel} shows</Link>
             {' '}or all{' '}
-            <Link href={`/genre/${genre}`}>{target.genreLabel.toLowerCase()} movies</Link>.
+            <Link href={`/tv/genre/${genre}`}>{target.genreLabel.toLowerCase()} shows</Link>.
           </Text>
 
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
-          ) : movies.length === 0 ? (
-            <Text mt={10} color='gray.500'>No movies currently match this streaming collection.</Text>
+            <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
+          ) : shows.length === 0 ? (
+            <Text mt={10} color='gray.500'>No shows currently match this streaming collection.</Text>
           ) : (
-            <MovieGrid movies={movies} />
+            <MovieGrid movies={shows} />
           )}
 
           {!isIndexable && indexabilityReason && (
@@ -177,7 +193,7 @@ export default function ProviderGenrePage({
             </Text>
           )}
           <Text textAlign='center' mt={8} color='gray.400'>
-            Availability changes by region and over time. Check the movie page for current provider information.
+            Availability changes by region and over time. Check the show page for current provider information.
           </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />

@@ -194,10 +194,17 @@ export interface TmdbCollection {
   parts?: TmdbMovie[]
 }
 
-export type PersonCredit = TitleSummary & {
+export type MovieCredit = TmdbMovie & {
   character?: string
   job?: string
-  popularity?: number
+  credit_id?: string
+}
+
+export type TvCredit = TmdbTvShow & {
+  character?: string
+  job?: string
+  roles?: { character: string }[]
+  jobs?: { job: string }[]
   credit_id?: string
   episode_count?: number
 }
@@ -212,8 +219,8 @@ export interface TmdbPerson {
   profile_path: string | null
   known_for_department?: string
   also_known_as?: string[]
-  movie_credits?: { cast?: PersonCredit[]; crew?: PersonCredit[] }
-  tv_credits?: { cast?: PersonCredit[]; crew?: PersonCredit[] }
+  movie_credits?: { cast?: MovieCredit[]; crew?: MovieCredit[] }
+  tv_credits?: { cast?: TvCredit[]; crew?: TvCredit[] }
 }
 
 export interface TmdbCompany {

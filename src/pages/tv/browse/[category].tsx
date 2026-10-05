@@ -1,30 +1,41 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
+import Link from 'next/link'
 import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../../../components/MovieGrid'
-import { fetchDiscoverTv, tvGenres } from '../../../utils/tmdb'
+import { fetchDiscoverTv, tvCategories } from '../../../utils/tmdb'
 import BreadcrumbSchema from '../../../components/BreadcrumbSchema'
 import HreflangTags from '../../../components/HreflangTags'
 import BackButton from '../../../components/BackButton'
+import type { NormalizedTvShow } from '../../../types/tmdb'
 
-export async function getServerSideProps({ params, res }) {
-  const genre = tvGenres[params.genre]
-  if (!genre) return { notFound: true }
+interface Props {
+  category: string
+  title: string
+  description: string
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+}
+
+export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ category: string }>): Promise<GetServerSidePropsResult<Props>> {
+  const slug = params?.category ?? ''
+  const category = tvCategories[slug]
+  if (!category) return { notFound: true }
 
   try {
-    const data = await fetchDiscoverTv({ genreId: genre.id })
+    const data = await fetchDiscoverTv({ category: slug })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    return { props: { genre: params.genre, ...genre, shows: data.results } }
+    return { props: { category: slug, ...category, shows: data.results } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { genre: params.genre, ...genre, shows: [], dataError: true } }
+    return { props: { category: slug, ...category, shows: [], dataError: true } }
   }
 }
 
-export default function TvGenrePage({ genre, title, shows, dataError }) {
+export default function TvBrowsePage({ category, title, description, shows, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/tv/genre/${genre}`
-  const description = `Discover ${title.toLowerCase()}, including popular picks and shows worth watching.`
+  const canonicalUrl = `${siteUrl}/tv/browse/${category}`
   const featuredPoster = shows?.[0]?.poster_path
     ? `https://image.tmdb.org/t/p/w500${shows[0].poster_path}`
     : null
@@ -98,6 +109,13 @@ export default function TvGenrePage({ genre, title, shows, dataError }) {
           {dataError ? (
             <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
           ) : <MovieGrid movies={shows} />}
+          <Text textAlign='center' mt={8}>
+            Browse <Link href='/tv/browse/popular'>popular</Link>,{' '}
+            <Link href='/tv/browse/airing-today'>airing today</Link>,{' '}
+            <Link href='/tv/browse/on-the-air'>on the air</Link>, or{' '}
+            <Link href='/tv/browse/top-rated'>top rated</Link> shows, or explore{' '}
+            <Link href='/tv'>all TV shows</Link>.
+          </Text>
           <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
             <BackButton />
           </Box>

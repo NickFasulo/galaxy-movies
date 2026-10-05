@@ -1,3 +1,4 @@
+import type { GetServerSideProps } from 'next'
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -14,8 +15,17 @@ import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
+import type { MovieCredit, NormalizedTvShow, TmdbPerson } from '../../types/tmdb'
 
-export const getServerSideProps = async (context) => {
+type PersonTvShow = NormalizedTvShow & { character: string }
+
+type Props =
+  | { error: string }
+  | { person: TmdbPerson; directedMovies: MovieCredit[]; actingMovies: MovieCredit[]; tvShows: PersonTvShow[] }
+
+type CardTitle = (MovieCredit | PersonTvShow) & { mediaType?: 'tv' }
+
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { personId } = context.query
 
   if (!/^\d{1,10}$/.test(String(personId))) return { notFound: true }
@@ -34,18 +44,18 @@ export const getServerSideProps = async (context) => {
       }
     }
 
-    const person = await res.json()
+    const person: TmdbPerson = await res.json()
 
     const crewMovies = person.movie_credits?.crew || []
     const directedList = crewMovies.filter((m) => m.job === 'Director')
     const uniqueDirected = Array.from(
       new Map(directedList.map((m) => [m.id, m])).values()
-    ).sort((a, b) => b.popularity - a.popularity)
+    ).sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
 
     const castList = person.movie_credits?.cast || []
     const uniqueActing = Array.from(
       new Map(castList.map((m) => [m.id, m])).values()
-    ).sort((a, b) => b.popularity - a.popularity)
+    ).sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
 
     // tv_credits include one entry per episode — dedupe and cap so prolific
     // guest stars don't produce hundreds of cards.
@@ -56,7 +66,7 @@ export const getServerSideProps = async (context) => {
     const uniqueTvShows = Array.from(
       new Map(tvCreditList.map((m) => [m.id, m])).values()
     )
-      .sort((a, b) => b.popularity - a.popularity)
+      .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
       .slice(0, 24)
       .map((c) => ({
         ...normalizeTvTitle(c),
@@ -88,8 +98,9 @@ export const getServerSideProps = async (context) => {
   }
 }
 
-export default function PersonDetails({ person, directedMovies, actingMovies, tvShows, error }) {
-  if (error) {
+export default function PersonDetails(props: Props) {
+  if ('error' in props) {
+    const { error } = props
     return (
       <Box minH='100vh' bg='transparent' p={8} textAlign='center' color='white'>
         <Text mt={20}>{error}</Text>
@@ -98,6 +109,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, tv
     )
   }
 
+  const { person, directedMovies, actingMovies, tvShows } = props
   const profilePath = person.profile_path 
     ? `https://image.tmdb.org/t/p/w500${person.profile_path}` 
     : '/profile_fallback.webp'
@@ -383,7 +395,7 @@ export default function PersonDetails({ person, directedMovies, actingMovies, tv
   )
 }
 
-function MovieCard({ movie, showRole }) {
+function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean }) {
   const posterPath = movie.poster_path 
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
     : '/poster_fallback.webp'
@@ -432,7 +444,7 @@ function MovieCard({ movie, showRole }) {
 
           <Flex justify='space-between' align='center' mt={2}>
             <Text fontSize='xs' color='gray.400'>
-              {dateFormatter(movie.release_date)?.slice(-4) || 'N/A'}
+              {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
             </Text>
             <Flex align='center' gap={1}>
               <StarIcon boxSize={3} color='gold' />

@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
@@ -6,8 +7,14 @@ import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import { fetchDiscoverTv, tvCategories, tvGenres, streamingProviders } from '../../utils/tmdb'
+import type { NormalizedTvShow } from '../../types/tmdb'
 
-export async function getServerSideProps({ res }) {
+interface Props {
+  shows: NormalizedTvShow[]
+  dataError?: boolean
+}
+
+export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   try {
     const data = await fetchDiscoverTv({ category: 'popular' })
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
@@ -19,7 +26,7 @@ export async function getServerSideProps({ res }) {
   }
 }
 
-function LinkGrid({ items }) {
+function LinkGrid({ items }: { items: { href: string; label: string }[] }) {
   return (
     <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
       {items.map((item) => (
@@ -43,7 +50,7 @@ function LinkGrid({ items }) {
   )
 }
 
-export default function TvIndex({ shows, dataError }) {
+export default function TvIndex({ shows, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/tv`
   const title = 'TV Shows – Browse Popular & Trending Series'

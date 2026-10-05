@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, InferGetServerSidePropsType } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Box, Heading, SimpleGrid, Text, Flex } from '@chakra-ui/react'
@@ -7,7 +8,7 @@ import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import BackButton from '../../components/BackButton'
 
-export async function getServerSideProps({ res }) {
+export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const generated = await getGeneratedLists()
   const generatedLists = Object.entries(generated).map(([slug, list]) => ({
     slug,
@@ -19,7 +20,7 @@ export async function getServerSideProps({ res }) {
   return { props: { generatedLists } }
 }
 
-export default function ListsIndex({ generatedLists = [] }) {
+export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/lists`
   const title = 'Curated Movie Lists & Mood Picks'
@@ -54,7 +55,7 @@ export default function ListsIndex({ generatedLists = [] }) {
     { name: 'Lists', url: canonicalUrl }
   ]
 
-  const renderCard = (entry) => (
+  const renderCard = (entry: { slug: string; title: string; tagline: string }) => (
     <Link key={entry.slug} href={`/lists/${entry.slug}`}>
       <Flex
         direction='column'

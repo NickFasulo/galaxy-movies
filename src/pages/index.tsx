@@ -1,3 +1,4 @@
+import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -14,6 +15,17 @@ import TopBackdrop from '../components/TopBackdrop'
 import HreflangTags from '../components/HreflangTags'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { fetchDiscoverMovies } from '../utils/tmdb'
+import type { TitleSummary, TmdbMovie } from '../types/tmdb'
+
+interface Props {
+  initialMovies: TmdbMovie[]
+  initialTotalPages: number
+}
+
+interface FeedPage {
+  results?: TitleSummary[]
+  total_pages?: number
+}
 
 const nowStreamingBadge = (
   <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
@@ -22,9 +34,9 @@ const nowStreamingBadge = (
 )
 
 // Feed values that route to non-movie TMDB media via the `media` query param.
-const MEDIA_FOR_CATEGORY = { tv: 'tv', trending: 'trending' }
+const MEDIA_FOR_CATEGORY: Record<string, string> = { tv: 'tv', trending: 'trending' }
 
-export async function getServerSideProps({ res }) {
+export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
     res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
@@ -35,7 +47,7 @@ export async function getServerSideProps({ res }) {
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages }) {
+export default function Home({ initialMovies, initialTotalPages }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
@@ -74,9 +86,9 @@ export default function Home({ initialMovies, initialTotalPages }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useInfiniteQuery(
+  } = useInfiniteQuery<FeedPage, Error>(
     ['infiniteMovies', category, activeSearch],
-    async ({ pageParam = 1 }) => {
+    async ({ pageParam = 1 }): Promise<FeedPage> => {
       const now = Date.now()
       const timeSinceLastFetch = now - lastFetchTimeRef.current
       const MIN_FETCH_DELAY = 500
@@ -113,7 +125,7 @@ export default function Home({ initialMovies, initialTotalPages }) {
     }
   )
 
-  const changeCategory = useCallback((selectedCategory) => {
+  const changeCategory = useCallback((selectedCategory: string) => {
     setCategory(selectedCategory)
     localStorage.setItem('category', selectedCategory)
     isRestoredRef.current = true
@@ -123,8 +135,8 @@ export default function Home({ initialMovies, initialTotalPages }) {
 
   const moviesList = useMemo(() => {
     if (!data?.pages) return []
-    const seenIds = new Set()
-    const uniqueMovies = []
+    const seenIds = new Set<string>()
+    const uniqueMovies: TitleSummary[] = []
 
     for (const page of data.pages) {
       if (!page.results) continue
@@ -245,7 +257,8 @@ export default function Home({ initialMovies, initialTotalPages }) {
         <meta name='twitter:title' content={pageTitle} />
         <meta name='twitter:description' content={pageDescription} />
         <meta name='twitter:image' content={ogImage} />
-        <meta name='impact-site-verification' value='1ad17b76-2079-4639-9f17-f65f40948c6b' />
+        {/* Impact's verifier requires a `value` attribute, which React's meta typings don't include. */}
+        <meta name='impact-site-verification' {...{ value: '1ad17b76-2079-4639-9f17-f65f40948c6b' }} />
         <meta name="google-adsense-account" content="ca-pub-7970999589560353" />
         <meta name="google-site-verification" content="dI9IyHQELzpq29cGmnFHM5lAXtVXJFovinLzCWl2NlM" />
         <meta name="mitgo-verification" content="dd8a3d12-ce6e-4f62-a56f-79c7a28cbb8d" />
