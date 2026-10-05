@@ -333,7 +333,9 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
           sx={{
             img: {
               objectFit: 'cover',
-              objectPosition: { base: 'center bottom', md: 'center 20%' }
+              objectPosition: { base: 'center bottom', md: 'center 20%' },
+              WebkitMaskImage: { base: 'linear-gradient(to top, black 55%, transparent 100%)', md: 'none' },
+              maskImage: { base: 'linear-gradient(to top, black 55%, transparent 100%)', md: 'none' }
             }
           }}
         >
@@ -363,7 +365,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
           position='absolute'
           inset={0}
           bgGradient={{
-            base: 'linear(to-t, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)',
+            base: 'linear(to-t, rgba(20,24,28,0.15) 0%, rgba(20,24,28,0.45) 55%, rgba(20,24,28,0.8) 100%)',
             md: 'linear(to-b, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)'
           }}
         />
@@ -400,7 +402,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
               ))}
             </Wrap>
 
-            <Box w='20rem' maxH='300px' overflowY='auto'>
+            <Box w='20rem' maxH='300px'>
               <WatchProviders
                 watchProviders={watchProviders}
                 allWatchProviders={watchProvidersByRegion}
