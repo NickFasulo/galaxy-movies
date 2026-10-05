@@ -2,10 +2,11 @@ import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Tooltip, Link, Select } from '@chakra-ui/react'
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
-import { sameStore } from '../utils/prices'
+import { sameStore, type PriceOffer } from '../utils/prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../hooks/useUserData'
-// import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
+import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
+import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
 // Affiliate monetization disabled — uncomment SurfsharkLink + its usages to re-enable.
 // eslint-disable-next-line no-unused-vars
@@ -24,7 +25,13 @@ function SurfsharkLink() {
   )
 }
 
-function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }) {
+function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
+  provider: WatchProvider
+  movieTitle?: string
+  affiliateLink?: string | null
+  isMine?: boolean
+  offer: PriceOffer | null
+}) {
   const caption = offer?.price != null ? `$${offer.price.toFixed(2)}` : null
   const icon = (
     <Flex direction='column' align='center' w='32px'>
@@ -79,7 +86,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }) {
 
 // Cheapest offer for a provider across a given offer type — rent preferred,
 // then buy, then anything with a deep link.
-function bestOfferFor(providerName, offers) {
+function bestOfferFor(providerName: string, offers: PriceOffer[]): PriceOffer | null {
   const matching = offers.filter((o) => sameStore(o.provider, providerName))
   const ranked = matching
     .filter((o) => o.type === 'rent' || o.type === 'buy')
@@ -87,8 +94,8 @@ function bestOfferFor(providerName, offers) {
   return ranked[0] || matching.find((o) => o.url) || null
 }
 
-const formatPrice = (offer) =>
-  offer ? `$${offer.price.toFixed(2)} on ${offer.provider}` : null
+const formatPrice = (offer: PriceOffer | null | undefined) =>
+  offer ? `$${(offer.price ?? 0).toFixed(2)} on ${offer.provider}` : null
 
 export default function WatchProviders({
   watchProviders,
@@ -100,9 +107,19 @@ export default function WatchProviders({
   tmdbId,
   mediaType = 'movie',
   releaseYear
+}: {
+  watchProviders?: WatchProvidersRegion | null
+  allWatchProviders?: Record<string, WatchProvidersRegion> | null
+  detectedRegion?: string
+  movieTitle?: string
+  affiliateLinks?: Record<string, string | null>
+  myProviderIds?: Set<number>
+  tmdbId: number
+  mediaType?: MediaType
+  releaseYear?: string | number | null
 }) {
   const { services } = useUserData()
-  const [chosenRegion, setChosenRegion] = useState(null)
+  const [chosenRegion, setChosenRegion] = useState<string | null>(null)
 
   const regionOptions = useMemo(() => Object.keys(allWatchProviders || {}).sort(), [allWatchProviders])
   const defaultRegion = regionOptions.includes(services.region)
@@ -110,7 +127,7 @@ export default function WatchProviders({
     : detectedRegion || 'US'
   const activeRegion = chosenRegion || defaultRegion
 
-  const bucket = allWatchProviders?.[activeRegion] || watchProviders || {}
+  const bucket: WatchProvidersRegion = allWatchProviders?.[activeRegion] || watchProviders || {}
   const flatrate = bucket.flatrate || []
   const rent = bucket.rent || []
   const buy = bucket.buy || []

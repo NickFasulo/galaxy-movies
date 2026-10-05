@@ -17,14 +17,14 @@ export default function ServicesPicker() {
     .filter(([key]) => isProviderAvailableInRegion(key, region))
     .map(([key, provider]) => ({ key, label: provider.title.replace(' Movies', '') }))
 
-  const toggle = (key) => {
+  const toggle = (key: string) => {
     const next = providers.includes(key)
       ? providers.filter((p) => p !== key)
       : [...providers, key]
     setServices(region, next)
   }
 
-  const changeRegion = (code) => {
+  const changeRegion = (code: string) => {
     setServices(code, providers.filter((key) => isProviderAvailableInRegion(key, code)))
   }
 

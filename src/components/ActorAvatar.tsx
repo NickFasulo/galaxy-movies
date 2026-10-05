@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Avatar } from '@chakra-ui/react'
 
-export default function ActorAvatar({ profilePath, name }) {
+export default function ActorAvatar({ profilePath, name }: { profilePath?: string | null; name?: string }) {
   const [hasError, setHasError] = useState(false)
 
-  const getCleanInitials = (str) => {
+  const getCleanInitials = (str: string) => {
     if (!str) return ''
     const parts = str.trim().split(' ')
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase()

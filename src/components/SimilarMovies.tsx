@@ -1,8 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Box, Flex, Text, Wrap, WrapItem } from '@chakra-ui/react'
+import type { SimilarTitle } from '../utils/similarMovies'
 
-export default function SimilarMovies({ movies }) {
+export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | null }) {
   if (!movies || movies.length === 0) return null
 
   return (

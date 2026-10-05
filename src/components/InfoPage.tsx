@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Box, Heading, Text } from '@chakra-ui/react'
@@ -5,7 +6,7 @@ import HreflangTags from './HreflangTags'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
 
-export default function InfoPage({ title, description, children }) {
+export default function InfoPage({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
   const { asPath } = useRouter()
   const canonicalUrl = `${siteUrl}${asPath.split('?')[0]}`
   const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
@@ -46,6 +47,6 @@ export default function InfoPage({ title, description, children }) {
   )
 }
 
-export function InfoParagraph({ children }) {
+export function InfoParagraph({ children }: { children?: ReactNode }) {
   return <Text mb={4}>{children}</Text>
 }

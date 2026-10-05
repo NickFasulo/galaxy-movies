@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef, type ChangeEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Flex, Input, Box, IconButton } from '@chakra-ui/react'
 import { SearchIcon } from '@chakra-ui/icons'
@@ -10,12 +10,17 @@ export default function SearchBar({
   changeCategory,
   searchInput,
   setSearchInput
+}: {
+  category: string
+  changeCategory: (category: string) => void
+  searchInput: string
+  setSearchInput: (value: string) => void
 }) {
   const isSearchActive = searchInput.trim().length > 0
   const [isSticky, setIsSticky] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
-  const headerRef = useRef(null)
-  const inputRef = useRef(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [headerTop, setHeaderTop] = useState(0)
   const isCollapsed = isSticky && !isExpanded && !isSearchActive
 
@@ -40,7 +45,7 @@ export default function SearchBar({
   }, [headerTop])
 
   const handleCategoryChange = useCallback(
-    selectedCategory => {
+    (selectedCategory: string) => {
       changeCategory(selectedCategory)
       sessionStorage.removeItem('homeSearchInput')
     },
@@ -52,7 +57,7 @@ export default function SearchBar({
     inputRef.current?.focus()
   }
 
-  const handleInputChange = e => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setSearchInput(value)
     if (value === '') {

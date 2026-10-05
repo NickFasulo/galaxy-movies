@@ -1,7 +1,7 @@
 import { Flex, Text, Link } from '@chakra-ui/react'
 import { SURFSHARK_AFFILIATE_LINK } from '../utils/surfsharkAffiliate'
 
-export default function SurfsharkBanner({ message }) {
+export default function SurfsharkBanner({ message }: { message: string }) {
   return (
     <Flex
       mt={6}

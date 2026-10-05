@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Box, Button, Flex, Input, Text } from '@chakra-ui/react'
 
 export default function WaitlistForm() {
@@ -6,7 +6,7 @@ export default function WaitlistForm() {
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
 
-  const submit = async (e) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     setStatus('submitting')
     setError('')
@@ -23,7 +23,7 @@ export default function WaitlistForm() {
       const body = await resp.json()
       setStatus(body.pending ? 'pending' : 'done')
     } catch (err) {
-      setError(err.message)
+      setError(err instanceof Error ? err.message : String(err))
       setStatus('idle')
     }
   }

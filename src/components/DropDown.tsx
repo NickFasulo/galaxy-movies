@@ -10,7 +10,7 @@ import {
 import { ChevronDownIcon } from '@chakra-ui/icons'
 import removeUnderscores from '../utils/removeUnderscores'
 
-const CATEGORY_LABELS = {
+const CATEGORY_LABELS: Record<string, string> = {
   popular: 'Popular',
   top_rated: 'Top Rated',
   now_playing: 'Now Playing',
@@ -58,7 +58,7 @@ const GENRES = [
   { label: 'Western', value: 'western' }
 ]
 
-export default function DropDown({ category, changeCategory }) {
+export default function DropDown({ category, changeCategory }: { category: string; changeCategory: (category: string) => void }) {
   const currentLabel = CATEGORY_LABELS[category] || removeUnderscores(category)
 
   return (

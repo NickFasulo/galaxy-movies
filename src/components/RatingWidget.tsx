@@ -3,17 +3,18 @@ import { StarIcon } from '@chakra-ui/icons'
 import { useState } from 'react'
 import { useUserData } from '../hooks/useUserData'
 import { getRating, setRating } from '../utils/userData'
+import type { TitleSummary } from '../types/tmdb'
 
-export default function RatingWidget({ movie }) {
+export default function RatingWidget({ movie }: { movie: TitleSummary }) {
   const data = useUserData()
   const mediaType = movie.mediaType || 'movie'
   const rating = getRating(movie.id, data, mediaType)
-  const [hovered, setHovered] = useState(null)
+  const [hovered, setHovered] = useState<number | null>(null)
   const { isOpen, onToggle, onClose } = useDisclosure()
   const shown = hovered ?? rating ?? 0
 
-  const pick = (n) => {
-    setRating(movie.id, n === rating ? null : n, movie.title || movie.name, mediaType)
+  const pick = (n: number) => {
+    setRating(movie.id, n === rating ? null : n, movie.title || movie.name || '', mediaType)
     onClose()
   }
 

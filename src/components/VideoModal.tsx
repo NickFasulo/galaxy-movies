@@ -14,7 +14,7 @@ import dynamic from 'next/dynamic'
 
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 
-export default function VideoModal({ videoKey }) {
+export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   if (!videoKey || videoKey === 'null') return null

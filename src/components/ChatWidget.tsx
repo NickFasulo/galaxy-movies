@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react'
 import NextLink from 'next/link'
 import {
   Box,
@@ -17,12 +17,18 @@ import {
 import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
 import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../utils/userData'
+import type { ResolvedMention } from '../utils/movieSearch'
 
-function escapeRegExp(value) {
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function renderMessageContent(content, links) {
+function renderMessageContent(content: string, links: ResolvedMention[] | undefined) {
   if (!links || links.length === 0) {
     return content
   }
@@ -51,16 +57,16 @@ function renderMessageContent(content, links) {
 
 export default function ChatWidget() {
   const { isOpen, onToggle, onClose } = useDisclosure()
-  const [messages, setMessages] = useState([])
-  const [messageLinks, setMessageLinks] = useState({})
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messageLinks, setMessageLinks] = useState<Record<number, ResolvedMention[]>>({})
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [sessionId, setSessionId] = useState(null)
-  const sessionStartTimeRef = useRef(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const sessionStartTimeRef = useRef<number | null>(null)
   const messageCountRef = useRef(0)
-  const messagesEndRef = useRef(null)
-  const abortControllerRef = useRef(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const quickActions = [
     { label: 'What should I watch tonight?', query: 'What should I watch tonight?' },
@@ -118,14 +124,15 @@ export default function ChatWidget() {
   const handleSendMessage = useCallback(async (messageText = inputValue) => {
     if (!messageText.trim() || isLoading) return
 
-    const userMessage = { role: 'user', content: messageText.trim() }
+    const userMessage: ChatMessage = { role: 'user', content: messageText.trim() }
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setIsLoading(true)
     setIsStreaming(true)
     messageCountRef.current += 1
 
-    abortControllerRef.current = new AbortController()
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
 
     try {
       const response = await fetch('/api/chat', {
@@ -137,19 +144,18 @@ export default function ChatWidget() {
           messages: [...messages, userMessage],
           tasteProfile: buildTasteProfile()
         }),
-        signal: abortControllerRef.current.signal
+        signal: abortController.signal
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const error = new Error(errorData.error || 'Failed to get response')
-        error.status = response.status
-        throw error
+        throw Object.assign(new Error(errorData.error || 'Failed to get response'), { status: response.status })
       }
 
+      if (!response.body) throw new Error('Empty response body')
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let aiMessage = { role: 'assistant', content: '' }
+      let aiMessage: ChatMessage = { role: 'assistant', content: '' }
       const assistantIndex = messages.length + 1
 
       setMessages(prev => [...prev, aiMessage])
@@ -216,7 +222,8 @@ export default function ChatWidget() {
         }
       }
 
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as Error & { status?: number }
       if (error.name === 'AbortError') {
         console.log('Request was aborted')
       } else {
@@ -235,7 +242,7 @@ export default function ChatWidget() {
     }
   }, [inputValue, messages, isLoading])
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
@@ -244,7 +251,7 @@ export default function ChatWidget() {
 
 
 
-  const handleQuickAction = (query) => {
+  const handleQuickAction = (query: string) => {
     handleSendMessage(query)
   }
 

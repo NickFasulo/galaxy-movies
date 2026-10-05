@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, memo } from 'react'
+import { useState, memo, type ReactNode } from 'react'
 import { ChakraBox } from './ChakraBox'
 import { WrapItem, Box, Badge, Skeleton, Text } from '@chakra-ui/react'
 import WatchlistButton from './WatchlistButton'
+import type { TitleSummary } from '../types/tmdb'
 
-function MovieCard({ movie, priority = false, badge = null }) {
+function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSummary; priority?: boolean; badge?: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const posterUrl = movie.poster_path
   const isTv = movie.mediaType === 'tv'
@@ -48,7 +49,7 @@ function MovieCard({ movie, priority = false, badge = null }) {
                   }}
                 />
               ) : (
-                <Box display='flex' align='center' justify='center' h='100%' p={2}>
+                <Box display='flex' alignItems='center' justifyContent='center' h='100%' p={2}>
                   <Text color='gray.400' textAlign='center' fontSize='sm'>
                     {title}
                   </Text>

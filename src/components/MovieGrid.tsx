@@ -1,6 +1,7 @@
 import { Badge, SimpleGrid } from '@chakra-ui/react'
 import MovieCard from './MovieCard'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
+import type { TitleSummary } from '../types/tmdb'
 
 const nowStreamingBadge = (
   <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
@@ -8,7 +9,7 @@ const nowStreamingBadge = (
   </Badge>
 )
 
-export default function MovieGrid({ movies }) {
+export default function MovieGrid({ movies }: { movies: TitleSummary[] }) {
   const isStreaming = useStreamingBadges(movies)
 
   return (

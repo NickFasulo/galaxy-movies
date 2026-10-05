@@ -1,14 +1,15 @@
-import { Button, IconButton, Tooltip } from '@chakra-ui/react'
+import type { MouseEvent } from 'react'
+import { Button, IconButton, Tooltip, type ButtonProps } from '@chakra-ui/react'
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
 import { useUserData } from '../hooks/useUserData'
-import { isWatchlisted, toggleWatchlist } from '../utils/userData'
+import { isWatchlisted, toggleWatchlist, type WatchlistableTitle } from '../utils/userData'
 
-export default function WatchlistButton({ movie, withLabel = false, ...props }) {
+export default function WatchlistButton({ movie, withLabel = false, ...props }: { movie: WatchlistableTitle; withLabel?: boolean } & Omit<ButtonProps, 'onClick'>) {
   const data = useUserData()
   const saved = isWatchlisted(movie.id, data, movie.mediaType || 'movie')
   const label = saved ? 'Saved to My List' : 'Save to My List'
 
-  const handleClick = (e) => {
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
     toggleWatchlist(movie)

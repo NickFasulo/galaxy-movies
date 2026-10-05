@@ -1,6 +1,6 @@
-import { Box } from '@chakra-ui/react'
+import { Box, type BoxProps } from '@chakra-ui/react'
 
-export default function TopBackdrop(props) {
+export default function TopBackdrop(props: BoxProps) {
   return (
     <Box
       position='absolute'

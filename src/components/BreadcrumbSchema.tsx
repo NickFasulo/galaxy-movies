@@ -1,4 +1,9 @@
-export default function BreadcrumbSchema({ items }) {
+export interface BreadcrumbItem {
+  name: string
+  url: string
+}
+
+export default function BreadcrumbSchema({ items }: { items?: BreadcrumbItem[] }) {
   if (!items || items.length === 0) return null
 
   const breadcrumbData = {

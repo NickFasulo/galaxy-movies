@@ -2,11 +2,11 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Box } from '@chakra-ui/react'
 
 export function useHoverBackground() {
-  const [hoveredBg, setHoveredBg] = useState(null)
+  const [hoveredBg, setHoveredBg] = useState<string | null>(null)
   const [isBgVisible, setIsBgVisible] = useState(false)
-  const hoverTimerRef = useRef(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleCardMouseEnter = useCallback((backdropPath) => {
+  const handleCardMouseEnter = useCallback((backdropPath: string | null | undefined) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
     if (!backdropPath) return
 
@@ -35,7 +35,7 @@ export function useHoverBackground() {
   }
 }
 
-export default function HoverBackground({ hoveredBg, isBgVisible }) {
+export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg: string | null; isBgVisible: boolean }) {
   const backgroundImage = hoveredBg ? `url(https://image.tmdb.org/t/p/w1280${hoveredBg})` : 'none'
 
   return (

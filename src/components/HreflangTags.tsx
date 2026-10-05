@@ -1,6 +1,6 @@
 // All hreflang entries point to the same URL intentionally — regional
 // differences are rendered server-side, not via separate locale URLs.
-export default function HreflangTags({ canonicalUrl }) {
+export default function HreflangTags({ canonicalUrl }: { canonicalUrl?: string | null }) {
   if (!canonicalUrl) return null
 
   return (

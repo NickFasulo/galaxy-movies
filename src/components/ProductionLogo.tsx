@@ -1,10 +1,16 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Box } from '@chakra-ui/react'
+import type { ProductionCompany } from '../types/tmdb'
 
 const DEFAULT_BG = 'rgba(20, 24, 28, 0.9)'
 
-function analyzeLogo(src) {
+interface LogoStyle {
+  width: number
+  bg: string
+}
+
+function analyzeLogo(src: string | null): Promise<LogoStyle> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.crossOrigin = 'anonymous'
@@ -31,11 +37,11 @@ function analyzeLogo(src) {
       resolve({ width, bg: isDark ? 'white' : DEFAULT_BG })
     }
     img.onerror = () => resolve({ width: 64, bg: DEFAULT_BG })
-    img.src = src
+    img.src = String(src)
   })
 }
 
-export default function ProductionLogo({ company }) {
+export default function ProductionLogo({ company }: { company: Pick<ProductionCompany, 'name' | 'logo_path'> }) {
   const logoPath = company.logo_path
   const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w185${logoPath}` : null
   const [{ width, bg }, setStyle] = useState({ width: 64, bg: DEFAULT_BG })
@@ -50,7 +56,7 @@ export default function ProductionLogo({ company }) {
     <Box position='relative' w={`${width}px`} h='36px' bg={bg} borderRadius='lg'>
       <Image
         alt={company.name}
-        src={logoPath}
+        src={logoPath ?? ''}
         fill
         sizes={`${width - 8}px`}
         style={{ objectFit: 'contain', objectPosition: 'center', padding: '4px' }}
