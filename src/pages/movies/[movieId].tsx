@@ -321,7 +321,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
         bottom={{ base: 0, md: 'auto' }}
         left={0}
         right={0}
-        h={{ base: '400px', md: '500px' }}
+        h={{ base: 'min(400px, 56.25vw)', md: '500px' }}
         zIndex={0}
         display={{ base: backdropSrc === '/backdrop_fallback.webp' ? 'none' : 'block', md: 'block' }}
       >
