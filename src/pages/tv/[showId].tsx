@@ -10,8 +10,7 @@ import {
   Badge,
   Heading,
   Text,
-  Box,
-  Link as ChakraLink
+  Box
 } from '@chakra-ui/react'
 import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
 import VideoModal from '../../components/VideoModal'
@@ -380,7 +379,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
         />
       </Box>
 
-      <Flex position='relative' zIndex={1} direction='column' align='center' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
+      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
 
           <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
@@ -490,6 +489,38 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
               {show.overview || 'Description unavailable.'}
             </Text>
 
+            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
+              <Flex align='center'>
+                <StarIcon boxSize={5} color='gold' />
+                <Text
+                  fontSize='lg'
+                  ml={2}
+                  color='white'
+                  textShadow='2px 0 4px black'
+                  textAlign='center'
+                >
+                  {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
+                </Text>
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                <RatingWidget movie={listItem} />
+              </Flex>
+              <Flex align='center' justify='flex-end'>
+                {network ? (
+                  <Link href={`/network/${network.id}`} passHref>
+                    <Box
+                      as='span'
+                      cursor='pointer'
+                      transition='all 0.2s ease-in-out'
+                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
+                    >
+                      <ProductionLogo company={network} />
+                    </Box>
+                  </Link>
+                ) : null}
+              </Flex>
+            </Flex>
+
             {aiSynopsis && (
               <Box
                 p={4}
@@ -513,33 +544,6 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
                 </Text>
               </Box>
             )}
-
-            <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
-              <Flex align='center'>
-                <StarIcon boxSize={5} color='gold' />
-                <Text
-                  fontSize='lg'
-                  ml={2}
-                  color='white'
-                  textShadow='2px 0 4px black'
-                  textAlign='center'
-                >
-                  {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
-                </Text>
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                <RatingWidget movie={listItem} />
-              </Flex>
-              <Flex align='center' justify='flex-end'>
-                {network ? (
-                  <Link href={`/network/${network.id}`} passHref legacyBehavior>
-                    <ChakraLink>
-                      <ProductionLogo company={network} />
-                    </ChakraLink>
-                  </Link>
-                ) : null}
-              </Flex>
-            </Flex>
 
             <Flex
               direction={{ base: 'column', md: 'row' }}
@@ -604,12 +608,10 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
               </Box>
             )}
 
+            <SimilarMovies movies={similarShows} />
           </Flex>
 
         </Flex>
-        <Box w='100%' maxW='1200px' px='1rem'>
-          <SimilarMovies movies={similarShows} />
-        </Box>
       </Flex>
       </Box>
     </>
