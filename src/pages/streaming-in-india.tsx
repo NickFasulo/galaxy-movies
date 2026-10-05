@@ -6,7 +6,7 @@ import MovieGrid from '../components/MovieGrid'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import BreadcrumbSchema from '../components/BreadcrumbSchema'
 import HreflangTags from '../components/HreflangTags'
-// import SurfsharkBanner from '../components/SurfsharkBanner' // affiliate monetization disabled
+import SurfsharkBanner from '../components/SurfsharkBanner'
 import BackButton from '../components/BackButton'
 import type { TmdbMovie } from '../types/tmdb'
 
@@ -137,7 +137,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
             ))}
           </SimpleGrid>
 
-          {/* <SurfsharkBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' /> */}
+          <SurfsharkBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>

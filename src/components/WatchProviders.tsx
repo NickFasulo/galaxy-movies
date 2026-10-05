@@ -8,8 +8,6 @@ import { useUserData } from '../hooks/useUserData'
 import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
-// Affiliate monetization disabled — uncomment SurfsharkLink + its usages to re-enable.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SurfsharkLink() {
   return (
     <Link
@@ -241,14 +239,14 @@ export default function WatchProviders({
                 Prices via Watchmode · Apple
               </Text>
             )}
-            {/* <SurfsharkLink /> */}
+            <SurfsharkLink />
           </>
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            {/* <SurfsharkLink /> */}
+            <SurfsharkLink />
           </Box>
         )}
         {criticScore != null && (

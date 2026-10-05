@@ -8,7 +8,7 @@ import { fetchDiscoverMovies, streamingProviders, getProviderId, isProviderAvail
 import { detectRegion } from '../../utils/region'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
-// import SurfsharkBanner from '../../components/SurfsharkBanner' // affiliate monetization disabled
+import SurfsharkBanner from '../../components/SurfsharkBanner'
 import { providerGenreSlugs, getProviderGenreTarget, type ProviderGenreTarget } from '../../utils/contentOpportunities'
 import type { StreamingProvider } from '../../utils/tmdb'
 import type { TmdbMovie } from '../../types/tmdb'
@@ -129,11 +129,11 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
             Looking for shows instead? Browse{' '}
             <Link href={`/tv/streaming/${provider}`}>{providerLabel} shows</Link>.
           </Text>
-          {/* <SurfsharkBanner
+          <SurfsharkBanner
             message={availableInRegion
               ? `${providerLabel}'s catalog differs by country — a VPN can unlock titles available in other regions.`
               : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
-          /> */}
+          />
           {dataError ? (
             <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : <MovieGrid movies={movies} />}
