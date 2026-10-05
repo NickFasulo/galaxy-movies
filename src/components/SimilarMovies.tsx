@@ -27,7 +27,7 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
       </Text>
       <Wrap spacing={3} justify='center'>
         {movies.map((movie) => (
-          <WrapItem key={movie.id} w={{ base: '100%', sm: '15.5rem' }}>
+          <WrapItem key={movie.id} w='15.5rem' maxW='100%'>
             <Link href={`/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`} passHref>
               <Flex
                 bg='rgba(255, 255, 255, 0.1)'
