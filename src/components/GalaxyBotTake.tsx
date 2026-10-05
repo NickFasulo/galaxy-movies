@@ -6,6 +6,7 @@ export default function GalaxyBotTake({ synopsis }: { synopsis?: string | null }
   return (
     <Box
       p={4}
+      mt='1rem'
       bg='whiteAlpha.100'
       borderRadius='md'
       borderTop={{ base: '3px solid', md: 'none' }}
