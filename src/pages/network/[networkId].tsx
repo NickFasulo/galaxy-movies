@@ -70,26 +70,31 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function Network(props: Props) {
   if ('networkError' in props) {
-    const { networkError } = props
-    return (
-      <>
-        <Head>
-          <title>Network unavailable | Galaxy Movies</title>
-          <meta name='description' content={networkError} />
-        </Head>
-        <Box minH='100vh' p={8} textAlign='center' bg='transparent' color='white'>
-          <Text mt={20}>{networkError}</Text>
-          <Link href='/' passHref>
-            <ChakraLink color='teal.300' mt={4} display='inline-block'>
-              Return to Galaxy Movies
-            </ChakraLink>
-          </Link>
-        </Box>
-      </>
-    )
+    return <NetworkErrorView message={props.networkError} />
   }
+  return <NetworkContent network={props.network} shows={props.shows} />
+}
 
-  const { network, shows } = props
+function NetworkErrorView({ message }: { message: string }) {
+  return (
+    <>
+      <Head>
+        <title>Network unavailable | Galaxy Movies</title>
+        <meta name='description' content={message} />
+      </Head>
+      <Box minH='100vh' p={8} textAlign='center' bg='transparent' color='white'>
+        <Text mt={20}>{message}</Text>
+        <Link href='/' passHref>
+          <ChakraLink color='teal.300' mt={4} display='inline-block'>
+            Return to Galaxy Movies
+          </ChakraLink>
+        </Link>
+      </Box>
+    </>
+  )
+}
+
+function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: NormalizedTvShow[] }) {
   const logoPath = network.logo_path
   const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w500${logoPath}` : undefined
   const [hasLogoError, setHasLogoError] = useState(false)

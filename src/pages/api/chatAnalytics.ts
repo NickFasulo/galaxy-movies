@@ -11,8 +11,6 @@ interface AnalyticsRecord {
   [key: string]: unknown
 }
 
-const analyticsCache = new LRUCache<string, AnalyticsRecord>({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
-
 const localAnalytics = new LRUCache<string, AnalyticsRecord>({ max: 10000, ttl: 1000 * 60 * 60 * 24 })
 
 export const config = {
@@ -109,15 +107,6 @@ async function getUsageStats(timeframe = '24h') {
 
   try {
     const now = Date.now()
-    const timeframes: Record<string, number> = {
-      '1h': 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000
-    }
-
-    const cutoffTime = now - (timeframes[timeframe] || timeframes['24h'])
-    
     const totalSessions = await kv.get<number>('analytics:total_sessions') || 0
     const totalMessages = await kv.get<number>('analytics:total_messages') || 0
     const avgRating = await kv.get<number>('analytics:total_rating') && await kv.get<number>('analytics:rating_count')
@@ -138,12 +127,12 @@ async function getUsageStats(timeframe = '24h') {
 }
 
 function getLocalUsageStats() {
-  const sessions = Array.from(localAnalytics.entries())
-    .filter(([_, data]) => data.timestamp)
-  
+  const sessions = Array.from(localAnalytics.values())
+    .filter((data) => data.timestamp)
+
   return {
     totalSessions: sessions.length,
-    totalMessages: sessions.reduce((sum, [_, data]) => sum + (data.messageCount || 0), 0),
+    totalMessages: sessions.reduce((sum, data) => sum + (data.messageCount || 0), 0),
     avgRating: null,
     timeframe: 'local',
     timestamp: Date.now()
@@ -174,8 +163,8 @@ async function getCostEstimate() {
       console.error('Redis cost estimation error:', err)
     }
   } else {
-    totalMessages = Array.from(localAnalytics.entries())
-      .reduce((sum, [_, data]) => sum + (data.messageCount || 0), 0)
+    totalMessages = Array.from(localAnalytics.values())
+      .reduce((sum, data) => sum + (data.messageCount || 0), 0)
   }
 
   const inputCost = (totalMessages * avgTokensPerMessage.input / 1000) * pricing[model].input

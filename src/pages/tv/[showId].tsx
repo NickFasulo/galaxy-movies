@@ -46,21 +46,23 @@ import type {
   WatchProvidersResponse
 } from '../../types/tmdb'
 
+type TvShowPageProps = {
+  show: TmdbTvDetails
+  videoKey: string | null
+  watchProviders: WatchProvidersRegion | null
+  watchProvidersByRegion: Record<string, WatchProvidersRegion>
+  detectedRegion: string
+  creators: { id: number; name: string }[]
+  topCast: AggregateCastMember[]
+  ageRating: string
+  aiSynopsis: string | null
+  similarShows: SimilarTitle[]
+  providerAffiliateLinks: Record<string, string | null>
+}
+
 type Props =
   | { showError: string }
-  | {
-      show: TmdbTvDetails
-      videoKey: string | null
-      watchProviders: WatchProvidersRegion | null
-      watchProvidersByRegion: Record<string, WatchProvidersRegion>
-      detectedRegion: string
-      creators: { id: number; name: string }[]
-      topCast: AggregateCastMember[]
-      ageRating: string
-      aiSynopsis: string | null
-      similarShows: SimilarTitle[]
-      providerAffiliateLinks: Record<string, string | null>
-    }
+  | TvShowPageProps
 
 export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { showId } = context.query
@@ -166,22 +168,27 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function TvShow(props: Props) {
   if ('showError' in props) {
-    const { showError } = props
-    return (
-      <>
-        <Head>
-          <title>Show unavailable | Galaxy Movies</title>
-          <meta name='description' content={showError} />
-        </Head>
-        <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
-          <Text mt={20}>{showError}</Text>
-          <Link href='/'>Return to Galaxy Movies</Link>
-        </Box>
-      </>
-    )
+    return <TvShowErrorView message={props.showError} />
   }
+  return <TvShowContent {...props} />
+}
 
-  const { show, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks } = props
+function TvShowErrorView({ message }: { message: string }) {
+  return (
+    <>
+      <Head>
+        <title>Show unavailable | Galaxy Movies</title>
+        <meta name='description' content={message} />
+      </Head>
+      <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
+        <Text mt={20}>{message}</Text>
+        <Link href='/'>Return to Galaxy Movies</Link>
+      </Box>
+    </>
+  )
+}
+
+function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks }: TvShowPageProps) {
   const backdropPath = show.backdrop_path || null
   const posterPath = show.poster_path || null
   const posterUrl = posterPath
@@ -334,6 +341,7 @@ export default function TvShow(props: Props) {
           }}
         >
           {backdropSrc === '/backdrop_fallback.webp' ? (
+            // eslint-disable-next-line @next/next/no-img-element -- raw srcSet fallback; next/image can't emit this markup
             <img
               src='/backdrop_fallback_lg.webp'
               srcSet='/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'

@@ -72,26 +72,31 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function Company(props: Props) {
   if ('companyError' in props) {
-    const { companyError } = props
-    return (
-      <>
-        <Head>
-          <title>Company unavailable | Galaxy Movies</title>
-          <meta name='description' content={companyError} />
-        </Head>
-        <Box minH='100vh' p={8} textAlign='center' bg='transparent' color='white'>
-          <Text mt={20}>{companyError}</Text>
-          <Link href='/' passHref>
-            <ChakraLink color='teal.300' mt={4} display='inline-block'>
-              Return to Galaxy Movies
-            </ChakraLink>
-          </Link>
-        </Box>
-      </>
-    )
+    return <CompanyErrorView message={props.companyError} />
   }
+  return <CompanyContent company={props.company} movies={props.movies} />
+}
 
-  const { company, movies } = props
+function CompanyErrorView({ message }: { message: string }) {
+  return (
+    <>
+      <Head>
+        <title>Company unavailable | Galaxy Movies</title>
+        <meta name='description' content={message} />
+      </Head>
+      <Box minH='100vh' p={8} textAlign='center' bg='transparent' color='white'>
+        <Text mt={20}>{message}</Text>
+        <Link href='/' passHref>
+          <ChakraLink color='teal.300' mt={4} display='inline-block'>
+            Return to Galaxy Movies
+          </ChakraLink>
+        </Link>
+      </Box>
+    </>
+  )
+}
+
+function CompanyContent({ company, movies }: { company: TmdbCompany; movies: TmdbMovie[] }) {
   const logoPath = company.logo_path
   const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w500${logoPath}` : undefined
   const [hasLogoError, setHasLogoError] = useState(false)
@@ -266,61 +271,65 @@ export default function Company(props: Props) {
             <Text color='gray.400'>No movies found for this production company.</Text>
           ) : (
             <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing={{ base: 4, md: 6 }}>
-              {movies.map((movie) => {
-                const posterPath = movie.poster_path 
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
-                  : '/poster_fallback.webp'
-                const [imgSrc, setImgSrc] = useState(posterPath)
-
-                return (
-                  <Link key={movie.id} href={`/movies/${movie.id}`} passHref>
-                    <Box
-                      bg='rgba(255, 255, 255, 0.05)'
-                      borderRadius='xl'
-                      overflow='hidden'
-                      cursor='pointer'
-                      transition='all 0.2s ease-in-out'
-                      _hover={{
-                        transform: 'translateY(-6px)',
-                        boxShadow: '0 12px 24px -10px rgba(0,0,0,0.8)',
-                        bg: 'rgba(255, 255, 255, 0.1)'
-                      }}
-                    >
-                      <Box position='relative' w='100%' pt='150%'>
-                        <Image
-                          src={imgSrc}
-                          alt={movie.title || 'Movie Poster'}
-                          fill
-                          sizes='(max-width: 768px) 50vw, 20vw'
-                          style={{ objectFit: 'cover' }}
-                          onError={() => setImgSrc('/poster_fallback.webp')}
-                          unoptimized={imgSrc.startsWith('/')}
-                        />
-                      </Box>
-                      <Box p={3}>
-                        <Text fontWeight='bold' fontSize='sm' noOfLines={1} color='white'>
-                          {movie.title}
-                        </Text>
-                        <Flex justify='space-between' align='center' mt={2}>
-                          <Text fontSize='xs' color='gray.400'>
-                            {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
-                          </Text>
-                          <Flex align='center' gap={1}>
-                            <StarIcon boxSize={3} color='gold' />
-                            <Text fontSize='xs' fontWeight='semibold' color='white'>
-                              {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
-                            </Text>
-                          </Flex>
-                        </Flex>
-                      </Box>
-                    </Box>
-                  </Link>
-                )
-              })}
+              {movies.map((movie) => (
+                <CompanyMovieCard key={movie.id} movie={movie} />
+              ))}
             </SimpleGrid>
           )}
         </Box>
       </Box>
     </>
+  )
+}
+
+function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
+  const posterPath = movie.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+    : '/poster_fallback.webp'
+  const [imgSrc, setImgSrc] = useState(posterPath)
+
+  return (
+    <Link href={`/movies/${movie.id}`} passHref>
+      <Box
+        bg='rgba(255, 255, 255, 0.05)'
+        borderRadius='xl'
+        overflow='hidden'
+        cursor='pointer'
+        transition='all 0.2s ease-in-out'
+        _hover={{
+          transform: 'translateY(-6px)',
+          boxShadow: '0 12px 24px -10px rgba(0,0,0,0.8)',
+          bg: 'rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <Box position='relative' w='100%' pt='150%'>
+          <Image
+            src={imgSrc}
+            alt={movie.title || 'Movie Poster'}
+            fill
+            sizes='(max-width: 768px) 50vw, 20vw'
+            style={{ objectFit: 'cover' }}
+            onError={() => setImgSrc('/poster_fallback.webp')}
+            unoptimized={imgSrc.startsWith('/')}
+          />
+        </Box>
+        <Box p={3}>
+          <Text fontWeight='bold' fontSize='sm' noOfLines={1} color='white'>
+            {movie.title}
+          </Text>
+          <Flex justify='space-between' align='center' mt={2}>
+            <Text fontSize='xs' color='gray.400'>
+              {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
+            </Text>
+            <Flex align='center' gap={1}>
+              <StarIcon boxSize={3} color='gold' />
+              <Text fontSize='xs' fontWeight='semibold' color='white'>
+                {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
+              </Text>
+            </Flex>
+          </Flex>
+        </Box>
+      </Box>
+    </Link>
   )
 }

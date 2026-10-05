@@ -46,21 +46,23 @@ import type {
   WatchProvidersResponse
 } from '../../types/tmdb'
 
+type MoviePageProps = {
+  movie: TmdbMovieDetails
+  videoKey: string | null
+  watchProviders: WatchProvidersRegion | null
+  watchProvidersByRegion: Record<string, WatchProvidersRegion>
+  detectedRegion: string
+  director: { id: number; name: string } | null
+  topCast: CastMember[]
+  ageRating: string
+  aiSynopsis: string | null
+  similarMovies: SimilarTitle[]
+  providerAffiliateLinks: Record<string, string | null>
+}
+
 type Props =
   | { movieError: string }
-  | {
-      movie: TmdbMovieDetails
-      videoKey: string | null
-      watchProviders: WatchProvidersRegion | null
-      watchProvidersByRegion: Record<string, WatchProvidersRegion>
-      detectedRegion: string
-      director: { id: number; name: string } | null
-      topCast: CastMember[]
-      ageRating: string
-      aiSynopsis: string | null
-      similarMovies: SimilarTitle[]
-      providerAffiliateLinks: Record<string, string | null>
-    }
+  | MoviePageProps
 
 export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { movieId } = context.query
@@ -162,27 +164,29 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function Movie(props: Props) {
   if ('movieError' in props) {
-    const { movieError } = props
-    return (
-      <>
-        <Head>
-          <title>Movie unavailable | Galaxy Movies</title>
-          <meta name='description' content={movieError} />
-        </Head>
-        <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
-          <Text mt={20}>{movieError}</Text>
-          <Link href='/'>Return to Galaxy Movies</Link>
-        </Box>
-      </>
-    )
+    return <MovieErrorView message={props.movieError} />
   }
+  return <MovieContent {...props} />
+}
 
-  const { movie, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks } = props
+function MovieErrorView({ message }: { message: string }) {
+  return (
+    <>
+      <Head>
+        <title>Movie unavailable | Galaxy Movies</title>
+        <meta name='description' content={message} />
+      </Head>
+      <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
+        <Text mt={20}>{message}</Text>
+        <Link href='/'>Return to Galaxy Movies</Link>
+      </Box>
+    </>
+  )
+}
+
+function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, director, topCast, ageRating, aiSynopsis, similarMovies, providerAffiliateLinks }: MoviePageProps) {
   const backdropPath = movie.backdrop_path || null
   const posterPath = movie.poster_path || null
-  const backdropUrl = backdropPath
-    ? `https://image.tmdb.org/t/p/original${backdropPath}`
-    : '/backdrop_fallback.webp'
   const posterUrl = posterPath
     ? `https://image.tmdb.org/t/p/w500${posterPath}`
     : '/poster_fallback.webp'
@@ -333,6 +337,7 @@ export default function Movie(props: Props) {
           }}
         >
           {backdropSrc === '/backdrop_fallback.webp' ? (
+            // eslint-disable-next-line @next/next/no-img-element -- raw srcSet fallback; next/image can't emit this markup
             <img
               src='/backdrop_fallback_lg.webp'
               srcSet='/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'
@@ -484,7 +489,7 @@ export default function Movie(props: Props) {
 
             {movie.tagline && (
               <Text as='em' fontSize='lg' color='gray.400' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
-                "{movie.tagline}"
+                &quot;{movie.tagline}&quot;
               </Text>
             )}
 

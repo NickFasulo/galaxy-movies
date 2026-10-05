@@ -47,7 +47,7 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
   }
 }
 
-export default function FreeStreaming({ region, movies, shows, dataError }: Props) {
+export default function FreeStreaming({ movies, shows, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/free`
   const title = 'Free Movies & TV Shows to Stream Now'

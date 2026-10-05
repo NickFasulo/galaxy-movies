@@ -9,7 +9,7 @@ import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfshar
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
 // Affiliate monetization disabled — uncomment SurfsharkLink + its usages to re-enable.
-// eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SurfsharkLink() {
   return (
     <Link

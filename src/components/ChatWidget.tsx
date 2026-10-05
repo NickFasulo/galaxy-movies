@@ -155,7 +155,7 @@ export default function ChatWidget() {
       if (!response.body) throw new Error('Empty response body')
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let aiMessage: ChatMessage = { role: 'assistant', content: '' }
+      const aiMessage: ChatMessage = { role: 'assistant', content: '' }
       const assistantIndex = messages.length + 1
 
       setMessages(prev => [...prev, aiMessage])
@@ -240,7 +240,7 @@ export default function ChatWidget() {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [inputValue, messages, isLoading])
+  }, [inputValue, messages, isLoading, sessionId])
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -332,7 +332,7 @@ export default function ChatWidget() {
               {messages.length === 0 && (
                 <VStack spacing="4" align="stretch" mt="4">
                   <Text color="whiteAlpha.900" textAlign="center" fontSize="sm">
-                    👋 Hi! I'm your movie and TV show assistant. What are you looking for?
+                    👋 Hi! I&apos;m your movie and TV show assistant. What are you looking for?
                   </Text>
                   <VStack spacing="2" align="stretch">
                     {quickActions.map((action, index) => (

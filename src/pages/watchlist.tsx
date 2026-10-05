@@ -20,7 +20,7 @@ export default function Watchlist() {
         <Box maxW='70rem' mx='auto' px={6}>
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>My List</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>
-            Movies you've saved. Your list lives on this device — no account needed.
+            Movies you&apos;ve saved. Your list lives on this device — no account needed.
           </Text>
 
           <Box mt={6}>

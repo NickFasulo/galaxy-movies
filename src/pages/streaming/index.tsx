@@ -97,7 +97,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
           )}
 
           <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
-            Want to see what's new? Check out{' '}
+            Want to see what&apos;s new? Check out{' '}
             <Link href='/new-on-streaming'>new releases streaming now</Link>.
           </Text>
 

@@ -110,7 +110,7 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
   )
 }
 
-export default function NewOnStreaming({ region, sections, changes = {}, dataError }: Props) {
+export default function NewOnStreaming({ sections, changes = {}, dataError }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const canonicalUrl = `${siteUrl}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })

@@ -42,7 +42,7 @@ export default function WaitlistForm() {
       ) : (
         <>
           <Text color='gray.400' fontSize='sm' mb={3}>
-            Leave your email and we'll let you know when we can alert you the moment a saved movie lands on your services.
+            Leave your email and we&apos;ll let you know when we can alert you the moment a saved movie lands on your services.
           </Text>
           <Flex as='form' onSubmit={submit} gap={2} direction={{ base: 'column', md: 'row' }}>
             <Input

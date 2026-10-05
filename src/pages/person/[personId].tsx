@@ -100,16 +100,25 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function PersonDetails(props: Props) {
   if ('error' in props) {
-    const { error } = props
     return (
       <Box minH='100vh' bg='transparent' p={8} textAlign='center' color='white'>
-        <Text mt={20}>{error}</Text>
+        <Text mt={20}>{props.error}</Text>
         <Link href='/'>Return to Galaxy Movies</Link>
       </Box>
     )
   }
 
-  const { person, directedMovies, actingMovies, tvShows } = props
+  return (
+    <PersonContent
+      person={props.person}
+      directedMovies={props.directedMovies}
+      actingMovies={props.actingMovies}
+      tvShows={props.tvShows}
+    />
+  )
+}
+
+function PersonContent({ person, directedMovies, actingMovies, tvShows }: { person: TmdbPerson; directedMovies: MovieCredit[]; actingMovies: MovieCredit[]; tvShows: PersonTvShow[] }) {
   const profilePath = person.profile_path 
     ? `https://image.tmdb.org/t/p/w500${person.profile_path}` 
     : '/profile_fallback.webp'

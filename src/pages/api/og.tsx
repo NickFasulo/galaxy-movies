@@ -22,7 +22,7 @@ async function toJpegDataUri(url: string): Promise<string | null> {
       binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
     }
     return `data:${contentType};base64,${btoa(binary)}`
-  } catch (err) {
+  } catch {
     return null
   }
 }

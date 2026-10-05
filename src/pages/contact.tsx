@@ -32,7 +32,7 @@ export default function Contact() {
         setStatus('error')
         setResult(data.message || 'Something went wrong. Please try again.')
       }
-    } catch (err) {
+    } catch {
       setStatus('error')
       setResult('Failed to send message. Please check your connection.')
     }
