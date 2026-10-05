@@ -85,7 +85,7 @@ const MAX_REQUESTS_PER_HOUR = 10
 const MAX_CONVERSATION_LENGTH = 8
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60
 const MAX_MESSAGE_LENGTH = 500
-const MAX_HISTORY_MESSAGE_LENGTH = 500
+const MAX_HISTORY_MESSAGE_LENGTH = 800
 const GLOBAL_DAILY_CHAT_BUDGET = 1000
 const CHAT_PROMPT_VERSION = 'v3'
 
@@ -167,7 +167,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const cacheKey = getConversationCacheKey(messages, tasteProfile)
   const cachedEntry = await readChatCache(cacheKey)
   if (cachedEntry) {
-    return res.status(200).json({ response: cachedEntry.text, links: cachedEntry.links, cached: true })
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.write(`data: ${JSON.stringify({ content: cachedEntry.text })}\n\n`)
+    if (cachedEntry.links.length > 0) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
+    res.write('data: [DONE]\n\n')
+    return res.end()
   }
 
   const withinBudget = await checkGlobalBudget('chat', {

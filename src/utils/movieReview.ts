@@ -46,12 +46,13 @@ async function writeCache(kv: Redis | null, key: string, value: string): Promise
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie' }: {
+export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie', generate = true }: {
   movieId: number
   title: string
   overview?: string
   genres?: string[]
   mediaType?: MediaType
+  generate?: boolean
 }): Promise<string | null> {
   if (!movieId || !title || !overview) return null
 
@@ -61,6 +62,8 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
 
   const cached = await readCache(kv, key)
   if (cached) return cached
+
+  if (!generate) return null
 
   const client = getOpenAIClient()
   if (!client) return null

@@ -65,13 +65,14 @@ async function writeCache(kv: Redis | null, key: string, value: SimilarTitle[]):
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie' }: {
+export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie', generate = true }: {
   movieId: number
   title: string
   overview?: string
   genres?: string[]
   candidates?: SimilarCandidate[]
   mediaType?: MediaType
+  generate?: boolean
 }): Promise<SimilarTitle[]> {
   if (!movieId || !title || candidates.length === 0) return []
 
@@ -80,6 +81,8 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
 
   const cached = await readCache(kv, key)
   if (cached) return cached
+
+  if (!generate) return []
 
   const client = getOpenAIClient()
   if (!client) return []

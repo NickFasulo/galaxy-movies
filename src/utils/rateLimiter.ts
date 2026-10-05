@@ -34,7 +34,8 @@ const ALLOWED_BOT_PATTERNS = [
   /linkedinbot/i,
   /telegrambot/i,
   /whatsapp/i,
-  /mitgo/i
+  /mitgo/i,
+  /chrome-lighthouse/i
 ]
 
 interface RateEntry {

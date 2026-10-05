@@ -111,30 +111,32 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
     const showGenres = showData.genres?.map((g) => g.name) || []
 
-    // Allowlisted crawlers (search engines, link previews) still get generated
-    // content; other bots render the page without it so scraper sweeps can't
-    // trigger OpenAI spend.
+    // Bots still get already-cached content but never trigger generation;
+    // their renders aren't CDN-cached, so an AI-less page can't be served to
+    // humans/Googlebot.
     const skipAi = isBot(context.req.headers['user-agent'])
 
     const [validVideoKey, aiSynopsis, similarShows, providerAffiliateLinks] = await Promise.all([
       withTimeout(getFirstPlayableKey(showData.videos?.results), 3000, null),
-      !skipAi && showData.overview
+      showData.overview
         ? withTimeout(getOrGenerateMovieReview({
             movieId: showData.id,
             title: showData.name,
             overview: showData.overview,
             genres: showGenres,
-            mediaType: 'tv'
+            mediaType: 'tv',
+            generate: !skipAi
           }), 4500, null)
         : null,
-      !skipAi && recommendationCandidates.length > 0
+      recommendationCandidates.length > 0
         ? withTimeout(getOrGenerateSimilarMovies({
             movieId: showData.id,
             title: showData.name,
             overview: showData.overview,
             genres: showGenres,
             candidates: recommendationCandidates,
-            mediaType: 'tv'
+            mediaType: 'tv',
+            generate: !skipAi
           }), 4500, [])
         : [],
       getProviderAffiliateLinks(providerNames)
@@ -143,7 +145,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
     if (context.res) {
       context.res.setHeader(
         'Cache-Control',
-        'public, s-maxage=3600, stale-while-revalidate=86400'
+        skipAi ? 'private, no-store' : 'public, s-maxage=3600, stale-while-revalidate=86400'
       )
     }
 

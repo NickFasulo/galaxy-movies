@@ -110,28 +110,30 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
     const providerNames = (['flatrate', 'rent', 'buy'] as const)
       .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
-    // Allowlisted crawlers (search engines, link previews) still get generated
-    // content; other bots render the page without it so scraper sweeps can't
-    // trigger OpenAI spend.
+    // Bots still get already-cached content but never trigger generation;
+    // their renders aren't CDN-cached, so an AI-less page can't be served to
+    // humans/Googlebot.
     const skipAi = isBot(context.req.headers['user-agent'])
 
     const [validVideoKey, aiSynopsis, similarMovies, providerAffiliateLinks] = await Promise.all([
       withTimeout(getFirstPlayableKey(movieData.videos?.results), 3000, null),
-      !skipAi && movieData.overview
+      movieData.overview
         ? withTimeout(getOrGenerateMovieReview({
             movieId: movieData.id,
             title: movieData.title,
             overview: movieData.overview,
-            genres: movieData.genres?.map((g) => g.name) || []
+            genres: movieData.genres?.map((g) => g.name) || [],
+            generate: !skipAi
           }), 4500, null)
         : null,
-      !skipAi && recommendationCandidates.length > 0
+      recommendationCandidates.length > 0
         ? withTimeout(getOrGenerateSimilarMovies({
             movieId: movieData.id,
             title: movieData.title,
             overview: movieData.overview,
             genres: movieData.genres?.map((g) => g.name) || [],
-            candidates: recommendationCandidates
+            candidates: recommendationCandidates,
+            generate: !skipAi
           }), 4500, [])
         : [],
       getProviderAffiliateLinks(providerNames)
@@ -140,7 +142,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
     if (context.res) {
       context.res.setHeader(
         'Cache-Control',
-        'public, s-maxage=3600, stale-while-revalidate=86400'
+        skipAi ? 'private, no-store' : 'public, s-maxage=3600, stale-while-revalidate=86400'
       )
     }
 

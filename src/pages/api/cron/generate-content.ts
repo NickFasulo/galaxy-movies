@@ -324,7 +324,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: Date.now()
         })
         if (!saved) {
-          await failSeed(seed.slug, 'registry cap reached')
           results.push({ slug: seed.slug, status: 'skipped', reason: 'registry cap reached' })
           continue
         }
@@ -366,7 +365,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: Date.now()
         })
         if (!saved) {
-          await failSeed(seed.slug, 'registry cap reached')
           results.push({ slug: seed.slug, status: 'skipped', reason: 'registry cap reached' })
           continue
         }
