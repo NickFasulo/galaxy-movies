@@ -4,7 +4,7 @@ const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/
 
 // TMDB provider_name substrings → homepage. Amazon is intentionally absent:
 // those providers keep the existing Associates search link instead.
-const PROVIDER_HOME_PAGES = [
+const PROVIDER_HOME_PAGES: [string, string][] = [
   ['netflix', 'https://www.netflix.com'],
   ['hulu', 'https://www.hulu.com'],
   ['disney plus', 'https://www.disneyplus.com'],
@@ -27,18 +27,18 @@ const PROVIDER_HOME_PAGES = [
 ]
 
 // Resolved per domain, not per movie — cache hits mean the resolve API is only
-// called once per provider domain per day.
-const linkCache = new LRUCache({ max: 500, ttl: 1000 * 60 * 60 * 24 })
+// called once per provider domain per day. '' caches a miss (lru-cache rejects null values).
+const linkCache = new LRUCache<string, string>({ max: 500, ttl: 1000 * 60 * 60 * 24 })
 
-export function getProviderHomePage(providerName = '') {
+export function getProviderHomePage(providerName = ''): string | null {
   const name = providerName.toLowerCase()
   if (name.includes('amazon')) return null
   const match = PROVIDER_HOME_PAGES.find(([key]) => name.includes(key))
   return match?.[1] || null
 }
 
-export async function resolveTakeadsLinks(iris = []) {
-  const unique = [...new Set(iris)].filter(Boolean)
+export async function resolveTakeadsLinks(iris: (string | null | undefined)[] = []): Promise<Record<string, string | null>> {
+  const unique = [...new Set(iris)].filter((iri): iri is string => Boolean(iri))
   const apiKey = process.env.TAKEADS_PUBLIC_KEY
   const pending = apiKey ? unique.filter((iri) => !linkCache.has(iri)) : []
 
@@ -53,10 +53,10 @@ export async function resolveTakeadsLinks(iris = []) {
         body: JSON.stringify({ iris: pending })
       })
       if (response.ok) {
-        const payload = await response.json()
+        const payload: { data?: { iri: string; trackingLink?: string | null }[] } = await response.json()
         const resolved = new Map((payload.data || []).map((item) => [item.iri, item.trackingLink || null]))
         for (const iri of pending) {
-          linkCache.set(iri, resolved.get(iri) || null)
+          linkCache.set(iri, resolved.get(iri) || '')
         }
       } else {
         console.error(`Takeads resolve failed: ${response.status}`)
@@ -69,7 +69,7 @@ export async function resolveTakeadsLinks(iris = []) {
   return Object.fromEntries(unique.map((iri) => [iri, linkCache.get(iri) || null]))
 }
 
-export async function getProviderAffiliateLinks(providerNames = []) {
+export async function getProviderAffiliateLinks(providerNames: string[] = []): Promise<Record<string, string | null>> {
   const names = [...new Set(providerNames)].filter(Boolean)
   // Affiliate monetization disabled — link provider icons directly to provider
   // homepages instead of Takeads tracking links (uncomment to re-enable).

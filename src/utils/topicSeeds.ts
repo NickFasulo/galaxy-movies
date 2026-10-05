@@ -1,8 +1,18 @@
+export interface TopicSeed {
+  slug: string
+  keyword: string
+  type: 'similar' | 'discover'
+  media?: 'tv'
+  movieTitle?: string
+  showTitle?: string
+  hint?: string
+}
+
 // Keyword-informed backlog for the content pipeline. Volumes/KD from OpenSEO
 // research (US, Oct 2026). `similar` seeds resolve movieTitle via TMDB search and
 // power "Movies Like X" pages off /movie/{id}/recommendations. `discover` seeds
 // hand the keyword + hint to the generator, which drafts TMDB discover params.
-export const topicSeeds = [
+export const topicSeeds: TopicSeed[] = [
   { slug: 'movies-like-interstellar', keyword: 'movies like interstellar', type: 'similar', movieTitle: 'Interstellar' },
   { slug: 'movies-like-the-notebook', keyword: 'movies like the notebook', type: 'similar', movieTitle: 'The Notebook' },
   { slug: 'movies-like-the-hunger-games', keyword: 'movies like the hunger games', type: 'similar', movieTitle: 'The Hunger Games' },

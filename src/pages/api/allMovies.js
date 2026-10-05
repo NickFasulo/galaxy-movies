@@ -21,7 +21,7 @@ const GENRE_MAP = {
   western: 37
 }
 
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
 function normalizeResults(results) {
   return (results || [])

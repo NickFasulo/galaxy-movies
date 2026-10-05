@@ -1,6 +1,41 @@
+import type { NormalizedTvShow, TmdbCollection, TmdbMovie, TmdbPaged, TmdbTvShow } from '../types/tmdb'
+
 const TMDB_URL = 'https://api.themoviedb.org/3'
 
-export async function fetchTmdb(path, params = {}) {
+export type TmdbParams = Record<string, string | number | boolean | null | undefined>
+
+export interface MovieCategory {
+  title: string
+  description: string
+  sortBy: string
+  language?: string
+}
+
+export interface TvCategory {
+  title: string
+  description: string
+}
+
+export interface GenreDef {
+  id: number
+  title: string
+}
+
+export interface StreamingProvider {
+  title: string
+  ids: { default: number; [region: string]: number }
+  regions?: string[]
+}
+
+export interface DiscoverOptions {
+  category?: string
+  genreId?: number | string | null
+  providerId?: number | string | null
+  region?: string
+  page?: number
+}
+
+export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promise<T> {
   const apiKey = process.env.TMDB_API_KEY
 
   if (!apiKey) {
@@ -10,7 +45,9 @@ export async function fetchTmdb(path, params = {}) {
   const searchParams = new URLSearchParams({
     api_key: apiKey,
     ...Object.fromEntries(
-      Object.entries(params).filter(([, value]) => value !== undefined && value !== null)
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => [key, String(value)])
     )
   })
   const response = await fetch(`${TMDB_URL}${path}?${searchParams}`)
@@ -19,10 +56,10 @@ export async function fetchTmdb(path, params = {}) {
     throw new Error(`TMDB request failed with status ${response.status}`)
   }
 
-  return response.json()
+  return response.json() as Promise<T>
 }
 
-export const movieCategories = {
+export const movieCategories: Record<string, MovieCategory> = {
   popular: {
     title: 'Popular Movies',
     description: 'Browse popular movies and discover what audiences are watching now.',
@@ -58,7 +95,7 @@ export const movieCategories = {
   }
 }
 
-export const movieGenres = {
+export const movieGenres: Record<string, GenreDef> = {
   action: { id: 28, title: 'Action Movies' },
   adventure: { id: 12, title: 'Adventure Movies' },
   animation: { id: 16, title: 'Animation Movies' },
@@ -75,7 +112,7 @@ export const movieGenres = {
   thriller: { id: 53, title: 'Thriller Movies' }
 }
 
-export const tvCategories = {
+export const tvCategories: Record<string, TvCategory> = {
   popular: {
     title: 'Popular TV Shows',
     description: 'Browse popular TV shows and discover what audiences are watching now.'
@@ -96,7 +133,7 @@ export const tvCategories = {
 
 // TV genre ids are a separate TMDB namespace from movie genres — several slugs
 // that share a name map to different ids (e.g. sci-fi: 878 movie / 10765 tv).
-export const tvGenres = {
+export const tvGenres: Record<string, GenreDef> = {
   'action-adventure': { id: 10759, title: 'Action & Adventure Shows' },
   animation: { id: 16, title: 'Animated Shows' },
   comedy: { id: 35, title: 'Comedy Shows' },
@@ -113,7 +150,7 @@ export const tvGenres = {
 }
 
 // Normalizes TMDB tv results to the movie-shaped fields cards/grids consume.
-export function normalizeTvTitle(show) {
+export function normalizeTvTitle(show: TmdbTvShow): NormalizedTvShow {
   return {
     ...show,
     title: show.name,
@@ -127,7 +164,7 @@ export function normalizeTvTitle(show) {
 // in the US catalog but id 119 in the India catalog). `ids.default` is used when a
 // region-specific id isn't listed. `regions`, when present, restricts which regions
 // the service is actually offered in (used for display copy, not just querying).
-export const streamingProviders = {
+export const streamingProviders: Record<string, StreamingProvider> = {
   netflix: { title: 'Netflix Movies', ids: { default: 8 } },
   'amazon-prime-video': { title: 'Amazon Prime Video Movies', ids: { default: 9, IN: 119 } },
   hulu: { title: 'Hulu Movies', ids: { default: 15 }, regions: ['US'] },
@@ -139,25 +176,25 @@ export const streamingProviders = {
   sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] }
 }
 
-export function getProviderId(providerKey, region = 'US') {
+export function getProviderId(providerKey: string, region = 'US'): number | null {
   const provider = streamingProviders[providerKey]
   if (!provider) return null
   return provider.ids[region] ?? provider.ids.default
 }
 
-export function isProviderAvailableInRegion(providerKey, region = 'US') {
+export function isProviderAvailableInRegion(providerKey: string, region = 'US'): boolean {
   const provider = streamingProviders[providerKey]
   if (!provider) return false
   return !provider.regions || provider.regions.includes(region)
 }
 
-export async function fetchDiscoverMovies({ category, genreId, providerId, region, page = 1 }) {
+export async function fetchDiscoverMovies({ category, genreId, providerId, region, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-  const params = {
+  const params: TmdbParams = {
     page,
     include_adult: 'false',
     sort_by: 'popularity.desc',
@@ -186,43 +223,43 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params.watch_region = region || 'US'
   }
 
-  const data = await fetchTmdb('/discover/movie', params)
+  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params)
   return {
     ...data,
     results: (data.results || []).filter(movie => movie.poster_path)
   }
 }
 
-export async function fetchListMovies(discoverParams = {}, page = 1) {
-  const params = {
+export async function fetchListMovies(discoverParams: TmdbParams = {}, page = 1): Promise<TmdbPaged<TmdbMovie>> {
+  const params: TmdbParams = {
     page,
     include_adult: 'false',
     'vote_count.gte': 50,
     ...discoverParams
   }
 
-  const data = await fetchTmdb('/discover/movie', params)
+  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params)
   return {
     ...data,
     results: (data.results || []).filter(movie => movie.poster_path)
   }
 }
 
-export async function fetchDiscoverTv({ category, genreId, providerId, region, page = 1 }) {
+export async function fetchDiscoverTv({ category, genreId, providerId, region, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
-  const daysAgo = (n) => {
+  const daysAgo = (n: number) => {
     const d = new Date(now)
     d.setDate(d.getDate() - n)
     return d.toISOString().split('T')[0]
   }
-  const daysAhead = (n) => {
+  const daysAhead = (n: number) => {
     const d = new Date(now)
     d.setDate(d.getDate() + n)
     return d.toISOString().split('T')[0]
   }
 
-  const params = {
+  const params: TmdbParams = {
     page,
     include_adult: 'false',
     'vote_count.gte': 10
@@ -251,7 +288,7 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
     params.watch_region = region || 'US'
   }
 
-  const data = await fetchTmdb('/discover/tv', params)
+  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params)
   return {
     ...data,
     results: (data.results || [])
@@ -260,15 +297,15 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
   }
 }
 
-export async function fetchListTv(discoverParams = {}, page = 1) {
-  const params = {
+export async function fetchListTv(discoverParams: TmdbParams = {}, page = 1): Promise<TmdbPaged<NormalizedTvShow>> {
+  const params: TmdbParams = {
     page,
     include_adult: 'false',
     'vote_count.gte': 50,
     ...discoverParams
   }
 
-  const data = await fetchTmdb('/discover/tv', params)
+  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params)
   return {
     ...data,
     results: (data.results || [])
@@ -277,8 +314,8 @@ export async function fetchListTv(discoverParams = {}, page = 1) {
   }
 }
 
-export async function fetchRecommendedTv(showId, page = 1) {
-  const data = await fetchTmdb(`/tv/${showId}/recommendations`, { page })
+export async function fetchRecommendedTv(showId: number | string, page = 1): Promise<TmdbPaged<NormalizedTvShow>> {
+  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>(`/tv/${showId}/recommendations`, { page })
   return {
     ...data,
     results: (data.results || [])
@@ -287,30 +324,30 @@ export async function fetchRecommendedTv(showId, page = 1) {
   }
 }
 
-export async function searchTvByTitle(title) {
-  const data = await fetchTmdb('/search/tv', { query: title, include_adult: 'false' })
+export async function searchTvByTitle(title: string): Promise<NormalizedTvShow | null> {
+  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/search/tv', { query: title, include_adult: 'false' })
   const show = (data.results || []).find(s => s.poster_path) || null
   return show ? normalizeTvTitle(show) : null
 }
 
-export async function fetchRecommendedMovies(movieId, page = 1) {
-  const data = await fetchTmdb(`/movie/${movieId}/recommendations`, { page })
+export async function fetchRecommendedMovies(movieId: number | string, page = 1): Promise<TmdbPaged<TmdbMovie>> {
+  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>(`/movie/${movieId}/recommendations`, { page })
   return {
     ...data,
     results: (data.results || []).filter(movie => movie.poster_path)
   }
 }
 
-export async function searchMovieByTitle(title) {
-  const data = await fetchTmdb('/search/movie', { query: title, include_adult: 'false' })
+export async function searchMovieByTitle(title: string): Promise<TmdbMovie | null> {
+  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/search/movie', { query: title, include_adult: 'false' })
   return (data.results || []).find(movie => movie.poster_path) || null
 }
 
-export async function searchKeywordId(name) {
-  const data = await fetchTmdb('/search/keyword', { query: name })
+export async function searchKeywordId(name: string): Promise<number | null> {
+  const data = await fetchTmdb<{ results?: { id: number; name: string }[] }>('/search/keyword', { query: name })
   return data.results?.[0]?.id || null
 }
 
-export async function fetchCollection(collectionId) {
-  return fetchTmdb(`/collection/${collectionId}`)
+export async function fetchCollection(collectionId: number | string): Promise<TmdbCollection> {
+  return fetchTmdb<TmdbCollection>(`/collection/${collectionId}`)
 }

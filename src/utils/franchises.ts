@@ -1,7 +1,7 @@
 // Seed TMDB collection ids for the /collections index and sitemap.
 // Names are never stored here — pages render whatever TMDB returns, so a
 // wrong id can only yield a different franchise, never a mislabeled one.
-export const franchiseCollectionIds = [
+export const franchiseCollectionIds: number[] = [
   86311, // The Avengers / MCU
   1241, // Harry Potter
   10, // Star Wars

@@ -1,4 +1,4 @@
-export default function timeFormatter(totalMinutes) {
+export default function timeFormatter(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
   return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`

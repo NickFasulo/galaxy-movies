@@ -1,5 +1,5 @@
 import { updateStreamingChanges } from '../../../utils/streamingChanges'
-const { isCronAuthorized } = require('../../../utils/auth')
+import { isCronAuthorized } from '../../../utils/auth'
 
 export const config = { maxDuration: 60 }
 

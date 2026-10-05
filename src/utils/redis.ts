@@ -1,9 +1,8 @@
-const { Redis } = require('@upstash/redis')
+import { Redis } from '@upstash/redis'
 
-let redis
+let redis: Redis | undefined
 
-// CJS so both require() (rateLimiter, waitlistStore) and ESM importers work.
-function getRedis() {
+export function getRedis(): Redis | null {
   if (redis) return redis
   if (!process.env.UPSTASH_REDIS_KV_REST_API_URL || !process.env.UPSTASH_REDIS_KV_REST_API_TOKEN) {
     return null
@@ -14,5 +13,3 @@ function getRedis() {
   })
   return redis
 }
-
-module.exports = { getRedis }

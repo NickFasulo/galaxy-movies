@@ -1,5 +1,6 @@
-const { LRUCache } = require('lru-cache')
-const { getRedis } = require('./redis')
+import { LRUCache } from 'lru-cache'
+import type { IncomingHttpHeaders } from 'http'
+import { getRedis } from './redis'
 
 const BOT_PATTERNS = [
   /bot/i,
@@ -36,9 +37,24 @@ const ALLOWED_BOT_PATTERNS = [
   /mitgo/i
 ]
 
-const distributedFallbackCounts = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 })
+interface RateEntry {
+  count: number
+  resetAt: number
+}
 
-function isBot(userAgent) {
+interface RateLimitOptions {
+  maxRequests: number
+  windowSeconds: number
+  cost?: number
+}
+
+type RateLimitRequest =
+  | { headers: Headers; socket?: undefined }
+  | { headers: IncomingHttpHeaders; socket?: { remoteAddress?: string } }
+
+const distributedFallbackCounts = new LRUCache<string, RateEntry>({ max: 10000, ttl: 1000 * 60 * 60 })
+
+export function isBot(userAgent: string | null | undefined): boolean {
   if (!userAgent) return true
 
   const ua = userAgent.toLowerCase()
@@ -47,14 +63,17 @@ function isBot(userAgent) {
 }
 
 // Node API routes expose headers as a plain object, edge routes as a Headers instance.
-function readHeader(req, name) {
-  const value = typeof req.headers.get === 'function' ? req.headers.get(name) : req.headers[name]
-  return Array.isArray(value) ? value[0] : value
+function readHeader(req: RateLimitRequest, name: string): string | undefined {
+  const { headers } = req
+  const value = typeof (headers as Headers).get === 'function'
+    ? (headers as Headers).get(name)
+    : (headers as IncomingHttpHeaders)[name]
+  return (Array.isArray(value) ? value[0] : value) ?? undefined
 }
 
 // Clients can inject their own leading x-forwarded-for entries, so only the
 // last entry (added by the edge) is trusted; x-vercel-* headers can't be spoofed.
-function getClientIP(req) {
+export function getClientIP(req: RateLimitRequest): string {
   const vercelForwarded = readHeader(req, 'x-vercel-forwarded-for')
   if (vercelForwarded) return vercelForwarded.split(',')[0].trim()
 
@@ -67,7 +86,7 @@ function getClientIP(req) {
   return readHeader(req, 'x-real-ip') || req.socket?.remoteAddress || 'unknown'
 }
 
-function checkMemoryRateLimit(key, { maxRequests, windowSeconds }, cost) {
+function checkMemoryRateLimit(key: string, { maxRequests, windowSeconds }: RateLimitOptions, cost: number): boolean {
   const now = Date.now()
   const entry = distributedFallbackCounts.get(key)
   const next = entry && entry.resetAt > now
@@ -79,13 +98,16 @@ function checkMemoryRateLimit(key, { maxRequests, windowSeconds }, cost) {
 
 // Redis errors degrade to a per-instance limiter instead of failing open, so a
 // Redis outage can't be used to run up OpenAI/Watchmode spend.
-async function checkDistributedRateLimit(clientId, { keyPrefix, maxRequests, windowSeconds, cost = 1 }) {
+export async function checkDistributedRateLimit(
+  clientId: string,
+  { keyPrefix, maxRequests, windowSeconds, cost = 1 }: RateLimitOptions & { keyPrefix: string }
+): Promise<boolean> {
   const key = `${keyPrefix}:${clientId}`
   const kv = getRedis()
 
   if (kv) {
     try {
-      const [count, ttl] = await kv.pipeline().incrby(key, cost).ttl(key).exec()
+      const [count, ttl] = await kv.pipeline().incrby(key, cost).ttl(key).exec<[number, number]>()
       if (ttl < 0) await kv.expire(key, windowSeconds)
       return count <= maxRequests
     } catch (err) {
@@ -96,13 +118,6 @@ async function checkDistributedRateLimit(clientId, { keyPrefix, maxRequests, win
   return checkMemoryRateLimit(key, { maxRequests, windowSeconds }, cost)
 }
 
-function checkGlobalBudget(name, { maxRequests, windowSeconds, cost }) {
+export function checkGlobalBudget(name: string, { maxRequests, windowSeconds, cost }: RateLimitOptions): Promise<boolean> {
   return checkDistributedRateLimit('all', { keyPrefix: `global_rl:${name}`, maxRequests, windowSeconds, cost })
-}
-
-module.exports = {
-  isBot,
-  getClientIP,
-  checkDistributedRateLimit,
-  checkGlobalBudget
 }

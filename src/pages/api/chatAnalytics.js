@@ -1,7 +1,7 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
-const { isCronAuthorized } = require('../../utils/auth')
+import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { isCronAuthorized } from '../../utils/auth'
 
 const analyticsCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 

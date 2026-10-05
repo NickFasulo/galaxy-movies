@@ -2,6 +2,15 @@ import { movieGenres, tvGenres, streamingProviders } from './tmdb'
 
 export const MIN_INDEXABLE_MOVIES = 8
 
+export interface ProviderGenreTarget {
+  providerKey: string
+  genreKey: string
+  providerLabel: string | null
+  genreLabel: string
+  title: string
+  description: string
+}
+
 export const providerGenreSlugs = [
   'action',
   'animation',
@@ -28,11 +37,11 @@ export const tvProviderGenreSlugs = [
   'sci-fi-fantasy'
 ]
 
-export function getProviderLabel(providerKey) {
+export function getProviderLabel(providerKey: string): string | null {
   return streamingProviders[providerKey]?.title?.replace(' Movies', '') || null
 }
 
-export function getProviderGenreTarget(providerKey, genreKey) {
+export function getProviderGenreTarget(providerKey: string, genreKey: string): ProviderGenreTarget | null {
   const provider = streamingProviders[providerKey]
   const genre = movieGenres[genreKey]
 
@@ -53,15 +62,15 @@ export function getProviderGenreTarget(providerKey, genreKey) {
   }
 }
 
-export function getProviderGenreTargets() {
+export function getProviderGenreTargets(): ProviderGenreTarget[] {
   return Object.keys(streamingProviders).flatMap((providerKey) =>
     providerGenreSlugs
       .map((genreKey) => getProviderGenreTarget(providerKey, genreKey))
-      .filter(Boolean)
+      .filter((target): target is ProviderGenreTarget => Boolean(target))
   )
 }
 
-export function getTvProviderGenreTarget(providerKey, genreKey) {
+export function getTvProviderGenreTarget(providerKey: string, genreKey: string): ProviderGenreTarget | null {
   const provider = streamingProviders[providerKey]
   const genre = tvGenres[genreKey]
 
@@ -82,15 +91,15 @@ export function getTvProviderGenreTarget(providerKey, genreKey) {
   }
 }
 
-export function getTvProviderGenreTargets() {
+export function getTvProviderGenreTargets(): ProviderGenreTarget[] {
   return Object.keys(streamingProviders).flatMap((providerKey) =>
     tvProviderGenreSlugs
       .map((genreKey) => getTvProviderGenreTarget(providerKey, genreKey))
-      .filter(Boolean)
+      .filter((target): target is ProviderGenreTarget => Boolean(target))
   )
 }
 
-export function getContentIndexability({ movies = [], dataError = false }) {
+export function getContentIndexability({ movies = [], dataError = false }: { movies?: unknown[]; dataError?: boolean }): { isIndexable: boolean; reason: string | null } {
   if (dataError) {
     return {
       isIndexable: false,

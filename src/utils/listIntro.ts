@@ -1,28 +1,29 @@
 import OpenAI from 'openai'
+import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { LRUCache } from 'lru-cache'
 
-let openai
+let openai: OpenAI | undefined
 
 const INTRO_CACHE_VERSION = 'v1'
 const INTRO_TTL_SECONDS = 60 * 60 * 24 * 180
 const MAX_SAMPLE_TITLES = 5
 
-const memoryIntroCache = new LRUCache({ max: 100, ttl: INTRO_TTL_SECONDS * 1000 })
+const memoryIntroCache = new LRUCache<string, string>({ max: 100, ttl: INTRO_TTL_SECONDS * 1000 })
 
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 10
 
-function getOpenAI() {
+function getOpenAI(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null
   openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
 }
 
-function introCacheKey(slug) {
+function introCacheKey(slug: string): string {
   return `ai_list_intro:${INTRO_CACHE_VERSION}:${slug}`
 }
 
-async function isWithinGlobalBudget(kv) {
+async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
   const windowId = Math.floor(Date.now() / 60000)
   const key = `ai_list_intro_global_rl:${windowId}`
   try {
@@ -35,10 +36,10 @@ async function isWithinGlobalBudget(kv) {
   }
 }
 
-async function readCache(kv, key) {
+async function readCache(kv: Redis | null, key: string): Promise<string | null> {
   if (kv) {
     try {
-      return await kv.get(key)
+      return await kv.get<string>(key)
     } catch (err) {
       console.error('Redis get error for list-intro cache:', err)
       return null
@@ -47,7 +48,7 @@ async function readCache(kv, key) {
   return memoryIntroCache.get(key) || null
 }
 
-async function writeCache(kv, key, value) {
+async function writeCache(kv: Redis | null, key: string, value: string): Promise<void> {
   if (kv) {
     try {
       await kv.set(key, value, { ex: INTRO_TTL_SECONDS })
@@ -61,7 +62,12 @@ async function writeCache(kv, key, value) {
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitles = [] }) {
+export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitles = [] }: {
+  slug: string
+  title: string
+  tagline?: string
+  sampleTitles?: string[]
+}): Promise<string | null> {
   if (!slug || !title) return null
 
   const kv = getRedis()

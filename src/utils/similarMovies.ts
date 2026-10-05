@@ -1,8 +1,27 @@
 import OpenAI from 'openai'
+import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { LRUCache } from 'lru-cache'
+import type { MediaType } from '../types/tmdb'
 
-let openai
+export interface SimilarCandidate {
+  id: number
+  title: string
+  overview?: string
+  poster_path?: string | null
+  release_date?: string
+}
+
+export interface SimilarTitle {
+  id: number
+  title: string
+  posterPath: string | null
+  releaseDate: string | null
+  reason: string
+  mediaType: MediaType
+}
+
+let openai: OpenAI | undefined
 
 const SIMILAR_CACHE_VERSION = 'v1'
 const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 90
@@ -10,24 +29,24 @@ const MAX_OVERVIEW_LENGTH = 300
 const MAX_CANDIDATES = 8
 const MAX_RESULTS = 5
 
-const memorySimilarCache = new LRUCache({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
+const memorySimilarCache = new LRUCache<string, SimilarTitle[]>({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
 
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
 
-function getOpenAI() {
+function getOpenAI(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null
   openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
 }
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
-function cacheKey(movieId, mediaType = 'movie') {
+function cacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
   return mediaType === 'tv'
     ? `ai_similar:${SIMILAR_CACHE_VERSION}:tv:${movieId}`
     : `ai_similar:${SIMILAR_CACHE_VERSION}:${movieId}`
 }
 
-async function isWithinGlobalBudget(kv) {
+async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
   const windowId = Math.floor(Date.now() / 60000)
   const key = `ai_similar_global_rl:${windowId}`
   try {
@@ -40,10 +59,10 @@ async function isWithinGlobalBudget(kv) {
   }
 }
 
-async function readCache(kv, key) {
+async function readCache(kv: Redis | null, key: string): Promise<SimilarTitle[] | null> {
   if (kv) {
     try {
-      return await kv.get(key)
+      return await kv.get<SimilarTitle[]>(key)
     } catch (err) {
       console.error('Redis get error for similar-movies cache:', err)
       return null
@@ -52,7 +71,7 @@ async function readCache(kv, key) {
   return memorySimilarCache.get(key) || null
 }
 
-async function writeCache(kv, key, value) {
+async function writeCache(kv: Redis | null, key: string, value: SimilarTitle[]): Promise<void> {
   if (kv) {
     try {
       await kv.set(key, value, { ex: SIMILAR_TTL_SECONDS })
@@ -66,7 +85,14 @@ async function writeCache(kv, key, value) {
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie' }) {
+export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie' }: {
+  movieId: number
+  title: string
+  overview?: string
+  genres?: string[]
+  candidates?: SimilarCandidate[]
+  mediaType?: MediaType
+}): Promise<SimilarTitle[]> {
   if (!movieId || !title || candidates.length === 0) return []
 
   const kv = getRedis()
@@ -119,14 +145,14 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
 
     const raw = completion.choices[0]?.message?.content
     const parsed = raw ? JSON.parse(raw) : null
-    const picks = Array.isArray(parsed?.recommendations) ? parsed.recommendations : []
+    const picks: { id?: unknown; reason?: unknown }[] = Array.isArray(parsed?.recommendations) ? parsed.recommendations : []
 
     const candidateMap = new Map(candidates.map((candidate) => [candidate.id, candidate]))
     const enriched = picks
-      .filter((pick) => pick && candidateMap.has(pick.id) && typeof pick.reason === 'string' && pick.reason.trim())
+      .filter((pick): pick is { id: number; reason: string } => Boolean(pick && candidateMap.has(pick.id as number) && typeof pick.reason === 'string' && pick.reason.trim()))
       .slice(0, MAX_RESULTS)
       .map((pick) => {
-        const candidate = candidateMap.get(pick.id)
+        const candidate = candidateMap.get(pick.id)!
         return {
           id: candidate.id,
           title: candidate.title,

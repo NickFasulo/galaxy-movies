@@ -1,12 +1,13 @@
 import { getRedis } from './redis'
 import { checkGlobalBudget } from './rateLimiter'
+import type { MediaType } from '../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const WM_ID_TTL_SECONDS = 60 * 60 * 24 * 7
 // Hard daily cap on uncached title lookups: Watchmode quota is monthly, so rotating-IP
 // scraping of /api/prices must not be able to exhaust it.
 const DAILY_UPSTREAM_LOOKUP_BUDGET = Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 300
-const SEARCH_FIELD = { movie: 'tmdb_movie_id', tv: 'tmdb_tv_id' }
+const SEARCH_FIELD: Record<MediaType, string> = { movie: 'tmdb_movie_id', tv: 'tmdb_tv_id' }
 
 // Watchmode free tier only serves US sources — skip upstream calls elsewhere.
 const WATCHMODE_REGIONS = ['US']
@@ -23,11 +24,52 @@ const PROVIDER_GROUPS = [
   /amc/i
 ]
 
-export function sameStore(a = '', b = '') {
+interface WatchmodeSource {
+  name: string
+  type: string
+  format?: string | null
+  price?: number | null
+  web_url?: string | null
+  seasons?: number | null
+}
+
+interface WatchmodeDetails {
+  critic_score?: number | null
+  user_rating?: number | null
+  relevance_percentile?: number | null
+}
+
+export interface PriceOffer {
+  provider: string
+  store: string
+  type: string
+  format: string | null
+  price: number | null
+  currency: string
+  url: string | null
+  seasons: number | null
+}
+
+export interface PriceExtras {
+  criticScore: number | null
+  userRating: number | null
+  relevancePercentile: number | null
+}
+
+export interface PricePayload {
+  cacheKey?: string
+  region: string
+  fetchedAt: number
+  offers: PriceOffer[]
+  cheapest: { rent: PriceOffer | null; buy: PriceOffer | null }
+  extras: PriceExtras
+}
+
+export function sameStore(a = '', b = ''): boolean {
   return PROVIDER_GROUPS.some((re) => re.test(a) && re.test(b))
 }
 
-async function resolveWatchmodeId(tmdbId, mediaType) {
+async function resolveWatchmodeId(tmdbId: string | number, mediaType: MediaType): Promise<number | null> {
   const apiKey = process.env.WATCHMODE_API_KEY
   if (!apiKey) return null
 
@@ -35,7 +77,7 @@ async function resolveWatchmodeId(tmdbId, mediaType) {
   const kv = getRedis()
   if (kv) {
     try {
-      const cached = await kv.get(cacheKey)
+      const cached = await kv.get<number | 'none'>(cacheKey)
       if (cached) return cached === 'none' ? null : cached
     } catch {}
   }
@@ -44,7 +86,7 @@ async function resolveWatchmodeId(tmdbId, mediaType) {
     const url = `${WATCHMODE_BASE}/search/?search_field=${SEARCH_FIELD[mediaType] || SEARCH_FIELD.movie}&search_value=${tmdbId}`
     const resp = await fetch(url, { headers: { 'X-API-Key': apiKey } })
     if (!resp.ok) return null
-    const data = await resp.json()
+    const data: { title_results?: { id: number }[] } = await resp.json()
     const wmId = data.title_results?.[0]?.id || null
     if (kv) {
       try {
@@ -57,7 +99,7 @@ async function resolveWatchmodeId(tmdbId, mediaType) {
   }
 }
 
-async function fetchWatchmodeJson(path) {
+async function fetchWatchmodeJson<T>(path: string): Promise<T | null> {
   const apiKey = process.env.WATCHMODE_API_KEY
   if (!apiKey) return null
   try {
@@ -69,9 +111,9 @@ async function fetchWatchmodeJson(path) {
   }
 }
 
-const isPaidOffer = (s) => (s.type === 'rent' || s.type === 'buy') && s.price != null
+const isPaidOffer = (s: WatchmodeSource) => (s.type === 'rent' || s.type === 'buy') && s.price != null
 
-function toWatchmodeOffers(sources = []) {
+function toWatchmodeOffers(sources: WatchmodeSource[] = []): PriceOffer[] {
   return sources
     .filter((s) => isPaidOffer(s) || s.type === 'sub' || s.type === 'free')
     .map((s) => ({
@@ -86,8 +128,8 @@ function toWatchmodeOffers(sources = []) {
     }))
 }
 
-function dedupeOffers(offers) {
-  const seen = new Map()
+function dedupeOffers(offers: PriceOffer[]): PriceOffer[] {
+  const seen = new Map<string, PriceOffer>()
   for (const offer of offers) {
     const key = `${offer.provider}|${offer.type}|${offer.format}`
     const existing = seen.get(key)
@@ -98,12 +140,16 @@ function dedupeOffers(offers) {
   return [...seen.values()]
 }
 
-const cheapestOf = (offers, type) =>
+const cheapestOf = (offers: PriceOffer[], type: string): PriceOffer | null =>
   offers
     .filter((o) => o.type === type && o.price != null)
-    .sort((a, b) => a.price - b.price)[0] || null
+    .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0] || null
 
-export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US' }) {
+export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US' }: {
+  tmdbId: string | number
+  mediaType?: MediaType
+  region?: string
+}): Promise<PricePayload> {
   const withinBudget = WATCHMODE_REGIONS.includes(region) && await checkGlobalBudget('watchmode', {
     maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
     windowSeconds: 60 * 60 * 24
@@ -111,8 +157,8 @@ export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US
   const wmId = withinBudget ? await resolveWatchmodeId(tmdbId, mediaType) : null
 
   const [sources, details] = await Promise.all([
-    wmId ? fetchWatchmodeJson(`/title/${wmId}/sources/?regions=${region}`) : null,
-    wmId ? fetchWatchmodeJson(`/title/${wmId}/details`) : null
+    wmId ? fetchWatchmodeJson<WatchmodeSource[]>(`/title/${wmId}/sources/?regions=${region}`) : null,
+    wmId ? fetchWatchmodeJson<WatchmodeDetails>(`/title/${wmId}/details`) : null
   ])
 
   const offers = dedupeOffers(sources ? toWatchmodeOffers(sources) : [])

@@ -1,7 +1,7 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
 import { getPriceOffers } from '../../utils/prices'
-const { isBot, getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
 // client and caches hard, since free-tier Watchmode quota is monthly.

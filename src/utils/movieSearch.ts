@@ -1,8 +1,23 @@
 import { fetchTmdb } from './tmdb'
+import type { Genre, TitleSummary, TmdbMovie, TmdbPaged } from '../types/tmdb'
 
-async function searchMultiByQuery(query, page = 1) {
+type MultiSearchResult = TitleSummary & { media_type: string }
+
+export interface MovieMention {
+  match: string
+  title: string
+  year: string
+}
+
+export interface ResolvedMention {
+  match: string
+  movieId: number
+  mediaType: string
+}
+
+async function searchMultiByQuery(query: string, page = 1): Promise<MultiSearchResult[]> {
   try {
-    const data = await fetchTmdb('/search/multi', {
+    const data = await fetchTmdb<TmdbPaged<MultiSearchResult>>('/search/multi', {
       query,
       page,
       include_adult: false
@@ -17,13 +32,13 @@ async function searchMultiByQuery(query, page = 1) {
   }
 }
 
-export async function getRecentReleases(page = 1) {
+export async function getRecentReleases(page = 1): Promise<{ results: TmdbMovie[]; total_pages: number; total_results: number }> {
   try {
     const now = new Date()
     const ninetyDaysAgo = new Date(now)
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-    const data = await fetchTmdb('/discover/movie', {
+    const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', {
       page,
       include_adult: false,
       sort_by: 'popularity.desc',
@@ -43,25 +58,25 @@ export async function getRecentReleases(page = 1) {
   }
 }
 
-export function formatMovieForChat(movie) {
+export function formatMovieForChat(movie: TmdbMovie & { genres?: Genre[] }) {
   return {
     id: movie.id,
     title: movie.title,
     year: movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A',
     rating: movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A',
-    overview: movie.overview?.substring(0, 200) + (movie.overview?.length > 200 ? '...' : ''),
+    overview: movie.overview?.substring(0, 200) + ((movie.overview?.length ?? 0) > 200 ? '...' : ''),
     genres: movie.genres?.map(g => g.name).join(', ') || 'N/A'
   }
 }
 
 const QUOTED_TITLE_PATTERN = /"([^"]+?)\s\((\d{4})\)"/g
 
-export function extractQuotedMovieMentions(text, maxMentions = 5) {
+export function extractQuotedMovieMentions(text: string | null | undefined, maxMentions = 5): MovieMention[] {
   if (!text) return []
 
-  const seen = new Set()
-  const mentions = []
-  let match
+  const seen = new Set<string>()
+  const mentions: MovieMention[] = []
+  let match: RegExpExecArray | null
 
   while ((match = QUOTED_TITLE_PATTERN.exec(text)) !== null) {
     const [fullMatch, title, year] = match
@@ -75,9 +90,9 @@ export function extractQuotedMovieMentions(text, maxMentions = 5) {
   return mentions
 }
 
-export async function resolveMovieMentions(mentions) {
+export async function resolveMovieMentions(mentions: MovieMention[]): Promise<ResolvedMention[]> {
   const resolved = await Promise.all(
-    mentions.map(async (mention) => {
+    mentions.map(async (mention): Promise<ResolvedMention | null> => {
       try {
         const results = await searchMultiByQuery(mention.title, 1)
         const bestMatch = results.find((item) => {
@@ -95,5 +110,5 @@ export async function resolveMovieMentions(mentions) {
     })
   )
 
-  return resolved.filter(Boolean)
+  return resolved.filter((mention): mention is ResolvedMention => Boolean(mention))
 }

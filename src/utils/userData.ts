@@ -1,8 +1,40 @@
 import { streamingProviders } from './tmdb'
+import type { MediaType } from '../types/tmdb'
+
+export interface WatchlistItem {
+  id: number
+  mediaType: MediaType
+  title: string | undefined
+  poster_path: string | null
+  year: string | null
+  added_at: string
+}
+
+export interface RatingEntry {
+  rating: number
+  title: string
+  mediaType: MediaType
+}
+
+export interface UserData {
+  watchlist: WatchlistItem[]
+  ratings: Record<string, RatingEntry>
+  services: { region: string; providers: string[] }
+}
+
+export interface WatchlistableTitle {
+  id: number
+  mediaType?: MediaType
+  title?: string
+  name?: string
+  poster_path?: string | null
+  release_date?: string
+  first_air_date?: string
+}
 
 const STORAGE_KEY = 'gm.userData.v1'
 
-export const EMPTY_USER_DATA = {
+export const EMPTY_USER_DATA: UserData = {
   watchlist: [],
   ratings: {},
   services: { region: 'US', providers: [] }
@@ -10,9 +42,9 @@ export const EMPTY_USER_DATA = {
 
 // Parsed data is cached against the raw string so useSyncExternalStore gets a
 // stable snapshot — a fresh object per read would loop forever.
-let cache = { raw: undefined, data: EMPTY_USER_DATA }
+let cache: { raw: string | null | undefined; data: UserData } = { raw: undefined, data: EMPTY_USER_DATA }
 
-function normalize(raw) {
+function normalize(raw: string | null): UserData {
   if (!raw) return EMPTY_USER_DATA
   try {
     const obj = JSON.parse(raw)
@@ -31,10 +63,10 @@ function normalize(raw) {
 
 // localStorage can throw on read AND write (private mode, disabled cookies,
 // sandboxed iframes) — fall back to memory so the feature still works per-session.
-let memoryFallback = null
+let memoryFallback: string | null = null
 let storageDisabled = false
 
-function readRaw() {
+function readRaw(): string | null {
   if (storageDisabled) return memoryFallback
   try {
     return window.localStorage.getItem(STORAGE_KEY)
@@ -44,7 +76,7 @@ function readRaw() {
   }
 }
 
-export function getUserData() {
+export function getUserData(): UserData {
   if (typeof window === 'undefined') return EMPTY_USER_DATA
   const raw = readRaw()
   if (raw === cache.raw) return cache.data
@@ -53,30 +85,30 @@ export function getUserData() {
   return data
 }
 
-export function getUserDataRaw() {
+export function getUserDataRaw(): string | null {
   if (typeof window === 'undefined') return null
   return readRaw()
 }
 
-const listeners = new Set()
+const listeners = new Set<() => void>()
 let storageListenerAttached = false
 
-function handleStorageEvent(event) {
+function handleStorageEvent(event: StorageEvent) {
   if (event.key !== STORAGE_KEY && event.key !== null) return
   cache = { raw: undefined, data: EMPTY_USER_DATA }
   listeners.forEach((listener) => listener())
 }
 
-export function subscribeUserData(listener) {
+export function subscribeUserData(listener: () => void): () => void {
   listeners.add(listener)
   if (typeof window !== 'undefined' && !storageListenerAttached) {
     window.addEventListener('storage', handleStorageEvent)
     storageListenerAttached = true
   }
-  return () => listeners.delete(listener)
+  return () => { listeners.delete(listener) }
 }
 
-function writeUserData(next) {
+function writeUserData(next: UserData) {
   const raw = JSON.stringify(next)
   try {
     window.localStorage.setItem(STORAGE_KEY, raw)
@@ -88,15 +120,15 @@ function writeUserData(next) {
   listeners.forEach((listener) => listener())
 }
 
-function update(mutator) {
+function update(mutator: (data: UserData) => UserData) {
   if (typeof window === 'undefined') return
   writeUserData(mutator(getUserData()))
 }
 
-export function toggleWatchlist(movie) {
+export function toggleWatchlist(movie: WatchlistableTitle): void {
   update((data) => {
     const mediaType = movie.mediaType || 'movie'
-    const matches = (item) => item.id === movie.id && (item.mediaType || 'movie') === mediaType
+    const matches = (item: WatchlistItem) => item.id === movie.id && (item.mediaType || 'movie') === mediaType
     const exists = data.watchlist.some(matches)
     return {
       ...data,
@@ -114,13 +146,13 @@ export function toggleWatchlist(movie) {
   })
 }
 
-export function isWatchlisted(id, data = getUserData(), mediaType = 'movie') {
+export function isWatchlisted(id: number, data: UserData = getUserData(), mediaType: MediaType = 'movie'): boolean {
   return data.watchlist.some((item) => item.id === id && (item.mediaType || 'movie') === mediaType)
 }
 
 // rating is 1..10; null/undefined removes the rating.
 // tv ratings are namespaced ('tv:{id}') since movie/tv ids overlap in TMDB.
-export function setRating(id, rating, title, mediaType = 'movie') {
+export function setRating(id: number, rating: number | null | undefined, title: string, mediaType: MediaType = 'movie'): void {
   update((data) => {
     const ratings = { ...data.ratings }
     const key = mediaType === 'tv' ? `tv:${id}` : id
@@ -130,16 +162,16 @@ export function setRating(id, rating, title, mediaType = 'movie') {
   })
 }
 
-export function getRating(id, data = getUserData(), mediaType = 'movie') {
+export function getRating(id: number, data: UserData = getUserData(), mediaType: MediaType = 'movie'): number | null {
   const key = mediaType === 'tv' ? `tv:${id}` : id
   return data.ratings[key]?.rating || null
 }
 
-export function setServices(region, providers) {
+export function setServices(region: string, providers: string[]): void {
   update((data) => ({ ...data, services: { region, providers } }))
 }
 
-export function buildTasteProfile(data = getUserData()) {
+export function buildTasteProfile(data: UserData = getUserData()) {
   const rated = Object.values(data.ratings)
   const topRated = rated
     .filter((r) => r.rating >= 7)
@@ -154,6 +186,6 @@ export function buildTasteProfile(data = getUserData()) {
   const watchlist = data.watchlist.slice(0, 15).map((m) => m.title)
   const services = data.services.providers
     .map((key) => streamingProviders[key]?.title?.replace(' Movies', ''))
-    .filter(Boolean)
+    .filter((title): title is string => Boolean(title))
   return { topRated, disliked, watchlist, services }
 }

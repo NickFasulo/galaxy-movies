@@ -1,4 +1,6 @@
-export default function imageLoader({ src, width, quality }) {
+import type { ImageLoaderProps } from 'next/image'
+
+export default function imageLoader({ src, width }: ImageLoaderProps): string {
   if (!src.startsWith('/')) {
     return src
   }

@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
+import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 
 // Server-side proxy for TMDB watch/providers — keeps TMDB_API_KEY off the client.
 // Batched so poster grids can check many movies in one request.

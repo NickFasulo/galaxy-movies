@@ -1,5 +1,5 @@
 import { ImageResponse } from '@vercel/og'
-const { getClientIP, checkDistributedRateLimit } = require('../../utils/rateLimiter')
+import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
 export const config = {
   runtime: 'edge',

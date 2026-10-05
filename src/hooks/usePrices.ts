@@ -1,7 +1,15 @@
 import { useQuery } from 'react-query'
+import type { MediaType } from '../types/tmdb'
+import type { PricePayload } from '../utils/prices'
 
-export function usePrices({ tmdbId, mediaType = 'movie', title, year, region = 'US' }) {
-  return useQuery(
+export function usePrices({ tmdbId, mediaType = 'movie', title, year, region = 'US' }: {
+  tmdbId: number | string | null | undefined
+  mediaType?: MediaType
+  title?: string | null
+  year?: string | number | null
+  region?: string
+}) {
+  return useQuery<PricePayload>(
     ['prices', mediaType, region, String(tmdbId)],
     async () => {
       const params = new URLSearchParams({ id: String(tmdbId), type: mediaType, region })

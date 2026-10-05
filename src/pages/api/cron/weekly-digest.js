@@ -1,7 +1,7 @@
 import { getRedis } from '../../../utils/redis'
 import { getProviderChanges } from '../../../utils/streamingChanges'
-const { CONFIRMED_KEY } = require('../../../utils/waitlistStore')
-const { isCronAuthorized } = require('../../../utils/auth')
+import { CONFIRMED_KEY } from '../../../utils/waitlistStore'
+import { isCronAuthorized } from '../../../utils/auth'
 
 export const config = { maxDuration: 60 }
 

@@ -1,7 +1,23 @@
+import type { MediaType } from '../types/tmdb'
+import type { TmdbParams } from './tmdb'
+
+export interface ListDef {
+  title: string
+  tagline: string
+  group: string
+  params?: TmdbParams
+  type?: 'similar' | 'discover'
+  media?: MediaType
+  movieId?: number
+  movieTitle?: string
+  keyword?: string
+  createdAt?: number
+}
+
 // TMDB keyword ids below were verified via /search/keyword + spot-checked against
 // /discover/movie — do not add lists with unverified ids (they silently return
 // empty or irrelevant results).
-export const curatedLists = {
+export const curatedLists: Record<string, ListDef> = {
   'cozy-night-in': {
     title: 'Cozy Night In Movies',
     tagline: 'Warm, low-commitment comfort watches for a quiet night at home.',
@@ -195,6 +211,6 @@ export const curatedLists = {
   }
 }
 
-export function getCuratedList(slug) {
+export function getCuratedList(slug: string): ListDef | null {
   return curatedLists[slug] || null
 }

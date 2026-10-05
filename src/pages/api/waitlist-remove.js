@@ -1,5 +1,5 @@
-const { getRedis, PENDING_KEY, CONFIRMED_KEY } = require('../../utils/waitlistStore')
-const { safeEqual } = require('../../utils/auth')
+import { getRedis, PENDING_KEY, CONFIRMED_KEY } from '../../utils/waitlistStore'
+import { safeEqual } from '../../utils/auth'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
 

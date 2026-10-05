@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 export const useScrollRestore = () => {
   const router = useRouter()
 
-  const scrollPositions = useRef({})
+  const scrollPositions = useRef<Record<string, number>>({})
   const isBack = useRef(false)
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export const useScrollRestore = () => {
       }
     }
 
-    const onRouteChangeComplete = url => {
+    const onRouteChangeComplete = (url: string) => {
       if (url !== '/' && isBack.current && scrollPositions.current[url]) {
         setTimeout(() => {
           window.scrollTo({

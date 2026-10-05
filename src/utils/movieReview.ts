@@ -1,31 +1,33 @@
 import OpenAI from 'openai'
+import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { LRUCache } from 'lru-cache'
+import type { MediaType } from '../types/tmdb'
 
-let openai
+let openai: OpenAI | undefined
 
 const REVIEW_CACHE_VERSION = 'v1'
 const REVIEW_TTL_SECONDS = 60 * 60 * 24 * 90
 const MAX_OVERVIEW_LENGTH = 1200
 
-const memoryReviewCache = new LRUCache({ max: 500, ttl: REVIEW_TTL_SECONDS * 1000 })
+const memoryReviewCache = new LRUCache<string, string>({ max: 500, ttl: REVIEW_TTL_SECONDS * 1000 })
 
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
 
-function getOpenAI() {
+function getOpenAI(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null
   openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
 }
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
-function reviewCacheKey(movieId, mediaType = 'movie') {
+function reviewCacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
   return mediaType === 'tv'
     ? `ai_review:${REVIEW_CACHE_VERSION}:tv:${movieId}`
     : `ai_review:${REVIEW_CACHE_VERSION}:${movieId}`
 }
 
-async function isWithinGlobalBudget(kv) {
+async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
   const windowId = Math.floor(Date.now() / 60000)
   const key = `ai_review_global_rl:${windowId}`
   try {
@@ -38,10 +40,10 @@ async function isWithinGlobalBudget(kv) {
   }
 }
 
-async function readCache(kv, key) {
+async function readCache(kv: Redis | null, key: string): Promise<string | null> {
   if (kv) {
     try {
-      return await kv.get(key)
+      return await kv.get<string>(key)
     } catch (err) {
       console.error('Redis get error for review cache:', err)
       return null
@@ -50,7 +52,7 @@ async function readCache(kv, key) {
   return memoryReviewCache.get(key) || null
 }
 
-async function writeCache(kv, key, value) {
+async function writeCache(kv: Redis | null, key: string, value: string): Promise<void> {
   if (kv) {
     try {
       await kv.set(key, value, { ex: REVIEW_TTL_SECONDS })
@@ -64,7 +66,13 @@ async function writeCache(kv, key, value) {
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie' }) {
+export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie' }: {
+  movieId: number
+  title: string
+  overview?: string
+  genres?: string[]
+  mediaType?: MediaType
+}): Promise<string | null> {
   if (!movieId || !title || !overview) return null
 
   const trimmedOverview = overview.slice(0, MAX_OVERVIEW_LENGTH)

@@ -1,6 +1,6 @@
-const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
-const { getRedis, PENDING_KEY, CONFIRMED_KEY } = require('../../utils/waitlistStore')
-const { randomUUID, createHash } = require('crypto')
+import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY } from '../../utils/waitlistStore'
+import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 

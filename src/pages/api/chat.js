@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat } from '../../utils/movieSearch'
-const { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } = require('../../utils/rateLimiter')
+import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 
 let openai
 
