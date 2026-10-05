@@ -16,11 +16,17 @@ const escapeXml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
 
+// lastmod must be a valid YYYY-MM-DD not in the future — TMDB release dates
+// for unreleased titles (e.g. the "upcoming" category) would otherwise emit
+// future dates, which Search Console flags as invalid.
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return null
   const date = new Date(dateString)
   if (isNaN(date.getTime())) return null
-  return date.toISOString().split('T')[0]
+  const iso = date.toISOString().split('T')[0]
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null
+  const today = new Date().toISOString().split('T')[0]
+  return iso > today ? today : iso
 }
 
 function urlEntry(loc: string, lastmod?: string | null) {
