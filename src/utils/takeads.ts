@@ -1,6 +1,6 @@
 import { LRUCache } from 'lru-cache'
 
-const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/resolve'
+// const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/resolve'
 
 // TMDB provider_name substrings → homepage. Amazon is intentionally absent:
 // those providers keep the existing Associates search link instead.
@@ -39,32 +39,33 @@ export function getProviderHomePage(providerName = ''): string | null {
 
 export async function resolveTakeadsLinks(iris: (string | null | undefined)[] = []): Promise<Record<string, string | null>> {
   const unique = [...new Set(iris)].filter((iri): iri is string => Boolean(iri))
-  const apiKey = process.env.TAKEADS_PUBLIC_KEY
-  const pending = apiKey ? unique.filter((iri) => !linkCache.has(iri)) : []
+  // Resolve API disabled until the Takeads account is approved (key returns 401).
+  // const apiKey = process.env.TAKEADS_PUBLIC_KEY
+  // const pending = apiKey ? unique.filter((iri) => !linkCache.has(iri)) : []
 
-  if (pending.length > 0) {
-    try {
-      const response = await fetch(TAKEADS_RESOLVE_URL, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ iris: pending })
-      })
-      if (response.ok) {
-        const payload: { data?: { iri: string; trackingLink?: string | null }[] } = await response.json()
-        const resolved = new Map((payload.data || []).map((item) => [item.iri, item.trackingLink || null]))
-        for (const iri of pending) {
-          linkCache.set(iri, resolved.get(iri) || '')
-        }
-      } else {
-        console.error(`Takeads resolve failed: ${response.status}`)
-      }
-    } catch (err) {
-      console.error('Takeads resolve error:', err)
-    }
-  }
+  // if (pending.length > 0) {
+  //   try {
+  //     const response = await fetch(TAKEADS_RESOLVE_URL, {
+  //       method: 'PUT',
+  //       headers: {
+  //         Authorization: `Bearer ${apiKey}`,
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify({ iris: pending })
+  //     })
+  //     if (response.ok) {
+  //       const payload: { data?: { iri: string; trackingLink?: string | null }[] } = await response.json()
+  //       const resolved = new Map((payload.data || []).map((item) => [item.iri, item.trackingLink || null]))
+  //       for (const iri of pending) {
+  //         linkCache.set(iri, resolved.get(iri) || '')
+  //       }
+  //     } else {
+  //       console.error(`Takeads resolve failed: ${response.status}`)
+  //     }
+  //   } catch (err) {
+  //     console.error('Takeads resolve error:', err)
+  //   }
+  // }
 
   return Object.fromEntries(unique.map((iri) => [iri, linkCache.get(iri) || null]))
 }
