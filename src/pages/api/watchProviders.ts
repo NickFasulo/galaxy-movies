@@ -1,15 +1,18 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
 import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { firstParam } from '../../utils/query'
+import type { WatchProvidersResponse } from '../../types/tmdb'
 
 // Server-side proxy for TMDB watch/providers — keeps TMDB_API_KEY off the client.
 // Batched so poster grids can check many movies in one request.
-const providerCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 6 })
+const providerCache = new LRUCache<string, number[]>({ max: 5000, ttl: 1000 * 60 * 60 * 6 })
 
 const MAX_IDS = 50
 const MAX_UNCACHED_LOOKUPS_PER_HOUR = 1500
 const GLOBAL_UNCACHED_LOOKUPS_PER_HOUR = 20000
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)
@@ -19,7 +22,8 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Bot access denied' })
   }
 
-  const region = /^[A-Z]{2}$/.test(req.query.region || '') ? req.query.region : 'US'
+  const regionParam = firstParam(req.query.region) || ''
+  const region = /^[A-Z]{2}$/.test(regionParam) ? regionParam : 'US'
   const mediaType = req.query.type === 'tv' ? 'tv' : 'movie'
   const ids = String(req.query.ids || '')
     .split(',')
@@ -41,7 +45,7 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
   }
 
-  const results = {}
+  const results: Record<string, number[]> = {}
   const uncached = ids.filter((id) => {
     const hit = providerCache.get(`${mediaType}:${region}:${id}`)
     if (hit) results[id] = hit
@@ -74,7 +78,7 @@ export default async function handler(req, res) {
         results[id] = []
         return
       }
-      const data = await resp.json()
+      const data: WatchProvidersResponse = await resp.json()
       const flatrate = data.results?.[region]?.flatrate || []
       const providerIds = flatrate.map((p) => p.provider_id)
       providerCache.set(`${mediaType}:${region}:${id}`, providerIds)

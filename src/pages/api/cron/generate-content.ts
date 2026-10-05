@@ -1,5 +1,6 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
-import { topicSeeds } from '../../../utils/topicSeeds'
+import { topicSeeds, type TopicSeed } from '../../../utils/topicSeeds'
 import {
   fetchListMovies,
   fetchListTv,
@@ -72,15 +73,19 @@ const TV_GENRE_ID_LIST = Object.entries(tvGenres)
   .map(([slug, genre]) => `${genre.id}=${slug}`)
   .join(', ')
 
-let openai
+let openai: OpenAI | undefined
 
-function getOpenAI() {
+type DiscoverDraft =
+  | { error: string }
+  | { error?: undefined; title: string; tagline: string; params: Record<string, string> }
+
+function getOpenAI(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null
   openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   return openai
 }
 
-async function draftTagline({ title, keyword, context }) {
+async function draftTagline({ title, keyword, context }: { title: string; keyword: string; context?: string }): Promise<string | null> {
   const client = getOpenAI()
   if (!client) {
     return `Hand-picked picks for anyone searching "${keyword}".`
@@ -101,7 +106,7 @@ async function draftTagline({ title, keyword, context }) {
   return completion.choices[0]?.message?.content?.trim() || null
 }
 
-async function resolveKeywordsParam(rawValue) {
+async function resolveKeywordsParam(rawValue: unknown): Promise<string | null> {
   const names = (Array.isArray(rawValue) ? rawValue : String(rawValue).split('|'))
     .map((name) => String(name).trim())
     .filter(Boolean)
@@ -110,9 +115,9 @@ async function resolveKeywordsParam(rawValue) {
   return resolved.length ? resolved.join('|') : null
 }
 
-async function sanitizeDiscoverParams(rawParams = {}, media = 'movie') {
+async function sanitizeDiscoverParams(rawParams: Record<string, unknown> = {}, media = 'movie'): Promise<Record<string, string>> {
   const allowlist = media === 'tv' ? TV_DISCOVER_PARAM_ALLOWLIST : DISCOVER_PARAM_ALLOWLIST
-  const params = {}
+  const params: Record<string, string> = {}
   for (const [key, value] of Object.entries(rawParams)) {
     if (!allowlist.has(key) || value === undefined || value === null || value === '') continue
     if (key === 'with_keywords') {
@@ -125,7 +130,7 @@ async function sanitizeDiscoverParams(rawParams = {}, media = 'movie') {
   return params
 }
 
-async function draftDiscoverList(seed) {
+async function draftDiscoverList(seed: TopicSeed): Promise<DiscoverDraft> {
   const client = getOpenAI()
   if (!client) return { error: 'OPENAI_API_KEY is not configured' }
 
@@ -159,7 +164,7 @@ async function draftDiscoverList(seed) {
   const raw = completion.choices[0]?.message?.content
   let draft
   try {
-    draft = JSON.parse(raw)
+    draft = JSON.parse(raw ?? '')
   } catch {
     return { error: 'Generator returned malformed JSON' }
   }
@@ -176,7 +181,7 @@ async function draftDiscoverList(seed) {
   return { title: draft.title.trim(), tagline: draft.tagline.trim(), params }
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
@@ -220,7 +225,7 @@ export default async function handler(req, res) {
     try {
       const isTv = seed.media === 'tv'
       if (seed.type === 'similar') {
-        const sourceTitle = seed.showTitle || seed.movieTitle
+        const sourceTitle = seed.showTitle || seed.movieTitle || ''
         const source = isTv
           ? await searchTvByTitle(sourceTitle)
           : await searchMovieByTitle(sourceTitle)
@@ -276,7 +281,7 @@ export default async function handler(req, res) {
         results.push({ slug: seed.slug, status: 'approved', title })
       } else {
         const draft = await draftDiscoverList(seed)
-        if (draft.error) {
+        if (draft.error !== undefined) {
           results.push({ slug: seed.slug, status: 'skipped', reason: draft.error })
           continue
         }
@@ -318,7 +323,7 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error(`Content generation failed for seed ${seed.slug}:`, err)
-      results.push({ slug: seed.slug, status: 'error', reason: err.message })
+      results.push({ slug: seed.slug, status: 'error', reason: err instanceof Error ? err.message : String(err) })
     }
   }
 

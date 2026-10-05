@@ -1,20 +1,22 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
-import { getPriceOffers } from '../../utils/prices'
+import { getPriceOffers, type PricePayload } from '../../utils/prices'
+import { firstParam } from '../../utils/query'
 import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
 // client and caches hard, since free-tier Watchmode quota is monthly.
-const priceCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
+const priceCache = new LRUCache<string, PricePayload>({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
 const PRICE_TTL_SECONDS = 60 * 60 * 24
 // Empty results are usually transient (upstream hiccup, missing key) — don't
 // poison the day-long cache with them.
 const EMPTY_TTL_SECONDS = 60 * 10
 const EMPTY_TTL_MS = EMPTY_TTL_SECONDS * 1000
 
-const EMPTY = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null } }
+const EMPTY: Pick<PricePayload, 'offers' | 'cheapest' | 'extras'> = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null } }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)
@@ -30,7 +32,8 @@ export default async function handler(req, res) {
   }
 
   const mediaType = req.query.type === 'tv' ? 'tv' : 'movie'
-  const region = /^[A-Z]{2}$/.test(req.query.region || '') ? req.query.region : 'US'
+  const regionParam = firstParam(req.query.region) || ''
+  const region = /^[A-Z]{2}$/.test(regionParam) ? regionParam : 'US'
   const clientId = getClientIP(req)
   const allowed = await checkDistributedRateLimit(clientId, {
     keyPrefix: 'price_rl',
@@ -50,7 +53,7 @@ export default async function handler(req, res) {
   const kv = getRedis()
   if (kv) {
     try {
-      const cached = await kv.get(cacheKey)
+      const cached = await kv.get<PricePayload>(cacheKey)
       if (cached) {
         priceCache.set(cacheKey, cached)
         return res.status(200).json(cached)
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
     } catch {}
   }
 
-  let payload
+  let payload: PricePayload
   try {
     payload = { cacheKey, ...(await getPriceOffers({ tmdbId, mediaType, region })) }
   } catch (err) {

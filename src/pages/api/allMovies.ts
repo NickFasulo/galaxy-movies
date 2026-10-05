@@ -1,6 +1,9 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { normalizeTvTitle } from '../../utils/tmdb'
+import { firstParam } from '../../utils/query'
+import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
-const GENRE_MAP = {
+const GENRE_MAP: Record<string, number> = {
   action: 28,
   adventure: 12,
   animation: 16,
@@ -23,7 +26,9 @@ const GENRE_MAP = {
 
 import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
-function normalizeResults(results) {
+type RawResult = TitleSummary & TmdbTvShow
+
+function normalizeResults(results: RawResult[] | undefined) {
   return (results || [])
     .filter(item => {
       if (!item.poster_path) return false
@@ -39,9 +44,7 @@ const VALID_CATEGORIES = new Set([...Object.keys(GENRE_MAP), 'popular', 'now_pla
 const MAX_SEARCH_LENGTH = 100
 const MAX_PAGE = 500
 
-const firstParam = (value) => (Array.isArray(value) ? value[0] : value)
-
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)
@@ -66,7 +69,7 @@ export default async function handler(req, res) {
   const category = String(firstParam(req.query.category) || 'popular')
   const media = String(firstParam(req.query.media) || 'movie')
   const search = String(firstParam(req.query.search) || '').slice(0, MAX_SEARCH_LENGTH)
-  const page = firstParam(req.query.page) || 1
+  const page = firstParam(req.query.page) || '1'
 
   if (!MEDIA_TYPES.has(media) || !VALID_CATEGORIES.has(category)) {
     return res.status(400).json({ message: 'Invalid category or media type' })
@@ -122,7 +125,7 @@ export default async function handler(req, res) {
       })
     }
 
-    const data = await response.json()
+    const data: TmdbPaged<RawResult> = await response.json()
 
     if (media !== 'movie') {
       res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')

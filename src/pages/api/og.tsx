@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { ImageResponse } from '@vercel/og'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
@@ -5,7 +6,7 @@ export const config = {
   runtime: 'edge',
 }
 
-async function toJpegDataUri(url) {
+async function toJpegDataUri(url: string): Promise<string | null> {
   try {
     const res = await fetch(url)
     if (!res.ok) return null
@@ -29,7 +30,7 @@ async function toJpegDataUri(url) {
 // Only TMDB poster URLs are fetched server-side, so ?poster= can't be used for SSRF or as an open image proxy.
 const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
 
-export default async function handler(req) {
+export default async function handler(req: NextRequest) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'GET, HEAD' } })
   }

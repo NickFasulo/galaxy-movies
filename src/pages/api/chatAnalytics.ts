@@ -1,11 +1,19 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
 import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 import { isCronAuthorized } from '../../utils/auth'
+import { firstParam } from '../../utils/query'
 
-const analyticsCache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
+interface AnalyticsRecord {
+  timestamp: number
+  messageCount?: number
+  [key: string]: unknown
+}
 
-const localAnalytics = new LRUCache({ max: 10000, ttl: 1000 * 60 * 60 * 24 })
+const analyticsCache = new LRUCache<string, AnalyticsRecord>({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
+
+const localAnalytics = new LRUCache<string, AnalyticsRecord>({ max: 10000, ttl: 1000 * 60 * 60 * 24 })
 
 export const config = {
   api: {
@@ -17,14 +25,14 @@ export const config = {
 
 const ID_PATTERN = /^[\w-]{1,64}$/
 
-const boundedInt = (value, min, max) => {
+const boundedInt = (value: unknown, min: number, max: number): number => {
   const n = Number(value)
   return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : min
 }
 
-const cleanString = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '')
+const cleanString = (value: unknown, max: number): string => (typeof value === 'string' ? value.slice(0, max) : '')
 
-async function trackChatSession(sessionData) {
+async function trackChatSession(sessionData: Record<string, unknown>): Promise<string> {
   const kv = getRedis()
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -35,7 +43,7 @@ async function trackChatSession(sessionData) {
     duration: boundedInt(sessionData.duration, 0, 1000 * 60 * 60 * 24),
     userSatisfaction: null,
     featuresUsed: Array.isArray(sessionData.featuresUsed)
-      ? sessionData.featuresUsed.filter((f) => typeof f === 'string').slice(0, 10).map((f) => f.slice(0, 40))
+      ? sessionData.featuresUsed.filter((f): f is string => typeof f === 'string').slice(0, 10).map((f) => f.slice(0, 40))
       : [],
     clientId: sessionData.clientId
   }
@@ -58,7 +66,7 @@ async function trackChatSession(sessionData) {
   return sessionId
 }
 
-async function recordFeedback(feedbackData) {
+async function recordFeedback(feedbackData: Record<string, unknown>): Promise<string> {
   const kv = getRedis()
   const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   
@@ -67,7 +75,7 @@ async function recordFeedback(feedbackData) {
     timestamp: Date.now(),
     rating: boundedInt(feedbackData.rating, 0, 5),
     comment: cleanString(feedbackData.comment, 500),
-    sessionId: ID_PATTERN.test(feedbackData.sessionId) ? feedbackData.sessionId : '',
+    sessionId: typeof feedbackData.sessionId === 'string' && ID_PATTERN.test(feedbackData.sessionId) ? feedbackData.sessionId : '',
     recommendationType: cleanString(feedbackData.recommendationType, 40) || 'general',
     helpful: feedbackData.helpful === true
   }
@@ -101,7 +109,7 @@ async function getUsageStats(timeframe = '24h') {
 
   try {
     const now = Date.now()
-    const timeframes = {
+    const timeframes: Record<string, number> = {
       '1h': 60 * 60 * 1000,
       '24h': 24 * 60 * 60 * 1000,
       '7d': 7 * 24 * 60 * 60 * 1000,
@@ -110,10 +118,10 @@ async function getUsageStats(timeframe = '24h') {
 
     const cutoffTime = now - (timeframes[timeframe] || timeframes['24h'])
     
-    const totalSessions = await kv.get('analytics:total_sessions') || 0
-    const totalMessages = await kv.get('analytics:total_messages') || 0
-    const avgRating = await kv.get('analytics:total_rating') && await kv.get('analytics:rating_count')
-      ? (await kv.get('analytics:total_rating') / await kv.get('analytics:rating_count')).toFixed(1)
+    const totalSessions = await kv.get<number>('analytics:total_sessions') || 0
+    const totalMessages = await kv.get<number>('analytics:total_messages') || 0
+    const avgRating = await kv.get<number>('analytics:total_rating') && await kv.get<number>('analytics:rating_count')
+      ? ((await kv.get<number>('analytics:total_rating') ?? 0) / (await kv.get<number>('analytics:rating_count') ?? 1)).toFixed(1)
       : null
 
     return {
@@ -161,7 +169,7 @@ async function getCostEstimate() {
   let totalMessages = 0
   if (kv) {
     try {
-      totalMessages = await kv.get('analytics:total_messages') || 0
+      totalMessages = await kv.get<number>('analytics:total_messages') || 0
     } catch (err) {
       console.error('Redis cost estimation error:', err)
     }
@@ -185,7 +193,7 @@ async function getCostEstimate() {
   }
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (isBot(req.headers['user-agent'])) {
     return res.status(403).json({ error: 'Bot access denied' })
   }
@@ -225,7 +233,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const { timeframe } = req.query
+    const timeframe = firstParam(req.query.timeframe)
     
     if (req.query.action === 'stats') {
       const stats = await getUsageStats(timeframe)

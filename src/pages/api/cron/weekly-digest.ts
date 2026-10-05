@@ -1,5 +1,6 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis } from '../../../utils/redis'
-import { getProviderChanges } from '../../../utils/streamingChanges'
+import { getProviderChanges, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
 import { CONFIRMED_KEY } from '../../../utils/waitlistStore'
 import { isCronAuthorized } from '../../../utils/auth'
 
@@ -7,21 +8,28 @@ export const config = { maxDuration: 60 }
 
 const MAX_ITEMS = 10
 
-const escapeHtml = (s) =>
+type DigestItem = (CatalogTitle | ComingTitle) & { provider: string; providerKey: string }
+
+interface DigestItems {
+  added: DigestItem[]
+  coming: DigestItem[]
+}
+
+const escapeHtml = (s: unknown) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const prettyDate = (stamp) => {
+const prettyDate = (stamp: string | null | undefined) => {
   const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
   return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : ''
 }
 
-const titlePath = (t) => `/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`
+const titlePath = (t: DigestItem) => `/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`
 
-function gatherItems(changes) {
-  const seen = new Set()
-  const pick = (kind) => {
-    const items = []
+function gatherItems(changes: Record<string, ProviderChanges>): DigestItems {
+  const seen = new Set<string>()
+  const pick = (kind: 'added' | 'coming') => {
+    const items: DigestItem[] = []
     for (const [providerKey, change] of Object.entries(changes)) {
       for (const t of change[kind] || []) {
         const id = `${t.tmdbType}:${t.tmdbId}`
@@ -35,18 +43,18 @@ function gatherItems(changes) {
   return { added: pick('added').slice(0, MAX_ITEMS), coming: pick('coming').slice(0, MAX_ITEMS) }
 }
 
-function itemList(siteUrl, items, showDate) {
+function itemList(siteUrl: string, items: DigestItem[], showDate: boolean) {
   if (!items.length) return ''
   return `<ul style="padding-left: 18px; margin: 6px 0 18px;">${items
     .map(
       (t) =>
         `<li style="margin: 4px 0;"><a href="${siteUrl}${titlePath(t)}" style="color: #2b6cb0;">${escapeHtml(t.title)}</a>` +
-        `<span style="color: #666;"> — ${escapeHtml(t.provider)}${showDate && t.date ? `, ${prettyDate(t.date)}` : ''}${t.season ? `, season ${t.season}` : ''}</span></li>`
+        `<span style="color: #666;"> — ${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</span></li>`
     )
     .join('')}</ul>`
 }
 
-function buildEmail(siteUrl, items, email, token) {
+function buildEmail(siteUrl: string, items: DigestItems, email: string, token: string) {
   const unsub = `${siteUrl}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
   const html = `
     <div style="font-family: sans-serif; max-width: 520px; color: #111;">
@@ -64,7 +72,7 @@ function buildEmail(siteUrl, items, email, token) {
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
@@ -86,7 +94,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ sent: 0, reason: 'no changes this week' })
     }
 
-    const confirmed = await kv.hgetall(CONFIRMED_KEY)
+    const confirmed = await kv.hgetall<Record<string, string>>(CONFIRMED_KEY)
     const entries = Object.entries(confirmed || {})
     if (!entries.length) {
       return res.status(200).json({ sent: 0, reason: 'no subscribers' })

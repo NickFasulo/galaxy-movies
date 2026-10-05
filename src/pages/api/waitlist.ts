@@ -1,10 +1,11 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY } from '../../utils/waitlistStore'
 import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 
-async function sendConfirmationEmail(email, token) {
+async function sendConfirmationEmail(email: string, token: string): Promise<boolean> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const confirmUrl = `${siteUrl}/api/waitlist-confirm?email=${encodeURIComponent(email)}&token=${token}`
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
@@ -31,7 +32,7 @@ async function sendConfirmationEmail(email, token) {
   return resp.ok
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)

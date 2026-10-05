@@ -1,14 +1,27 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
-import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat } from '../../utils/movieSearch'
+import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
 import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 
-let openai
+interface ChatTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
 
-const chatCache = new LRUCache({ max: 1000, ttl: 1000 * 60 * 30 })
+interface TasteProfile {
+  topRated: string[]
+  disliked: string[]
+  watchlist: string[]
+  services: string[]
+}
 
-const recentReleasesCache = new LRUCache({ max: 1, ttl: 1000 * 60 * 60 })
+let openai: OpenAI | undefined
+
+const chatCache = new LRUCache<string, { text: string; links: ResolvedMention[] }>({ max: 1000, ttl: 1000 * 60 * 30 })
+
+const recentReleasesCache = new LRUCache<string, string>({ max: 1, ttl: 1000 * 60 * 60 })
 
 const RECENT_RELEASES_KEYWORDS = [
   'recent movie', 'recent release', 'recently released', 'new movie', 'newest movie',
@@ -16,12 +29,12 @@ const RECENT_RELEASES_KEYWORDS = [
   'in theaters now', 'currently in theaters', 'best recent', "what's new", 'this year'
 ]
 
-function isRecentReleasesQuery(text) {
+function isRecentReleasesQuery(text: string): boolean {
   const lower = text.toLowerCase()
   return RECENT_RELEASES_KEYWORDS.some((keyword) => lower.includes(keyword))
 }
 
-async function getRecentReleasesContext() {
+async function getRecentReleasesContext(): Promise<string> {
   const cached = recentReleasesCache.get('context')
   if (cached) return cached
 
@@ -51,7 +64,7 @@ export const config = {
   }
 }
 
-function getConversationCacheKey(messages, tasteProfile) {
+function getConversationCacheKey(messages: ChatTurn[], tasteProfile: TasteProfile | null): string {
   const hash = createHash('sha256')
     .update(JSON.stringify([messages.map((m) => [m.role, m.content]), tasteProfile]))
     .digest('hex')
@@ -60,12 +73,12 @@ function getConversationCacheKey(messages, tasteProfile) {
 
 // Caps each field so a crafted body can't inflate the prompt — this is injected
 // into the system message, so treat it as untrusted input.
-function sanitizeTasteProfile(tp) {
+function sanitizeTasteProfile(tp: Record<string, unknown> | null | undefined): TasteProfile | null {
   if (!tp || typeof tp !== 'object') return null
-  const list = (v, n) => Array.isArray(v)
-    ? v.filter((s) => typeof s === 'string').map((s) => s.substring(0, 80)).slice(0, n)
+  const list = (v: unknown, n: number): string[] => Array.isArray(v)
+    ? v.filter((s): s is string => typeof s === 'string').map((s) => s.substring(0, 80)).slice(0, n)
     : []
-  const profile = {
+  const profile: TasteProfile = {
     topRated: list(tp.topRated, 10),
     disliked: list(tp.disliked, 5),
     watchlist: list(tp.watchlist, 15),
@@ -75,7 +88,7 @@ function sanitizeTasteProfile(tp) {
   return hasAny ? profile : null
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).end(`Method ${req.method} Not Allowed`)
@@ -102,9 +115,9 @@ export default async function handler(req, res) {
   }
 
   // Only user/assistant turns are accepted so a client can't smuggle in its own system prompt.
-  const messages = rawMessages
+  const messages: ChatTurn[] = rawMessages
     .slice(-MAX_CONVERSATION_LENGTH)
-    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .filter((m): m is ChatTurn => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_HISTORY_MESSAGE_LENGTH) }))
 
   const clientId = getClientIP(req)
@@ -140,7 +153,7 @@ export default async function handler(req, res) {
     openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
     let recentReleasesContext = ''
-    if (isRecentReleasesQuery(lastMessage.content)) {
+    if (isRecentReleasesQuery(rawLast.content)) {
       try {
         recentReleasesContext = await getRecentReleasesContext()
       } catch (error) {
@@ -152,7 +165,7 @@ export default async function handler(req, res) {
 
     let tasteContext = ''
     if (tasteProfile) {
-      const parts = []
+      const parts: string[] = []
       if (tasteProfile.topRated.length) parts.push(`- Titles they loved: ${tasteProfile.topRated.join(', ')}`)
       if (tasteProfile.disliked.length) parts.push(`- Titles they disliked: ${tasteProfile.disliked.join(', ')}`)
       if (tasteProfile.watchlist.length) parts.push(`- On their watchlist: ${tasteProfile.watchlist.join(', ')}`)
@@ -165,7 +178,7 @@ ${parts.join('\n')}`
       }
     }
 
-    const systemMessage = {
+    const systemMessage: OpenAI.Chat.ChatCompletionMessageParam = {
       role: 'system',
       content: `You are a helpful movie and TV show discovery assistant for Galaxy Movies. Your goal is to help users find movies and shows they'll enjoy based on their preferences, mood, or specific criteria.
 
@@ -203,7 +216,7 @@ When users ask about group decision making:
 Keep responses conversational but focused on actionable movie and show recommendations.`
     }
 
-    const allMessages = [systemMessage, ...messages]
+    const allMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [systemMessage, ...messages]
 
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -231,7 +244,7 @@ Keep responses conversational but focused on actionable movie and show recommend
       }
     }
 
-    let links = []
+    let links: ResolvedMention[] = []
     if (fullResponse.trim()) {
       try {
         const mentions = extractQuotedMovieMentions(fullResponse)
