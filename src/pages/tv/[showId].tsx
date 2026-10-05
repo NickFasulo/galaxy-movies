@@ -20,8 +20,9 @@ import TopBackdrop from '../../components/TopBackdrop'
 import BackButton from '../../components/BackButton'
 import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
-import ActorAvatar from '../../components/ActorAvatar'
 import SimilarMovies from '../../components/SimilarMovies'
+import GalaxyBotTake from '../../components/GalaxyBotTake'
+import CastSection from '../../components/CastSection'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import HreflangTags from '../../components/HreflangTags'
 import dateFormatter from '../../utils/dateFormatter'
@@ -521,29 +522,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
               </Flex>
             </Flex>
 
-            {aiSynopsis && (
-              <Box
-                p={4}
-                bg='whiteAlpha.100'
-                borderRadius='md'
-                borderTop={{ base: '3px solid', md: 'none' }}
-                borderLeft={{ base: 'none', md: '3px solid' }}
-                borderColor='purple.400'
-              >
-                <Text
-                  fontSize='sm'
-                  fontWeight='semibold'
-                  color='white'
-                  mb={1}
-                  textAlign={{ base: 'center', md: 'left' }}
-                >
-                  Galaxy Bot&apos;s Take
-                </Text>
-                <Text fontSize='sm' color='whiteAlpha.800'>
-                  {aiSynopsis}
-                </Text>
-              </Box>
-            )}
+            <GalaxyBotTake synopsis={aiSynopsis} />
 
             <Flex
               direction={{ base: 'column', md: 'row' }}
@@ -559,54 +538,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
               <BackButton />
             </Flex>
 
-            {topCast.length > 0 && (
-              <Box mb={4}>
-                <Text
-                  color='gray.400'
-                  fontSize='xs'
-                  fontWeight='bold'
-                  textTransform='uppercase'
-                  textShadow='0 0 4px black'
-                  textAlign='center'
-                  position='relative'
-                  display='flex'
-                  alignItems='center'
-                  gap={3}
-                  mb={2}
-                  _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-                  _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-                >
-                  Cast
-                </Text>
-                <Wrap spacing={3} justify='center'>
-                  {topCast.map((actor) => (
-                    <WrapItem key={actor.id}>
-                      <Link href={`/person/${actor.id}`} passHref>
-                        <Flex
-                          align='center'
-                          bg='rgba(255, 255, 255, 0.1)'
-                          px={3.5}
-                          py={1.5}
-                          borderRadius='full'
-                          gap={2.5}
-                          cursor='pointer'
-                          transition='all 0.2s ease-in-out'
-                          _hover={{
-                            bg: 'rgba(255, 255, 255, 0.2)',
-                            transform: 'translateY(-2px)'
-                          }}
-                        >
-                          <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
-                          <Text fontSize='sm' color='white' fontWeight='medium' textShadow='0 0 4px black'>
-                            {actor.name}
-                          </Text>
-                        </Flex>
-                      </Link>
-                    </WrapItem>
-                  ))}
-                </Wrap>
-              </Box>
-            )}
+            <CastSection cast={topCast} />
 
             <SimilarMovies movies={similarShows} />
           </Flex>
