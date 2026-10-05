@@ -272,7 +272,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
     description: `Watch the official trailer for ${movie.title}`,
     inLanguage: 'en',
     thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
-    uploadDate: movie.release_date || undefined,
+    uploadDate: movie.release_date ? `${movie.release_date}T00:00:00Z` : undefined,
     contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
     embedUrl: `https://www.youtube.com/embed/${videoKey}`
   } : null

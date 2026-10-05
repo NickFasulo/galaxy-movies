@@ -275,7 +275,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
     description: `Watch the official trailer for ${show.name}`,
     inLanguage: 'en',
     thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
-    uploadDate: show.first_air_date || undefined,
+    uploadDate: show.first_air_date ? `${show.first_air_date}T00:00:00Z` : undefined,
     contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
     embedUrl: `https://www.youtube.com/embed/${videoKey}`
   } : null
