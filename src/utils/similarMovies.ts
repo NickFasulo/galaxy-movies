@@ -1,6 +1,6 @@
-import OpenAI from 'openai'
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
+import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
 import { LRUCache } from 'lru-cache'
 import type { MediaType } from '../types/tmdb'
 
@@ -21,9 +21,7 @@ export interface SimilarTitle {
   mediaType: MediaType
 }
 
-let openai: OpenAI | undefined
-
-const SIMILAR_CACHE_VERSION = 'v1'
+const SIMILAR_CACHE_VERSION = 'v2'
 const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 90
 const MAX_OVERVIEW_LENGTH = 300
 const MAX_CANDIDATES = 8
@@ -32,12 +30,6 @@ const MAX_RESULTS = 5
 const memorySimilarCache = new LRUCache<string, SimilarTitle[]>({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
 
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
-
-function getOpenAI(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null
-  openai = openai || new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  return openai
-}
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
 function cacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
@@ -101,7 +93,7 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   const cached = await readCache(kv, key)
   if (cached) return cached
 
-  const client = getOpenAI()
+  const client = getOpenAIClient()
   if (!client) return []
 
   if (kv && !(await isWithinGlobalBudget(kv))) {
@@ -118,16 +110,45 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   }))
 
   try {
+    const requestStart = Date.now()
     const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 500,
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
+      ...aiParams('similar', 500, 0.4),
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'similar_recommendations',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              recommendations: {
+                type: 'array',
+                maxItems: 5,
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    reason: { type: 'string' }
+                  },
+                  required: ['id', 'reason'],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ['recommendations'],
+            additionalProperties: false
+          }
+        }
+      },
       messages: [
         {
           role: 'system',
           content:
-            `You recommend which candidate ${noun}s best suit a fan of a given ${noun}. Pick up to 5 of the best-fitting candidates and, for each, write one short reason (under 20 words) tied to specific tone, theme, or style overlap with the source ${noun} — not just a shared genre label. Only use candidates from the provided list; do not invent ${noun}s. Respond with only a JSON object of the shape {"recommendations": [{"id": number, "reason": string}]}, ranked best-first. If none fit well, return an empty array.`
+            `You recommend which candidate ${noun}s best suit a fan of a given ${noun}. Pick up to 5 of the best-fitting candidates, ranked best-first. Only use candidates from the provided list; do not invent ${noun}s.
+Rank candidates using evidence from the supplied overviews: tone and viewing experience, then themes or premise, then style or audience appeal; treat genre as supporting evidence only. Do not infer similarity from titles alone.
+Each reason must name one specific overlap with the source ${noun}, use at most 20 words, and not repeat either title.
+If the supplied evidence is insufficient, return an empty array.
+Respond with only a JSON object of the shape {"recommendations": [{"id": number, "reason": string}]}.`
         },
         {
           role: 'user',
@@ -142,6 +163,8 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
         }
       ]
     })
+
+    recordAiUsage('similar', completion.usage, { latencyMs: Date.now() - requestStart })
 
     const raw = completion.choices[0]?.message?.content
     const parsed = raw ? JSON.parse(raw) : null

@@ -34,6 +34,9 @@ yarn-error.log*
 # lighthouse reports
 .lighthouseci/
 
+# devin local config (may contain personal keys)
+.devin/mcp_config.local.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -4,6 +4,7 @@ import { getRedis } from '../../utils/redis'
 import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 import { isCronAuthorized } from '../../utils/auth'
 import { firstParam } from '../../utils/query'
+import { aiModel } from '../../utils/openai'
 
 interface AnalyticsRecord {
   timestamp: number
@@ -141,15 +142,64 @@ function getLocalUsageStats() {
 
 async function getCostEstimate() {
   const kv = getRedis()
-  
-  const pricing = {
+
+  const pricing: Record<string, { input: number; cachedInput?: number; cacheWrite?: number; output: number }> = {
+    'gpt-6-luna': {
+      input: 0.0001,
+      cachedInput: 0.00001,
+      cacheWrite: 0.000125,
+      output: 0.0005
+    },
     'gpt-4o-mini': {
       input: 0.00015,
+      cachedInput: 0.000075,
       output: 0.0006
     }
   }
+  const defaultRates = pricing['gpt-6-luna']
 
-  const model = 'gpt-4o-mini'
+  // Prefer real token usage recorded per task/model; fall back to the
+  // message-count estimate for pre-migration traffic or missing Redis.
+  if (kv) {
+    try {
+      const usage = await kv.hgetall<Record<string, number>>('ai_usage')
+      if (usage && Object.keys(usage).length) {
+        type Metric = 'input' | 'output' | 'reasoning' | 'cached' | 'cache_write' | 'uncached' | 'latency_ms' | 'ttft_ms' | 'requests'
+        const zero = (): Record<Metric, number> => ({
+          input: 0, output: 0, reasoning: 0, cached: 0, cache_write: 0, uncached: 0, latency_ms: 0, ttft_ms: 0, requests: 0
+        })
+        const tasks: Record<string, Record<Metric, number>> = {}
+        for (const [field, raw] of Object.entries(usage)) {
+          const m = field.match(/^(.+)\.(chat|review|intro|similar|tagline|discover)\.(input|output|reasoning|cached|cache_write|uncached|latency_ms|ttft_ms|requests)$/)
+          if (!m) continue
+          const key = `${m[1]}/${m[2]}`
+          const bucket = tasks[key] || (tasks[key] = zero())
+          bucket[m[3] as Metric] += Number(raw) || 0
+        }
+        let totalCost = 0
+        const breakdown: Record<string, string> = {}
+        for (const [key, t] of Object.entries(tasks)) {
+          const [modelName, task] = key.split('/')
+          const rates = pricing[modelName] || defaultRates
+          const uncached = t.uncached || Math.max(0, t.input - t.cached - t.cache_write)
+          const cost =
+            (uncached / 1000) * rates.input +
+            (t.cached / 1000) * (rates.cachedInput ?? rates.input) +
+            (t.cache_write / 1000) * (rates.cacheWrite ?? rates.input) +
+            (t.output / 1000) * rates.output
+          totalCost += cost
+          const hitRate = t.input ? `, ${Math.round((100 * t.cached) / t.input)}% cached` : ''
+          const avgLatency = t.requests && t.latency_ms ? `, ${Math.round(t.latency_ms / t.requests)}ms avg` : ''
+          breakdown[`${modelName}/${task}`] = `$${cost.toFixed(4)} (${t.requests} reqs${hitRate}${avgLatency})`
+        }
+        return { estimatedCost: totalCost.toFixed(4), source: 'actual_usage', breakdown }
+      }
+    } catch (err) {
+      console.error('Redis AI usage read error:', err)
+    }
+  }
+
+  const model = aiModel('chat')
   const avgTokensPerMessage = {
     input: 150,
     output: 200
@@ -167,14 +217,16 @@ async function getCostEstimate() {
       .reduce((sum, data) => sum + (data.messageCount || 0), 0)
   }
 
-  const inputCost = (totalMessages * avgTokensPerMessage.input / 1000) * pricing[model].input
-  const outputCost = (totalMessages * avgTokensPerMessage.output / 1000) * pricing[model].output
+  const rates = pricing[model] || defaultRates
+  const inputCost = (totalMessages * avgTokensPerMessage.input / 1000) * rates.input
+  const outputCost = (totalMessages * avgTokensPerMessage.output / 1000) * rates.output
   const totalCost = inputCost + outputCost
 
   return {
     model,
     totalMessages,
     estimatedCost: totalCost.toFixed(4),
+    source: 'estimated',
     breakdown: {
       input: inputCost.toFixed(4),
       output: outputCost.toFixed(4)
