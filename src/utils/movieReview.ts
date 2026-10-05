@@ -1,11 +1,12 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 import type { MediaType } from '../types/tmdb'
 
 const REVIEW_CACHE_VERSION = 'v2'
-const REVIEW_TTL_SECONDS = 60 * 60 * 24 * 90
+const REVIEW_TTL_SECONDS = 60 * 60 * 24 * 365
 const MAX_OVERVIEW_LENGTH = 1200
 
 const memoryReviewCache = new LRUCache<string, string>({ max: 500, ttl: REVIEW_TTL_SECONDS * 1000 })
@@ -19,41 +20,28 @@ function reviewCacheKey(movieId: number | string, mediaType: MediaType = 'movie'
     : `ai_review:${REVIEW_CACHE_VERSION}:${movieId}`
 }
 
-async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
-  const windowId = Math.floor(Date.now() / 60000)
-  const key = `ai_review_global_rl:${windowId}`
-  try {
-    const count = await kv.incr(key)
-    if (count === 1) await kv.expire(key, 120)
-    return count <= MAX_GLOBAL_GENERATIONS_PER_MINUTE
-  } catch (err) {
-    console.error('Redis error checking AI review generation budget, failing open:', err)
-    return true
-  }
-}
-
 async function readCache(kv: Redis | null, key: string): Promise<string | null> {
-  if (kv) {
-    try {
-      return await kv.get<string>(key)
-    } catch (err) {
-      console.error('Redis get error for review cache:', err)
-      return null
-    }
+  const local = memoryReviewCache.get(key)
+  if (local) return local
+  if (!kv) return null
+  try {
+    const value = await kv.get<string>(key)
+    if (value) memoryReviewCache.set(key, value)
+    return value
+  } catch (err) {
+    console.error('Redis get error for review cache:', err)
+    return null
   }
-  return memoryReviewCache.get(key) || null
 }
 
 async function writeCache(kv: Redis | null, key: string, value: string): Promise<void> {
-  if (kv) {
-    try {
-      await kv.set(key, value, { ex: REVIEW_TTL_SECONDS })
-      return
-    } catch (err) {
-      console.error('Redis set error for review cache:', err)
-    }
-  }
   memoryReviewCache.set(key, value)
+  if (!kv) return
+  try {
+    await kv.set(key, value, { ex: REVIEW_TTL_SECONDS })
+  } catch (err) {
+    console.error('Redis set error for review cache:', err)
+  }
 }
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
@@ -77,7 +65,11 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
   const client = getOpenAIClient()
   if (!client) return null
 
-  if (kv && !(await isWithinGlobalBudget(kv))) {
+  const withinBudget = await checkGlobalBudget('ai_review', {
+    maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
+    windowSeconds: 60
+  })
+  if (!withinBudget) {
     console.warn(`AI review generation budget exceeded; skipping generation for movie ${movieId}`)
     return null
   }

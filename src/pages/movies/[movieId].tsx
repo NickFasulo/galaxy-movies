@@ -33,6 +33,7 @@ import { useUserData } from '../../hooks/useUserData'
 import { getProviderId } from '../../utils/tmdb'
 import { getOrGenerateMovieReview } from '../../utils/movieReview'
 import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
+import { isBot } from '../../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
 import { withTimeout } from '../../utils/withTimeout'
 import type { SimilarTitle } from '../../utils/similarMovies'
@@ -109,9 +110,14 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
     const providerNames = (['flatrate', 'rent', 'buy'] as const)
       .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
+    // Allowlisted crawlers (search engines, link previews) still get generated
+    // content; other bots render the page without it so scraper sweeps can't
+    // trigger OpenAI spend.
+    const skipAi = isBot(context.req.headers['user-agent'])
+
     const [validVideoKey, aiSynopsis, similarMovies, providerAffiliateLinks] = await Promise.all([
       withTimeout(getFirstPlayableKey(movieData.videos?.results), 3000, null),
-      movieData.overview
+      !skipAi && movieData.overview
         ? withTimeout(getOrGenerateMovieReview({
             movieId: movieData.id,
             title: movieData.title,
@@ -119,7 +125,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
             genres: movieData.genres?.map((g) => g.name) || []
           }), 4500, null)
         : null,
-      recommendationCandidates.length > 0
+      !skipAi && recommendationCandidates.length > 0
         ? withTimeout(getOrGenerateSimilarMovies({
             movieId: movieData.id,
             title: movieData.title,

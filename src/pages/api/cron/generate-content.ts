@@ -29,6 +29,7 @@ export const config = { maxDuration: 60 }
 
 const BATCH_SIZE = 3
 const SLUG_PATTERN = /^[a-z0-9-]+$/
+const MAX_SEED_ATTEMPTS = 3
 
 const DISCOVER_PARAM_ALLOWLIST = new Set([
   'with_genres',
@@ -234,7 +235,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const statuses = await getSeedStatuses(topicSeeds.map((seed) => seed.slug))
   const forcedSlug = typeof req.query.seed === 'string' ? req.query.seed : null
-  const pending = topicSeeds.filter((seed) => !statuses[seed.slug])
+  // 'failed' seeds retry until MAX_SEED_ATTEMPTS — otherwise an OpenAI call that
+  // always errors would burn spend on every cron run. ?seed= forces a retry.
+  const pending = topicSeeds.filter((seed) => {
+    const status = statuses[seed.slug]
+    return !status || (status.status === 'failed' && (status.attempts || 0) < MAX_SEED_ATTEMPTS)
+  })
   const batch = forcedSlug
     ? topicSeeds.filter((seed) => seed.slug === forcedSlug)
     : pending.slice(0, BATCH_SIZE)
@@ -255,6 +261,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .filter((list) => list.movieId)
       .map((list) => `${list.media || 'movie'}:${list.movieId}`)
   )
+
+  const failSeed = (slug: string, reason: string) =>
+    setSeedStatus(slug, { status: 'failed', reason, attempts: (statuses[slug]?.attempts || 0) + 1 })
 
   for (const seed of batch) {
     if (!SLUG_PATTERN.test(seed.slug) || curatedLists[seed.slug] || generated[seed.slug]) {
@@ -298,6 +307,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           context: `Source ${isTv ? 'show' : 'movie'}: ${source.title} (${source.release_date?.slice(0, 4) || 'n/a'}).`
         })
         if (!tagline) {
+          await failSeed(seed.slug, 'tagline generation failed')
           results.push({ slug: seed.slug, status: 'skipped', reason: 'tagline generation failed' })
           continue
         }
@@ -314,6 +324,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: Date.now()
         })
         if (!saved) {
+          await failSeed(seed.slug, 'registry cap reached')
           results.push({ slug: seed.slug, status: 'skipped', reason: 'registry cap reached' })
           continue
         }
@@ -323,6 +334,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else {
         const draft = await draftDiscoverList(seed)
         if (draft.error !== undefined) {
+          await failSeed(seed.slug, draft.error)
           results.push({ slug: seed.slug, status: 'skipped', reason: draft.error })
           continue
         }
@@ -354,6 +366,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: Date.now()
         })
         if (!saved) {
+          await failSeed(seed.slug, 'registry cap reached')
           results.push({ slug: seed.slug, status: 'skipped', reason: 'registry cap reached' })
           continue
         }
@@ -364,7 +377,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch (err) {
       console.error(`Content generation failed for seed ${seed.slug}:`, err)
-      results.push({ slug: seed.slug, status: 'error', reason: err instanceof Error ? err.message : String(err) })
+      const reason = err instanceof Error ? err.message : String(err)
+      await failSeed(seed.slug, reason)
+      results.push({ slug: seed.slug, status: 'error', reason })
     }
   }
 

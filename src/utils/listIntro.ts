@@ -1,6 +1,7 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 
 const INTRO_CACHE_VERSION = 'v2'
@@ -15,41 +16,28 @@ function introCacheKey(slug: string): string {
   return `ai_list_intro:${INTRO_CACHE_VERSION}:${slug}`
 }
 
-async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
-  const windowId = Math.floor(Date.now() / 60000)
-  const key = `ai_list_intro_global_rl:${windowId}`
-  try {
-    const count = await kv.incr(key)
-    if (count === 1) await kv.expire(key, 120)
-    return count <= MAX_GLOBAL_GENERATIONS_PER_MINUTE
-  } catch (err) {
-    console.error('Redis error checking AI list-intro generation budget, failing open:', err)
-    return true
-  }
-}
-
 async function readCache(kv: Redis | null, key: string): Promise<string | null> {
-  if (kv) {
-    try {
-      return await kv.get<string>(key)
-    } catch (err) {
-      console.error('Redis get error for list-intro cache:', err)
-      return null
-    }
+  const local = memoryIntroCache.get(key)
+  if (local) return local
+  if (!kv) return null
+  try {
+    const value = await kv.get<string>(key)
+    if (value) memoryIntroCache.set(key, value)
+    return value
+  } catch (err) {
+    console.error('Redis get error for list-intro cache:', err)
+    return null
   }
-  return memoryIntroCache.get(key) || null
 }
 
 async function writeCache(kv: Redis | null, key: string, value: string): Promise<void> {
-  if (kv) {
-    try {
-      await kv.set(key, value, { ex: INTRO_TTL_SECONDS })
-      return
-    } catch (err) {
-      console.error('Redis set error for list-intro cache:', err)
-    }
-  }
   memoryIntroCache.set(key, value)
+  if (!kv) return
+  try {
+    await kv.set(key, value, { ex: INTRO_TTL_SECONDS })
+  } catch (err) {
+    console.error('Redis set error for list-intro cache:', err)
+  }
 }
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
@@ -71,7 +59,11 @@ export async function getOrGenerateListIntro({ slug, title, tagline, sampleTitle
   const client = getOpenAIClient()
   if (!client) return null
 
-  if (kv && !(await isWithinGlobalBudget(kv))) {
+  const withinBudget = await checkGlobalBudget('ai_list_intro', {
+    maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
+    windowSeconds: 60
+  })
+  if (!withinBudget) {
     console.warn(`AI list-intro generation budget exceeded; skipping generation for list ${slug}`)
     return null
   }

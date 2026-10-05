@@ -1,6 +1,7 @@
 import type { Redis } from '@upstash/redis'
 import { getRedis } from './redis'
 import { aiParams, recordAiUsage, getOpenAIClient } from './openai'
+import { checkGlobalBudget } from './rateLimiter'
 import { LRUCache } from 'lru-cache'
 import type { MediaType } from '../types/tmdb'
 
@@ -22,9 +23,9 @@ export interface SimilarTitle {
 }
 
 const SIMILAR_CACHE_VERSION = 'v2'
-const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 90
-const MAX_OVERVIEW_LENGTH = 300
-const MAX_CANDIDATES = 8
+const SIMILAR_TTL_SECONDS = 60 * 60 * 24 * 365
+const MAX_OVERVIEW_LENGTH = 200
+const MAX_CANDIDATES = 6
 const MAX_RESULTS = 5
 
 const memorySimilarCache = new LRUCache<string, SimilarTitle[]>({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
@@ -38,41 +39,28 @@ function cacheKey(movieId: number | string, mediaType: MediaType = 'movie'): str
     : `ai_similar:${SIMILAR_CACHE_VERSION}:${movieId}`
 }
 
-async function isWithinGlobalBudget(kv: Redis): Promise<boolean> {
-  const windowId = Math.floor(Date.now() / 60000)
-  const key = `ai_similar_global_rl:${windowId}`
-  try {
-    const count = await kv.incr(key)
-    if (count === 1) await kv.expire(key, 120)
-    return count <= MAX_GLOBAL_GENERATIONS_PER_MINUTE
-  } catch (err) {
-    console.error('Redis error checking AI similar-movies generation budget, failing open:', err)
-    return true
-  }
-}
-
 async function readCache(kv: Redis | null, key: string): Promise<SimilarTitle[] | null> {
-  if (kv) {
-    try {
-      return await kv.get<SimilarTitle[]>(key)
-    } catch (err) {
-      console.error('Redis get error for similar-movies cache:', err)
-      return null
-    }
+  const local = memorySimilarCache.get(key)
+  if (local) return local
+  if (!kv) return null
+  try {
+    const value = await kv.get<SimilarTitle[]>(key)
+    if (value) memorySimilarCache.set(key, value)
+    return value
+  } catch (err) {
+    console.error('Redis get error for similar-movies cache:', err)
+    return null
   }
-  return memorySimilarCache.get(key) || null
 }
 
 async function writeCache(kv: Redis | null, key: string, value: SimilarTitle[]): Promise<void> {
-  if (kv) {
-    try {
-      await kv.set(key, value, { ex: SIMILAR_TTL_SECONDS })
-      return
-    } catch (err) {
-      console.error('Redis set error for similar-movies cache:', err)
-    }
-  }
   memorySimilarCache.set(key, value)
+  if (!kv) return
+  try {
+    await kv.set(key, value, { ex: SIMILAR_TTL_SECONDS })
+  } catch (err) {
+    console.error('Redis set error for similar-movies cache:', err)
+  }
 }
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
@@ -96,7 +84,11 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   const client = getOpenAIClient()
   if (!client) return []
 
-  if (kv && !(await isWithinGlobalBudget(kv))) {
+  const withinBudget = await checkGlobalBudget('ai_similar', {
+    maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
+    windowSeconds: 60
+  })
+  if (!withinBudget) {
     console.warn(`AI similar-movies generation budget exceeded; skipping generation for movie ${movieId}`)
     return []
   }

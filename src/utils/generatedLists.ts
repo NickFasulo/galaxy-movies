@@ -11,8 +11,9 @@ const MAX_RUN_LOG_ENTRIES = 50
 export const MAX_GENERATED_LISTS = 100
 
 export interface SeedStatus {
-  status: 'approved' | 'rejected'
+  status: 'approved' | 'rejected' | 'failed'
   reason?: string
+  attempts?: number
   processedAt?: number
 }
 

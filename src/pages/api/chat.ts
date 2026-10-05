@@ -5,6 +5,7 @@ import { LRUCache } from 'lru-cache'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
 import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 import { aiModel, aiParams, recordAiUsage, getOpenAIClient } from '../../utils/openai'
+import { getRedis } from '../../utils/redis'
 
 interface ChatTurn {
   role: 'user' | 'assistant'
@@ -18,7 +19,39 @@ interface TasteProfile {
   services: string[]
 }
 
-const chatCache = new LRUCache<string, { text: string; links: ResolvedMention[] }>({ max: 1000, ttl: 1000 * 60 * 30 })
+const CHAT_CACHE_TTL_SECONDS = 60 * 30
+
+// Redis is the shared layer; the LRU is an L1 for hot keys on this instance.
+// The key covers the full conversation + taste profile, so only identical
+// requests hit — but those (quick actions, common first questions) are the
+// bulk of traffic.
+const chatCache = new LRUCache<string, { text: string; links: ResolvedMention[] }>({ max: 1000, ttl: CHAT_CACHE_TTL_SECONDS * 1000 })
+
+async function readChatCache(key: string): Promise<{ text: string; links: ResolvedMention[] } | null> {
+  const local = chatCache.get(key)
+  if (local) return local
+  const kv = getRedis()
+  if (!kv) return null
+  try {
+    const value = await kv.get<{ text: string; links: ResolvedMention[] }>(key)
+    if (value) chatCache.set(key, value)
+    return value
+  } catch (err) {
+    console.error('Redis get error for chat cache:', err)
+    return null
+  }
+}
+
+async function writeChatCache(key: string, value: { text: string; links: ResolvedMention[] }): Promise<void> {
+  chatCache.set(key, value)
+  const kv = getRedis()
+  if (!kv) return
+  try {
+    await kv.set(key, value, { ex: CHAT_CACHE_TTL_SECONDS })
+  } catch (err) {
+    console.error('Redis set error for chat cache:', err)
+  }
+}
 
 const recentReleasesCache = new LRUCache<string, string>({ max: 1, ttl: 1000 * 60 * 60 })
 
@@ -48,12 +81,12 @@ async function getRecentReleasesContext(): Promise<string> {
   return context
 }
 
-const MAX_REQUESTS_PER_HOUR = 20
-const MAX_CONVERSATION_LENGTH = 10
+const MAX_REQUESTS_PER_HOUR = 10
+const MAX_CONVERSATION_LENGTH = 8
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60
 const MAX_MESSAGE_LENGTH = 500
-const MAX_HISTORY_MESSAGE_LENGTH = 2000
-const GLOBAL_DAILY_CHAT_BUDGET = 3000
+const MAX_HISTORY_MESSAGE_LENGTH = 500
+const GLOBAL_DAILY_CHAT_BUDGET = 1000
 const CHAT_PROMPT_VERSION = 'v3'
 
 export const config = {
@@ -132,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const cacheKey = getConversationCacheKey(messages, tasteProfile)
-  const cachedEntry = chatCache.get(cacheKey)
+  const cachedEntry = await readChatCache(cacheKey)
   if (cachedEntry) {
     return res.status(200).json({ response: cachedEntry.text, links: cachedEntry.links, cached: true })
   }
@@ -275,7 +308,7 @@ ${JSON.stringify(referenceData)}`
     res.end()
 
     if (fullResponse.trim()) {
-      chatCache.set(cacheKey, { text: fullResponse, links })
+      await writeChatCache(cacheKey, { text: fullResponse, links })
     }
 
   } catch (error) {
