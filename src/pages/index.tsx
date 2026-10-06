@@ -59,6 +59,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time localStorage hydrate; a lazy initializer would mismatch SSR HTML
     if (savedCategory) setCategory(savedCategory)
 
     const savedSearch = sessionStorage.getItem('homeSearchInput')

@@ -79,6 +79,7 @@ export default function ChatWidget() {
     const savedMessages = sessionStorage.getItem('chatMessages')
     if (savedMessages) {
       try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time sessionStorage hydrate; a lazy initializer would mismatch SSR HTML
         setMessages(JSON.parse(savedMessages))
       } catch (e) {
         console.error('Error loading saved messages:', e)
@@ -119,13 +120,13 @@ export default function ChatWidget() {
     }
   }, [messageLinks])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isStreaming])
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isStreaming])
 
   const handleSendMessage = useCallback(async (messageText = inputValue) => {
     if (!messageText.trim() || isLoading) return

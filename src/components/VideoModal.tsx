@@ -87,7 +87,7 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
                   height="100%"
                   playing={isOpen}
                   controls
-                  url={`https://www.youtube-nocookie.com/watch?v=${videoKey}`}
+                  src={`https://www.youtube-nocookie.com/watch?v=${videoKey}`}
                 />
               </AspectRatio>
             </Flex>

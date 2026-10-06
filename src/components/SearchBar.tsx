@@ -25,9 +25,11 @@ export default function SearchBar({
   const isCollapsed = isSticky && !isExpanded && !isSearchActive
   const placeholder = useBreakpointValue({ base: 'Search...', md: 'Search movies & shows...' })
 
-  useEffect(() => {
+  const [prevIsSticky, setPrevIsSticky] = useState(isSticky)
+  if (prevIsSticky !== isSticky) {
+    setPrevIsSticky(isSticky)
     if (!isSticky) setIsExpanded(false)
-  }, [isSticky])
+  }
 
   useEffect(() => {
     if (headerRef.current) {

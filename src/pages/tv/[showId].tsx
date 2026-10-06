@@ -2,7 +2,7 @@ import type { GetServerSideProps } from 'next'
 import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Flex,
   Wrap,
@@ -204,14 +204,15 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
     : '/poster_fallback.webp'
   const [backdropSrc, setBackdropSrc] = useState(backdropPath || '/backdrop_fallback.webp')
   const [posterSrc, setPosterSrc] = useState(posterPath || '/poster_fallback.webp')
+  const [prevPaths, setPrevPaths] = useState([backdropPath, posterPath])
 
-  useEffect(() => {
+  // Reset to the new prop paths on client-side nav between titles — prev-check
+  // setState-during-render replaces a reset effect (react-hooks/set-state-in-effect).
+  if (prevPaths[0] !== backdropPath || prevPaths[1] !== posterPath) {
+    setPrevPaths([backdropPath, posterPath])
     setBackdropSrc(backdropPath || '/backdrop_fallback.webp')
-  }, [backdropPath])
-
-  useEffect(() => {
     setPosterSrc(posterPath || '/poster_fallback.webp')
-  }, [posterPath])
+  }
 
   const { services } = useUserData()
   const myProviderIds = new Set(
