@@ -3,19 +3,13 @@ import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import {
-  Flex,
-  Box,
-  Heading,
-  Text,
-  SimpleGrid
-} from '@chakra-ui/react'
-import { StarIcon } from '@chakra-ui/icons'
+import { Flex, Box, Heading, Text, SimpleGrid, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
 import type { MovieCredit, NormalizedTvShow, TmdbPerson } from '../../types/tmdb'
+import { LuStar } from 'react-icons/lu';
 
 type PersonTvShow = NormalizedTvShow & { character: string }
 
@@ -337,7 +331,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     Directed Movies ({directedMovies.length})
                   </Text>
 
-                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
+                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {directedMovies.map((movie) => (
                       <MovieCard key={movie.id} movie={movie} showRole={false} />
                     ))}
@@ -363,7 +357,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     Acting Credits ({actingMovies.length})
                   </Text>
 
-                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
+                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {actingMovies.map((movie) => (
                       <MovieCard key={movie.id} movie={movie} showRole={true} />
                     ))}
@@ -389,7 +383,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     TV Shows ({tvShows.length})
                   </Text>
 
-                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} spacing={4}>
+                  <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {tvShows.map((show) => (
                       <MovieCard key={show.id} movie={show} showRole={true} />
                     ))}
@@ -401,7 +395,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
         </Flex>
       </Box>
     </>
-  )
+  );
 }
 
 function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean }) {
@@ -441,11 +435,11 @@ function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean })
 
         <Box p={3} display='flex' flexDirection='column' justifyContent='space-between' flex={1}>
           <Box>
-            <Text fontWeight='bold' fontSize='sm' noOfLines={1} color='white'>
+            <Text fontWeight='bold' fontSize='sm' lineClamp={1} color='white'>
               {movie.title}
             </Text>
             {showRole && movie.character && (
-              <Text color='gray.400' fontSize='xs' noOfLines={1} mt={0.5}>
+              <Text color='gray.400' fontSize='xs' lineClamp={1} mt={0.5}>
                 as {movie.character}
               </Text>
             )}
@@ -456,7 +450,7 @@ function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean })
               {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
             </Text>
             <Flex align='center' gap={1}>
-              <StarIcon boxSize={3} color='gold' />
+              <Icon boxSize={3} color='gold' asChild><LuStar /></Icon>
               <Text fontSize='xs' fontWeight='semibold' color='white'>
                 {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
               </Text>
@@ -465,5 +459,5 @@ function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean })
         </Box>
       </Box>
     </Link>
-  )
+  );
 }

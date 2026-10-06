@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, useRef, type ChangeEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Flex, Input, Box, IconButton, useBreakpointValue } from '@chakra-ui/react'
-import { SearchIcon } from '@chakra-ui/icons'
 import DropDown from './DropDown'
 import NavMenu from './NavMenu'
+import { LuSearch } from 'react-icons/lu';
 
 export default function SearchBar({
   category,
@@ -88,14 +88,12 @@ export default function SearchBar({
         >
           <IconButton
             aria-label='Search'
-            icon={<SearchIcon />}
             onClick={handleExpand}
             variant='ghost'
             color='white'
             display={{ base: isCollapsed ? 'inline-flex' : 'none', md: 'none' }}
             _hover={{ bg: 'whiteAlpha.200' }}
-            _active={{ bg: 'whiteAlpha.300' }}
-          />
+            _active={{ bg: 'whiteAlpha.300' }}><LuSearch /></IconButton>
           <Input
             ref={inputRef}
             value={searchInput}
@@ -137,5 +135,5 @@ export default function SearchBar({
         </Flex>
       </Flex>
     </Box>
-  )
+  );
 }

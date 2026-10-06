@@ -4,8 +4,7 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Badge, Box, Flex, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
-import { ArrowUpIcon } from '@chakra-ui/icons'
+import { Badge, Box, Flex, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
@@ -16,6 +15,7 @@ import LegalLinks from '../components/LegalLinks'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import type { TitleSummary, TmdbMovie } from '../types/tmdb'
+import { LuArrowUp } from 'react-icons/lu';
 
 interface Props {
   initialMovies: TmdbMovie[]
@@ -28,7 +28,7 @@ interface FeedPage {
 }
 
 const nowStreamingBadge = (
-  <Badge colorScheme='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
+  <Badge colorPalette='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
     Now streaming
   </Badge>
 )
@@ -327,8 +327,8 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
                 my={{ base: '3rem', md: '5rem' }}
                 mx={{ base: '1rem', md: '5rem', xl: 'auto' }}
                 maxW={{ xl: '80rem' }}
-                spacingX={{ base: 8, md: 12, xl: 4 }}
-                spacingY={{ base: 8, md: 12 }}
+                gapX={{ base: 8, md: 12, xl: 4 }}
+                gapY={{ base: 8, md: 12 }}
                 columns={{ base: 2, md: 5 }}
                 minH='100vh'
               >
@@ -380,7 +380,6 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
         {showScrollTop && (
           <IconButton
             aria-label='Scroll to top'
-            icon={<ArrowUpIcon boxSize={8} />}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             position='fixed'
             size='lg'
@@ -393,10 +392,9 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
             color='white'
             border='1px solid'
             borderColor='whiteAlpha.300'
-            _hover={{ bg: '#2a3138' }}
-          />
+            _hover={{ bg: '#2a3138' }}><Icon boxSize={8} asChild><LuArrowUp /></Icon></IconButton>
         )}
       </Box>
     </>
-  )
+  );
 }

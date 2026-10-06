@@ -66,11 +66,11 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
     )
 
     const sections = results.filter((section) => section.movies.length > 0)
-    const changes: Record<string, ProviderChanges> = await withTimeout(
+    const changes: Record<string, ProviderChanges> = (await withTimeout(
       getProviderChanges(sections.map((section) => section.key)),
       2000,
       {}
-    ) || {}
+    )) || {}
 
     res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400')
     return { props: { region, sections, changes } }
@@ -223,5 +223,5 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
         </Box>
       </Box>
     </>
-  )
+  );
 }

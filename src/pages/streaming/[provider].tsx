@@ -140,7 +140,7 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
             Browse {providerLabel} by Genre
           </Heading>
-          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
             {genreTargets.map((target) => (
               <Link key={target.genreKey} href={`/streaming/${provider}/${target.genreKey}`}>
                 <Flex
@@ -167,5 +167,5 @@ export default function StreamingPage({ provider, title, movies, dataError, regi
         </Box>
       </Box>
     </>
-  )
+  );
 }

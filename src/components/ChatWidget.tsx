@@ -10,14 +10,14 @@ import {
   Button,
   Link,
   useDisclosure,
-  ScaleFade,
   Spinner,
-  HStack
+  HStack,
+  Presence
 } from '@chakra-ui/react'
-import { ChatIcon, CloseIcon } from '@chakra-ui/icons'
 import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../utils/userData'
 import type { ResolvedMention } from '../utils/movieSearch'
+import { LuMessageCircle, LuX } from 'react-icons/lu';
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -25,7 +25,7 @@ interface ChatMessage {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function renderMessageContent(content: string, links: ResolvedMention[] | undefined) {
@@ -43,20 +43,19 @@ function renderMessageContent(content: string, links: ResolvedMention[] | undefi
     return (
       <Link
         key={index}
-        as={NextLink}
-        href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}
         color="blue.300"
         fontWeight="semibold"
         _hover={{ textDecoration: 'underline' }}
-      >
-        {part}
-      </Link>
-    )
-  })
+        asChild><NextLink
+          href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}>
+          {part}
+        </NextLink></Link>
+    );
+  });
 }
 
 export default function ChatWidget() {
-  const { isOpen, onToggle, onClose } = useDisclosure()
+  const { open, onToggle, onClose } = useDisclosure()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageLinks, setMessageLinks] = useState<Record<number, ResolvedMention[]>>({})
   const [inputValue, setInputValue] = useState('')
@@ -289,7 +288,14 @@ export default function ChatWidget() {
         right="6"
         zIndex={1000}
       >
-        <ScaleFade in={isOpen} unmountOnExit>
+        <Presence
+          present={open}
+          unmountOnExit
+          animationStyle={{
+            _open: 'scale-fade-in',
+            _closed: 'scale-fade-out'
+          }}
+          animationDuration='moderate'>
           <Box
             bg="#1f252b"
             borderRadius="xl"
@@ -310,30 +316,26 @@ export default function ChatWidget() {
               color="white"
             >
               <Flex align="center" gap="2">
-                <ChatIcon />
+                <LuMessageCircle />
                 <Text fontWeight="bold">Galaxy Bot</Text>
               </Flex>
-              <HStack spacing="2">
+              <HStack gap="2">
                 <IconButton
-                  icon={<TbMessageX size="18" />}
                   size="sm"
                   variant="ghost"
                   color="white"
                   _hover={{ bg: 'whiteAlpha.200' }}
                   onClick={handleClearChat}
-                  isDisabled={messages.length === 0}
+                  disabled={messages.length === 0}
                   aria-label="Clear chat"
-                  title="Clear chat"
-                />
+                  title="Clear chat"><TbMessageX size="18" /></IconButton>
                 <IconButton
-                  icon={<CloseIcon />}
                   size="sm"
                   variant="ghost"
                   color="white"
                   _hover={{ bg: 'whiteAlpha.200' }}
                   onClick={onClose}
-                  aria-label="Close chat"
-                />
+                  aria-label="Close chat"><LuX /></IconButton>
               </HStack>
             </Flex>
 
@@ -344,11 +346,11 @@ export default function ChatWidget() {
               bg="#14181c"
             >
               {messages.length === 0 && (
-                <VStack spacing="4" align="stretch" mt="4">
+                <VStack gap="4" align="stretch" mt="4">
                   <Text color="whiteAlpha.900" textAlign="center" fontSize="sm">
                     👋 Hi! I&apos;m your movie and TV show assistant. What are you looking for?
                   </Text>
-                  <VStack spacing="2" align="stretch">
+                  <VStack gap="2" align="stretch">
                     {quickActions.map((action, index) => (
                       <Button
                         key={index}
@@ -369,7 +371,7 @@ export default function ChatWidget() {
                 </VStack>
               )}
 
-              <VStack spacing="3" align="stretch">
+              <VStack gap="3" align="stretch">
                 {messages.map((message, index) => (
                   <Box
                     key={index}
@@ -432,11 +434,10 @@ export default function ChatWidget() {
               </Button>
             </Flex>
           </Box>
-        </ScaleFade>
+        </Presence>
 
-        {!isOpen && (
+        {!open && (
           <IconButton
-            icon={<ChatIcon />}
             onClick={onToggle}
             size="lg"
             borderRadius="full"
@@ -450,10 +451,9 @@ export default function ChatWidget() {
               transform: 'scale(0.95)'
             }}
             boxShadow="lg"
-            aria-label="Open chat"
-          />
+            aria-label="Open chat"><LuMessageCircle /></IconButton>
         )}
       </Box>
     </>
-  )
+  );
 }

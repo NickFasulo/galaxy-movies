@@ -51,7 +51,7 @@ export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg:
       opacity={isBgVisible && hoveredBg ? 0.30 : 0}
       transition='opacity 0.6s ease-in-out'
       bgImage={backgroundImage}
-      bgPosition='center'
+      bgPos='center'
       bgSize='cover'
       bgRepeat='no-repeat'
       _after={{

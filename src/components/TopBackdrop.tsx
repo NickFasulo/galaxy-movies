@@ -11,7 +11,7 @@ export default function TopBackdrop(props: BoxProps) {
       pointerEvents='none'
       bgImage={{ base: "url('/backdrop_fallback.webp')", md: "url('/backdrop_fallback_lg.webp')" }}
       bgSize='cover'
-      bgPosition='center 20%'
+      bgPos='center 20%'
       _before={{
         content: '""',
         position: 'absolute',

@@ -3,20 +3,13 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Badge,
-  Link as ChakraLink
-} from '@chakra-ui/react'
-import { ExternalLinkIcon } from '@chakra-ui/icons'
+import { Box, Flex, Heading, Text, Badge, Link as ChakraLink, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import MovieGrid from '../../components/MovieGrid'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import { normalizeTvTitle } from '../../utils/tmdb'
 import type { NormalizedTvShow, TmdbNetwork, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
+import { LuExternalLink } from 'react-icons/lu';
 
 type Props =
   | { networkError: string }
@@ -219,7 +212,7 @@ function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: Norma
 
               <Flex gap={3} justify={{ base: 'center', md: 'flex-start' }} wrap='wrap' align='center'>
                 {network.origin_country && (
-                  <Badge colorScheme='purple' fontSize='xs' px={2.5} py={1} borderRadius='md'>
+                  <Badge colorPalette='purple' fontSize='xs' px={2.5} py={1} borderRadius='md'>
                     {network.origin_country}
                   </Badge>
                 )}
@@ -233,15 +226,15 @@ function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: Norma
               {/^https?:\/\//i.test(network.homepage || '') && (
                 <ChakraLink
                   href={network.homepage}
-                  isExternal
                   fontSize='sm'
                   color='purple.300'
                   display='inline-flex'
                   alignItems='center'
                   gap={1}
                   _hover={{ textDecoration: 'underline' }}
-                >
-                  Official Website <ExternalLinkIcon mx='2px' />
+                  target='_blank'
+                  rel='noopener noreferrer'>
+                  Official Website <Icon mx='2px' asChild><LuExternalLink /></Icon>
                 </ChakraLink>
               )}
             </Flex>
@@ -265,5 +258,5 @@ function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: Norma
         </Box>
       </Box>
     </>
-  )
+  );
 }

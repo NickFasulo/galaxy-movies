@@ -107,7 +107,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in the United States</Heading>
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
             {usProviders.map((provider) => (
               <Link key={provider.key} href={`/streaming/${provider.key}`}>
                 <Flex
@@ -122,7 +122,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
                 >
                   <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
                   {provider.regions && (
-                    <Badge ml={2} colorScheme='gray' fontSize='2xs'>US only</Badge>
+                    <Badge ml={2} colorPalette='gray' fontSize='2xs'>US only</Badge>
                   )}
                 </Flex>
               </Link>
@@ -130,7 +130,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
           </SimpleGrid>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in India</Heading>
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
             {indiaProviders.map((provider) => (
               <Link key={provider.key} href={`/streaming/${provider.key}`}>
                 <Flex
@@ -158,5 +158,5 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
         </Box>
       </Box>
     </>
-  )
+  );
 }

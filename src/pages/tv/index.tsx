@@ -28,7 +28,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext): Pr
 
 function LinkGrid({ items }: { items: { href: string; label: string }[] }) {
   return (
-    <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+    <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
       {items.map((item) => (
         <Link key={item.href} href={item.href}>
           <Flex
@@ -47,7 +47,7 @@ function LinkGrid({ items }: { items: { href: string; label: string }[] }) {
         </Link>
       ))}
     </SimpleGrid>
-  )
+  );
 }
 
 export default function TvIndex({ shows, dataError }: Props) {
@@ -163,5 +163,5 @@ export default function TvIndex({ shows, dataError }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

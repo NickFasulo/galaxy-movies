@@ -27,7 +27,7 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
       >
         Cast
       </Text>
-      <Wrap spacing={3} justify='center'>
+      <Wrap gap={3} justify='center'>
         {cast.map((actor) => (
           <WrapItem key={actor.id}>
             <Link href={`/person/${actor.id}`} passHref>
@@ -55,5 +55,5 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
         ))}
       </Wrap>
     </Box>
-  )
+  );
 }

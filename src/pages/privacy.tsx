@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import InfoPage, { InfoParagraph, InfoHeading } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
-import { Box, ListItem, UnorderedList } from '@chakra-ui/react'
+import { Box, List } from '@chakra-ui/react';
 
 export default function Privacy() {
   return (
@@ -45,15 +45,15 @@ export default function Privacy() {
         as message counts, session duration, and feature usage) to monitor performance and cost.</InfoParagraph>
 
       <InfoHeading>2. How We Use Your Information</InfoHeading>
-      <UnorderedList mb={4} pl={4} spacing={1}>
-        <ListItem>To provide and operate the Service, including search, streaming availability, and recommendations</ListItem>
-        <ListItem>To generate personalized Galaxy Bot responses based on the messages and taste profile you send</ListItem>
-        <ListItem>To send alert, digest, confirmation, and device-linking emails you have signed up for</ListItem>
-        <ListItem>To match your synced watchlist against streaming catalog changes on the services you follow</ListItem>
-        <ListItem>To respond to corrections, feedback, and inquiries sent through the contact form</ListItem>
-        <ListItem>To analyze aggregated traffic and usage so we can improve the Service</ListItem>
-        <ListItem>To protect the Service through rate limiting and abuse prevention</ListItem>
-      </UnorderedList>
+      <List.Root as='ul' mb={4} pl={4} gap={1}>
+        <List.Item>To provide and operate the Service, including search, streaming availability, and recommendations</List.Item>
+        <List.Item>To generate personalized Galaxy Bot responses based on the messages and taste profile you send</List.Item>
+        <List.Item>To send alert, digest, confirmation, and device-linking emails you have signed up for</List.Item>
+        <List.Item>To match your synced watchlist against streaming catalog changes on the services you follow</List.Item>
+        <List.Item>To respond to corrections, feedback, and inquiries sent through the contact form</List.Item>
+        <List.Item>To analyze aggregated traffic and usage so we can improve the Service</List.Item>
+        <List.Item>To protect the Service through rate limiting and abuse prevention</List.Item>
+      </List.Root>
 
       <InfoHeading>3. Cookies and Local Storage</InfoHeading>
       <InfoParagraph>
@@ -82,15 +82,15 @@ export default function Privacy() {
       <InfoHeading>5. Third-Party Services We Use</InfoHeading>
       <InfoParagraph>To operate the Service we rely on the following providers, each of which
         processes data under its own privacy policy:</InfoParagraph>
-      <UnorderedList mb={4} pl={4} spacing={1}>
-        <ListItem><strong>Vercel</strong> — hosting, request logs, and aggregated analytics</ListItem>
-        <ListItem><strong>Upstash</strong> — server-side storage for subscriber emails, synced alert preferences, and anonymous usage statistics</ListItem>
-        <ListItem><strong>OpenAI</strong> — generates Galaxy Bot responses from your messages and taste profile</ListItem>
-        <ListItem><strong>Resend</strong> — delivers confirmation, alert, digest, and device-linking emails</ListItem>
-        <ListItem><strong>Web3Forms</strong> — delivers contact form submissions to us</ListItem>
-        <ListItem><strong>TMDB and Watchmode</strong> — supply movie metadata and streaming availability</ListItem>
-        <ListItem><strong>YouTube</strong> — embedded trailers (loaded via the youtube-nocookie.com domain)</ListItem>
-      </UnorderedList>
+      <List.Root as='ul' mb={4} pl={4} gap={1}>
+        <List.Item><strong>Vercel</strong> — hosting, request logs, and aggregated analytics</List.Item>
+        <List.Item><strong>Upstash</strong> — server-side storage for subscriber emails, synced alert preferences, and anonymous usage statistics</List.Item>
+        <List.Item><strong>OpenAI</strong> — generates Galaxy Bot responses from your messages and taste profile</List.Item>
+        <List.Item><strong>Resend</strong> — delivers confirmation, alert, digest, and device-linking emails</List.Item>
+        <List.Item><strong>Web3Forms</strong> — delivers contact form submissions to us</List.Item>
+        <List.Item><strong>TMDB and Watchmode</strong> — supply movie metadata and streaming availability</List.Item>
+        <List.Item><strong>YouTube</strong> — embedded trailers (loaded via the youtube-nocookie.com domain)</List.Item>
+      </List.Root>
       <InfoParagraph>
         Movie poster and backdrop images are served directly from TMDB&apos;s image servers, so your
         browser discloses standard request data (such as IP address and browser type) to them when
@@ -99,13 +99,13 @@ export default function Privacy() {
       </InfoParagraph>
 
       <InfoHeading>6. Data Retention</InfoHeading>
-      <UnorderedList mb={4} pl={4} spacing={1}>
-        <ListItem>Watchlist, ratings, and preferences: stored only on your device until you clear them</ListItem>
-        <ListItem>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</ListItem>
-        <ListItem>Galaxy Bot anonymous session statistics: retained for up to 30 days; optional feedback for up to 90 days</ListItem>
-        <ListItem>Chat responses may be cached server-side for up to 30 minutes to improve performance</ListItem>
-        <ListItem>Hosting and security logs: retained by Vercel under their standard retention periods</ListItem>
-      </UnorderedList>
+      <List.Root as='ul' mb={4} pl={4} gap={1}>
+        <List.Item>Watchlist, ratings, and preferences: stored only on your device until you clear them</List.Item>
+        <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</List.Item>
+        <List.Item>Galaxy Bot anonymous session statistics: retained for up to 30 days; optional feedback for up to 90 days</List.Item>
+        <List.Item>Chat responses may be cached server-side for up to 30 minutes to improve performance</List.Item>
+        <List.Item>Hosting and security logs: retained by Vercel under their standard retention periods</List.Item>
+      </List.Root>
 
       <InfoHeading>7. Your Rights and Choices</InfoHeading>
       <InfoParagraph>
@@ -151,7 +151,7 @@ export default function Privacy() {
         <BackButton />
       </Box>
     </InfoPage>
-  )
+  );
 }
 
 export async function getStaticProps() {

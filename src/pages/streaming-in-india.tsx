@@ -118,7 +118,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
           <Heading as='h2' size='md' mt={8} mb={4} textAlign={{ base: 'center', md: 'left' }}>Top streaming platforms in India</Heading>
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
             {INDIA_PROVIDERS.map((provider) => (
               <Link key={provider.key} href={`/streaming/${provider.key}`}>
                 <Flex
@@ -140,7 +140,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
           <SurfsharkBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
             {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
               <Link key={category.key} href={`/browse/${category.key}`}>
                 <Flex
@@ -175,5 +175,5 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

@@ -4,27 +4,19 @@ import { Avatar } from '@chakra-ui/react'
 export default function ActorAvatar({ profilePath, name }: { profilePath?: string | null; name?: string }) {
   const [hasError, setHasError] = useState(false)
 
-  const getCleanInitials = (str: string) => {
-    if (!str) return ''
-    const parts = str.trim().split(' ')
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
-    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase()
-  }
-
-  const imageSrc = profilePath && !hasError 
-    ? `https://image.tmdb.org/t/p/w185${profilePath}` 
+  const imageSrc = profilePath && !hasError
+    ? `https://image.tmdb.org/t/p/w185${profilePath}`
     : '/profile_fallback.webp'
 
   return (
-    <Avatar
+    <Avatar.Root
       size='xs'
-      name={name}
-      src={imageSrc}
-      getInitials={getCleanInitials}
       onError={() => setHasError(true)}
       bg='gray.600'
       color='white'
-      fontSize='10px'
-    />
-  )
+      fontSize='10px'>
+      <Avatar.Fallback name={name} />
+      <Avatar.Image src={imageSrc} />
+    </Avatar.Root>
+  );
 }

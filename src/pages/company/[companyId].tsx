@@ -3,20 +3,12 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  SimpleGrid,
-  Badge,
-  Link as ChakraLink
-} from '@chakra-ui/react'
-import { StarIcon, ExternalLinkIcon } from '@chakra-ui/icons'
+import { Box, Flex, Heading, Text, SimpleGrid, Badge, Link as ChakraLink, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import BreadcrumbSchema from '../../components/BreadcrumbSchema'
 import dateFormatter from '../../utils/dateFormatter'
 import type { TmdbCompany, TmdbMovie, TmdbPaged } from '../../types/tmdb'
+import { LuExternalLink, LuStar } from 'react-icons/lu';
 
 type Props =
   | { companyError: string }
@@ -222,7 +214,7 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
               <Flex direction='column' gap={2} align={{ base: 'center', md: 'flex-start' }}>
                 <Flex gap={3} justify={{ base: 'center', md: 'flex-start' }} wrap='wrap' align='center'>
                   {company.origin_country && (
-                    <Badge colorScheme='teal' fontSize='xs' px={2.5} py={1} borderRadius='md'>
+                    <Badge colorPalette='teal' fontSize='xs' px={2.5} py={1} borderRadius='md'>
                       {company.origin_country}
                     </Badge>
                   )}
@@ -236,15 +228,15 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
                 {/^https?:\/\//i.test(company.homepage || '') && (
                   <ChakraLink
                     href={company.homepage}
-                    isExternal
                     fontSize='sm'
                     color='teal.300'
                     display='inline-flex'
                     alignItems='center'
                     gap={1}
                     _hover={{ textDecoration: 'underline' }}
-                  >
-                    Official Website <ExternalLinkIcon mx='2px' />
+                    target='_blank'
+                    rel='noopener noreferrer'>
+                    Official Website <Icon mx='2px' asChild><LuExternalLink /></Icon>
                   </ChakraLink>
                 )}
               </Flex>
@@ -270,7 +262,7 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
           {movies.length === 0 ? (
             <Text color='gray.400'>No movies found for this production company.</Text>
           ) : (
-            <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing={{ base: 4, md: 6 }}>
+            <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} gap={{ base: 4, md: 6 }}>
               {movies.map((movie) => (
                 <CompanyMovieCard key={movie.id} movie={movie} />
               ))}
@@ -279,7 +271,7 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
         </Box>
       </Box>
     </>
-  )
+  );
 }
 
 function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
@@ -314,7 +306,7 @@ function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
           />
         </Box>
         <Box p={3}>
-          <Text fontWeight='bold' fontSize='sm' noOfLines={1} color='white'>
+          <Text fontWeight='bold' fontSize='sm' lineClamp={1} color='white'>
             {movie.title}
           </Text>
           <Flex justify='space-between' align='center' mt={2}>
@@ -322,7 +314,7 @@ function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
               {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
             </Text>
             <Flex align='center' gap={1}>
-              <StarIcon boxSize={3} color='gold' />
+              <Icon boxSize={3} color='gold' asChild><LuStar /></Icon>
               <Text fontSize='xs' fontWeight='semibold' color='white'>
                 {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
               </Text>
@@ -331,5 +323,5 @@ function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
         </Box>
       </Box>
     </Link>
-  )
+  );
 }

@@ -115,5 +115,5 @@ export default function TvGenrePage({ genre, title, shows, dataError }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

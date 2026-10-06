@@ -18,7 +18,6 @@ export default function SurfsharkBanner({ message }: { message: string }) {
       <Text color='gray.300' fontSize='sm'>{message}</Text>
       <Link
         href={SURFSHARK_AFFILIATE_LINK}
-        isExternal
         rel='sponsored nofollow noopener'
         color='white'
         fontWeight='semibold'
@@ -30,9 +29,10 @@ export default function SurfsharkBanner({ message }: { message: string }) {
         borderColor='whiteAlpha.300'
         borderRadius='0.5rem'
         _hover={{ bg: 'whiteAlpha.100' }}
+        target='_blank'
       >
         Try Surfshark VPN ↗
       </Link>
     </Flex>
-  )
+  );
 }

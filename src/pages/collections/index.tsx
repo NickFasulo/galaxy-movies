@@ -73,7 +73,7 @@ export default function Collections({ collections }: InferGetStaticPropsType<typ
           <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mt={8}>
+          <SimpleGrid columns={{ base: 2, md: 4 }} gap={4} mt={8}>
             {collections.map((collection) => (
               <Link key={collection.id} href={`/collections/${collection.id}`}>
                 <Flex
@@ -97,7 +97,7 @@ export default function Collections({ collections }: InferGetStaticPropsType<typ
                     ) : null}
                   </Box>
                   <Box p={3}>
-                    <Text fontWeight='medium' fontSize='sm' noOfLines={2}>{collection.name}</Text>
+                    <Text fontWeight='medium' fontSize='sm' lineClamp={2}>{collection.name}</Text>
                     <Text fontSize='xs' color='gray.500' mt={1}>{collection.partsCount} movies</Text>
                   </Box>
                 </Flex>
@@ -111,5 +111,5 @@ export default function Collections({ collections }: InferGetStaticPropsType<typ
         </Box>
       </Box>
     </>
-  )
+  );
 }

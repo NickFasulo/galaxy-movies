@@ -201,5 +201,5 @@ export default function ProviderGenrePage({
         </Box>
       </Box>
     </>
-  )
+  );
 }

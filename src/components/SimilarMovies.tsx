@@ -25,7 +25,7 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
       >
         More Like This
       </Text>
-      <Wrap spacing={3} justify='center'>
+      <Wrap gap={3} justify='center'>
         {movies.map((movie) => (
           <WrapItem key={movie.id} w='15.5rem' maxW='100%'>
             <Link href={`/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`} passHref>
@@ -51,10 +51,10 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
                   )}
                 </Box>
                 <Box minW={0}>
-                  <Text color='white' fontWeight='semibold' fontSize='sm' noOfLines={1}>
+                  <Text color='white' fontWeight='semibold' fontSize='sm' lineClamp={1}>
                     {movie.title}
                   </Text>
-                  <Text color='gray.300' fontSize='xs' mt={1} noOfLines={3}>
+                  <Text color='gray.300' fontSize='xs' mt={1} lineClamp={3}>
                     {movie.reason}
                   </Text>
                 </Box>
@@ -64,5 +64,5 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
         ))}
       </Wrap>
     </Box>
-  )
+  );
 }

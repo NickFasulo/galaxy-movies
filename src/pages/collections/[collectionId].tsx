@@ -126,5 +126,5 @@ export default function Collection({ collection, movies }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

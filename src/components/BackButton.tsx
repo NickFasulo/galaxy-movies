@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router'
 import { Button } from '@chakra-ui/react'
-import { ArrowBackIcon } from '@chakra-ui/icons'
+import { LuArrowLeft } from 'react-icons/lu';
 
 export default function BackButton() {
   const router = useRouter()
@@ -17,11 +17,12 @@ export default function BackButton() {
     <Button
       size={{ base: 'md', md: 'sm' }}
       width={{ base: '8rem', md: '7rem' }}
-      leftIcon={<ArrowBackIcon />}
       onClick={handleBack}
-      bg='#1f252b' color='white' border='1px solid' borderColor='whiteAlpha.300' _hover={{ bg: '#2a3138' }}
-    >
-      Back
-    </Button>
-  )
+      bg='#1f252b'
+      color='white'
+      border='1px solid'
+      borderColor='whiteAlpha.300'
+      _hover={{ bg: '#2a3138' }}><LuArrowLeft />Back
+                </Button>
+  );
 }

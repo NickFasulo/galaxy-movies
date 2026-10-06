@@ -40,7 +40,7 @@ export default function ServicesPicker() {
               key={r.code}
               size='xs'
               variant={region === r.code ? 'solid' : 'outline'}
-              colorScheme={region === r.code ? 'blue' : 'whiteAlpha'}
+              colorPalette={region === r.code ? 'blue' : 'whiteAlpha'}
               onClick={() => changeRegion(r.code)}
             >
               {r.label}
@@ -51,19 +51,19 @@ export default function ServicesPicker() {
       <Text color='gray.500' fontSize='xs' mb='0.75rem'>
         Pick your subscriptions to see which saved movies are streaming for you.
       </Text>
-      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+      <SimpleGrid columns={{ base: 2, md: 4 }} gap={2}>
         {visibleProviders.map((provider) => (
-          <Checkbox
+          <Checkbox.Root
             key={provider.key}
-            isChecked={providers.includes(provider.key)}
-            onChange={() => toggle(provider.key)}
+            onCheckedChange={() => toggle(provider.key)}
             color='gray.200'
             size='sm'
-          >
+            checked={providers.includes(provider.key)}
+          ><Checkbox.HiddenInput /><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><Checkbox.Label>
             {provider.label}
-          </Checkbox>
+          </Checkbox.Label></Checkbox.Root>
         ))}
       </SimpleGrid>
     </Box>
-  )
+  );
 }

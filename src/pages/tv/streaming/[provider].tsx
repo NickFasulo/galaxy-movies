@@ -137,7 +137,7 @@ export default function TvStreamingPage({ provider, title, shows, dataError, reg
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
             Browse {providerLabel} Shows by Genre
           </Heading>
-          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
             {genreTargets.map((target) => (
               <Link key={target.genreKey} href={`/tv/streaming/${provider}/${target.genreKey}`}>
                 <Flex
@@ -164,5 +164,5 @@ export default function TvStreamingPage({ provider, title, shows, dataError, reg
         </Box>
       </Box>
     </>
-  )
+  );
 }

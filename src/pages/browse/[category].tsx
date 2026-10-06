@@ -126,5 +126,5 @@ export default function BrowsePage({ category, title, description, movies, dataE
         </Box>
       </Box>
     </>
-  )
+  );
 }

@@ -108,10 +108,10 @@ async function getUsageStats(timeframe = '24h') {
 
   try {
     const now = Date.now()
-    const totalSessions = await kv.get<number>('analytics:total_sessions') || 0
-    const totalMessages = await kv.get<number>('analytics:total_messages') || 0
-    const avgRating = await kv.get<number>('analytics:total_rating') && await kv.get<number>('analytics:rating_count')
-      ? ((await kv.get<number>('analytics:total_rating') ?? 0) / (await kv.get<number>('analytics:rating_count') ?? 1)).toFixed(1)
+    const totalSessions = (await kv.get<number>('analytics:total_sessions')) || 0
+    const totalMessages = (await kv.get<number>('analytics:total_messages')) || 0
+    const avgRating = (await kv.get<number>('analytics:total_rating')) && (await kv.get<number>('analytics:rating_count'))
+      ? (((await kv.get<number>('analytics:total_rating')) ?? 0) / ((await kv.get<number>('analytics:rating_count')) ?? 1)).toFixed(1)
       : null
 
     return {
@@ -208,7 +208,7 @@ async function getCostEstimate() {
   let totalMessages = 0
   if (kv) {
     try {
-      totalMessages = await kv.get<number>('analytics:total_messages') || 0
+      totalMessages = (await kv.get<number>('analytics:total_messages')) || 0
     } catch (err) {
       console.error('Redis cost estimation error:', err)
     }

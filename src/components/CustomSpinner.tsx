@@ -4,11 +4,10 @@ export default function CustomSpinner({ height = '100vh' }) {
   return (
     <Center h={height}>
       <Spinner
-        thickness='4px'
-        emptyColor='gray.200'
+        borderWidth='4px'
         color='green.500'
         size='xl'
       />
     </Center>
-  )
+  );
 }

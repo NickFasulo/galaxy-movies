@@ -150,10 +150,10 @@ export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US
   mediaType?: MediaType
   region?: string
 }): Promise<PricePayload> {
-  const withinBudget = WATCHMODE_REGIONS.includes(region) && await checkGlobalBudget('watchmode', {
+  const withinBudget = WATCHMODE_REGIONS.includes(region) && (await checkGlobalBudget('watchmode', {
     maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
     windowSeconds: 60 * 60 * 24
-  })
+  }))
   const wmId = withinBudget ? await resolveWatchmodeId(tmdbId, mediaType) : null
 
   const [sources, details] = await Promise.all([

@@ -109,19 +109,19 @@ export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePr
           <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Mood Picks</Heading>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
             {moodLists.map(renderCard)}
           </SimpleGrid>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Curated Collections</Heading>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
             {curatedOnly.map(renderCard)}
           </SimpleGrid>
 
           {generatedLists.length > 0 && (
             <>
               <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Fresh Collections</Heading>
-              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+              <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
                 {generatedLists.map(renderCard)}
               </SimpleGrid>
             </>
@@ -133,5 +133,5 @@ export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePr
         </Box>
       </Box>
     </>
-  )
+  );
 }

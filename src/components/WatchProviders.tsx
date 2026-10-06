@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-import { Box, Flex, Text, Tooltip, Link, Select } from '@chakra-ui/react'
+import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
 import { sameStore, type PriceOffer } from '../utils/prices'
 import { usePrices } from '../hooks/usePrices'
@@ -12,15 +13,15 @@ function SurfsharkLink() {
   return (
     <Link
       href={SURFSHARK_AFFILIATE_LINK}
-      isExternal
       rel='sponsored nofollow noopener'
       fontSize='xs'
       color='gray.400'
       _hover={{ color: 'white' }}
+      target='_blank'
     >
-      {SURFSHARK_LINK_TEXT} ↗
-    </Link>
-  )
+      {SURFSHARK_LINK_TEXT}↗
+          </Link>
+  );
 }
 
 function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
@@ -48,7 +49,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
         />
       </Box>
       {caption && (
-        <Text fontSize='2xs' color='gray.400' mt={0.5} lineHeight={1} noOfLines={1}>
+        <Text fontSize='2xs' color='gray.400' mt={0.5} lineHeight={1} lineClamp={1}>
           {caption}
         </Text>
       )}
@@ -61,25 +62,29 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
 
   if (href) {
     return (
-      <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
+      <Tooltip key={provider.provider_id} content={provider.provider_name} showArrow positioning={{
+        placement: 'top'
+      }}>
         <Link
           href={href}
-          isExternal
           rel='sponsored nofollow noopener'
           _hover={{ transform: 'scale(1.05)' }}
           transition='transform 0.15s'
+          target='_blank'
         >
           {icon}
         </Link>
       </Tooltip>
-    )
+    );
   }
 
   return (
-    <Tooltip key={provider.provider_id} label={provider.provider_name} hasArrow placement='top'>
+    <Tooltip key={provider.provider_id} content={provider.provider_name} showArrow positioning={{
+      placement: 'top'
+    }}>
       {icon}
     </Tooltip>
-  )
+  );
 }
 
 // Cheapest offer for a provider across a given offer type — rent preferred,
@@ -160,23 +165,32 @@ export default function WatchProviders({
             Where to Watch
           </Text>
           {regionOptions.length > 1 && (
-            <Select
-              size='xs'
-              w='auto'
-              value={activeRegion}
-              onChange={(e) => setChosenRegion(e.target.value)}
-              color='gray.300'
-              borderColor='whiteAlpha.300'
-              aria-label='Availability region'
-              sx={{ option: { color: 'black' } }}
-            >
-              {regionOptions.map((code) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </Select>
+            <NativeSelect.Root size='xs' w='auto'>
+              <NativeSelect.Field
+                value={activeRegion}
+                onChange={(e) => setChosenRegion(e.target.value)}
+                color='gray.300'
+                borderColor='whiteAlpha.300'
+                aria-label='Availability region'
+                css={{
+                  '& option': { color: 'black' }
+                }}>
+                {regionOptions.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
           )}
           {streamLink && (
-            <Link href={streamLink} isExternal fontSize='xs' color='gray.400' _hover={{ color: 'white' }} flexShrink={0}>
+            <Link
+              href={streamLink}
+              fontSize='xs'
+              color='gray.400'
+              _hover={{ color: 'white' }}
+              flexShrink={0}
+              target='_blank'
+              rel='noopener noreferrer'>
               JustWatch ↗
             </Link>
           )}
@@ -256,5 +270,5 @@ export default function WatchProviders({
         )}
       </Box>
     </>
-  )
+  );
 }

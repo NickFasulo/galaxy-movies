@@ -5,13 +5,7 @@ import {
   Box,
   Heading,
   Text,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer
+  Table
 } from '@chakra-ui/react'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import MovieGrid from '../components/MovieGrid'
@@ -146,26 +140,26 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Galaxy Movies vs JustWatch</Heading>
-          <TableContainer border='1px solid' borderColor='whiteAlpha.300' borderRadius='0.75rem'>
-            <Table variant='simple' size='sm'>
-              <Thead>
-                <Tr>
-                  <Th color='gray.400' borderColor='whiteAlpha.300'>Feature</Th>
-                  <Th color='gray.400' borderColor='whiteAlpha.300'>Galaxy Movies</Th>
-                  <Th color='gray.400' borderColor='whiteAlpha.300'>JustWatch</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+          <Table.ScrollArea border='1px solid' borderColor='whiteAlpha.300' borderRadius='0.75rem'>
+            <Table.Root variant='line' size='sm'>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>Feature</Table.ColumnHeader>
+                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>Galaxy Movies</Table.ColumnHeader>
+                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>JustWatch</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {COMPARISON_ROWS.map(({ feature, galaxy, justwatch }) => (
-                  <Tr key={feature}>
-                    <Td borderColor='whiteAlpha.200' fontWeight='medium' whiteSpace='normal'>{feature}</Td>
-                    <Td borderColor='whiteAlpha.200' whiteSpace='normal'>{galaxy}</Td>
-                    <Td borderColor='whiteAlpha.200' whiteSpace='normal'>{justwatch}</Td>
-                  </Tr>
+                  <Table.Row key={feature}>
+                    <Table.Cell borderColor='whiteAlpha.200' fontWeight='medium' whiteSpace='normal'>{feature}</Table.Cell>
+                    <Table.Cell borderColor='whiteAlpha.200' whiteSpace='normal'>{galaxy}</Table.Cell>
+                    <Table.Cell borderColor='whiteAlpha.200' whiteSpace='normal'>{justwatch}</Table.Cell>
+                  </Table.Row>
                 ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
+              </Table.Body>
+            </Table.Root>
+          </Table.ScrollArea>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Where JustWatch is still the better tool</Heading>
           <Text maxW='60rem'>
@@ -216,5 +210,5 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
         </Box>
       </Box>
     </>
-  )
+  );
 }

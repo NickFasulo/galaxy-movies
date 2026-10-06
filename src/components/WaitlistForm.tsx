@@ -44,26 +44,26 @@ export default function WaitlistForm() {
           <Text color='gray.400' fontSize='sm' mb={3}>
             Leave your email and we&apos;ll alert you the moment a saved movie or show lands on one of your streaming services.
           </Text>
-          <Flex as='form' onSubmit={submit} gap={2} direction={{ base: 'column', md: 'row' }}>
-            <Input
-              type='email'
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder='you@example.com'
-              size='sm'
-              bg='blackAlpha.400'
-              borderColor='whiteAlpha.300'
-              color='white'
-              _placeholder={{ color: 'gray.500' }}
-            />
-            <Button type='submit' size='sm' colorScheme='blue' isLoading={status === 'submitting'} flexShrink={0}>
-              Notify me
-            </Button>
-          </Flex>
+          <Flex gap={2} direction={{ base: 'column', md: 'row' }} asChild><form onSubmit={submit}>
+              <Input
+                type='email'
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder='you@example.com'
+                size='sm'
+                bg='blackAlpha.400'
+                borderColor='whiteAlpha.300'
+                color='white'
+                _placeholder={{ color: 'gray.500' }}
+              />
+              <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}>
+                Notify me
+              </Button>
+            </form></Flex>
           {error && <Text color='red.300' fontSize='xs' mt={2}>{error}</Text>}
         </>
       )}
     </Box>
-  )
+  );
 }

@@ -115,5 +115,5 @@ export default function GenrePage({ genre, title, movies, dataError }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

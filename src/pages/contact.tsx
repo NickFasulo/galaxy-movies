@@ -96,8 +96,8 @@ export default function Contact() {
 
         <Button
           type='submit'
-          isDisabled={status === 'submitting'}
-          colorScheme='blue'
+          disabled={status === 'submitting'}
+          colorPalette='blue'
         >
           {status === 'submitting' ? 'Sending...' : 'Send Message'}
         </Button>
@@ -113,7 +113,7 @@ export default function Contact() {
         <BackButton />
       </Box>
     </InfoPage>
-  )
+  );
 }
 
 export async function getStaticProps() {

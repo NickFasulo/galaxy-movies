@@ -138,5 +138,5 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
         </Box>
       </Box>
     </>
-  )
+  );
 }

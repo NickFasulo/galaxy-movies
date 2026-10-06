@@ -3,16 +3,7 @@ import Image from 'next/image'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import {
-  Flex,
-  Wrap,
-  WrapItem,
-  Badge,
-  Heading,
-  Text,
-  Box
-} from '@chakra-ui/react'
-import { StarIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons'
+import { Flex, Wrap, WrapItem, Badge, Heading, Text, Box, Icon } from '@chakra-ui/react';
 import VideoModal from '../../components/VideoModal'
 import WatchlistButton from '../../components/WatchlistButton'
 import RatingWidget from '../../components/RatingWidget'
@@ -47,6 +38,7 @@ import type {
   WatchProvidersRegion,
   WatchProvidersResponse
 } from '../../types/tmdb'
+import { LuCalendar, LuClock, LuStar } from 'react-icons/lu';
 
 type MoviePageProps = {
   movie: TmdbMovieDetails
@@ -339,8 +331,8 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
           position='relative'
           h='100%'
           w='100%'
-          sx={{
-            img: {
+          css={{
+            '& img': {
               objectFit: 'cover',
               objectPosition: { base: 'center bottom', md: 'center 20%' },
               WebkitMaskImage: { base: 'linear-gradient(to top, black 55%, transparent 100%)', md: 'none' },
@@ -405,7 +397,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
               />
             </Box>
 
-            <Wrap justify='center' spacing={{ base: 4, md: 2 }}>
+            <Wrap justify='center' gap={{ base: 4, md: 2 }}>
               {movie.genres?.map((genre) => (
                 <WrapItem key={genre.id}><Badge>{genre.name}</Badge></WrapItem>
               ))}
@@ -433,7 +425,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
                 <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
                   <Text as='span' display='inline-block'>{movie.title}</Text>
                 </Heading>
-                <Badge colorScheme='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid' borderColor='whiteAlpha.300' flexShrink={0}>
+                <Badge colorPalette='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid' borderColor='whiteAlpha.300' flexShrink={0}>
                   {ageRating}
                 </Badge>
               </Flex>
@@ -490,19 +482,17 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
               gap={{ base: 4, md: 0 }}
             >
               <Flex align='center'>
-                <CalendarIcon color='white' />
+                <Icon color='white' asChild><LuCalendar /></Icon>
                 <Text color='white' textShadow='0 0 4px black' ml={1.5}>{movie.release_date ? dateFormatter(movie.release_date) : 'N/A'}</Text>
               </Flex>
               <Flex align='center'>
-                <TimeIcon color='white' />
+                <Icon color='white' asChild><LuClock /></Icon>
                 <Text color='white' textShadow='0 0 4px black' ml={1.5}>{movie.runtime ? timeFormatter(movie.runtime) : 'N/A'}</Text>
               </Flex>
             </Flex>
 
             {movie.tagline && (
-              <Text as='em' fontSize='lg' color='gray.400' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
-                &quot;{movie.tagline}&quot;
-              </Text>
+              <Text fontSize='lg' color='gray.400' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }} asChild><em>&quot;{movie.tagline}&quot;</em></Text>
             )}
 
             <Text color='white' fontSize='md' textShadow='0 0 4px black' textAlign='left'>
@@ -511,7 +501,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
 
             <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
               <Flex align='center'>
-                <StarIcon boxSize={5} color='gold' />
+                <Icon boxSize={5} color='gold' asChild><LuStar /></Icon>
                 <Text
                   fontSize='lg'
                   ml={2}
@@ -566,5 +556,5 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
       </Flex>
       </Box>
     </>
-  )
+  );
 }

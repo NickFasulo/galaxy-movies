@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react'
-import { Button, IconButton, Tooltip, type ButtonProps } from '@chakra-ui/react'
+import { Button, IconButton, type ButtonProps } from '@chakra-ui/react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
 import { useUserData } from '../hooks/useUserData'
 import { isWatchlisted, toggleWatchlist, type WatchlistableTitle } from '../utils/userData'
@@ -17,9 +18,10 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
 
   if (withLabel) {
     return (
-      <Tooltip label={label} hasArrow placement='top'>
+      <Tooltip content={label} showArrow positioning={{
+        placement: 'top'
+      }}>
         <Button
-          leftIcon={saved ? <BsBookmarkFill /> : <BsBookmark />}
           size={{ base: 'md', md: 'sm' }}
           width={{ base: '8rem', md: '7rem' }}
           aria-label={label}
@@ -29,19 +31,17 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
           borderColor='whiteAlpha.300'
           _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
           onClick={handleClick}
-          {...props}
-        >
-          {saved ? 'Saved' : 'Save'}
-        </Button>
+          {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}{saved ? 'Saved' : 'Save'}</Button>
       </Tooltip>
-    )
+    );
   }
 
   return (
-    <Tooltip label={label} hasArrow placement='top'>
+    <Tooltip content={label} showArrow positioning={{
+      placement: 'top'
+    }}>
       <IconButton
         aria-label={label}
-        icon={saved ? <BsBookmarkFill /> : <BsBookmark />}
         size='sm'
         variant='solid'
         bg={saved ? '#2b6cb0' : 'blackAlpha.600'}
@@ -50,8 +50,7 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
         borderColor='whiteAlpha.300'
         _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
         onClick={handleClick}
-        {...props}
-      />
+        {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}</IconButton>
     </Tooltip>
-  )
+  );
 }

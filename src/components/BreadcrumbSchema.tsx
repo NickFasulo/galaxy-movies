@@ -24,5 +24,5 @@ export default function BreadcrumbSchema({ items }: { items?: BreadcrumbItem[] }
         __html: JSON.stringify(breadcrumbData).replace(/</g, '\\u003c')
       }}
     />
-  )
+  );
 }

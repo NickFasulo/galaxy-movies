@@ -122,5 +122,5 @@ export default function TvBrowsePage({ category, title, description, shows, data
         </Box>
       </Box>
     </>
-  )
+  );
 }

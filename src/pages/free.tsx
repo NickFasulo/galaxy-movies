@@ -153,5 +153,5 @@ export default function FreeStreaming({ movies, shows, dataError }: Props) {
         </Box>
       </Box>
     </>
-  )
+  );
 }

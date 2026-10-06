@@ -28,12 +28,13 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
         <Link href={isTv ? `/tv/${movie.id}` : `/movies/${movie.id}`}>
           <Box position='relative' w='100%' aspectRatio='2/3' bg='gray.800'>
             <Skeleton
-              isLoaded={isLoaded || !posterUrl}
+              loading={!(isLoaded || !posterUrl)}
               position='absolute'
               inset={0}
-              startColor='gray.700'
-              endColor='gray.900'
-            >
+              css={{
+                '--start-color': 'gray.700',
+                '--end-color': 'gray.900'
+              }}>
               {posterUrl ? (
                 <Image
                   src={posterUrl}
@@ -64,7 +65,7 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
             top={2}
             left={2}
             zIndex={2}
-            colorScheme='purple'
+            colorPalette='purple'
             fontSize='2xs'
             px={1.5}
             py={0.5}
@@ -83,7 +84,7 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
         )}
       </ChakraBox>
     </WrapItem>
-  )
+  );
 }
 
 export default memo(MovieCard)
