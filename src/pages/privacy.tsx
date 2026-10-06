@@ -17,13 +17,18 @@ export default function Privacy() {
 
       <InfoHeading>1. Information We Collect</InfoHeading>
       <InfoParagraph><strong>Data stored on your device.</strong> Galaxy Movies does not require an
-        account. Your saved movies, ratings, and streaming service preferences are stored only in
-        your browser&apos;s local storage on your device — they are not uploaded to our servers or
-        shared with third parties. You can delete this data at any time by clearing your browser
-        storage.</InfoParagraph>
-      <InfoParagraph><strong>Email address (optional).</strong> If you optionally join our alerts
-        waitlist, we ask you to confirm your email address and store it solely to notify you when
-        streaming alerts launch.</InfoParagraph>
+        account. Your saved titles, ratings, and streaming service preferences are stored in your
+        browser&apos;s local storage on your device. You can delete this data at any time by clearing
+        your browser storage.</InfoParagraph>
+      <InfoParagraph><strong>Synced alert preferences (optional).</strong> If you join streaming
+        alerts and confirm your email, the device you confirmed on stores a sync credential and
+        uploads a snapshot of your watchlist titles, chosen streaming services, and region to our
+        servers. We use this snapshot to email you when a saved title arrives on one of your
+        services. Your ratings are never uploaded. Unsubscribing deletes your synced data from our
+        servers.</InfoParagraph>
+      <InfoParagraph><strong>Email address (optional).</strong> If you join streaming alerts, we ask
+        you to confirm your email address and store it to send you watchlist alerts, a weekly
+        streaming digest, and related service emails (such as device-linking links).</InfoParagraph>
       <InfoParagraph><strong>Contact form submissions.</strong> If you contact us through the contact
         page, we receive the name, email address, and message you submit so we can respond.</InfoParagraph>
       <InfoParagraph><strong>Chat messages.</strong> When you chat with Galaxy Bot, the messages you
@@ -43,7 +48,8 @@ export default function Privacy() {
       <UnorderedList mb={4} pl={4} spacing={1}>
         <ListItem>To provide and operate the Service, including search, streaming availability, and recommendations</ListItem>
         <ListItem>To generate personalized Galaxy Bot responses based on the messages and taste profile you send</ListItem>
-        <ListItem>To send waitlist confirmation and notification emails you have signed up for</ListItem>
+        <ListItem>To send alert, digest, confirmation, and device-linking emails you have signed up for</ListItem>
+        <ListItem>To match your synced watchlist against streaming catalog changes on the services you follow</ListItem>
         <ListItem>To respond to corrections, feedback, and inquiries sent through the contact form</ListItem>
         <ListItem>To analyze aggregated traffic and usage so we can improve the Service</ListItem>
         <ListItem>To protect the Service through rate limiting and abuse prevention</ListItem>
@@ -52,8 +58,9 @@ export default function Privacy() {
       <InfoHeading>3. Cookies and Local Storage</InfoHeading>
       <InfoParagraph>
         Galaxy Movies does not set tracking cookies. We use your browser&apos;s local storage to keep
-        your watchlist, ratings, and service preferences on your device, and to remember an
-        analytics opt-out preference. You can opt out of analytics at any time by setting
+        your watchlist, ratings, and service preferences on your device, to remember an analytics
+        opt-out preference, and — if you confirm a streaming alerts subscription — to hold the sync
+        credential that links this device to your alerts. You can opt out of analytics at any time by setting
         a <code>disableAnalytics</code> flag in your browser&apos;s local storage, and you can manage
         or clear cookies and site data through your browser settings.
       </InfoParagraph>
@@ -77,9 +84,9 @@ export default function Privacy() {
         processes data under its own privacy policy:</InfoParagraph>
       <UnorderedList mb={4} pl={4} spacing={1}>
         <ListItem><strong>Vercel</strong> — hosting, request logs, and aggregated analytics</ListItem>
-        <ListItem><strong>Upstash</strong> — server-side storage for the waitlist and anonymous usage statistics</ListItem>
+        <ListItem><strong>Upstash</strong> — server-side storage for subscriber emails, synced alert preferences, and anonymous usage statistics</ListItem>
         <ListItem><strong>OpenAI</strong> — generates Galaxy Bot responses from your messages and taste profile</ListItem>
-        <ListItem><strong>Resend</strong> — delivers waitlist confirmation and notification emails</ListItem>
+        <ListItem><strong>Resend</strong> — delivers confirmation, alert, digest, and device-linking emails</ListItem>
         <ListItem><strong>Web3Forms</strong> — delivers contact form submissions to us</ListItem>
         <ListItem><strong>TMDB and Watchmode</strong> — supply movie metadata and streaming availability</ListItem>
         <ListItem><strong>YouTube</strong> — embedded trailers (loaded via the youtube-nocookie.com domain)</ListItem>
@@ -94,7 +101,7 @@ export default function Privacy() {
       <InfoHeading>6. Data Retention</InfoHeading>
       <UnorderedList mb={4} pl={4} spacing={1}>
         <ListItem>Watchlist, ratings, and preferences: stored only on your device until you clear them</ListItem>
-        <ListItem>Waitlist email addresses: kept until alerts launch and we notify you, or until you ask us to delete your address</ListItem>
+        <ListItem>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</ListItem>
         <ListItem>Galaxy Bot anonymous session statistics: retained for up to 30 days; optional feedback for up to 90 days</ListItem>
         <ListItem>Chat responses may be cached server-side for up to 30 minutes to improve performance</ListItem>
         <ListItem>Hosting and security logs: retained by Vercel under their standard retention periods</ListItem>
@@ -106,9 +113,10 @@ export default function Privacy() {
         including the right to access, correct, or delete the personal data we hold about you, to
         withdraw consent, and to lodge a complaint with your local data protection authority.
         Because most of your data never leaves your device, the information we hold is generally
-        limited to your waitlist email address and contact form messages — you can ask us to access
-        or delete these at any time via the <Link href='/contact'>contact page</Link>. Every email we
-        send includes an unsubscribe link.
+        limited to your subscriber email address, synced alert preferences, and contact form
+        messages — you can ask us to access or delete these at any time via
+        the <Link href='/contact'>contact page</Link>. Every email we send includes an unsubscribe
+        link that removes your subscription and synced alert data.
       </InfoParagraph>
 
       <InfoHeading>8. Data Security</InfoHeading>

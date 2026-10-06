@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import type { MediaType } from '../types/tmdb'
 import type { PricePayload } from '../utils/prices'
 
@@ -9,9 +9,9 @@ export function usePrices({ tmdbId, mediaType = 'movie', title, year, region = '
   year?: string | number | null
   region?: string
 }) {
-  return useQuery<PricePayload>(
-    ['prices', mediaType, region, String(tmdbId)],
-    async () => {
+  return useQuery<PricePayload>({
+    queryKey: ['prices', mediaType, region, String(tmdbId)],
+    queryFn: async () => {
       const params = new URLSearchParams({ id: String(tmdbId), type: mediaType, region })
       if (title) params.set('title', title)
       if (year) params.set('year', String(year))
@@ -19,10 +19,8 @@ export function usePrices({ tmdbId, mediaType = 'movie', title, year, region = '
       if (!resp.ok) throw new Error('Price lookup failed')
       return resp.json()
     },
-    {
-      enabled: Boolean(tmdbId) && Boolean(title),
-      staleTime: 1000 * 60 * 60,
-      retry: 1
-    }
-  )
+    enabled: Boolean(tmdbId) && Boolean(title),
+    staleTime: 1000 * 60 * 60,
+    retry: 1
+  })
 }

@@ -2,7 +2,7 @@ import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { useInfiniteQuery } from 'react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { Badge, Box, Flex, IconButton, SimpleGrid, Text } from '@chakra-ui/react'
 import { ArrowUpIcon } from '@chakra-ui/icons'
@@ -85,10 +85,11 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
     error,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage
-  } = useInfiniteQuery<FeedPage, Error>(
-    ['infiniteMovies', category, activeSearch],
-    async ({ pageParam = 1 }): Promise<FeedPage> => {
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery<FeedPage, Error>({
+    queryKey: ['infiniteMovies', category, activeSearch],
+    queryFn: async ({ pageParam }): Promise<FeedPage> => {
       const now = Date.now()
       const timeSinceLastFetch = now - lastFetchTimeRef.current
       const MIN_FETCH_DELAY = 500
@@ -111,19 +112,18 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
       if (!res.ok) throw new Error('Failed to load movies')
       return res.json()
     },
-    {
-      initialData: initialInfiniteData,
-      staleTime: 1000 * 60 * 10,
-      cacheTime: 1000 * 60 * 60,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      getNextPageParam: (lastPage, pages) => {
-        if (!lastPage?.results?.length) return undefined
-        const totalPages = lastPage?.total_pages || 1
-        return pages.length < totalPages ? pages.length + 1 : undefined
-      }
+    initialPageParam: 1,
+    initialData: initialInfiniteData,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    getNextPageParam: (lastPage, pages) => {
+      if (!lastPage?.results?.length) return undefined
+      const totalPages = lastPage?.total_pages || 1
+      return pages.length < totalPages ? pages.length + 1 : undefined
     }
-  )
+  })
 
   const changeCategory = useCallback((selectedCategory: string) => {
     setCategory(selectedCategory)
@@ -299,7 +299,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
           setSearchInput={setSearchInput}
         />
 
-        {status === 'loading' && moviesList.length === 0 ? (
+        {isLoading && moviesList.length === 0 ? (
           <CustomSpinner />
         ) : status === 'error' ? (
           <Text textAlign='center' mt='20rem' fontWeight='bold' fontSize='xl'>

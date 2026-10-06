@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { Hydrate, QueryClient, QueryClientProvider, type DehydratedState } from 'react-query'
+import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query'
 import { ChakraProvider, Flex, Box } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
+import { useAlertsSync } from '../hooks/useAlertsSync'
 import ChatWidget from '../components/ChatWidget'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -20,10 +21,11 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]'
 
   useScrollRestore()
+  useAlertsSync()
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Hydrate state={pageProps.dehydratedState}>
+      <HydrationBoundary state={pageProps.dehydratedState}>
         <ChakraProvider>
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
@@ -49,7 +51,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
             />
           )}
         </ChakraProvider>
-      </Hydrate>
+      </HydrationBoundary>
     </QueryClientProvider>
   )
 }

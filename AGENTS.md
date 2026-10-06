@@ -1,6 +1,6 @@
 # Galaxy Movies
 
-Next.js 15 Pages Router app (React 18, Chakra UI, React Query v3). All application code is strict TypeScript under `src/` — `allowJs` is off, so new source files must be `.ts`/`.tsx`.
+Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All application code is strict TypeScript under `src/` — `allowJs` is off, so new source files must be `.ts`/`.tsx`.
 
 ## Commands
 
@@ -16,6 +16,10 @@ Next.js 15 Pages Router app (React 18, Chakra UI, React Query v3). All applicati
 - Detail pages with server-side error props split the error view into a separate component so hooks never run conditionally (see `CompanyContent`/`CompanyErrorView` pattern).
 - `src/pages/api/og.tsx` renders `@vercel/og` markup — raw `<img>` is required there and ESLint rules are disabled for that file only.
 - `scripts/` is plain JS build tooling, excluded from tsconfig and ESLint.
+
+## Watchlist alerts
+
+Alerts give a confirmed waitlist subscriber (`gm:waitlist:confirmed`, email → unsub token) a separate, independently-rotatable credential — `gm:alerts:synckey` (email → UUID) — minted on first confirm and handed out via URL fragment (`/email-status#email=&key=`) so it never hits server access logs. The client stores it (`gm.alerts.v1` in localStorage) and posts debounced watchlist/service snapshots to `POST /api/alerts-prefs`, stored in `gm:alerts:prefs` (email → `{watchlist, services, region, updatedAt}`). `GET /api/alerts-link?email&key` re-issues the fragment for linking additional devices; `waitlist.ts` emails that link automatically when an already-confirmed address re-submits the form. The daily `/api/cron/watchlist-alerts` cron (runs after `streaming-changes`) reads `streaming-changes`'s cached diffs, matches each subscriber's watchlist against their chosen providers' `added`/`coming` titles, dedupes against `gm:alerts:notified`, and sends one Resend email per subscriber with matches. Unsubscribing (`waitlist-remove.ts`) clears all three `gm:alerts:*` hash entries for that email.
 
 ## Environment
 
