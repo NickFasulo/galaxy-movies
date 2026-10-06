@@ -1,14 +1,17 @@
+import { useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
 import { Box } from '@chakra-ui/react'
 import { firstParam } from '../utils/query'
+import { setAlertsCredentials, syncAlertsNow } from '../utils/alertsSync'
+import { getUserData } from '../utils/userData'
 
 const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {
     title: "You're confirmed",
-    body: "Thanks — we'll email you when streaming alerts launch on Galaxy Movies."
+    body: "Thanks — we'll email you when something on your list lands on your streaming services."
   },
   unsubscribed: {
     title: 'Unsubscribed',
@@ -23,6 +26,20 @@ const STATUSES: Record<string, { title: string; body: string }> = {
 export default function EmailStatus() {
   const { query } = useRouter()
   const status = STATUSES[firstParam(query.status) ?? ''] || STATUSES.error
+
+  // Credentials travel in the URL fragment (never sent to the server on
+  // redirect) rather than the query string, so they're read here client-side.
+  useEffect(() => {
+    if (firstParam(query.status) !== 'confirmed') return
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const email = params.get('email')
+    const key = params.get('key')
+    if (!email || !key) return
+
+    setAlertsCredentials(email, key)
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    void syncAlertsNow(getUserData(), { email, key })
+  }, [query.status])
 
   return (
     <>

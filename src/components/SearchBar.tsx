@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef, type ChangeEvent } from 'react'
 import { flushSync } from 'react-dom'
-import { Flex, Input, Box, IconButton } from '@chakra-ui/react'
+import { Flex, Input, Box, IconButton, useBreakpointValue } from '@chakra-ui/react'
 import { SearchIcon } from '@chakra-ui/icons'
 import DropDown from './DropDown'
 import NavMenu from './NavMenu'
@@ -23,6 +23,7 @@ export default function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null)
   const [headerTop, setHeaderTop] = useState(0)
   const isCollapsed = isSticky && !isExpanded && !isSearchActive
+  const placeholder = useBreakpointValue({ base: 'Search...', md: 'Search movies & shows...' })
 
   useEffect(() => {
     if (!isSticky) setIsExpanded(false)
@@ -98,7 +99,7 @@ export default function SearchBar({
             value={searchInput}
             onChange={handleInputChange}
             onBlur={() => !isSearchActive && setIsExpanded(false)}
-            placeholder='Search movies & shows...'
+            placeholder={placeholder}
             background='#1f252b'
             color='white'
             borderColor='whiteAlpha.300'
