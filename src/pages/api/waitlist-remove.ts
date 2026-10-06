@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, PENDING_KEY, CONFIRMED_KEY } from '../../utils/waitlistStore'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
@@ -25,6 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await kv.hdel(CONFIRMED_KEY, email)
     await kv.hdel(PENDING_KEY, email)
+    await kv.hdel(SYNCKEY_KEY, email)
+    await kv.hdel(ALERTS_PREFS_KEY, email)
+    await kv.hdel(ALERTS_NOTIFIED_KEY, email)
     return redirect('unsubscribed')
   } catch (err) {
     console.error('Waitlist remove error:', err)

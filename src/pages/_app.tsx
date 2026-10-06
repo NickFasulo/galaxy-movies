@@ -6,6 +6,7 @@ import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedSta
 import { ChakraProvider, Flex, Box } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
+import { useAlertsSync } from '../hooks/useAlertsSync'
 import ChatWidget from '../components/ChatWidget'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -20,6 +21,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]'
 
   useScrollRestore()
+  useAlertsSync()
 
   return (
     <QueryClientProvider client={queryClient}>

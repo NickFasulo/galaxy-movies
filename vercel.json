@@ -9,6 +9,10 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/cron/watchlist-alerts",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 16 * * 5"
     }

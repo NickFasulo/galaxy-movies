@@ -31,18 +31,18 @@ export default function WaitlistForm() {
   return (
     <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='1rem' p={4}>
       <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
-        Streaming alerts — coming soon
+        Streaming alerts
       </Text>
       {status === 'done' || status === 'pending' ? (
         <Text color='green.300' fontSize='sm'>
           {status === 'pending'
             ? 'Check your inbox — we sent a confirmation link to verify your email.'
-            : "You're on the list. We'll email you when alerts launch."}
+            : "You're on the list. We'll email you when something on it lands on your services."}
         </Text>
       ) : (
         <>
           <Text color='gray.400' fontSize='sm' mb={3}>
-            Leave your email and we&apos;ll let you know when we can alert you the moment a saved movie lands on your services.
+            Leave your email and we&apos;ll alert you the moment a saved movie or show lands on one of your streaming services.
           </Text>
           <Flex as='form' onSubmit={submit} gap={2} direction={{ base: 'column', md: 'row' }}>
             <Input
