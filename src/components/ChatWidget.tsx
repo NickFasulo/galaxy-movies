@@ -406,7 +406,7 @@ export default function ChatWidget() {
               </VStack>
             </Box>
 
-            <Flex p="3" bg="#1f252b" borderTop="1px" borderColor="whiteAlpha.200">
+            <Flex p="3" bg="#1f252b" borderTop="1px solid var(--chakra-colors-white-alpha-200)">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -423,8 +423,7 @@ export default function ChatWidget() {
               <Button
                 bg='#1f252b'
                 color='white'
-                border='1px solid'
-                borderColor='whiteAlpha.300'
+                border='1px solid var(--chakra-colors-white-alpha-300)'
                 _hover={{ bg: '#2a3138' }}
                 size="sm"
                 onClick={() => handleSendMessage()}

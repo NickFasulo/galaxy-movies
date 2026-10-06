@@ -4,7 +4,7 @@ import { LuStar } from 'react-icons/lu';
 export default function VoteScore({ voteAverage }: { voteAverage?: number }) {
   return (
     <Flex align='center'>
-      <Icon boxSize={5} color='gold' asChild><LuStar /></Icon>
+      <Icon boxSize={5} color='gold' asChild><LuStar fill='currentColor' /></Icon>
       <Text
         fontSize='lg'
         ml={2}

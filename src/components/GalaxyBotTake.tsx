@@ -9,9 +9,8 @@ export default function GalaxyBotTake({ synopsis }: { synopsis?: string | null }
       mt='1rem'
       bg='whiteAlpha.100'
       borderRadius='md'
-      borderTop={{ base: '3px solid', md: 'none' }}
-      borderLeft={{ base: 'none', md: '3px solid' }}
-      borderColor='purple.400'
+      borderTop={{ base: '3px solid var(--chakra-colors-purple-400)', md: 'none' }}
+      borderLeft={{ base: 'none', md: '3px solid var(--chakra-colors-purple-400)' }}
     >
       <Text
         fontSize='sm'

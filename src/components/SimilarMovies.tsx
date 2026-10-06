@@ -20,8 +20,8 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
         alignItems='center'
         gap={3}
         mb={2}
-        _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-        _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+        _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+        _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
       >
         More Like This
       </Text>

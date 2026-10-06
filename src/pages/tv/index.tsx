@@ -37,8 +37,7 @@ function LinkGrid({ items }: { items: { href: string; label: string }[] }) {
             minH='4rem'
             p={4}
             borderRadius='0.5rem'
-            border='1px solid'
-            borderColor='whiteAlpha.300'
+            border='1px solid var(--chakra-colors-white-alpha-300)'
             _hover={{ borderColor: 'whiteAlpha.600' }}
             h='100%'
           >

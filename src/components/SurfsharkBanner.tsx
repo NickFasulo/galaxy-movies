@@ -7,8 +7,7 @@ export default function SurfsharkBanner({ message }: { message: string }) {
       mt={6}
       p={4}
       bg='#1f252b'
-      border='1px solid'
-      borderColor='whiteAlpha.300'
+      border='1px solid var(--chakra-colors-white-alpha-300)'
       borderRadius='0.5rem'
       align={{ base: 'flex-start', md: 'center' }}
       justify='space-between'
@@ -25,8 +24,7 @@ export default function SurfsharkBanner({ message }: { message: string }) {
         whiteSpace='nowrap'
         px={4}
         py={2}
-        border='1px solid'
-        borderColor='whiteAlpha.300'
+        border='1px solid var(--chakra-colors-white-alpha-300)'
         borderRadius='0.5rem'
         _hover={{ bg: 'whiteAlpha.100' }}
         target='_blank'

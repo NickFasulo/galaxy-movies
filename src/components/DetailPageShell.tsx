@@ -4,6 +4,7 @@ import { Box, Flex } from '@chakra-ui/react';
 import TopBackdrop from './TopBackdrop'
 
 const SIDE_VIGNETTE = 'linear-gradient(to right, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)'
+const DESKTOP_OVERLAY = 'linear-gradient(to bottom, rgba(20,24,28,0.35) 0%, rgba(20,24,28,0.8) 60%, #14181c 100%)'
 
 export default function DetailPageShell({
   backdropSrc,
@@ -76,8 +77,8 @@ export default function DetailPageShell({
           position='absolute'
           inset={0}
           bgImage={{
-            base: 'linear-gradient(to top, #14181c 0%, #14181c 10%, rgba(20,24,28,0.55) 60%, rgba(20,24,28,0.85) 100%)',
-            md: 'linear-gradient(to bottom, rgba(20,24,28,0.35) 0%, rgba(20,24,28,0.8) 60%, #14181c 100%)'
+            base: 'linear-gradient(to top, #14181c 0%, #14181c 10%, rgba(20,24,28,0.35) 60%, rgba(20,24,28,0.85) 100%)',
+            md: DESKTOP_OVERLAY
           }}
         />
         <Box
@@ -106,6 +107,11 @@ export default function DetailPageShell({
             WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 20%, black 55%, transparent 100%)',
             maskImage: 'linear-gradient(to top, transparent 0%, black 20%, black 55%, transparent 100%)'
           }}
+        />
+        <Box
+          position='absolute'
+          inset={0}
+          bgImage={DESKTOP_OVERLAY}
         />
         <Box
           position='absolute'

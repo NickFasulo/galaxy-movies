@@ -79,8 +79,7 @@ export default function Collections({ collections }: InferGetStaticPropsType<typ
                 <Flex
                   direction='column'
                   borderRadius='0.5rem'
-                  border='1px solid'
-                  borderColor='whiteAlpha.300'
+                  border='1px solid var(--chakra-colors-white-alpha-300)'
                   overflow='hidden'
                   h='100%'
                   _hover={{ borderColor: 'whiteAlpha.600' }}

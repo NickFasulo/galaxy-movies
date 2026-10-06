@@ -243,8 +243,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                   p={4}
                   bg='blackAlpha.600'
                   borderRadius='0.5rem'
-                  border='1px solid'
-                  borderColor='whiteAlpha.200'
+                  border='1px solid var(--chakra-colors-white-alpha-200)'
                 >
                   <Heading as='h3' fontSize='sm' textTransform='uppercase' color='gray.400' mb={3}>
                     Personal Info
@@ -325,8 +324,8 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     alignItems='center'
                     gap={3}
                     mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
                   >
                     Directed Movies ({directedMovies.length})
                   </Text>
@@ -351,8 +350,8 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     alignItems='center'
                     gap={3}
                     mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
                   >
                     Acting Credits ({actingMovies.length})
                   </Text>
@@ -377,8 +376,8 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     alignItems='center'
                     gap={3}
                     mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid', borderColor: 'whiteAlpha.400' }}
+                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
                   >
                     TV Shows ({tvShows.length})
                   </Text>

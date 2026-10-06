@@ -287,7 +287,7 @@ function MovieContent({ movie, videoKey, watchProviders, watchProvidersByRegion,
                 <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
                   <Text as='span' display='inline-block'>{movie.title}</Text>
                 </Heading>
-                <Badge colorPalette='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid' borderColor='whiteAlpha.300' flexShrink={0}>
+                <Badge colorPalette='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid var(--chakra-colors-white-alpha-300)' flexShrink={0}>
                   {ageRating}
                 </Badge>
               </Flex>

@@ -32,7 +32,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
           fontSize='xs'
           _hover={{ color: 'white' }}
           asChild><button type='button' onClick={onToggle}>
-            <Icon boxSize={3} color={rating ? 'gold' : 'inherit'} asChild><LuStar /></Icon>
+            <Icon boxSize={3} color={rating ? 'gold' : 'inherit'} asChild><LuStar fill={rating ? 'currentColor' : 'none'} /></Icon>
             {rating ? `${rating}/10` : 'Rate'}
           </button></Flex>
       </Popover.Trigger>
@@ -54,7 +54,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
                         boxSize={4}
                         color={n <= shown ? 'gold' : 'whiteAlpha.300'}
                         transition='color 0.1s'
-                        asChild><LuStar /></Icon>
+                        asChild><LuStar fill={n <= shown ? 'currentColor' : 'none'} /></Icon>
                     </button></Box>
                 </Tooltip>
               ))}

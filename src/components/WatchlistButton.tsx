@@ -27,8 +27,7 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
           aria-label={label}
           bg={saved ? '#2b6cb0' : 'blackAlpha.600'}
           color='white'
-          border='1px solid'
-          borderColor='whiteAlpha.300'
+          border='1px solid var(--chakra-colors-white-alpha-300)'
           _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
           onClick={handleClick}
           {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}{saved ? 'Saved' : 'Save'}</Button>
@@ -46,8 +45,7 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
         variant='solid'
         bg={saved ? '#2b6cb0' : 'blackAlpha.600'}
         color='white'
-        border='1px solid'
-        borderColor='whiteAlpha.300'
+        border='1px solid var(--chakra-colors-white-alpha-300)'
         _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
         onClick={handleClick}
         {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}</IconButton>

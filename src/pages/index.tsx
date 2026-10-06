@@ -390,8 +390,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
             boxShadow='0 0 6px black'
             bg='#1f252b'
             color='white'
-            border='1px solid'
-            borderColor='whiteAlpha.300'
+            border='1px solid var(--chakra-colors-white-alpha-300)'
             _hover={{ bg: '#2a3138' }}><Icon boxSize={8} asChild><LuArrowUp /></Icon></IconButton>
         )}
       </Box>

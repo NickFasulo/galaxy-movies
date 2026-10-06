@@ -16,7 +16,7 @@ export default function TopBackdrop(props: BoxProps) {
         content: '""',
         position: 'absolute',
         inset: 0,
-        bgImage: 'linear-gradient(to bottom, transparent 0%, rgba(20,24,28,0.55) 55%, #14181c 100%)'
+        bgImage: 'linear-gradient(to bottom, rgba(20,24,28,0.35) 0%, rgba(20,24,28,0.55) 55%, #14181c 100%)'
       }}
       _after={{
         content: '""',

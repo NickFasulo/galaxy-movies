@@ -75,8 +75,7 @@ export default function SearchBar({
       top={0}
       zIndex={20}
       background={isSticky ? '#14181c' : 'transparent'}
-      borderBottom={isSticky ? '1px solid' : 'none'}
-      borderColor='whiteAlpha.200'
+      borderBottom={isSticky ? '1px solid var(--chakra-colors-white-alpha-200)' : 'none'}
       transition='background 0.2s ease-in-out, border-bottom 0.2s ease-in-out'
     >
       <Flex justify='center' align='center' width='100%'>

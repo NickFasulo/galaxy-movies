@@ -20,8 +20,7 @@ export default function BackButton() {
       onClick={handleBack}
       bg='#1f252b'
       color='white'
-      border='1px solid'
-      borderColor='whiteAlpha.300'
+      border='1px solid var(--chakra-colors-white-alpha-300)'
       _hover={{ bg: '#2a3138' }}><LuArrowLeft />Back
                 </Button>
   );
