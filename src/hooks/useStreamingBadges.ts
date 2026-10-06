@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQueries } from 'react-query'
+import { useQueries } from '@tanstack/react-query'
 import { useUserData } from './useUserData'
 import { getProviderId } from '../utils/tmdb'
 import type { MediaType, TitleSummary } from '../types/tmdb'
@@ -33,8 +33,8 @@ export function useStreamingBadges(movies: BadgeTitle[]): (movie: BadgeTitle) =>
     return out
   }, [movies])
 
-  const results = useQueries(
-    chunks.map(({ type, ids }) => ({
+  const results = useQueries({
+    queries: chunks.map(({ type, ids }) => ({
       queryKey: ['watchProviders', type, services.region, ids],
       queryFn: async (): Promise<{ results?: Record<string, number[]> }> => {
         const resp = await fetch(`/api/watchProviders?region=${services.region}&ids=${ids}&type=${type}`)
@@ -44,7 +44,7 @@ export function useStreamingBadges(movies: BadgeTitle[]): (movie: BadgeTitle) =>
       enabled: myProviderIds.size > 0,
       staleTime: 1000 * 60 * 60
     }))
-  )
+  })
 
   const streamingIds = new Set<string>()
   results.forEach((r, i) => {
