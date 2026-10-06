@@ -1,5 +1,4 @@
 import type { InferGetStaticPropsType } from 'next'
-import Head from 'next/head'
 import Link from 'next/link'
 import {
   Box,
@@ -9,9 +8,9 @@ import {
 } from '@chakra-ui/react'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import MovieGrid from '../components/MovieGrid'
-import BreadcrumbSchema from '../components/BreadcrumbSchema'
-import HreflangTags from '../components/HreflangTags'
-import BackButton from '../components/BackButton'
+import PageHead from '../components/PageHead'
+import PageShell from '../components/PageShell'
+import { SITE_URL } from '../utils/site'
 import type { TmdbMovie } from '../types/tmdb'
 
 export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; dataError?: boolean }; revalidate: number }> {
@@ -68,18 +67,9 @@ const FAQ_ITEMS = [
 ]
 
 export default function JustWatchAlternative({ movies, dataError }: InferGetStaticPropsType<typeof getStaticProps>) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/justwatch-alternative`
+  const canonicalUrl = `${SITE_URL}/justwatch-alternative`
   const title = 'A Free JustWatch Alternative for Deciding What to Watch'
   const description = 'Galaxy Movies is a free JustWatch alternative that pairs where-to-watch availability with an AI assistant that helps you decide what to watch. Movies and TV shows, no account needed.'
-  const featuredPoster = movies?.[0]?.poster_path
-    ? `https://image.tmdb.org/t/p/w500${movies[0].poster_path}`
-    : null
-  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title,
-    subtitle: description,
-    ...(featuredPoster ? { poster: featuredPoster } : {})
-  }).toString()}`
 
   const faqSchema = {
     '@context': 'https://schema.org',
@@ -91,46 +81,20 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
     }))
   }
 
-  const breadcrumbItems = [
-    { name: 'Home', url: siteUrl },
-    { name: 'JustWatch Alternative', url: canonicalUrl }
-  ]
-
   return (
     <>
-      <Head>
-        <title>{`${title} | Galaxy Movies`}</title>
-        <meta name='description' content={description} />
-        <link rel='canonical' href={canonicalUrl} />
-        <HreflangTags canonicalUrl={canonicalUrl} />
-
-        <meta property='og:type' content='website' />
-        <meta property='og:site_name' content='Galaxy Movies' />
-        <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={`${title} | Galaxy Movies`} />
-        <meta property='og:description' content={description} />
-        <meta property='og:url' content={canonicalUrl} />
-        <meta property='og:image' content={ogImage} />
-        <meta property='og:image:width' content='1200' />
-        <meta property='og:image:height' content='630' />
-
-        <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={`${title} | Galaxy Movies`} />
-        <meta name='twitter:description' content={description} />
-        <meta name='twitter:image' content={ogImage} />
-
-        <script
-          type='application/ld+json'
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c')
-          }}
-        />
-        <BreadcrumbSchema items={breadcrumbItems} />
-      </Head>
-      <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={{ base: 6, md: 10 }}>
-        <Box maxW='70rem' mx='auto' px={6}>
-          <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-          <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>
+      <PageHead
+        title={title}
+        description={description}
+        canonicalUrl={canonicalUrl}
+        posterPath={movies[0]?.poster_path}
+        structuredData={faqSchema}
+        breadcrumbItems={[
+          { name: 'Home', url: SITE_URL },
+          { name: 'JustWatch Alternative', url: canonicalUrl }
+        ]}
+      />
+      <PageShell title={title} description={description} withBackButton>
 
           <Text maxW='60rem' mt={8}>
             JustWatch answers one question extremely well: <em>where</em> can I watch this? Galaxy Movies is built
@@ -204,11 +168,7 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
           <Text textAlign='center' mt={8} color='gray.400'>
             Availability varies by country and changes over time — check each title page for current providers.
           </Text>
-          <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-            <BackButton />
-          </Box>
-        </Box>
-      </Box>
+      </PageShell>
     </>
   );
 }

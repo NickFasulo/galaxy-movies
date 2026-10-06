@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import Head from 'next/head'
 import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
@@ -43,10 +42,7 @@ export default function EmailStatus() {
 
   return (
     <>
-      <Head>
-        <meta name='robots' content='noindex' />
-      </Head>
-      <InfoPage title={status.title} description={status.body}>
+      <InfoPage title={status.title} description={status.body} noindex>
         <InfoParagraph>{status.body}</InfoParagraph>
         <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
           <BackButton />

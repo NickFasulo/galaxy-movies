@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
-import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/api'
 import { getRedis, SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
 import { streamingProviders } from '../../utils/tmdb'
@@ -37,14 +38,8 @@ function parseServices(input: unknown): string[] | null {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (!requireMethod(req, res, 'POST')) return
+  if (rejectBot(req, res)) return
 
   const email = String(req.body?.email || '').trim().toLowerCase()
   const key = String(req.body?.key || '')

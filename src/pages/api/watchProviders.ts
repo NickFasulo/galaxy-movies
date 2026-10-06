@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
-import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
 import { firstParam } from '../../utils/query'
 import type { WatchProvidersResponse } from '../../types/tmdb'
 
@@ -13,14 +14,8 @@ const MAX_UNCACHED_LOOKUPS_PER_HOUR = 1500
 const GLOBAL_UNCACHED_LOOKUPS_PER_HOUR = 20000
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (!requireMethod(req, res, 'GET')) return
+  if (rejectBot(req, res)) return
 
   const regionParam = firstParam(req.query.region) || ''
   const region = /^[A-Z]{2}$/.test(regionParam) ? regionParam : 'US'
@@ -88,6 +83,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }))
 
-  res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400')
+  setApiCache(res, 21600, 86400)
   return res.status(200).json({ region, results })
 }

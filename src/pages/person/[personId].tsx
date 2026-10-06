@@ -1,13 +1,16 @@
 import type { GetServerSideProps } from 'next'
 import Image from 'next/image'
-import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Flex, Box, Heading, Text, SimpleGrid, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
+import DetailErrorView from '../../components/DetailErrorView'
+import PageHead from '../../components/PageHead'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
+import { setSwrCache } from '../../utils/ssr'
+import { absoluteImageUrl } from '../../utils/schema'
+import { tmdbImage, SITE_URL } from '../../utils/site'
 import type { MovieCredit, NormalizedTvShow, TmdbPerson } from '../../types/tmdb'
 import { LuStar } from 'react-icons/lu';
 
@@ -67,12 +70,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
         character: c.character || c.roles?.[0]?.character || c.job || c.jobs?.[0]?.job || ''
       }))
 
-    if (context.res) {
-      context.res.setHeader(
-        'Cache-Control',
-        'public, s-maxage=3600, stale-while-revalidate=86400'
-      )
-    }
+    if (context.res) setSwrCache(context.res)
 
     return {
       props: {
@@ -94,12 +92,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
 export default function PersonDetails(props: Props) {
   if ('error' in props) {
-    return (
-      <Box minH='100vh' bg='transparent' p={8} textAlign='center' color='white'>
-        <Text mt={20}>{props.error}</Text>
-        <Link href='/'>Return to Galaxy Movies</Link>
-      </Box>
-    )
+    return <DetailErrorView title='Person unavailable' message={props.error} />
   }
 
   return (
@@ -112,25 +105,36 @@ export default function PersonDetails(props: Props) {
   )
 }
 
+function SectionTitle({ children }: { children?: ReactNode }) {
+  return (
+    <Text
+      color='gray.400'
+      fontSize='xs'
+      fontWeight='bold'
+      textTransform='uppercase'
+      textShadow='0 0 4px black'
+      display='flex'
+      alignItems='center'
+      gap={3}
+      mb={4}
+      _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+      _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
+    >
+      {children}
+    </Text>
+  )
+}
+
 function PersonContent({ person, directedMovies, actingMovies, tvShows }: { person: TmdbPerson; directedMovies: MovieCredit[]; actingMovies: MovieCredit[]; tvShows: PersonTvShow[] }) {
-  const profilePath = person.profile_path 
-    ? `https://image.tmdb.org/t/p/w500${person.profile_path}` 
-    : '/profile_fallback.webp'
+  const profilePath = tmdbImage(person.profile_path) || '/profile_fallback.webp'
   const [profileSrc, setProfileSrc] = useState(profilePath)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const canonicalUrl = `${siteUrl}/person/${person.id}`
+  const canonicalUrl = `${SITE_URL}/person/${person.id}`
   const description = person.biography
     ? `${person.biography.slice(0, 155).trim()}...`
     : `Explore filmography, biography, and movie details for ${person.name} on Galaxy Movies.`
-  const ogPoster = person.profile_path
   const ogSubtitle = person.known_for_department
     ? `${person.known_for_department} · Galaxy Movies`
     : description
-  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title: person.name,
-    subtitle: ogSubtitle,
-    ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
-  }).toString()}`
 
   const getAge = () => {
     if (!person.birthday) return null
@@ -152,7 +156,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
     '@type': 'Person',
     name: person.name,
     description,
-    image: profileSrc.startsWith('http') ? profileSrc : `${siteUrl}${profileSrc.startsWith('/') ? profileSrc : '/' + profileSrc}`,
+    image: absoluteImageUrl(profileSrc, SITE_URL),
     birthDate: person.birthday || undefined,
     deathDate: person.deathday || undefined,
     birthPlace: person.place_of_birth ? {
@@ -162,42 +166,22 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
     jobTitle: person.known_for_department || 'Film Professional'
   }
 
-  const breadcrumbItems = [
-    { name: 'Home', url: siteUrl },
-    { name: 'People', url: `${siteUrl}/person` },
-    { name: person.name, url: canonicalUrl }
-  ]
-
   return (
     <>
-      <Head>
-        <title>{`${person.name} | Galaxy Movies`}</title>
-        <meta name='description' content={description} />
-        <link rel='canonical' href={canonicalUrl} />
-
-        <meta property='og:type' content='profile' />
-        <meta property='og:site_name' content='Galaxy Movies' />
-        <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={`${person.name} | Galaxy Movies`} />
-        <meta property='og:description' content={description} />
-        <meta property='og:url' content={canonicalUrl} />
-        <meta property='og:image' content={ogImage} />
-        <meta property='og:image:width' content='1200' />
-        <meta property='og:image:height' content='630' />
-
-        <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={`${person.name} | Galaxy Movies`} />
-        <meta name='twitter:description' content={description} />
-        <meta name='twitter:image' content={ogImage} />
-
-        <script
-          type='application/ld+json'
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
-          }}
-        />
-        <BreadcrumbSchema items={breadcrumbItems} />
-      </Head>
+      <PageHead
+        title={person.name}
+        description={description}
+        canonicalUrl={canonicalUrl}
+        ogType='profile'
+        ogSubtitle={ogSubtitle}
+        posterPath={person.profile_path}
+        structuredData={structuredData}
+        breadcrumbItems={[
+          { name: 'Home', url: SITE_URL },
+          { name: 'People', url: `${SITE_URL}/person` },
+          { name: person.name, url: canonicalUrl }
+        ]}
+      />
 
       <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '5em', md: '6rem' }} px='1rem'>
         <Flex justify='center'>
@@ -314,22 +298,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
 
               {directedMovies?.length > 0 && (
                 <Box mt={2}>
-                  <Text
-                    color='gray.400'
-                    fontSize='xs'
-                    fontWeight='bold'
-                    textTransform='uppercase'
-                    textShadow='0 0 4px black'
-                    display='flex'
-                    alignItems='center'
-                    gap={3}
-                    mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                  >
-                    Directed Movies ({directedMovies.length})
-                  </Text>
-
+                  <SectionTitle>Directed Movies ({directedMovies.length})</SectionTitle>
                   <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {directedMovies.map((movie) => (
                       <MovieCard key={movie.id} movie={movie} showRole={false} />
@@ -340,22 +309,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
 
               {actingMovies?.length > 0 && (
                 <Box mt={2}>
-                  <Text
-                    color='gray.400'
-                    fontSize='xs'
-                    fontWeight='bold'
-                    textTransform='uppercase'
-                    textShadow='0 0 4px black'
-                    display='flex'
-                    alignItems='center'
-                    gap={3}
-                    mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                  >
-                    Acting Credits ({actingMovies.length})
-                  </Text>
-
+                  <SectionTitle>Acting Credits ({actingMovies.length})</SectionTitle>
                   <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {actingMovies.map((movie) => (
                       <MovieCard key={movie.id} movie={movie} showRole={true} />
@@ -366,22 +320,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
 
               {tvShows?.length > 0 && (
                 <Box mt={2}>
-                  <Text
-                    color='gray.400'
-                    fontSize='xs'
-                    fontWeight='bold'
-                    textTransform='uppercase'
-                    textShadow='0 0 4px black'
-                    display='flex'
-                    alignItems='center'
-                    gap={3}
-                    mb={4}
-                    _before={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                    _after={{ content: '""', flex: 1, borderTop: '1px solid var(--chakra-colors-white-alpha-400)' }}
-                  >
-                    TV Shows ({tvShows.length})
-                  </Text>
-
+                  <SectionTitle>TV Shows ({tvShows.length})</SectionTitle>
                   <SimpleGrid columns={{ base: 2, sm: 3, lg: 4 }} gap={4}>
                     {tvShows.map((show) => (
                       <MovieCard key={show.id} movie={show} showRole={true} />
@@ -398,9 +337,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
 }
 
 function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean }) {
-  const posterPath = movie.poster_path 
-    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
-    : '/poster_fallback.webp'
+  const posterPath = tmdbImage(movie.poster_path) || '/poster_fallback.webp'
   const [imgSrc, setImgSrc] = useState(posterPath)
 
   return (

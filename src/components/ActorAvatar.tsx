@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Avatar } from '@chakra-ui/react'
+import { tmdbImage } from '../utils/site'
 
 export default function ActorAvatar({ profilePath, name }: { profilePath?: string | null; name?: string }) {
   const [hasError, setHasError] = useState(false)
 
-  const imageSrc = profilePath && !hasError
-    ? `https://image.tmdb.org/t/p/w185${profilePath}`
-    : '/profile_fallback.webp'
+  const imageSrc = !hasError && tmdbImage(profilePath, 'w185') || '/profile_fallback.webp'
 
   return (
     <Avatar.Root

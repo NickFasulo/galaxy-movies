@@ -5,8 +5,8 @@ import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
 import { franchiseCollectionIds } from '../utils/franchises'
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
+import { SITE_URL as siteUrl } from '../utils/site'
+import { setSwrCache } from '../utils/ssr'
 
 const escapeXml = (value: string) =>
   value
@@ -246,7 +246,7 @@ ${allEntries.join('\n')}
 </urlset>`
 
   res.setHeader('Content-Type', 'application/xml')
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  setSwrCache(res, 86400, 604800)
   res.statusCode = 200
   res.end(xml)
 

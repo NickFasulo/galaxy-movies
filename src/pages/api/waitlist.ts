@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/api'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../utils/waitlistStore'
+import { SITE_URL } from '../../utils/site'
 import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 
 async function sendConfirmationEmail(email: string, token: string): Promise<boolean> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const confirmUrl = `${siteUrl}/api/waitlist-confirm?email=${encodeURIComponent(email)}&token=${token}`
+  const confirmUrl = `${SITE_URL}/api/waitlist-confirm?email=${encodeURIComponent(email)}&token=${token}`
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
   const resp = await fetch('https://api.resend.com/emails', {
@@ -35,8 +36,7 @@ async function sendConfirmationEmail(email: string, token: string): Promise<bool
 // Already-confirmed subscribers hitting the form again from a new device need
 // a link bearing their sync key so this device's watchlist can start syncing too.
 async function sendLinkDeviceEmail(email: string, key: string): Promise<boolean> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
-  const linkUrl = `${siteUrl}/api/alerts-link?email=${encodeURIComponent(email)}&key=${key}`
+  const linkUrl = `${SITE_URL}/api/alerts-link?email=${encodeURIComponent(email)}&key=${key}`
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
   const resp = await fetch('https://api.resend.com/emails', {
@@ -62,14 +62,8 @@ async function sendLinkDeviceEmail(email: string, key: string): Promise<boolean>
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (!requireMethod(req, res, 'POST')) return
+  if (rejectBot(req, res)) return
 
   const email = String(req.body?.email || '').trim().toLowerCase()
   if (!EMAIL_PATTERN.test(email) || email.length > 254) {

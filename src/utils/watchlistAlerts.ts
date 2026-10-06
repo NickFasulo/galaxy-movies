@@ -1,6 +1,7 @@
 import { getRedis } from './redis'
 import { getProviderChanges, type ProviderChanges } from './streamingChanges'
 import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY } from './waitlistStore'
+import { SITE_URL } from './site'
 import type { MediaType } from '../types/tmdb'
 
 const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
@@ -77,14 +78,14 @@ const prettyDate = (stamp: string | null | undefined) => {
 
 const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 
-function buildEmail(siteUrl: string, items: MatchedItem[], email: string, unsubToken: string) {
-  const unsub = `${siteUrl}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
+function buildEmail(items: MatchedItem[], email: string, unsubToken: string) {
+  const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) => {
       const status = item.kind === 'coming'
         ? `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
         : `Now on ${escapeHtml(item.provider)}`
-      return `<li style="margin: 4px 0;"><a href="${siteUrl}${titlePath(item)}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
+      return `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
         `<span style="color: #666;"> — ${status}</span></li>`
     })
     .join('')
@@ -94,7 +95,7 @@ function buildEmail(siteUrl: string, items: MatchedItem[], email: string, unsubT
       <h2 style="margin-bottom: 4px;">Something on your list just moved</h2>
       <p style="color: #666; margin-top: 0;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
       <ul style="padding-left: 18px; margin: 6px 0 18px;">${rows}</ul>
-      <p style="margin-top: 24px;"><a href="${siteUrl}/watchlist" style="color: #2b6cb0;">View your list →</a></p>
+      <p style="margin-top: 24px;"><a href="${SITE_URL}/watchlist" style="color: #2b6cb0;">View your list →</a></p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
       <p style="color: #999; font-size: 12px;">
         You asked for streaming alerts from Galaxy Movies.
@@ -122,7 +123,6 @@ export async function sendWatchlistAlerts() {
   const entries = Object.entries(prefsHash || {})
   if (!entries.length) return { sent: 0, reason: 'no subscribers' }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
   let sent = 0
@@ -138,7 +138,7 @@ export async function sendWatchlistAlerts() {
     const matches = matchItems(prefs, changes, notified)
     if (!matches.length) continue
 
-    const { html, headers } = buildEmail(siteUrl, matches, email, unsubToken)
+    const { html, headers } = buildEmail(matches, email, unsubToken)
     try {
       const resp = await fetch('https://api.resend.com/emails', {
         method: 'POST',

@@ -3,7 +3,8 @@ import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
 import { getPriceOffers, type PricePayload } from '../../utils/prices'
 import { firstParam } from '../../utils/query'
-import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
 // client and caches hard, since free-tier Watchmode quota is monthly.
@@ -17,14 +18,8 @@ const EMPTY_TTL_MS = EMPTY_TTL_SECONDS * 1000
 const EMPTY: Pick<PricePayload, 'offers' | 'cheapest' | 'extras'> = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (!requireMethod(req, res, 'GET')) return
+  if (rejectBot(req, res)) return
 
   const tmdbId = String(req.query.id || '').trim()
   if (!/^\d+$/.test(tmdbId)) {
@@ -77,6 +72,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch {}
   }
 
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  setApiCache(res, 86400, 604800)
   return res.status(200).json(payload)
 }

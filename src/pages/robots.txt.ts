@@ -1,16 +1,16 @@
 import type { GetServerSidePropsContext } from 'next'
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
+import { setSwrCache } from '../utils/ssr'
+import { SITE_URL } from '../utils/site'
 
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   res.setHeader('Content-Type', 'text/plain')
-  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  setSwrCache(res, 86400, 604800)
 
   res.write(`User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: ${siteUrl}/sitemap.xml
+Sitemap: ${SITE_URL}/sitemap.xml
 `)
   res.end()
 

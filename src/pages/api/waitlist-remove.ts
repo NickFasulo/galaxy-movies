@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
+import { requireMethod } from '../../utils/api'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
 
@@ -8,10 +9,7 @@ const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const redirect = (status: string) => res.redirect(302, `/email-status?status=${status}`)
 
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
+  if (!requireMethod(req, res, 'GET')) return
 
   const email = String(req.query.email || '').trim().toLowerCase()
   const token = String(req.query.token || '')

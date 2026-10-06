@@ -24,7 +24,8 @@ const GENRE_MAP: Record<string, number> = {
   western: 37
 }
 
-import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
 
 type RawResult = TitleSummary & TmdbTvShow
 
@@ -45,17 +46,10 @@ const MAX_SEARCH_LENGTH = 100
 const MAX_PAGE = 500
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
+  if (!requireMethod(req, res, 'GET')) return
+  if (rejectBot(req, res)) return
 
   const ip = getClientIP(req)
-  const userAgent = req.headers['user-agent']
-
-  if (isBot(userAgent)) {
-    return res.status(403).json({ message: 'Bot access denied' })
-  }
 
   const allowed = await checkDistributedRateLimit(ip, {
     keyPrefix: 'movies_rl',
@@ -128,8 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data: TmdbPaged<RawResult> = await response.json()
 
     if (media !== 'movie') {
-      res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
-      res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+      setApiCache(res, 1800, 3600, { cdn: true })
       return res.status(200).json({ ...data, results: normalizeResults(data.results) })
     }
 
@@ -154,8 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return true
     })
 
-    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
-    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+    setApiCache(res, 1800, 3600, { cdn: true })
 
     return res.status(200).json({
       ...data,

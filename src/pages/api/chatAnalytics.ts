@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
-import { isBot, getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/api'
 import { isCronAuthorized } from '../../utils/auth'
 import { firstParam } from '../../utils/query'
 import { aiModel } from '../../utils/openai'
@@ -235,9 +236,7 @@ async function getCostEstimate() {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (rejectBot(req, res)) return
 
   if (req.method === 'POST') {
     const clientId = getClientIP(req)
@@ -289,6 +288,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid action' })
   }
 
-  res.setHeader('Allow', ['GET', 'POST'])
-  return res.status(405).end(`Method ${req.method} Not Allowed`)
+  requireMethod(req, res, ['GET', 'POST'])
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Box } from '@chakra-ui/react'
+import { tmdbImage } from '../utils/site'
 
 export function useHoverBackground() {
   const [hoveredBg, setHoveredBg] = useState<string | null>(null)
@@ -36,7 +37,7 @@ export function useHoverBackground() {
 }
 
 export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg: string | null; isBgVisible: boolean }) {
-  const backgroundImage = hoveredBg ? `url(https://image.tmdb.org/t/p/w1280${hoveredBg})` : 'none'
+  const backgroundImage = hoveredBg ? `url(${tmdbImage(hoveredBg, 'w1280')})` : 'none'
 
   return (
     <Box

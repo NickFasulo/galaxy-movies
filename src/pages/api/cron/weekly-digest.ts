@@ -3,6 +3,7 @@ import { getRedis } from '../../../utils/redis'
 import { getProviderChanges, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
 import { CONFIRMED_KEY } from '../../../utils/waitlistStore'
 import { isCronAuthorized } from '../../../utils/auth'
+import { SITE_URL } from '../../../utils/site'
 
 export const config = { maxDuration: 60 }
 
@@ -43,26 +44,26 @@ function gatherItems(changes: Record<string, ProviderChanges>): DigestItems {
   return { added: pick('added').slice(0, MAX_ITEMS), coming: pick('coming').slice(0, MAX_ITEMS) }
 }
 
-function itemList(siteUrl: string, items: DigestItem[], showDate: boolean) {
+function itemList(items: DigestItem[], showDate: boolean) {
   if (!items.length) return ''
   return `<ul style="padding-left: 18px; margin: 6px 0 18px;">${items
     .map(
       (t) =>
-        `<li style="margin: 4px 0;"><a href="${siteUrl}${titlePath(t)}" style="color: #2b6cb0;">${escapeHtml(t.title)}</a>` +
+        `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #2b6cb0;">${escapeHtml(t.title)}</a>` +
         `<span style="color: #666;"> — ${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</span></li>`
     )
     .join('')}</ul>`
 }
 
-function buildEmail(siteUrl: string, items: DigestItems, email: string, token: string) {
-  const unsub = `${siteUrl}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
+function buildEmail(items: DigestItems, email: string, token: string) {
+  const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
   const html = `
     <div style="font-family: sans-serif; max-width: 520px; color: #111;">
       <h2 style="margin-bottom: 4px;">This week on streaming</h2>
       <p style="color: #666; margin-top: 0;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
-      ${items.added.length ? `<h3 style="margin-bottom: 4px;">Just added</h3>${itemList(siteUrl, items.added, false)}` : ''}
-      ${items.coming.length ? `<h3 style="margin-bottom: 4px;">Coming soon</h3>${itemList(siteUrl, items.coming, true)}` : ''}
-      <p style="margin-top: 24px;"><a href="${siteUrl}/new-on-streaming" style="color: #2b6cb0;">See everything new on streaming →</a></p>
+      ${items.added.length ? `<h3 style="margin-bottom: 4px;">Just added</h3>${itemList(items.added, false)}` : ''}
+      ${items.coming.length ? `<h3 style="margin-bottom: 4px;">Coming soon</h3>${itemList(items.coming, true)}` : ''}
+      <p style="margin-top: 24px;"><a href="${SITE_URL}/new-on-streaming" style="color: #2b6cb0;">See everything new on streaming →</a></p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
       <p style="color: #999; font-size: 12px;">
         You asked for streaming alerts from Galaxy Movies.
@@ -100,12 +101,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, reason: 'no subscribers' })
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
     const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
     const results = await Promise.allSettled(
       entries.map(([email, token]) => {
-        const { html, headers } = buildEmail(siteUrl, items, email, token)
+        const { html, headers } = buildEmail(items, email, token)
         return fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {

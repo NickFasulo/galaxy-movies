@@ -1,3 +1,6 @@
+import { SITE_URL, tmdbImage } from './site'
+import type { MediaType, TitleSummary } from '../types/tmdb'
+
 export function absoluteImageUrl(path: string, siteUrl: string): string {
   return path.startsWith('http') ? path : `${siteUrl}${path.startsWith('/') ? path : `/${path}`}`
 }
@@ -36,8 +39,60 @@ export function buildOgImageUrl({
   return `${siteUrl}/api/og?${new URLSearchParams({
     title,
     subtitle,
-    ...(posterPath ? { poster: `https://image.tmdb.org/t/p/w500${posterPath}` } : {})
+    ...(posterPath ? { poster: tmdbImage(posterPath)! } : {})
   }).toString()}`
+}
+
+export function itemListSchema({ name, description, url, items, numberOfItems }: {
+  name: string
+  description?: string
+  url: string
+  items: Record<string, unknown>[]
+  numberOfItems?: number
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name,
+    description,
+    url,
+    numberOfItems: numberOfItems ?? items.length,
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item
+    }))
+  }
+}
+
+export function titleItem(title: TitleSummary, media?: MediaType): Record<string, unknown> {
+  const isTv = (media ?? title.mediaType) === 'tv'
+  return {
+    '@type': isTv ? 'TVSeries' : 'Movie',
+    name: title.name || title.title,
+    url: `${SITE_URL}/${isTv ? 'tv' : 'movies'}/${title.id}`,
+    image: tmdbImage(title.poster_path),
+    ...(isTv
+      ? { startDate: title.first_air_date || title.release_date || undefined }
+      : { datePublished: title.release_date || undefined })
+  }
+}
+
+export function titleListSchema({ name, description, url, titles, media, limit = 10 }: {
+  name: string
+  description?: string
+  url: string
+  titles: TitleSummary[]
+  media?: MediaType
+  limit?: number
+}) {
+  return itemListSchema({
+    name,
+    description,
+    url,
+    numberOfItems: titles.length,
+    items: titles.slice(0, limit).map((t) => titleItem(t, media))
+  })
 }
 
 export function buildTrailerSchema({

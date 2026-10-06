@@ -1,5 +1,4 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
-import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -10,10 +9,12 @@ import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import TopBackdrop from '../components/TopBackdrop'
-import HreflangTags from '../components/HreflangTags'
+import PageHead from '../components/PageHead'
 import LegalLinks from '../components/LegalLinks'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { fetchDiscoverMovies } from '../utils/tmdb'
+import { setSwrCache } from '../utils/ssr'
+import { SITE_URL } from '../utils/site'
 import type { TitleSummary, TmdbMovie } from '../types/tmdb'
 import { LuArrowUp } from 'react-icons/lu';
 
@@ -39,7 +40,7 @@ const MEDIA_FOR_CATEGORY: Record<string, string> = { tv: 'tv', trending: 'trendi
 export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
-    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=3600')
+    setSwrCache(res, 1800, 3600)
     return { props: { initialMovies: data.results || [], initialTotalPages: data.total_pages || 1 } }
   } catch (error) {
     console.error('Error fetching initial movies for homepage SSR:', error)
@@ -195,26 +196,21 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://galaxymovies.app'
   const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
   const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
-  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title: 'Galaxy Movies',
-    subtitle: 'Discover Popular & New Films'
-  }).toString()}`
 
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Galaxy Movies',
-    url: siteUrl,
+    url: SITE_URL,
     description: pageDescription,
     inLanguage: 'en',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${siteUrl}/?search={search_term_string}`
+        urlTemplate: `${SITE_URL}/?search={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
     }
@@ -224,7 +220,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Galaxy Movies',
-    url: siteUrl,
+    url: SITE_URL,
     description: pageDescription,
     inLanguage: 'en',
     applicationCategory: 'Entertainment',
@@ -239,44 +235,22 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
 
   return (
     <>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name='description' content={pageDescription} />
-        <link rel='canonical' href={siteUrl} />
-        <HreflangTags canonicalUrl={siteUrl} />
+      <PageHead
+        title={pageTitle}
+        titleSuffix={false}
+        description={pageDescription}
+        canonicalUrl={SITE_URL}
+        ogTitle='Galaxy Movies'
+        ogSubtitle='Discover Popular & New Films'
+        structuredData={[websiteSchema, webApplicationSchema]}
+      >
         <link rel='icon' href='/favicon.ico' />
-
-        <meta property='og:type' content='website' />
-        <meta property='og:site_name' content='Galaxy Movies' />
-        <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={pageTitle} />
-        <meta property='og:description' content={pageDescription} />
-        <meta property='og:url' content={siteUrl} />
-        <meta property='og:image' content={ogImage} />
-
-        <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={pageTitle} />
-        <meta name='twitter:description' content={pageDescription} />
-        <meta name='twitter:image' content={ogImage} />
         {/* Impact's verifier requires a `value` attribute, which React's meta typings don't include. */}
         <meta name='impact-site-verification' {...{ value: '1ad17b76-2079-4639-9f17-f65f40948c6b' }} />
         <meta name="google-adsense-account" content="ca-pub-7970999589560353" />
         <meta name="google-site-verification" content="dI9IyHQELzpq29cGmnFHM5lAXtVXJFovinLzCWl2NlM" />
         <meta name="mitgo-verification" content="dd8a3d12-ce6e-4f62-a56f-79c7a28cbb8d" />
-
-        <script
-          type='application/ld+json'
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(websiteSchema).replace(/</g, '\\u003c')
-          }}
-        />
-        <script
-          type='application/ld+json'
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(webApplicationSchema).replace(/</g, '\\u003c')
-          }}
-        />
-      </Head>
+      </PageHead>
 
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 

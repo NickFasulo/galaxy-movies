@@ -3,7 +3,8 @@ import type OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
 import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
-import { isBot, getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/api'
 import { aiModel, aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../utils/openai'
 import { getRedis } from '../../utils/redis'
 
@@ -122,14 +123,8 @@ function sanitizeTasteProfile(tp: Record<string, unknown> | null | undefined): T
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
-  if (isBot(req.headers['user-agent'])) {
-    return res.status(403).json({ error: 'Bot access denied' })
-  }
+  if (!requireMethod(req, res, 'POST')) return
+  if (rejectBot(req, res)) return
 
   const { messages: rawMessages, tasteProfile: rawTasteProfile } = req.body || {}
   const tasteProfile = sanitizeTasteProfile(rawTasteProfile)

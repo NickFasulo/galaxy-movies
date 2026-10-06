@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Box } from '@chakra-ui/react'
+import { tmdbImage } from '../utils/site'
 import type { ProductionCompany } from '../types/tmdb'
 
 const DEFAULT_BG = 'rgba(20, 24, 28, 0.9)'
@@ -43,7 +44,7 @@ function analyzeLogo(src: string | null): Promise<LogoStyle> {
 
 export default function ProductionLogo({ company }: { company: Pick<ProductionCompany, 'name' | 'logo_path'> }) {
   const logoPath = company.logo_path
-  const logoUrl = logoPath ? `https://image.tmdb.org/t/p/w185${logoPath}` : null
+  const logoUrl = tmdbImage(logoPath, 'w185') ?? null
   const [{ width, bg }, setStyle] = useState({ width: 64, bg: DEFAULT_BG })
 
   useEffect(() => {

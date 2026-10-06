@@ -159,6 +159,27 @@ export function normalizeTvTitle(show: TmdbTvShow): NormalizedTvShow {
   }
 }
 
+const hasPoster = <T extends { poster_path?: string | null }>(item: T) => Boolean(item.poster_path)
+
+const pagedMovies = (data: TmdbPaged<TmdbMovie>): TmdbPaged<TmdbMovie> => ({
+  ...data,
+  results: (data.results || []).filter(hasPoster)
+})
+
+const pagedTv = (data: TmdbPaged<TmdbTvShow>): TmdbPaged<NormalizedTvShow> => ({
+  ...data,
+  results: (data.results || []).filter(hasPoster).map(normalizeTvTitle)
+})
+
+function withCatalogFilters(params: TmdbParams, { genreId, providerId, region }: Pick<DiscoverOptions, 'genreId' | 'providerId' | 'region'>): TmdbParams {
+  if (genreId) params.with_genres = genreId
+  if (providerId) {
+    params.with_watch_providers = providerId
+    params.watch_region = region || 'US'
+  }
+  return params
+}
+
 // TMDB's watch-provider catalog is region-scoped: the same real-world service can
 // have a different provider_id per `watch_region` (e.g. Amazon Prime Video is id 9
 // in the US catalog but id 119 in the India catalog). `ids.default` is used when a
@@ -215,34 +236,22 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params.with_original_language = categoryLanguage
   }
 
-  if (genreId) {
-    params.with_genres = genreId
-  }
-  if (providerId) {
-    params.with_watch_providers = providerId
-    params.watch_region = region || 'US'
-  }
+  withCatalogFilters(params, { genreId, providerId, region })
 
-  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params)
-  return {
-    ...data,
-    results: (data.results || []).filter(movie => movie.poster_path)
-  }
+  return pagedMovies(await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params))
 }
 
 export async function fetchListMovies(discoverParams: TmdbParams = {}, page = 1): Promise<TmdbPaged<TmdbMovie>> {
-  const params: TmdbParams = {
+  return pagedMovies(await fetchList('/discover/movie', discoverParams, page))
+}
+
+async function fetchList(path: '/discover/movie' | '/discover/tv', discoverParams: TmdbParams, page: number) {
+  return fetchTmdb<TmdbPaged<TmdbMovie & TmdbTvShow>>(path, {
     page,
     include_adult: 'false',
     'vote_count.gte': 50,
     ...discoverParams
-  }
-
-  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params)
-  return {
-    ...data,
-    results: (data.results || []).filter(movie => movie.poster_path)
-  }
+  })
 }
 
 export async function fetchDiscoverTv({ category, genreId, providerId, region, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
@@ -280,67 +289,32 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
     params.sort_by = 'popularity.desc'
   }
 
-  if (genreId) {
-    params.with_genres = genreId
-  }
-  if (providerId) {
-    params.with_watch_providers = providerId
-    params.watch_region = region || 'US'
-  }
+  withCatalogFilters(params, { genreId, providerId, region })
 
-  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params)
-  return {
-    ...data,
-    results: (data.results || [])
-      .filter(show => show.poster_path)
-      .map(normalizeTvTitle)
-  }
+  return pagedTv(await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params))
 }
 
 export async function fetchListTv(discoverParams: TmdbParams = {}, page = 1): Promise<TmdbPaged<NormalizedTvShow>> {
-  const params: TmdbParams = {
-    page,
-    include_adult: 'false',
-    'vote_count.gte': 50,
-    ...discoverParams
-  }
-
-  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params)
-  return {
-    ...data,
-    results: (data.results || [])
-      .filter(show => show.poster_path)
-      .map(normalizeTvTitle)
-  }
+  return pagedTv(await fetchList('/discover/tv', discoverParams, page))
 }
 
 export async function fetchRecommendedTv(showId: number | string, page = 1): Promise<TmdbPaged<NormalizedTvShow>> {
-  const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>(`/tv/${showId}/recommendations`, { page })
-  return {
-    ...data,
-    results: (data.results || [])
-      .filter(show => show.poster_path)
-      .map(normalizeTvTitle)
-  }
+  return pagedTv(await fetchTmdb<TmdbPaged<TmdbTvShow>>(`/tv/${showId}/recommendations`, { page }))
 }
 
 export async function searchTvByTitle(title: string): Promise<NormalizedTvShow | null> {
   const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/search/tv', { query: title, include_adult: 'false' })
-  const show = (data.results || []).find(s => s.poster_path) || null
+  const show = (data.results || []).find(hasPoster)
   return show ? normalizeTvTitle(show) : null
 }
 
 export async function fetchRecommendedMovies(movieId: number | string, page = 1): Promise<TmdbPaged<TmdbMovie>> {
-  const data = await fetchTmdb<TmdbPaged<TmdbMovie>>(`/movie/${movieId}/recommendations`, { page })
-  return {
-    ...data,
-    results: (data.results || []).filter(movie => movie.poster_path)
-  }
+  return pagedMovies(await fetchTmdb<TmdbPaged<TmdbMovie>>(`/movie/${movieId}/recommendations`, { page }))
 }
 
 export async function searchMovieByTitle(title: string): Promise<TmdbMovie | null> {
   const data = await fetchTmdb<TmdbPaged<TmdbMovie>>('/search/movie', { query: title, include_adult: 'false' })
-  return (data.results || []).find(movie => movie.poster_path) || null
+  return (data.results || []).find(hasPoster) || null
 }
 
 export async function searchKeywordId(name: string): Promise<number | null> {
