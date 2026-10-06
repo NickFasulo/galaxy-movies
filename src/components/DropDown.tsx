@@ -56,7 +56,7 @@ export default function DropDown({ category, changeCategory }: { category: strin
   return (
     <Menu.Root>
       <Menu.Trigger asChild><Button
-          minWidth='8.9rem'
+          w='fit-content'
           bg='#1f252b'
           color='white'
           _hover={{ bg: '#2a3138' }}

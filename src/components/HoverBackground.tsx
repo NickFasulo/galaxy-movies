@@ -61,7 +61,7 @@ export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg:
         left: 0,
         right: 0,
         bottom: 0,
-        bgGradient: 'radial(circle, transparent 20%, #14181c 90%)'
+        bgImage: 'radial-gradient(circle, transparent 20%, #14181c 90%)'
       }}
     />
   )

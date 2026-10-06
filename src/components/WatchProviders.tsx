@@ -159,7 +159,7 @@ export default function WatchProviders({
 
   return (
     <>
-      <Box p={3} bg='blackAlpha.600' borderRadius='1rem' border='1px solid' borderColor='whiteAlpha.200'>
+      <Box p={3} bg='blackAlpha.600' borderRadius='0.5rem' border='1px solid' borderColor='whiteAlpha.200'>
         <Flex align='center' justify='space-between' mb={2} gap={2}>
           <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' flexShrink={0}>
             Where to Watch

@@ -34,7 +34,7 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
               <Flex
                 align='center'
                 bg='rgba(255, 255, 255, 0.1)'
-                px={3.5}
+                px={2.5}
                 py={1.5}
                 borderRadius='full'
                 gap={2.5}

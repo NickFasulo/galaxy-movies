@@ -9,7 +9,7 @@ export default function SurfsharkBanner({ message }: { message: string }) {
       bg='#1f252b'
       border='1px solid'
       borderColor='whiteAlpha.300'
-      borderRadius='0.75rem'
+      borderRadius='0.5rem'
       align={{ base: 'flex-start', md: 'center' }}
       justify='space-between'
       direction={{ base: 'column', md: 'row' }}

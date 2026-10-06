@@ -29,7 +29,7 @@ export default function ServicesPicker() {
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='1rem' p={4}>
+    <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='0.5rem' p={4}>
       <Flex align='center' justify='space-between' wrap='wrap' gap={3}>
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>
           My streaming services

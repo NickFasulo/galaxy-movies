@@ -1,21 +1,21 @@
 import type { GetServerSideProps } from 'next'
-import Image from 'next/image'
-import Head from 'next/head'
-import Link from 'next/link'
 import { useState } from 'react'
-import { Flex, Wrap, WrapItem, Badge, Heading, Text, Box, Icon } from '@chakra-ui/react';
-import VideoModal from '../../components/VideoModal'
-import WatchlistButton from '../../components/WatchlistButton'
+import { Flex, Badge, Heading, Text, Box } from '@chakra-ui/react';
+import DetailPageShell from '../../components/DetailPageShell'
+import DetailPoster from '../../components/DetailPoster'
+import DetailHead from '../../components/DetailHead'
+import DetailErrorView from '../../components/DetailErrorView'
+import DetailMetaItem from '../../components/DetailMetaItem'
+import DetailActions from '../../components/DetailActions'
+import GenreBadges from '../../components/GenreBadges'
+import CompanyLogoLink from '../../components/CompanyLogoLink'
+import VoteScore from '../../components/VoteScore'
+import { DetailCreditLine, DetailCreditLink } from '../../components/DetailCredit'
 import RatingWidget from '../../components/RatingWidget'
-import TopBackdrop from '../../components/TopBackdrop'
-import BackButton from '../../components/BackButton'
-import ProductionLogo from '../../components/ProductionLogo'
 import WatchProviders from '../../components/WatchProviders'
 import SimilarMovies from '../../components/SimilarMovies'
 import GalaxyBotTake from '../../components/GalaxyBotTake'
 import CastSection from '../../components/CastSection'
-import BreadcrumbSchema from '../../components/BreadcrumbSchema'
-import HreflangTags from '../../components/HreflangTags'
 import dateFormatter from '../../utils/dateFormatter'
 import { getFirstPlayableKey } from '../../utils/youtubeCache'
 import { detectRegion } from '../../utils/region'
@@ -26,6 +26,7 @@ import { getOrGenerateSimilarMovies } from '../../utils/similarMovies'
 import { isBot } from '../../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../../utils/takeads'
 import { withTimeout } from '../../utils/withTimeout'
+import { absoluteImageUrl, aggregateRatingSchema, buildOgImageUrl, personSchema } from '../../utils/schema'
 import type { SimilarTitle } from '../../utils/similarMovies'
 import type {
   AggregateCastMember,
@@ -37,7 +38,7 @@ import type {
   WatchProvidersRegion,
   WatchProvidersResponse
 } from '../../types/tmdb'
-import { LuCalendar, LuClock, LuStar } from 'react-icons/lu';
+import { LuCalendar, LuClock } from 'react-icons/lu';
 
 type TvShowPageProps = {
   show: TmdbTvDetails
@@ -174,18 +175,7 @@ export default function TvShow(props: Props) {
 }
 
 function TvShowErrorView({ message }: { message: string }) {
-  return (
-    <>
-      <Head>
-        <title>Show unavailable | Galaxy Movies</title>
-        <meta name='description' content={message} />
-      </Head>
-      <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
-        <Text mt={20}>{message}</Text>
-        <Link href='/'>Return to Galaxy Movies</Link>
-      </Box>
-    </>
-  )
+  return <DetailErrorView title='Show unavailable' message={message} />
 }
 
 function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion, detectedRegion, creators, topCast, ageRating, aiSynopsis, similarShows, providerAffiliateLinks }: TvShowPageProps) {
@@ -218,11 +208,7 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
   const genres = show.genres?.map(g => g.name) || []
   const ogPoster = show.poster_path
   const ogSubtitle = description
-  const ogImage = `${siteUrl}/api/og?${new URLSearchParams({
-    title: show.name,
-    subtitle: ogSubtitle,
-    ...(ogPoster ? { poster: `https://image.tmdb.org/t/p/w500${ogPoster}` } : {})
-  }).toString()}`
+  const ogImage = buildOgImageUrl({ siteUrl, title: show.name, subtitle: ogSubtitle, posterPath: ogPoster })
 
   const seasonsLabel = show.number_of_seasons
     ? `${show.number_of_seasons} season${show.number_of_seasons === 1 ? '' : 's'}`
@@ -235,43 +221,21 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
     name: show.name,
     description,
     inLanguage: show.original_language || 'en',
-    image: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
+    image: absoluteImageUrl(posterUrl, siteUrl),
     startDate: show.first_air_date || undefined,
     endDate: show.status === 'Ended' || show.status === 'Canceled' ? (show.last_air_date || undefined) : undefined,
     genre: genres.length > 0 ? genres : undefined,
     numberOfSeasons: show.number_of_seasons || undefined,
     numberOfEpisodes: show.number_of_episodes || undefined,
-    creator: creators.length > 0 ? creators.map((person) => ({
-      '@type': 'Person',
-      name: person.name,
-      url: `${siteUrl}/person/${person.id}`
-    })) : undefined,
-    actor: topCast.length > 0 ? topCast.slice(0, 5).map(person => ({
-      '@type': 'Person',
-      name: person.name,
-      url: `${siteUrl}/person/${person.id}`
-    })) : undefined,
-    aggregateRating: (show.vote_count ?? 0) > 0 ? {
-      '@type': 'AggregateRating',
-      ratingValue: show.vote_average,
-      ratingCount: show.vote_count,
-      bestRating: 10,
-      worstRating: 0
-    } : undefined,
+    creator: creators.length > 0 ? creators.map((person) => personSchema(person, siteUrl)) : undefined,
+    actor: topCast.length > 0 ? topCast.slice(0, 5).map(person => personSchema(person, siteUrl)) : undefined,
+    aggregateRating: aggregateRatingSchema(show.vote_average, show.vote_count),
     contentRating: ageRating || undefined
   }
 
-  const videoObjectData = videoKey ? {
-    '@context': 'https://schema.org',
-    '@type': 'VideoObject',
-    name: `${show.name} Trailer`,
-    description: `Watch the official trailer for ${show.name}`,
-    inLanguage: 'en',
-    thumbnailUrl: posterUrl.startsWith('http') ? posterUrl : `${siteUrl}${posterUrl.startsWith('/') ? posterUrl : '/' + posterUrl}`,
-    uploadDate: show.first_air_date ? `${show.first_air_date}T00:00:00Z` : undefined,
-    contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
-    embedUrl: `https://www.youtube.com/embed/${videoKey}`
-  } : null
+  const trailer = videoKey
+    ? { title: show.name, uploadDate: show.first_air_date || undefined, thumbnailUrl: absoluteImageUrl(posterUrl, siteUrl), videoKey }
+    : null
 
   const breadcrumbItems = [
     { name: 'Home', url: siteUrl },
@@ -281,130 +245,29 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
 
   return (
     <>
-      <Head>
-        <title>{`${show.name} (TV Series) | Galaxy Movies`}</title>
-        <meta name='description' content={description} />
-        <link rel='canonical' href={canonicalUrl} />
-        <HreflangTags canonicalUrl={canonicalUrl} />
-
-        <meta property='og:type' content='video.tv_show' />
-        <meta property='og:site_name' content='Galaxy Movies' />
-        <meta property='og:locale' content='en_US' />
-        <meta property='og:title' content={`${show.name} (TV Series) | Galaxy Movies`} />
-        <meta property='og:description' content={description} />
-        <meta property='og:url' content={canonicalUrl} />
-        <meta property='og:image' content={ogImage} />
-        <meta property='og:image:width' content='1200' />
-        <meta property='og:image:height' content='630' />
-
-        <meta name='twitter:card' content='summary_large_image' />
-        <meta name='twitter:title' content={`${show.name} (TV Series) | Galaxy Movies`} />
-        <meta name='twitter:description' content={description} />
-        <meta name='twitter:image' content={ogImage} />
-
-        <script
-          type='application/ld+json'
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
-          }}
-        />
-        {videoObjectData && (
-          <script
-            type='application/ld+json'
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(videoObjectData).replace(/</g, '\\u003c')
-            }}
-          />
-        )}
-        <BreadcrumbSchema items={breadcrumbItems} />
-      </Head>
-      <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
-      <TopBackdrop display={{ base: 'block', md: 'none' }} zIndex={0} />
-      <Box
-        position='absolute'
-        top={{ base: 'auto', md: 0 }}
-        bottom={{ base: 0, md: 'auto' }}
-        left={0}
-        right={0}
-        h={{ base: 'min(400px, 56.25vw)', md: '500px' }}
-        zIndex={0}
-        display={{ base: backdropSrc === '/backdrop_fallback.webp' ? 'none' : 'block', md: 'block' }}
-      >
-        <Box
-          position='relative'
-          h='100%'
-          w='100%'
-          css={{
-            '& img': {
-              objectFit: 'cover',
-              objectPosition: { base: 'center bottom', md: 'center 20%' },
-              WebkitMaskImage: { base: 'linear-gradient(to top, black 55%, transparent 100%)', md: 'none' },
-              maskImage: { base: 'linear-gradient(to top, black 55%, transparent 100%)', md: 'none' }
-            }
-          }}
-        >
-          {backdropSrc === '/backdrop_fallback.webp' ? (
-            // eslint-disable-next-line @next/next/no-img-element -- raw srcSet fallback; next/image can't emit this markup
-            <img
-              src='/backdrop_fallback_lg.webp'
-              srcSet='/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'
-              sizes='100vw'
-              alt={show.name || 'Show Backdrop'}
-              // React 18.2 doesn't recognize camelCase fetchPriority; the lowercase attribute passes through as-is.
-              {...{ fetchpriority: 'high' }}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      <DetailHead
+        pageTitle={`${show.name} (TV Series) | Galaxy Movies`}
+        description={description}
+        canonicalUrl={canonicalUrl}
+        ogType='video.tv_show'
+        ogImage={ogImage}
+        structuredData={structuredData}
+        trailer={trailer}
+        breadcrumbItems={breadcrumbItems}
+      />
+      <DetailPageShell
+        backdropSrc={backdropSrc}
+        backdropAlt={show.name || 'Show Backdrop'}
+        onBackdropError={() => setBackdropSrc('/backdrop_fallback.webp')}
+        sidebar={
+          <>
+            <DetailPoster
+              src={posterSrc}
+              alt={show.name || 'Show Poster'}
+              onError={() => setPosterSrc('/poster_fallback.webp')}
             />
-          ) : (
-            <Image
-              src={backdropSrc}
-              alt={show.name || 'Show Backdrop'}
-              fill
-              priority
-              sizes='100vw'
-              onError={() => setBackdropSrc('/backdrop_fallback.webp')}
-            />
-          )}
-        </Box>
-        <Box
-          position='absolute'
-          inset={0}
-          bgGradient={{
-            base: 'linear(to-t, rgba(20,24,28,0.15) 0%, rgba(20,24,28,0.45) 55%, rgba(20,24,28,0.8) 100%)',
-            md: 'linear(to-b, rgba(20,24,28,0.2) 0%, rgba(20,24,28,0.7) 60%, #14181c 100%)'
-          }}
-        />
-        <Box
-          position='absolute'
-          inset={0}
-          bgGradient={{
-            base: 'linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)',
-            md: 'linear(to-r, #14181c 0%, transparent 20%, transparent 80%, #14181c 100%)'
-          }}
-        />
-      </Box>
 
-      <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
-        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>
-
-          <Flex align='center' direction='column' position={{ base: 'relative', md: 'sticky' }} top={{ md: '2rem' }} w='20rem' flexShrink={0} gap='1rem'>
-            <Box position='relative' w={{ base: '20rem', md: '20rem' }} h={{ base: '30rem', md: '30rem' }}>
-              <Image
-                src={posterSrc}
-                alt={show.name || 'Show Poster'}
-                fill
-                priority
-                sizes='(max-width: 768px) 100vw, 320px'
-                onError={() => setPosterSrc('/poster_fallback.webp')}
-                style={{ objectFit: 'cover', borderRadius: '1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)' }}
-                unoptimized={posterSrc === '/poster_fallback.webp'}
-              />
-            </Box>
-
-            <Wrap justify='center' gap={{ base: 4, md: 2 }}>
-              {show.genres?.map((genre) => (
-                <WrapItem key={genre.id}><Badge>{genre.name}</Badge></WrapItem>
-              ))}
-            </Wrap>
+            <GenreBadges genres={show.genres} />
 
             <Box w='20rem' maxH='300px'>
               <WatchProviders
@@ -419,10 +282,9 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
                 releaseYear={Number((show.first_air_date || '').slice(0, 4)) || null}
               />
             </Box>
-
-          </Flex>
-
-          <Flex direction='column' w={{ base: '20rem', md: '40rem' }} maxW='100%' gap='1rem'>
+          </>
+        }
+      >
             <Box>
               <Flex align='center' justify={{ base: 'center', md: 'flex-start' }} gap={4} wrap='wrap'>
                 <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
@@ -438,31 +300,15 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
                 )}
               </Flex>
               {creators.length > 0 && (
-                <Text
-                  fontSize='sm'
-                  color='gray.400'
-                  textShadow='0 0 4px black'
-                  mt={{ base: 4, md: 1 }}
-                  textAlign={{ base: 'center', md: 'left' }}
-                >
+                <DetailCreditLine>
                   Created by{' '}
                   {creators.map((person, index) => (
                     <span key={person.id}>
                       {index > 0 && ', '}
-                      <Link href={`/person/${person.id}`} passHref>
-                        <Text
-                          as='span'
-                          color='white'
-                          fontWeight='semibold'
-                          _hover={{ textDecoration: 'underline' }}
-                          cursor='pointer'
-                        >
-                          {person.name}
-                        </Text>
-                      </Link>
+                      <DetailCreditLink href={`/person/${person.id}`}>{person.name}</DetailCreditLink>
                     </span>
                   ))}
-                </Text>
+                </DetailCreditLine>
               )}
             </Box>
 
@@ -472,20 +318,14 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
               gap={{ base: 4, md: 6 }}
               wrap='wrap'
             >
-              <Flex align='center'>
-                <Icon color='white' asChild><LuCalendar /></Icon>
-                <Text color='white' textShadow='0 0 4px black' ml={1.5}>{show.first_air_date ? dateFormatter(show.first_air_date) : 'N/A'}</Text>
-              </Flex>
+              <DetailMetaItem icon={<LuCalendar />}>
+                {show.first_air_date ? dateFormatter(show.first_air_date) : 'N/A'}
+              </DetailMetaItem>
               {episodeRuntime && (
-                <Flex align='center'>
-                  <Icon color='white' asChild><LuClock /></Icon>
-                  <Text color='white' textShadow='0 0 4px black' ml={1.5}>~{episodeRuntime}m/ep</Text>
-                </Flex>
+                <DetailMetaItem icon={<LuClock />}>~{episodeRuntime}m/ep</DetailMetaItem>
               )}
               {seasonsLabel && (
-                <Flex align='center'>
-                  <Text color='white' textShadow='0 0 4px black'>{seasonsLabel}{show.number_of_episodes ? ` · ${show.number_of_episodes} episodes` : ''}</Text>
-                </Flex>
+                <DetailMetaItem>{seasonsLabel}{show.number_of_episodes ? ` · ${show.number_of_episodes} episodes` : ''}</DetailMetaItem>
               )}
             </Flex>
 
@@ -494,61 +334,25 @@ function TvShowContent({ show, videoKey, watchProviders, watchProvidersByRegion,
             </Text>
 
             <Flex align='center' justify='space-between' gap={{ base: 4, md: 0 }}>
-              <Flex align='center'>
-                <Icon boxSize={5} color='gold' asChild><LuStar /></Icon>
-                <Text
-                  fontSize='lg'
-                  ml={2}
-                  color='white'
-                  textShadow='2px 0 4px black'
-                  textAlign='center'
-                >
-                  {show.vote_average ? Math.round(show.vote_average * 10) / 10 : 'TBD'}
-                </Text>
-              </Flex>
+              <VoteScore voteAverage={show.vote_average} />
               <Flex align='center' justify='flex-end'>
                 <RatingWidget movie={listItem} />
               </Flex>
               <Flex align='center' justify='flex-end'>
                 {network ? (
-                  <Link href={`/network/${network.id}`} passHref>
-                    <Box
-                      as='span'
-                      cursor='pointer'
-                      transition='all 0.2s ease-in-out'
-                      _hover={{ transform: 'scale(1.05)', opacity: 0.9 }}
-                    >
-                      <ProductionLogo company={network} />
-                    </Box>
-                  </Link>
+                  <CompanyLogoLink href={`/network/${network.id}`} company={network} />
                 ) : null}
               </Flex>
             </Flex>
 
             <GalaxyBotTake synopsis={aiSynopsis} />
 
-            <Flex
-              direction={{ base: 'column', md: 'row' }}
-              align={{ base: 'center', md: 'flex-end' }}
-              justify={{ base: 'center', md: 'space-evenly' }}
-              gap='2rem'
-              w='100%'
-              py={{ base: '1rem', md: 0 }}
-              my='1rem'
-            >
-              <VideoModal videoKey={videoKey} />
-              <WatchlistButton movie={listItem} withLabel />
-              <BackButton />
-            </Flex>
+            <DetailActions videoKey={videoKey} item={listItem} />
 
             <CastSection cast={topCast} />
 
             <SimilarMovies movies={similarShows} />
-          </Flex>
-
-        </Flex>
-      </Flex>
-      </Box>
+      </DetailPageShell>
     </>
   );
 }

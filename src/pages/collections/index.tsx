@@ -78,7 +78,7 @@ export default function Collections({ collections }: InferGetStaticPropsType<typ
               <Link key={collection.id} href={`/collections/${collection.id}`}>
                 <Flex
                   direction='column'
-                  borderRadius='0.75rem'
+                  borderRadius='0.5rem'
                   border='1px solid'
                   borderColor='whiteAlpha.300'
                   overflow='hidden'

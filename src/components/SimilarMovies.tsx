@@ -31,7 +31,7 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
             <Link href={`/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`} passHref>
               <Flex
                 bg='rgba(255, 255, 255, 0.1)'
-                borderRadius='0.75rem'
+                borderRadius='0.5rem'
                 p={3}
                 gap={3}
                 w='100%'
@@ -39,7 +39,7 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
                 transition='all 0.2s ease-in-out'
                 _hover={{ bg: 'rgba(255, 255, 255, 0.2)', transform: 'translateY(-2px)' }}
               >
-                <Box position='relative' w='3.25rem' h='4.875rem' flexShrink={0} borderRadius='0.5rem' overflow='hidden' bg='gray.800'>
+                <Box position='relative' w='3.25rem' h='4.875rem' flexShrink={0} borderRadius='0.3rem' overflow='hidden' bg='gray.800'>
                   {movie.posterPath && (
                     <Image
                       src={movie.posterPath}

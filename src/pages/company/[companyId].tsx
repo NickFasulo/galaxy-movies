@@ -176,7 +176,7 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
                 flexShrink={0}
                 bg='white'
                 p={4}
-                borderRadius='xl'
+                borderRadius='sm'
                 display='flex'
                 alignItems='center'
                 justifyContent='center'
@@ -198,7 +198,7 @@ function CompanyContent({ company, movies }: { company: TmdbCompany; movies: Tmd
                 h='120px'
                 flexShrink={0}
                 bg='whiteAlpha.200'
-                borderRadius='xl'
+                borderRadius='0.5rem'
                 align='center'
                 justify='center'
                 textAlign='center'
@@ -284,7 +284,7 @@ function CompanyMovieCard({ movie }: { movie: TmdbMovie }) {
     <Link href={`/movies/${movie.id}`} passHref>
       <Box
         bg='rgba(255, 255, 255, 0.05)'
-        borderRadius='xl'
+        borderRadius='0.5rem'
         overflow='hidden'
         cursor='pointer'
         transition='all 0.2s ease-in-out'

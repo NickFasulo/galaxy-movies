@@ -60,7 +60,7 @@ export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePr
       <Flex
         direction='column'
         p={4}
-        borderRadius='0.75rem'
+        borderRadius='0.5rem'
         border='1px solid'
         borderColor='whiteAlpha.300'
         _hover={{ borderColor: 'whiteAlpha.600' }}

@@ -28,7 +28,7 @@ export default function Header({ isHome = false, isDark = false }) {
                 fontSize='lg'
                 px={3}
                 py={1}
-                borderRadius='8px'
+                borderRadius='0.5rem'
                 transform='skewX(-15deg)'
               >
                 <Box as='span' display='inline-block' transform='skewX(15deg)'>
@@ -39,8 +39,14 @@ export default function Header({ isHome = false, isDark = false }) {
         )}
         <Flex display={{ base: 'none', md: 'flex' }} align='center' gap={5} fontSize='sm' color='whiteAlpha.900'>
           <Menu.Root>
-            <Menu.Trigger color='whiteAlpha.900' _hover={{ textDecoration: 'underline' }}>Explore <LuChevronDown />
-            </Menu.Trigger>
+            <Menu.Trigger asChild><Box
+                as='button'
+                color='whiteAlpha.900'
+                display='inline-flex'
+                alignItems='center'
+                gap={1}
+                _hover={{ textDecoration: 'underline' }}>Explore <LuChevronDown />
+              </Box></Menu.Trigger>
             <Portal><Menu.Positioner><Menu.Content>
                   <Menu.Item {...menuItemProps} value='item-0' asChild><NextLink href='/streaming'>Streaming</NextLink></Menu.Item>
                   <Menu.Item {...menuItemProps} value='item-1' asChild><NextLink href='/tv'>TV Shows</NextLink></Menu.Item>

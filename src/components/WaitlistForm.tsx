@@ -29,7 +29,7 @@ export default function WaitlistForm() {
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='1rem' p={4}>
+    <Box bg='blackAlpha.500' border='1px solid' borderColor='whiteAlpha.200' borderRadius='0.5rem' p={4}>
       <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
         Streaming alerts
       </Text>

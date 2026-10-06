@@ -230,7 +230,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                     onError={() => setProfileSrc('/profile_fallback.webp')}
                     style={{
                       objectFit: 'cover',
-                      borderRadius: '1rem',
+                      borderRadius: '0.5rem',
                       boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)'
                     }}
                     unoptimized={profileSrc.startsWith('/')}
@@ -242,7 +242,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                   maxW='20rem'
                   p={4}
                   bg='blackAlpha.600'
-                  borderRadius='1rem'
+                  borderRadius='0.5rem'
                   border='1px solid'
                   borderColor='whiteAlpha.200'
                 >
@@ -408,7 +408,7 @@ function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean })
     <Link href={movie.mediaType === 'tv' ? `/tv/${movie.id}` : `/movies/${movie.id}`} passHref>
       <Box
         bg='rgba(255, 255, 255, 0.05)'
-        borderRadius='xl'
+        borderRadius='0.5rem'
         overflow='hidden'
         cursor='pointer'
         transition='all 0.2s ease-in-out'

@@ -53,7 +53,7 @@ export default function ProductionLogo({ company }: { company: Pick<ProductionCo
   }, [logoUrl])
 
   return (
-    <Box position='relative' w={`${width}px`} h='36px' bg={bg} borderRadius='lg'>
+    <Box position='relative' w={`${width}px`} h='36px' bg={bg} borderRadius='sm'>
       <Image
         alt={company.name}
         src={logoPath ?? ''}

@@ -114,7 +114,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
                   align='center'
                   justify='center'
                   p={4}
-                  borderRadius='0.75rem'
+                  borderRadius='0.5rem'
                   border='1px solid'
                   borderColor='whiteAlpha.300'
                   _hover={{ borderColor: 'whiteAlpha.600' }}
@@ -137,7 +137,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
                   align='center'
                   justify='center'
                   p={4}
-                  borderRadius='0.75rem'
+                  borderRadius='0.5rem'
                   border='1px solid'
                   borderColor='whiteAlpha.300'
                   _hover={{ borderColor: 'whiteAlpha.600' }}

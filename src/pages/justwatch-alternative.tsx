@@ -140,7 +140,7 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Galaxy Movies vs JustWatch</Heading>
-          <Table.ScrollArea border='1px solid' borderColor='whiteAlpha.300' borderRadius='0.75rem'>
+          <Table.ScrollArea border='1px solid' borderColor='whiteAlpha.300' borderRadius='0.5rem'>
             <Table.Root variant='line' size='sm'>
               <Table.Header>
                 <Table.Row>

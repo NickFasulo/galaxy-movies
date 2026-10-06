@@ -16,13 +16,13 @@ export default function TopBackdrop(props: BoxProps) {
         content: '""',
         position: 'absolute',
         inset: 0,
-        bgGradient: 'linear(to-b, transparent 0%, rgba(20,24,28,0.55) 55%, #14181c 100%)'
+        bgImage: 'linear-gradient(to bottom, transparent 0%, rgba(20,24,28,0.55) 55%, #14181c 100%)'
       }}
       _after={{
         content: '""',
         position: 'absolute',
         inset: 0,
-        bgGradient: 'radial(ellipse 120% 100% at 50% 0%, transparent 40%, rgba(20,24,28,0.9) 100%)'
+        bgImage: 'radial-gradient(ellipse 120% 100% at 50% 0%, transparent 40%, rgba(20,24,28,0.9) 100%)'
       }}
       {...props}
     />

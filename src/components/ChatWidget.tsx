@@ -298,7 +298,7 @@ export default function ChatWidget() {
           animationDuration='moderate'>
           <Box
             bg="#1f252b"
-            borderRadius="xl"
+            borderRadius="lg"
             boxShadow="2xl"
             width={{ base: '90vw', md: '400px' }}
             height={{ base: '60vh', md: '500px' }}

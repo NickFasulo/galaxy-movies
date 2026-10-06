@@ -21,8 +21,8 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
         position='relative'
         zIndex={1}
         w={{ base: '11rem', md: '13rem' }}
-        boxShadow='dark-lg'
-        borderRadius='1rem'
+        boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5)'
+        borderRadius='0.5rem'
         overflow='hidden'
       >
         <Link href={isTv ? `/tv/${movie.id}` : `/movies/${movie.id}`}>
@@ -32,8 +32,8 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
               position='absolute'
               inset={0}
               css={{
-                '--start-color': 'gray.700',
-                '--end-color': 'gray.900'
+                '--start-color': 'var(--colors-gray-700)',
+                '--end-color': 'var(--colors-gray-900)'
               }}>
               {posterUrl ? (
                 <Image

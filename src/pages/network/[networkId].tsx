@@ -175,7 +175,7 @@ function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: Norma
                 flexShrink={0}
                 bg='white'
                 p={4}
-                borderRadius='xl'
+                borderRadius='0.5rem'
                 display='flex'
                 alignItems='center'
                 justifyContent='center'
@@ -197,7 +197,7 @@ function NetworkContent({ network, shows }: { network: TmdbNetwork; shows: Norma
                 h='120px'
                 flexShrink={0}
                 bg='whiteAlpha.200'
-                borderRadius='xl'
+                borderRadius='0.5rem'
                 align='center'
                 justify='center'
                 textAlign='center'

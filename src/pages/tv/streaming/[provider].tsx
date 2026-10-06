@@ -145,7 +145,7 @@ export default function TvStreamingPage({ provider, title, shows, dataError, reg
                   justify='center'
                   minH='4rem'
                   p={4}
-                  borderRadius='0.75rem'
+                  borderRadius='0.5rem'
                   border='1px solid'
                   borderColor='whiteAlpha.300'
                   _hover={{ borderColor: 'whiteAlpha.600' }}
