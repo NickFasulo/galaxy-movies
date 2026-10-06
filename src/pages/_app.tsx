@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { Hydrate, QueryClient, QueryClientProvider, type DehydratedState } from 'react-query'
+import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query'
 import { ChakraProvider, Flex, Box } from '@chakra-ui/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
@@ -23,7 +23,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Hydrate state={pageProps.dehydratedState}>
+      <HydrationBoundary state={pageProps.dehydratedState}>
         <ChakraProvider>
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
@@ -49,7 +49,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
             />
           )}
         </ChakraProvider>
-      </Hydrate>
+      </HydrationBoundary>
     </QueryClientProvider>
   )
 }
