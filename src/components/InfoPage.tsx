@@ -50,3 +50,7 @@ export default function InfoPage({ title, description, children }: { title: stri
 export function InfoParagraph({ children }: { children?: ReactNode }) {
   return <Text mb={4}>{children}</Text>
 }
+
+export function InfoHeading({ children }: { children?: ReactNode }) {
+  return <Heading as='h2' size='md' mt={8} mb={3}>{children}</Heading>
+}
