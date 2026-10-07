@@ -75,7 +75,7 @@ export default function Privacy() {
         Some outbound &quot;where to watch&quot; links route through affiliate redirect services —
         including the Takeads affiliate network and Amazon Associates — which record the click for
         commission attribution. These services may set cookies or use similar technologies to track
-        whether a click led to a qualifying purchase. See our <Link href='/disclosure'>affiliate
+        whether a click led to a qualifying purchase. See our <Link href='/disclosure' style={{ textDecoration: 'underline' }}>affiliate
         disclosure</Link> for details.
       </InfoParagraph>
 
@@ -115,7 +115,7 @@ export default function Privacy() {
         Because most of your data never leaves your device, the information we hold is generally
         limited to your subscriber email address, synced alert preferences, and contact form
         messages — you can ask us to access or delete these at any time via
-        the <Link href='/contact'>contact page</Link>. Every email we send includes an unsubscribe
+        the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>. Every email we send includes an unsubscribe
         link that removes your subscription and synced alert data.
       </InfoParagraph>
 
@@ -144,7 +144,7 @@ export default function Privacy() {
       <InfoHeading>11. Contact Us</InfoHeading>
       <InfoParagraph>
         If you have questions about this Privacy Policy or want to exercise your data rights, reach
-        us through the <Link href='/contact'>contact page</Link>.
+        us through the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>.
       </InfoParagraph>
 
       <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>

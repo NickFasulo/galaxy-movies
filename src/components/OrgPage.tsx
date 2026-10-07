@@ -234,7 +234,7 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
                     display='inline-flex'
                     alignItems='center'
                     gap={1}
-                    _hover={{ textDecoration: 'underline' }}
+                    textDecoration='underline'
                     target='_blank'
                     rel='noopener noreferrer'>
                     Official Website <Icon mx='2px' asChild><LuExternalLink /></Icon>

@@ -88,8 +88,8 @@ export default function FreeStreaming({ movies, shows, dataError }: Props) {
 
         <Text maxW='42rem' mt={10} ml={{ base: '1rem', md: '5rem' }} color='gray.400' fontStyle='italic'>
           Rather rent or buy instead? Compare prices on any movie page, or browse by{' '}
-          <Link href='/streaming'>streaming service</Link> and{' '}
-          <Link href='/new-on-streaming'>new releases</Link>.
+          <Link href='/streaming' style={{ textDecoration: 'underline' }}>streaming service</Link> and{' '}
+          <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases</Link>.
         </Text>
 
         <Text textAlign='center' mt={8} color='gray.400'>

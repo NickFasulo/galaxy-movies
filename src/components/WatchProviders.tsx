@@ -17,6 +17,7 @@ function VpnLink() {
         rel='sponsored nofollow noopener'
         fontSize='xs'
         color='gray.400'
+        textDecoration='underline'
         _hover={{ color: 'white' }}
         target='_blank'
       >
@@ -190,6 +191,7 @@ export default function WatchProviders({
               href={streamLink}
               fontSize='xs'
               color='gray.400'
+              textDecoration='underline'
               _hover={{ color: 'white' }}
               flexShrink={0}
               target='_blank'

@@ -57,18 +57,18 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
         {region === 'IN' && (
           <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
             Looking for streaming options in India specifically? See our{' '}
-            <Link href='/streaming-in-india'>streaming in India guide</Link>.
+            <Link href='/streaming-in-india' style={{ textDecoration: 'underline' }}>streaming in India guide</Link>.
           </Text>
         )}
 
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
           Want to see what&apos;s new? Check out{' '}
-          <Link href='/new-on-streaming'>new releases streaming now</Link>.
+          <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link>.
         </Text>
 
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
           Looking for TV shows?{' '}
-          <Link href='/tv'>Browse shows by streaming service and genre</Link>.
+          <Link href='/tv' style={{ textDecoration: 'underline' }}>Browse shows by streaming service and genre</Link>.
         </Text>
 
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in the United States</Heading>

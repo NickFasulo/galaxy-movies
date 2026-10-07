@@ -7,7 +7,7 @@ export default function Terms() {
   return (
     <InfoPage title='Terms of Use' description='Read the Galaxy Movies terms of use.'>
       <InfoParagraph>Galaxy Movies is provided for personal, informational use. Movie descriptions, ratings, release dates, and availability are provided as-is.</InfoParagraph>
-      <InfoParagraph>You are responsible for checking the terms, pricing, availability, and age requirements of any third-party service before making a purchase or subscription. Some outbound links are affiliate links that may earn us a commission — see the <Link href='/disclosure'>affiliate disclosure</Link>.</InfoParagraph>
+      <InfoParagraph>You are responsible for checking the terms, pricing, availability, and age requirements of any third-party service before making a purchase or subscription. Some outbound links are affiliate links that may earn us a commission — see the <Link href='/disclosure' style={{ textDecoration: 'underline' }}>affiliate disclosure</Link>.</InfoParagraph>
       <InfoParagraph>Do not use the site to scrape, disrupt, or overload the service or its data providers.</InfoParagraph>
       <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
         <BackButton />

@@ -11,7 +11,7 @@ export default function DetailErrorView({ title, message }: { title: string; mes
       </Head>
       <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
         <Text mt={20}>{message}</Text>
-        <Link href='/'>Return to Galaxy Movies</Link>
+        <Link href='/' style={{ textDecoration: 'underline' }}>Return to Galaxy Movies</Link>
       </Box>
     </>
   );

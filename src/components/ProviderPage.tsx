@@ -129,7 +129,7 @@ export default function ProviderPage({ media, provider, title, titles, dataError
       <PageShell title={pageTitle} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
           Looking for {media === 'tv' ? 'movies' : 'shows'} instead? Browse{' '}
-          <Link href={`${otherBasePath}/${provider}`}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
+          <Link href={`${otherBasePath}/${provider}`} style={{ textDecoration: 'underline' }}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
         </Text>
         {media === 'movie' && (
           <VpnBanner

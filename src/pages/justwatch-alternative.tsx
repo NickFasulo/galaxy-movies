@@ -143,11 +143,11 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
             it to a pick, with an instant AI synopsis so you can sanity-check it before committing.
           </Text>
           <Text maxW='60rem' mt={4} color='gray.400' fontStyle='italic'>
-            Browse by <Link href='/streaming'>streaming service</Link>, <Link href='/genre/action'>genre</Link>,{' '}
-            <Link href='/lists'>curated list</Link>, or <Link href='/collections'>franchise collection</Link> — check{' '}
-            <Link href='/new-on-streaming'>what is new and coming soon</Link>, see what is{' '}
-            <Link href='/free'>streaming free with ads</Link>, or open the{' '}
-            <Link href='/streaming-in-india'>India streaming guide</Link> for Bollywood, Tamil and Telugu coverage.
+            Browse by <Link href='/streaming' style={{ textDecoration: 'underline' }}>streaming service</Link>, <Link href='/genre/action' style={{ textDecoration: 'underline' }}>genre</Link>,{' '}
+            <Link href='/lists' style={{ textDecoration: 'underline' }}>curated list</Link>, or <Link href='/collections' style={{ textDecoration: 'underline' }}>franchise collection</Link> — check{' '}
+            <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>what is new and coming soon</Link>, see what is{' '}
+            <Link href='/free' style={{ textDecoration: 'underline' }}>streaming free with ads</Link>, or open the{' '}
+            <Link href='/streaming-in-india' style={{ textDecoration: 'underline' }}>India streaming guide</Link> for Bollywood, Tamil and Telugu coverage.
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Frequently asked questions</Heading>

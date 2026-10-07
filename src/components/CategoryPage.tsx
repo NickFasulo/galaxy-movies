@@ -75,22 +75,22 @@ export function categoryServerSideProps(media: MediaType) {
 const FOOTER_LINKS: Record<MediaType, ReactNode> = {
   movie: (
     <>
-      Browse <Link href='/browse/popular'>popular</Link>,{' '}
-      <Link href='/browse/now-playing'>now playing</Link>, or{' '}
-      <Link href='/browse/upcoming'>upcoming</Link> movies, or explore{' '}
-      <Link href='/browse/bollywood'>Bollywood</Link>,{' '}
-      <Link href='/browse/tamil'>Tamil</Link>, and{' '}
-      <Link href='/browse/telugu'>Telugu</Link> cinema, or check out{' '}
-      <Link href='/tv'>TV shows</Link>.
+      Browse <Link href='/browse/popular' style={{ textDecoration: 'underline' }}>popular</Link>,{' '}
+      <Link href='/browse/now-playing' style={{ textDecoration: 'underline' }}>now playing</Link>, or{' '}
+      <Link href='/browse/upcoming' style={{ textDecoration: 'underline' }}>upcoming</Link> movies, or explore{' '}
+      <Link href='/browse/bollywood' style={{ textDecoration: 'underline' }}>Bollywood</Link>,{' '}
+      <Link href='/browse/tamil' style={{ textDecoration: 'underline' }}>Tamil</Link>, and{' '}
+      <Link href='/browse/telugu' style={{ textDecoration: 'underline' }}>Telugu</Link> cinema, or check out{' '}
+      <Link href='/tv' style={{ textDecoration: 'underline' }}>TV shows</Link>.
     </>
   ),
   tv: (
     <>
-      Browse <Link href='/tv/browse/popular'>popular</Link>,{' '}
-      <Link href='/tv/browse/airing-today'>airing today</Link>,{' '}
-      <Link href='/tv/browse/on-the-air'>on the air</Link>, or{' '}
-      <Link href='/tv/browse/top-rated'>top rated</Link> shows, or explore{' '}
-      <Link href='/tv'>all TV shows</Link>.
+      Browse <Link href='/tv/browse/popular' style={{ textDecoration: 'underline' }}>popular</Link>,{' '}
+      <Link href='/tv/browse/airing-today' style={{ textDecoration: 'underline' }}>airing today</Link>,{' '}
+      <Link href='/tv/browse/on-the-air' style={{ textDecoration: 'underline' }}>on the air</Link>, or{' '}
+      <Link href='/tv/browse/top-rated' style={{ textDecoration: 'underline' }}>top rated</Link> shows, or explore{' '}
+      <Link href='/tv' style={{ textDecoration: 'underline' }}>all TV shows</Link>.
     </>
   )
 }

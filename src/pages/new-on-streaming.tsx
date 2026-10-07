@@ -149,7 +149,7 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
             sections.map((section) => (
               <Box key={section.key} mt={10}>
                 <Heading as='h2' size='md' mb={4} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
-                  <Link href={`/streaming/${section.key}`}>{section.label}</Link>
+                  <Link href={`/streaming/${section.key}`} style={{ textDecoration: 'underline' }}>{section.label}</Link>
                 </Heading>
                 <MovieGrid movies={section.movies} />
               </Box>
@@ -165,7 +165,7 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
                 {Object.entries(changes).map(([key, change]) => (
                   <Box key={key} mb={8}>
                     <Heading as='h3' size='sm' mb={3}>
-                      <Link href={`/streaming/${key}`}>{change.source}</Link>
+                      <Link href={`/streaming/${key}`} style={{ textDecoration: 'underline' }}>{change.source}</Link>
                     </Heading>
                     <ChangeList label='Coming soon' items={change.coming} showDate />
                     <ChangeList label='Just added' items={change.added} />

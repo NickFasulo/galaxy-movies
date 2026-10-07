@@ -166,9 +166,9 @@ export default function ProviderGenrePage({
       <PageShell title={target.title} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
           Browse all{' '}
-          <Link href={`${basePath}/${provider}`}>{target.providerLabel} {plural}</Link>
+          <Link href={`${basePath}/${provider}`} style={{ textDecoration: 'underline' }}>{target.providerLabel} {plural}</Link>
           {' '}or all{' '}
-          <Link href={`${genreBasePath}/${genre}`}>{target.genreLabel.toLowerCase()} {plural}</Link>.
+          <Link href={`${genreBasePath}/${genre}`} style={{ textDecoration: 'underline' }}>{target.genreLabel.toLowerCase()} {plural}</Link>.
         </Text>
 
         {dataError ? (
