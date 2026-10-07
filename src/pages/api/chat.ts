@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type OpenAI from 'openai'
 import { createHash } from 'crypto'
 import { LRUCache } from 'lru-cache'
-import { extractQuotedMovieMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
+import { extractTitleMentions, resolveMovieMentions, getRecentReleases, formatMovieForChat, type ResolvedMention } from '../../utils/movieSearch'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
 import { requireMethod, rejectBot } from '../../utils/api'
 import { aiModel, aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../utils/openai'
@@ -291,7 +291,7 @@ ${JSON.stringify(referenceData)}`
     let links: ResolvedMention[] = []
     if (fullResponse.trim()) {
       try {
-        const mentions = extractQuotedMovieMentions(fullResponse)
+        const mentions = extractTitleMentions(fullResponse)
         if (mentions.length > 0) {
           links = await resolveMovieMentions(mentions)
         }

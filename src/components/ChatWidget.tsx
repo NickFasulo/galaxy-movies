@@ -33,7 +33,8 @@ function renderMessageContent(content: string, links: ResolvedMention[] | undefi
     return content
   }
 
-  const pattern = new RegExp(`(${links.map((link) => escapeRegExp(link.match)).join('|')})`, 'g')
+  const escaped = links.map((link) => escapeRegExp(link.match)).sort((a, b) => b.length - a.length)
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'g')
   const parts = content.split(pattern)
 
   return parts.map((part, index) => {
@@ -163,6 +164,34 @@ export default function ChatWidget() {
       const decoder = new TextDecoder()
       const aiMessage: ChatMessage = { role: 'assistant', content: '' }
       const assistantIndex = messages.length + 1
+      let sseBuffer = ''
+
+      const handleSseData = (data: string) => {
+        if (data === '[DONE]') {
+          setIsStreaming(false)
+          return
+        }
+        if (data === '[ERROR]') {
+          throw new Error('Stream error occurred')
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.content) {
+            aiMessage.content += parsed.content
+            setMessages(prev => {
+              const newMessages = [...prev]
+              newMessages[newMessages.length - 1] = aiMessage
+              return newMessages
+            })
+          }
+          if (parsed.links && parsed.links.length > 0) {
+            setMessageLinks(prev => ({ ...prev, [assistantIndex]: parsed.links }))
+          }
+        } catch (e) {
+          console.error('Error parsing stream data:', e)
+        }
+      }
 
       setMessages(prev => [...prev, aiMessage])
 
@@ -170,38 +199,22 @@ export default function ChatWidget() {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        // A chunk can split an SSE line anywhere; carry the partial tail so
+        // the one-shot links event isn't dropped on a boundary.
+        sseBuffer += decoder.decode(value, { stream: true })
+        const lines = sseBuffer.split('\n')
+        sseBuffer = lines.pop() || ''
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') {
-              setIsStreaming(false)
-              break
-            }
-            if (data === '[ERROR]') {
-              throw new Error('Stream error occurred')
-            }
-
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.content) {
-                aiMessage.content += parsed.content
-                setMessages(prev => {
-                  const newMessages = [...prev]
-                  newMessages[newMessages.length - 1] = aiMessage
-                  return newMessages
-                })
-              }
-              if (parsed.links && parsed.links.length > 0) {
-                setMessageLinks(prev => ({ ...prev, [assistantIndex]: parsed.links }))
-              }
-            } catch (e) {
-              console.error('Error parsing stream data:', e)
-            }
+            handleSseData(line.slice(6))
           }
         }
+      }
+
+      const tail = sseBuffer.trim()
+      if (tail.startsWith('data: ')) {
+        handleSseData(tail.slice(6))
       }
 
       if (!sessionId && messageCountRef.current >= 2) {
