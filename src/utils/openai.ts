@@ -60,7 +60,18 @@ interface AiUsageMeta {
 }
 
 // Feeds the chatAnalytics cost estimate with real tokens instead of the
-// fixed per-message estimate.
+// fixed per-message estimate. Every HINCRBY is a billed Upstash command, so
+// deltas accumulate in memory and flush in one batch — stats lag by up to
+// USAGE_FLUSH_MS and an instance dying loses its unflushed tail.
+const pendingUsage = new Map<string, number>()
+let lastUsageFlush = 0
+const USAGE_FLUSH_MS = 30 * 1000
+const USAGE_FLUSH_FIELDS = 50
+
+function bumpUsage(field: string, delta: number): void {
+  pendingUsage.set(field, (pendingUsage.get(field) || 0) + delta)
+}
+
 export function recordAiUsage(task: AiTask, usage: AiUsage | null | undefined, meta: AiUsageMeta = {}): void {
   const kv = getRedis()
   if (!kv) return
@@ -68,17 +79,21 @@ export function recordAiUsage(task: AiTask, usage: AiUsage | null | undefined, m
   const promptTokens = usage?.prompt_tokens || 0
   const cached = usage?.prompt_tokens_details?.cached_tokens || 0
   const cacheWrite = usage?.prompt_tokens_details?.cache_write_tokens || 0
-  const ops = [
-    kv.hincrby('ai_usage', `${field}.input`, promptTokens),
-    kv.hincrby('ai_usage', `${field}.output`, usage?.completion_tokens || 0),
-    kv.hincrby('ai_usage', `${field}.reasoning`, usage?.completion_tokens_details?.reasoning_tokens || 0),
-    kv.hincrby('ai_usage', `${field}.cached`, cached),
-    kv.hincrby('ai_usage', `${field}.cache_write`, cacheWrite),
-    kv.hincrby('ai_usage', `${field}.uncached`, promptTokens - cached - cacheWrite),
-    kv.hincrby('ai_usage', `${field}.requests`, 1)
-  ]
-  if (meta.latencyMs != null) ops.push(kv.hincrby('ai_usage', `${field}.latency_ms`, Math.round(meta.latencyMs)))
-  if (meta.ttftMs != null) ops.push(kv.hincrby('ai_usage', `${field}.ttft_ms`, Math.round(meta.ttftMs)))
+  bumpUsage(`${field}.input`, promptTokens)
+  bumpUsage(`${field}.output`, usage?.completion_tokens || 0)
+  bumpUsage(`${field}.reasoning`, usage?.completion_tokens_details?.reasoning_tokens || 0)
+  bumpUsage(`${field}.cached`, cached)
+  bumpUsage(`${field}.cache_write`, cacheWrite)
+  bumpUsage(`${field}.uncached`, promptTokens - cached - cacheWrite)
+  bumpUsage(`${field}.requests`, 1)
+  if (meta.latencyMs != null) bumpUsage(`${field}.latency_ms`, Math.round(meta.latencyMs))
+  if (meta.ttftMs != null) bumpUsage(`${field}.ttft_ms`, Math.round(meta.ttftMs))
+
+  const now = Date.now()
+  if (pendingUsage.size < USAGE_FLUSH_FIELDS && now - lastUsageFlush < USAGE_FLUSH_MS) return
+  lastUsageFlush = now
+  const ops = [...pendingUsage.entries()].map(([f, delta]) => kv.hincrby('ai_usage', f, delta))
+  pendingUsage.clear()
   Promise.all(ops).catch((err) => console.error('Redis AI usage recording error:', err))
 }
 
@@ -110,17 +125,29 @@ export function markAiUnavailable(): void {
 }
 
 // Key present + not tripped. Redis read errors fail open (assume available).
+// "Available" results are memoized for 60s per instance — this ran once per
+// generation attempt and the flag exists only to cap spend, which the global
+// rate budgets already bound within the same window.
+let availableCheckedUntil = 0
+
 export async function isAiAvailable(): Promise<boolean> {
   if (!process.env.OPENAI_API_KEY) return false
-  if (Date.now() < unavailableUntil) return false
+  const now = Date.now()
+  if (now < unavailableUntil) return false
+  if (now < availableCheckedUntil) return true
   const kv = getRedis()
-  if (!kv) return true
+  if (!kv) {
+    availableCheckedUntil = now + 60 * 1000
+    return true
+  }
   try {
     const flagged = await kv.get(UNAVAILABLE_KEY)
-    if (flagged) unavailableUntil = Date.now() + 60 * 1000
+    if (flagged) unavailableUntil = now + 60 * 1000
+    else availableCheckedUntil = now + 60 * 1000
     return !flagged
   } catch (err) {
     console.error('Redis error reading AI availability:', err)
+    availableCheckedUntil = now + 60 * 1000
     return true
   }
 }

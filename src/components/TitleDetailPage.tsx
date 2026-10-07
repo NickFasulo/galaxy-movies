@@ -126,8 +126,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
 
       // Bots still get already-cached content but never trigger generation;
-      // their renders aren't CDN-cached, so an AI-less page can't be served to
-      // humans/Googlebot.
+      // AI-less bot renders stay uncached so they can't be served to
+      // humans/Googlebot (see the Cache-Control branch below).
       const skipAi = isBot(context.req.headers['user-agent'])
       const displayTitle = media === 'tv' ? title.name : title.title
       const genres = title.genres?.map((g) => g.name) || []
@@ -158,8 +158,16 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         getProviderAffiliateLinks(providerNames)
       ])
 
+      // Bot renders skip AI generation, so a page whose generated slots came
+      // back empty differs from the human version — keep those out of the
+      // shared CDN cache. When both slots are already filled the bot render is
+      // identical to a human's, and caching it lets the edge absorb repeat
+      // scraper crawls instead of paying SSR + Redis + TMDB for every hit.
+      const aiContentComplete =
+        (title.overview ? aiSynopsis !== null : true) &&
+        (recommendationCandidates.length > 0 ? similarTitles.length > 0 : true)
       if (context.res) {
-        if (skipAi) context.res.setHeader('Cache-Control', 'private, no-store')
+        if (skipAi && !aiContentComplete) context.res.setHeader('Cache-Control', 'private, no-store')
         else setSwrCache(context.res)
       }
 

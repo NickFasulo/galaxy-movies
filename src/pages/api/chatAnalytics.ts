@@ -50,12 +50,11 @@ async function trackChatSession(sessionData: Record<string, unknown>): Promise<s
 
   if (kv) {
     try {
-      await kv.hset(`chat_session:${sessionId}`, analyticsData)
-      await kv.expire(`chat_session:${sessionId}`, 60 * 60 * 24 * 30)
-      
+      await kv.set(`chat_session:${sessionId}`, analyticsData, { ex: 60 * 60 * 24 * 30 })
+
       await kv.incr('analytics:total_sessions')
       await kv.incrby('analytics:total_messages', analyticsData.messageCount)
-      
+
       return sessionId
     } catch (err) {
       console.error('Redis analytics error:', err)
@@ -82,14 +81,13 @@ async function recordFeedback(feedbackData: Record<string, unknown>): Promise<st
 
   if (kv) {
     try {
-      await kv.hset(`chat_feedback:${feedbackId}`, feedback)
-      await kv.expire(`chat_feedback:${feedbackId}`, 60 * 60 * 24 * 90)
-      
+      await kv.set(`chat_feedback:${feedbackId}`, feedback, { ex: 60 * 60 * 24 * 90 })
+
       if (feedback.rating) {
         await kv.incrby('analytics:total_rating', feedback.rating)
         await kv.incr('analytics:rating_count')
       }
-      
+
       return feedbackId
     } catch (err) {
       console.error('Redis feedback error:', err)
@@ -109,11 +107,10 @@ async function getUsageStats(timeframe = '24h') {
 
   try {
     const now = Date.now()
-    const totalSessions = (await kv.get<number>('analytics:total_sessions')) || 0
-    const totalMessages = (await kv.get<number>('analytics:total_messages')) || 0
-    const avgRating = (await kv.get<number>('analytics:total_rating')) && (await kv.get<number>('analytics:rating_count'))
-      ? (((await kv.get<number>('analytics:total_rating')) ?? 0) / ((await kv.get<number>('analytics:rating_count')) ?? 1)).toFixed(1)
-      : null
+    const [totalSessions, totalMessages, totalRating, ratingCount] = await kv.mget<[
+      number | null, number | null, number | null, number | null
+    ]>('analytics:total_sessions', 'analytics:total_messages', 'analytics:total_rating', 'analytics:rating_count')
+    const avgRating = totalRating && ratingCount ? (totalRating / ratingCount).toFixed(1) : null
 
     return {
       totalSessions,

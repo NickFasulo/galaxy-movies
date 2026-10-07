@@ -99,6 +99,9 @@ function checkMemoryRateLimit(key: string, { maxRequests, windowSeconds }: RateL
 
 // Redis errors degrade to a per-instance limiter instead of failing open, so a
 // Redis outage can't be used to run up OpenAI/Watchmode spend.
+// Upstash bills every pipeline member as a command, so the hot path is a single
+// INCRBY: a fresh key (count === cost) needs its window set, and a blocked
+// client double-checks TTL so a key that lost its expiry can't 429 forever.
 export async function checkDistributedRateLimit(
   clientId: string,
   { keyPrefix, maxRequests, windowSeconds, cost = 1 }: RateLimitOptions & { keyPrefix: string }
@@ -108,8 +111,12 @@ export async function checkDistributedRateLimit(
 
   if (kv) {
     try {
-      const [count, ttl] = await kv.pipeline().incrby(key, cost).ttl(key).exec<[number, number]>()
-      if (ttl < 0) await kv.expire(key, windowSeconds)
+      const count = await kv.incrby(key, cost)
+      if (count <= cost) {
+        await kv.expire(key, windowSeconds)
+      } else if (count > maxRequests && (await kv.ttl(key)) < 0) {
+        await kv.expire(key, windowSeconds)
+      }
       return count <= maxRequests
     } catch (err) {
       console.error('Redis rate limit error, using in-memory fallback:', err)
