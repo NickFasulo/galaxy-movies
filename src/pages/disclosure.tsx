@@ -12,7 +12,7 @@ export default function Disclosure() {
         Some outbound links on Galaxy Movies are affiliate links — including
         &quot;where to watch&quot; links to streaming, rental, and purchase
         providers (monetized through the Takeads affiliate network) and links
-        to VPN services such as Surfshark. If you follow one of those links
+        to VPN services such as NordVPN. If you follow one of those links
         and complete a qualifying purchase or subscription, we may earn a
         commission at no additional cost to you. When a link has no affiliate
         offer, it leads directly to the provider.

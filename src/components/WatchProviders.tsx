@@ -1,26 +1,29 @@
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
+import { Box, Flex, Text, Link, NativeSelect, Image as ChakraImage } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
 import { sameStore, type PriceOffer } from '../utils/prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../hooks/useUserData'
-import { SURFSHARK_AFFILIATE_LINK, SURFSHARK_LINK_TEXT } from '../utils/surfsharkAffiliate'
+import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../utils/vpnAffiliate'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
-function SurfsharkLink() {
+function VpnLink() {
   return (
-    <Link
-      href={SURFSHARK_AFFILIATE_LINK}
-      rel='sponsored nofollow noopener'
-      fontSize='xs'
-      color='gray.400'
-      _hover={{ color: 'white' }}
-      target='_blank'
-    >
-      {SURFSHARK_LINK_TEXT}↗
-          </Link>
+    <Box position='relative'>
+      <Link
+        href={VPN_AFFILIATE_LINK}
+        rel='sponsored nofollow noopener'
+        fontSize='xs'
+        color='gray.400'
+        _hover={{ color: 'white' }}
+        target='_blank'
+      >
+        {VPN_LINK_TEXT} ↗
+      </Link>
+      <ChakraImage src={VPN_AFFILIATE_PIXEL} alt='' aria-hidden w='1px' h='1px' position='absolute' />
+    </Box>
   );
 }
 
@@ -253,14 +256,14 @@ export default function WatchProviders({
                 Prices via Watchmode · Apple
               </Text>
             )}
-            <SurfsharkLink />
+            <VpnLink />
           </>
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <SurfsharkLink />
+            <VpnLink />
           </Box>
         )}
         {criticScore != null && (

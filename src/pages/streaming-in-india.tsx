@@ -4,7 +4,7 @@ import MovieGrid from '../components/MovieGrid'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import LinkTile from '../components/LinkTile'
-import SurfsharkBanner from '../components/SurfsharkBanner'
+import VpnBanner from '../components/VpnBanner'
 import { fetchDiscoverMovies } from '../utils/tmdb'
 import { setSwrCache } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
@@ -72,7 +72,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
           ))}
         </SimpleGrid>
 
-        <SurfsharkBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
+        <VpnBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
 
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>

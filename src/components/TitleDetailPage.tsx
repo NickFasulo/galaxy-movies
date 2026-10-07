@@ -122,8 +122,12 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== title.id)
         .map((candidate): TmdbMovie | NormalizedTvShow => (media === 'tv' ? normalizeTvTitle(candidate as TmdbTvShow) : candidate as TmdbMovie))
 
-      const providerNames = (['flatrate', 'rent', 'buy'] as const)
-        .flatMap((key) => (userProviders?.[key] || []).map((p) => p.provider_name))
+      // All regions + buckets: the client region switcher and "Watch free" row
+      // render providers outside the detected region, and each still needs a link.
+      const providerNames = Object.values(providersData.results || {}).flatMap((bucket) =>
+        (['flatrate', 'free', 'ads', 'rent', 'buy'] as const)
+          .flatMap((key) => bucket?.[key]?.map((p) => p.provider_name) || [])
+      )
 
       // Bots still get already-cached content but never trigger generation;
       // AI-less bot renders stay uncached so they can't be served to

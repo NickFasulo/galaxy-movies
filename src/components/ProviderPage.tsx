@@ -5,7 +5,7 @@ import MovieGrid from './MovieGrid'
 import LinkTile from './LinkTile'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
-import SurfsharkBanner from './SurfsharkBanner'
+import VpnBanner from './VpnBanner'
 import {
   fetchDiscoverMovies,
   fetchDiscoverTv,
@@ -132,7 +132,7 @@ export default function ProviderPage({ media, provider, title, titles, dataError
           <Link href={`${otherBasePath}/${provider}`}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
         </Text>
         {media === 'movie' && (
-          <SurfsharkBanner
+          <VpnBanner
             message={availableInRegion
               ? `${providerLabel}'s catalog differs by country — a VPN can unlock titles available in other regions.`
               : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
