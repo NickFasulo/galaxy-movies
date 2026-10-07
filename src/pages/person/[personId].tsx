@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react'
 import { Flex, Box, Heading, Text, SimpleGrid, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import DetailErrorView from '../../components/DetailErrorView'
+import { BottomBackdrop } from '../../components/Backdrop'
 import PageHead from '../../components/PageHead'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
@@ -21,6 +22,17 @@ type Props =
   | { person: TmdbPerson; directedMovies: MovieCredit[]; actingMovies: MovieCredit[]; tvShows: PersonTvShow[] }
 
 type CardTitle = (MovieCredit | PersonTvShow) & { mediaType?: 'tv' }
+
+// Props are serialized into the page-data payload — keep only the fields the
+// cards render so prolific filmographies stay under the 128 kB page-data limit.
+const toCardCredit = (m: MovieCredit): MovieCredit => ({
+  id: m.id,
+  title: m.title,
+  poster_path: m.poster_path,
+  release_date: m.release_date,
+  vote_average: m.vote_average,
+  character: m.character
+})
 
 export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
   const { personId } = context.query
@@ -60,23 +72,45 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
       ...(person.tv_credits?.cast || []),
       ...(person.tv_credits?.crew || [])
     ]
-    const uniqueTvShows = Array.from(
+    const uniqueTvShows: PersonTvShow[] = Array.from(
       new Map(tvCreditList.map((m) => [m.id, m])).values()
     )
       .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
       .slice(0, 24)
-      .map((c) => ({
-        ...normalizeTvTitle(c),
-        character: c.character || c.roles?.[0]?.character || c.job || c.jobs?.[0]?.job || ''
-      }))
+      .map((c) => {
+        const show = normalizeTvTitle(c)
+        return {
+          id: show.id,
+          name: show.name,
+          title: show.title,
+          poster_path: show.poster_path,
+          release_date: show.release_date,
+          vote_average: show.vote_average,
+          mediaType: show.mediaType,
+          character: c.character || c.roles?.[0]?.character || c.job || c.jobs?.[0]?.job || ''
+        }
+      })
 
     if (context.res) setSwrCache(context.res)
 
+    // The raw append_to_response credits live only in these lists — re-sending
+    // them inside `person` would double the payload.
+    const personSummary: TmdbPerson = {
+      id: person.id,
+      name: person.name,
+      biography: person.biography,
+      birthday: person.birthday,
+      deathday: person.deathday,
+      place_of_birth: person.place_of_birth,
+      profile_path: person.profile_path,
+      known_for_department: person.known_for_department
+    }
+
     return {
       props: {
-        person,
-        directedMovies: uniqueDirected,
-        actingMovies: uniqueActing,
+        person: personSummary,
+        directedMovies: uniqueDirected.map(toCardCredit),
+        actingMovies: uniqueActing.map(toCardCredit),
         tvShows: uniqueTvShows
       }
     }
@@ -184,7 +218,8 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
       />
 
       <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '5em', md: '6rem' }} px='1rem'>
-        <Flex justify='center'>
+        <BottomBackdrop />
+        <Flex justify='center' position='relative' zIndex={1}>
           <Flex
             direction={{ base: 'column', md: 'row' }}
             align={{ base: 'center', md: 'flex-start' }}
@@ -386,7 +421,7 @@ function MovieCard({ movie, showRole }: { movie: CardTitle; showRole: boolean })
               {movie.release_date ? dateFormatter(movie.release_date).slice(-4) : 'N/A'}
             </Text>
             <Flex align='center' gap={1}>
-              <Icon boxSize={3} color='gold' asChild><LuStar /></Icon>
+              <Icon boxSize={3} color='gold' asChild><LuStar fill='currentColor' /></Icon>
               <Text fontSize='xs' fontWeight='semibold' color='white'>
                 {movie.vote_average ? Math.round(movie.vote_average * 10) / 10 : 'NR'}
               </Text>

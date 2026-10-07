@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Box } from '@chakra-ui/react'
-import { tmdbImage } from '../utils/site'
+import Backdrop, { BACKDROP_OVERLAYS } from './Backdrop'
 
 export function useHoverBackground() {
   const [hoveredBg, setHoveredBg] = useState<string | null>(null)
@@ -37,33 +36,19 @@ export function useHoverBackground() {
 }
 
 export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg: string | null; isBgVisible: boolean }) {
-  const backgroundImage = hoveredBg ? `url(${tmdbImage(hoveredBg, 'w1280')})` : 'none'
+  if (!hoveredBg) return null
 
   return (
-    <Box
-      display={{ base: 'none', md: 'block' }}
+    <Backdrop
+      path={hoveredBg}
+      overlays={BACKDROP_OVERLAYS.viewport}
+      imagePosition='center'
+      imageSizes='1280px'
       position='fixed'
-      top={0}
-      left={0}
-      w='100vw'
-      h='100vh'
-      zIndex={0}
-      pointerEvents='none'
-      opacity={isBgVisible && hoveredBg ? 0.30 : 0}
+      display={{ base: 'none', md: 'block' }}
+      opacity={isBgVisible ? 0.30 : 0}
       transition='opacity 0.6s ease-in-out'
-      bgImage={backgroundImage}
-      bgPos='center'
-      bgSize='cover'
-      bgRepeat='no-repeat'
-      _after={{
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgImage: 'radial-gradient(circle, transparent 20%, #14181c 90%)'
-      }}
+      zIndex={0}
     />
   )
 }

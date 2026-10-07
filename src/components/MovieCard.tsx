@@ -15,8 +15,8 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
   return (
     <WrapItem>
       <ChakraBox
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         mx='auto'
         position='relative'
         zIndex={1}

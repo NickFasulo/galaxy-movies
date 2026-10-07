@@ -216,15 +216,13 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   const backdropPath = title.backdrop_path || null
   const posterPath = title.poster_path || null
   const posterUrl = tmdbImage(posterPath) || '/poster_fallback.webp'
-  const [backdropSrc, setBackdropSrc] = useState(backdropPath || '/backdrop_fallback.webp')
   const [posterSrc, setPosterSrc] = useState(posterPath || '/poster_fallback.webp')
-  const [prevPaths, setPrevPaths] = useState([backdropPath, posterPath])
+  const [prevPosterPath, setPrevPosterPath] = useState(posterPath)
 
-  // Reset to the new prop paths on client-side nav between titles — prev-check
+  // Reset to the new prop path on client-side nav between titles — prev-check
   // setState-during-render replaces a reset effect (react-hooks/set-state-in-effect).
-  if (prevPaths[0] !== backdropPath || prevPaths[1] !== posterPath) {
-    setPrevPaths([backdropPath, posterPath])
-    setBackdropSrc(backdropPath || '/backdrop_fallback.webp')
+  if (prevPosterPath !== posterPath) {
+    setPrevPosterPath(posterPath)
     setPosterSrc(posterPath || '/poster_fallback.webp')
   }
 
@@ -300,9 +298,8 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         ]}
       />
       <DetailPageShell
-        backdropSrc={backdropSrc}
+        backdropPath={backdropPath}
         backdropAlt={displayTitle || (isTv ? 'Show Backdrop' : 'Movie Backdrop')}
-        onBackdropError={() => setBackdropSrc('/backdrop_fallback.webp')}
         sidebar={
           <>
             <DetailPoster

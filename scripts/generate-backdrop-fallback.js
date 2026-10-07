@@ -228,17 +228,15 @@ async function main() {
       ]
     },
     {
-      frame: { width: 1024, height: 1536, seed: 20261001, portrait: true, icon: 'reel' },
+      frame: { width: 2560, height: 1440, seed: 20261006 },
       targets: [
-        { file: 'poster_fallback.webp', width: 1024, height: 1536, format: 'webp', opts: { quality: 82 } }
+        { file: 'backdrop_bottom_lg.webp', width: 2560, height: 1440, format: 'webp', opts: { quality: 82 } },
+        { file: 'backdrop_bottom.webp', width: 1376, height: 768, format: 'webp', opts: { quality: 82 } }
       ]
     },
-    {
-      frame: { width: 1024, height: 1536, seed: 20261002, portrait: true, icon: 'avatar' },
-      targets: [
-        { file: 'profile_fallback.webp', width: 1024, height: 1536, format: 'webp', opts: { quality: 82 } }
-      ]
-    }
+    // poster_fallback.webp / profile_fallback.webp are intentionally absent —
+    // this renderer produces the old icon designs. Their newer art is committed
+    // directly; re-adding jobs here would overwrite it.
   ]
 
   for (const job of jobs) {

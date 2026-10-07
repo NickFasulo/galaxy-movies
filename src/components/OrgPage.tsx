@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Box, Flex, Heading, Text, Badge, Link as ChakraLink, Icon } from '@chakra-ui/react'
 import BackButton from './BackButton'
 import MovieGrid from './MovieGrid'
+import { BottomBackdrop } from './Backdrop'
 import PageHead from './PageHead'
 import DetailErrorView from './DetailErrorView'
 import { normalizeTvTitle } from '../utils/tmdb'
@@ -156,7 +157,8 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
       />
 
       <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: 8, md: 12 }} pt={{ base: 14, md: 16 }} px={{ base: 4, md: 12 }}>
-        <Box maxW='1200px' mx='auto'>
+        <BottomBackdrop />
+        <Box maxW='1200px' mx='auto' position='relative' zIndex={1}>
           <Flex
             direction={{ base: 'column', md: 'row' }}
             align={{ base: 'center', md: 'flex-start' }}
