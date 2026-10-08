@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, memo, type ReactNode } from 'react'
 import { ChakraBox } from './ChakraBox'
-import { WrapItem, Box, Badge, Skeleton, Text } from '@chakra-ui/react'
+import { Box, Badge, Skeleton, Text } from '@chakra-ui/react'
 import WatchlistButton from './WatchlistButton'
 import type { TitleSummary } from '../types/tmdb'
 
@@ -13,14 +13,14 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
   const title = movie.title || movie.name
 
   return (
-    <WrapItem>
+    <Box>
       <ChakraBox
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         mx='auto'
         position='relative'
         zIndex={1}
-        w={{ base: '11rem', md: '13rem' }}
+        w='100%'
         boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5)'
         borderRadius='0.5rem'
         overflow='hidden'
@@ -41,7 +41,7 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
                   alt={title || (isTv ? 'Show Poster' : 'Movie Poster')}
                   fill
                   priority={priority}
-                  sizes='(max-width: 768px) 176px, 208px'
+                  sizes='(max-width: 768px) 45vw, (max-width: 1280px) 25vw, 240px'
                   onLoad={() => setIsLoaded(true)}
                   style={{
                     objectFit: 'cover',
@@ -83,7 +83,7 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
           </Box>
         )}
       </ChakraBox>
-    </WrapItem>
+    </Box>
   );
 }
 

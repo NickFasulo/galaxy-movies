@@ -60,12 +60,21 @@ export default function Backdrop({
   ...rest
 }: BackdropProps) {
   const [failed, setFailed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [swapped, setSwapped] = useState(false)
   const [prevPath, setPrevPath] = useState(path)
+  // Browsers keep painting the old <img> frame until the new src decodes, so
+  // after a path change we hide the image until its onLoad — otherwise the
+  // previous title's backdrop flashes on hover swaps and detail-page nav.
   if (prevPath !== path) {
     setPrevPath(path)
     setFailed(false)
+    setLoaded(false)
+    setSwapped(true)
   }
   const fallbackArt = BACKDROP_FALLBACKS[fallback]
+  const imgOpacity = swapped && !loaded ? 0 : 1
+  const onImgLoad = () => setLoaded(true)
 
   return (
     <Box position='absolute' top={0} right={0} bottom={0} left={0} overflow='hidden' pointerEvents='none' {...rest}>
@@ -88,7 +97,12 @@ export default function Backdrop({
             fill
             priority={priority}
             sizes={imageSizes}
+            onLoad={onImgLoad}
             onError={() => setFailed(true)}
+            style={{
+              opacity: imgOpacity,
+              transition: 'opacity 0.25s ease-in'
+            }}
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- raw srcSet fallback; next/image can't emit this markup
@@ -98,7 +112,8 @@ export default function Backdrop({
             sizes='100vw'
             alt={alt}
             fetchPriority={priority ? 'high' : 'auto'}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            onLoad={onImgLoad}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: imgOpacity, transition: 'opacity 0.25s ease-in' }}
           />
         )}
       </Box>

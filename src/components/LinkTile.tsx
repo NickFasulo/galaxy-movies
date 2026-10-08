@@ -16,7 +16,7 @@ export default function LinkTile({ href, column = false, children }: {
         minH={column ? undefined : '4rem'}
         p={4}
         borderRadius='0.5rem'
-        border='1px solid var(--chakra-colors-white-alpha-300)'
+        border='1px solid var(--chakra-colors-border-subtle)'
         _hover={{ borderColor: 'whiteAlpha.600' }}
         h='100%'
       >

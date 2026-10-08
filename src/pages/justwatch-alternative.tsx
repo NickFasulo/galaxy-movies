@@ -104,13 +104,13 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Galaxy Movies vs JustWatch</Heading>
-          <Table.ScrollArea border='1px solid var(--chakra-colors-white-alpha-300)' borderRadius='0.5rem'>
+          <Table.ScrollArea border='1px solid var(--chakra-colors-border-subtle)' borderRadius='0.5rem'>
             <Table.Root variant='line' size='sm'>
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>Feature</Table.ColumnHeader>
-                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>Galaxy Movies</Table.ColumnHeader>
-                  <Table.ColumnHeader color='gray.400' borderColor='whiteAlpha.300'>JustWatch</Table.ColumnHeader>
+                  <Table.ColumnHeader color='gray.400' borderColor='border.subtle'>Feature</Table.ColumnHeader>
+                  <Table.ColumnHeader color='gray.400' borderColor='border.subtle'>Galaxy Movies</Table.ColumnHeader>
+                  <Table.ColumnHeader color='gray.400' borderColor='border.subtle'>JustWatch</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
               <Table.Body>

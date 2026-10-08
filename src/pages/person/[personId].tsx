@@ -263,9 +263,10 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
                   w='100%'
                   maxW='20rem'
                   p={4}
-                  bg='blackAlpha.600'
-                  borderRadius='0.5rem'
-                  border='1px solid var(--chakra-colors-white-alpha-200)'
+                  bg='blackAlpha.500'
+                  borderRadius='lg'
+                  border='1px solid var(--chakra-colors-border-subtle)'
+                  backdropFilter='blur(10px)'
                 >
                   <Heading as='h3' fontSize='sm' textTransform='uppercase' color='gray.400' mb={3}>
                     Personal Info

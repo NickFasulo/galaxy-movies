@@ -3,8 +3,9 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Badge, Box, Flex, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
+import { Badge, Box, Flex, Heading, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
+import Wordmark from '../components/Wordmark'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
@@ -259,13 +260,14 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
         zIndex={0}
         opacity={isBgVisible && hoveredBg ? 0 : 1}
         transition='opacity 0.6s ease-in-out'
+        willChange='opacity'
       />
 
       <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
-          <h1 className='title'>
-            <span>Galaxy Movies</span>
-          </h1>
-          <Text textAlign='center' color='gray.400' fontSize='sm' my='1rem'>Warp speed movie discovery</Text>
+          <Heading as='h1' textAlign='center' mt='2rem'>
+            <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
+          </Heading>
+          <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
 
         <SearchBar
           category={category}
@@ -277,11 +279,11 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
         {isLoading && moviesList.length === 0 ? (
           <CustomSpinner />
         ) : status === 'error' ? (
-          <Text textAlign='center' mt='20rem' fontWeight='bold' fontSize='xl'>
+          <Text textAlign='center' mt='8rem' fontWeight='bold' fontSize='xl'>
             {error?.message || 'Error loading movies'}
           </Text>
         ) : moviesList.length === 0 ? (
-          <Text textAlign='center' mt='10rem' fontWeight='bold' fontSize='xl' color='gray.500'>
+          <Text textAlign='center' mt='8rem' fontWeight='bold' fontSize='xl' color='gray.500'>
             No movies found
           </Text>
         ) : (
@@ -299,11 +301,10 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
             >
               <SimpleGrid
                 my={{ base: '3rem', md: '5rem' }}
-                mx={{ base: '1rem', md: '5rem', xl: 'auto' }}
+                mx={{ base: '1.5rem', md: '3rem', xl: 'auto' }}
                 maxW={{ xl: '80rem' }}
-                gapX={{ base: 8, md: 12, xl: 4 }}
-                gapY={{ base: 8, md: 12 }}
-                columns={{ base: 2, md: 5 }}
+                gap={{ base: 8, md: 10 }}
+                minChildWidth={{ base: '45%', md: '12rem' }}
                 minH='100vh'
               >
                 {moviesList.map((movie, index) => (
@@ -332,18 +333,20 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
               <Box
                 as='footer'
                 position='fixed'
-                bottom='0'
+                bottom='1rem'
                 left='0'
                 right='0'
                 mx='auto'
-                borderTopRadius='0.5rem'
                 zIndex={9}
                 py='0.25rem'
-                px='0.5rem'
+                px='1rem'
                 w='fit-content'
-                bg='#1f252b'
+                bg='rgba(31, 37, 43, 0.72)'
+                border='1px solid var(--chakra-colors-border-subtle)'
+                borderRadius='full'
+                backdropFilter='blur(10px)'
               >
-                <Text textAlign='center' color='whiteAlpha.900' fontSize='sm'>
+                <Text textAlign='center'>
                   <LegalLinks />
                 </Text>
               </Box>
@@ -361,11 +364,11 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
             bottom='9rem'
             zIndex={10}
             borderRadius='full'
-            boxShadow='0 0 6px black'
-            bg='#1f252b'
+            boxShadow='lg'
+            bg='surface.raised'
             color='white'
-            border='1px solid var(--chakra-colors-white-alpha-300)'
-            _hover={{ bg: '#2a3138' }}><Icon boxSize={8} asChild><LuArrowUp /></Icon></IconButton>
+            border='1px solid var(--chakra-colors-border-subtle)'
+            _hover={{ bg: 'surface.overlay' }}><Icon boxSize={6} asChild><LuArrowUp /></Icon></IconButton>
         )}
       </Box>
     </>

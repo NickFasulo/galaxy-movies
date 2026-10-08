@@ -9,9 +9,9 @@ export default function DetailErrorView({ title, message }: { title: string; mes
         <title>{title} | Galaxy Movies</title>
         <meta name='description' content={message} />
       </Head>
-      <Box minH='100vh' p={8} pt={20} textAlign='center' bg='#14181c' color='white'>
-        <Text mt={20}>{message}</Text>
-        <Link href='/' style={{ textDecoration: 'underline' }}>Return to Galaxy Movies</Link>
+      <Box minH='100vh' p={8} pt={20} textAlign='center' bg='surface.canvas' color='white'>
+        <Text mt={20} mb={4} color='gray.300'>{message}</Text>
+        <Link href='/' style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}>Return to Galaxy Movies</Link>
       </Box>
     </>
   );

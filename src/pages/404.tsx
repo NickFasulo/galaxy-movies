@@ -20,13 +20,13 @@ export default function NotFoundPage() {
           </Text>
           <Flex wrap='wrap' gap={4} justify='center' align='center'>
             <Link href='/'>
-              <Button as='span' bg='#1f252b' color='white' border='1px solid var(--chakra-colors-white-alpha-300)' _hover={{ bg: '#2a3138' }}>Go Home</Button>
+              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Go Home</Button>
             </Link>
             <Link href='/browse/popular'>
-              <Button as='span' bg='#1f252b' color='white' border='1px solid var(--chakra-colors-white-alpha-300)' _hover={{ bg: '#2a3138' }}>Browse Movies</Button>
+              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Browse Movies</Button>
             </Link>
             <Link href='/streaming'>
-              <Button as='span' bg='#1f252b' color='white' border='1px solid var(--chakra-colors-white-alpha-300)' _hover={{ bg: '#2a3138' }}>Streaming Guide</Button>
+              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Streaming Guide</Button>
             </Link>
             <BackButton />
           </Flex>

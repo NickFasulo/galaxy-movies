@@ -1,5 +1,6 @@
 import { Menu, Button, Portal } from '@chakra-ui/react';
 import removeUnderscores from '../utils/removeUnderscores'
+import { menuItemProps } from './NavMenu'
 import { LuChevronDown } from 'react-icons/lu';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -57,60 +58,47 @@ export default function DropDown({ category, changeCategory }: { category: strin
     <Menu.Root>
       <Menu.Trigger asChild><Button
           w='fit-content'
-          bg='#1f252b'
+          bg='surface.raised'
           color='white'
-          _hover={{ bg: '#2a3138' }}
-          _active={{ bg: '#2a3138' }}>
+          border='1px solid var(--chakra-colors-border-subtle)'
+          _hover={{ bg: 'surface.overlay' }}
+          _active={{ bg: 'surface.overlay' }}>
           {currentLabel}
           <LuChevronDown /></Button></Menu.Trigger>
       <Portal><Menu.Positioner><Menu.Content>
             <Menu.ItemGroup><Menu.ItemGroupLabel>Feeds</Menu.ItemGroupLabel>
               <Menu.Item
                 onSelect={() => changeCategory('popular')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-0'>Popular</Menu.Item>
               <Menu.Item
                 onSelect={() => changeCategory('top_rated')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-1'>Top Rated</Menu.Item>
               <Menu.Item
                 onSelect={() => changeCategory('now_playing')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-2'>Now Playing</Menu.Item>
               <Menu.Item
                 onSelect={() => changeCategory('upcoming')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-3'>Upcoming</Menu.Item>
               <Menu.Item
                 onSelect={() => changeCategory('trending')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-4'>Trending</Menu.Item>
               <Menu.Item
                 onSelect={() => changeCategory('tv')}
-                bg='transparent'
-                _hover={{ bg: '#2a3138' }}
-                _focus={{ bg: '#2a3138' }}
+                {...menuItemProps}
                 value='item-5'>TV Shows</Menu.Item>
             </Menu.ItemGroup>
-            <Menu.Separator borderColor='whiteAlpha.200' />
+            <Menu.Separator borderColor='border.subtle' />
             <Menu.ItemGroup><Menu.ItemGroupLabel>Genres</Menu.ItemGroupLabel>
               {GENRES.map((genre) => (
                 <Menu.Item
                   key={genre.value}
                   onSelect={() => changeCategory(genre.value)}
-                  bg='transparent'
-                  _hover={{ bg: '#2a3138' }}
-                  _focus={{ bg: '#2a3138' }}
+                  {...menuItemProps}
                   value='item-6'>
                   {genre.label}
                 </Menu.Item>

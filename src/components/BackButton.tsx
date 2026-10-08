@@ -18,10 +18,10 @@ export default function BackButton() {
       size={{ base: 'md', md: 'sm' }}
       width={{ base: '8rem', md: '7rem' }}
       onClick={handleBack}
-      bg='#1f252b'
+      bg='surface.raised'
       color='white'
-      border='1px solid var(--chakra-colors-white-alpha-300)'
-      _hover={{ bg: '#2a3138' }}><LuArrowLeft />Back
+      border='1px solid var(--chakra-colors-border-subtle)'
+      _hover={{ bg: 'surface.overlay' }}><LuArrowLeft />Back
                 </Button>
   );
 }

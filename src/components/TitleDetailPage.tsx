@@ -401,10 +401,10 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
       >
             <Box>
               <Flex align='center' justify={{ base: 'center', md: 'flex-start' }} gap={4} wrap='wrap'>
-                <Heading color='white' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
+                <Heading color='white' letterSpacing='-0.02em' textShadow='0 0 4px black' textAlign={{ base: 'center', md: 'left' }}>
                   <Text as='span' display='inline-block'>{displayTitle}</Text>
                 </Heading>
-                <Badge colorPalette='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid var(--chakra-colors-white-alpha-300)' flexShrink={0}>
+                <Badge colorPalette='whiteAlpha' bg='rgba(255,255,255,0.1)' color='white' px={2.5} py={1} borderRadius='md' fontSize='xs' border='1px solid var(--chakra-colors-border-subtle)' flexShrink={0}>
                   {ageRating}
                 </Badge>
                 {status && (

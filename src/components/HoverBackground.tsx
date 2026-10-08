@@ -48,6 +48,7 @@ export default function HoverBackground({ hoveredBg, isBgVisible }: { hoveredBg:
       display={{ base: 'none', md: 'block' }}
       opacity={isBgVisible ? 0.30 : 0}
       transition='opacity 0.6s ease-in-out'
+      willChange='opacity'
       zIndex={0}
     />
   )

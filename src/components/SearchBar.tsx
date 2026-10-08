@@ -74,9 +74,11 @@ export default function SearchBar({
       position='sticky'
       top={0}
       zIndex={20}
-      background={isSticky ? '#14181c' : 'transparent'}
-      borderBottom={isSticky ? '1px solid var(--chakra-colors-white-alpha-200)' : 'none'}
-      transition='background 0.2s ease-in-out, border-bottom 0.2s ease-in-out'
+      background={isSticky ? 'rgba(20, 24, 28, 0.88)' : 'transparent'}
+      backdropFilter={isSticky ? 'blur(12px)' : 'none'}
+      borderBottom='1px solid'
+      borderColor={isSticky ? 'border.subtle' : 'transparent'}
+      transition='background 0.2s ease-in-out, border-color 0.2s ease-in-out'
     >
       <Flex justify='center' align='center' width='100%'>
         <Flex
@@ -92,16 +94,16 @@ export default function SearchBar({
             color='white'
             display={{ base: isCollapsed ? 'inline-flex' : 'none', md: 'none' }}
             _hover={{ bg: 'whiteAlpha.200' }}
-            _active={{ bg: 'whiteAlpha.300' }}><LuSearch /></IconButton>
+            _active={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
           <Input
             ref={inputRef}
             value={searchInput}
             onChange={handleInputChange}
             onBlur={() => !isSearchActive && setIsExpanded(false)}
             placeholder={placeholder}
-            background='#1f252b'
+            background='surface.raised'
             color='white'
-            borderColor='whiteAlpha.300'
+            borderColor='border.subtle'
             _placeholder={{ color: 'gray.400' }}
             flex='1'
             display={{ base: isCollapsed ? 'none' : 'block', md: 'block' }}

@@ -5,11 +5,11 @@ import LegalLinks from './LegalLinks'
 // "bottom" for an in-flow footer, so it uses its own fixed legal pill instead.
 export default function Footer({ isDark = false }) {
   // renders outside the page's own Box, so match the dark background explicitly
-  const bg = isDark ? '#14181c' : 'transparent'
+  const bg = isDark ? 'surface.canvas' : 'transparent'
 
   return (
     <Box as='footer' bg={bg} mt='auto'>
-      <Text textAlign='center' fontSize='sm' color='whiteAlpha.900' py={2}>
+      <Text textAlign='center' py={4}>
         <LegalLinks />
       </Text>
     </Box>

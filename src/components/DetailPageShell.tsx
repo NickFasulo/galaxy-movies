@@ -15,7 +15,7 @@ export default function DetailPageShell({
   children: ReactNode
 }) {
   return (
-    <Box position='relative' minH='100vh' bg='#14181c' overflow='hidden'>
+    <Box position='relative' minH='100vh' bg='surface.canvas' overflow='hidden'>
       <TopBackdrop display={{ base: 'block', md: 'none' }} zIndex={0} />
       <Backdrop
         path={backdropPath}

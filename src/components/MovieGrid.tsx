@@ -14,10 +14,9 @@ export default function MovieGrid({ movies }: { movies: TitleSummary[] }) {
 
   return (
     <SimpleGrid
-      margin={{ base: '2rem 1rem', md: '3rem 5rem' }}
-      gapX={{ base: 8, md: 12, xl: 4 }}
-      gapY={{ base: 8, md: 12 }}
-      columns={{ base: 2, md: 5 }}
+      my={{ base: '2rem', md: '3rem' }}
+      gap={{ base: 8, md: 10 }}
+      minChildWidth={{ base: '45%', md: '12rem' }}
     >
       {movies.map((movie, index) => (
         <MovieCard

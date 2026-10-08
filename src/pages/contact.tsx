@@ -55,7 +55,7 @@ export default function Contact() {
             id="name"
             name="name"
             required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
           />
         </div>
 
@@ -66,7 +66,7 @@ export default function Contact() {
             id="email"
             name="email"
             required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
           />
         </div>
 
@@ -77,7 +77,7 @@ export default function Contact() {
             id="subject"
             name="subject"
             placeholder="e.g., Inaccurate streaming info"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
           />
         </div>
 
@@ -90,7 +90,7 @@ export default function Contact() {
             rows={5}
             required
             placeholder="Please include movie title and page URL if reporting inaccurate information."
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #3a424a', backgroundColor: '#1f252b', color: '#fff' }}
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
           />
         </div>
 

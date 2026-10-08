@@ -33,7 +33,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
-          <Flex direction='column' minH='100vh' position='relative' bg={isDark ? '#14181c' : undefined}>
+          <Flex direction='column' minH='100vh' position='relative' bg={isDark ? 'surface.canvas' : undefined}>
             {showTopBackdrop && <TopBackdrop />}
             <Header isHome={isHome} isDark={isDark} />
             <Box position='relative' zIndex={1} flex='1' display='flex' flexDirection='column'>

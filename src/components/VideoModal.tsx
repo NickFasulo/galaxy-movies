@@ -16,7 +16,7 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
         width={{ base: '8rem', md: '7rem' }}
         onClick={onOpen}
         aria-label="Watch trailer"
-        bg='#1f252b' color='white' border='1px solid var(--chakra-colors-white-alpha-300)' _hover={{ bg: '#2a3138' }}
+        bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}
       >
         <Icon boxSize={{ base: 6, md: 5 }} asChild><BsCaretRightFill /></Icon>
       </Button>

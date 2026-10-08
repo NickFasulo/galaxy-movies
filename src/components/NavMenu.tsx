@@ -4,8 +4,9 @@ import { LuMenu } from 'react-icons/lu';
 
 export const menuItemProps = {
   bg: 'transparent',
-  _hover: { bg: '#2a3138' },
-  _focus: { bg: '#2a3138' }
+  cursor: 'pointer',
+  _hover: { bg: 'surface.overlay' },
+  _focus: { bg: 'surface.overlay' }
 }
 
 export default function NavMenu() {
@@ -18,7 +19,7 @@ export default function NavMenu() {
           variant='ghost'
           color='white'
           _hover={{ bg: 'whiteAlpha.200' }}
-          _active={{ bg: 'whiteAlpha.300' }}><LuMenu /></IconButton></Menu.Trigger>
+          _active={{ bg: 'whiteAlpha.200' }}><LuMenu /></IconButton></Menu.Trigger>
       <Portal><Menu.Positioner><Menu.Content>
             <Menu.Item {...menuItemProps} value='item-0' asChild><NextLink href='/streaming'>Streaming</NextLink></Menu.Item>
             <Menu.Item {...menuItemProps} value='item-1' asChild><NextLink href='/tv'>TV Shows</NextLink></Menu.Item>

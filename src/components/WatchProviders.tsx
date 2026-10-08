@@ -7,6 +7,7 @@ import { sameStore, type PriceOffer } from '../utils/prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../hooks/useUserData'
 import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../utils/vpnAffiliate'
+import { LuArrowUpRight } from 'react-icons/lu'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
 function VpnLink() {
@@ -15,13 +16,16 @@ function VpnLink() {
       <Link
         href={VPN_AFFILIATE_LINK}
         rel='sponsored nofollow noopener'
-        fontSize='xs'
-        color='gray.400'
-        textDecoration='underline'
+        fontSize='2xs'
+        color='gray.500'
+        display='inline-flex'
+        alignItems='center'
+        gap={0.5}
+        transition='color 0.15s'
         _hover={{ color: 'white' }}
         target='_blank'
       >
-        {VPN_LINK_TEXT} ↗
+        {VPN_LINK_TEXT} <LuArrowUpRight />
       </Link>
       <ChakraImage src={VPN_AFFILIATE_PIXEL} alt='' aria-hidden w='1px' h='1px' position='absolute' />
     </Box>
@@ -43,7 +47,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
         width='32px'
         height='32px'
         borderRadius='0.375rem'
-        {...(isMine ? { boxShadow: '0 0 0 2px #48bb78' } : {})}
+        {...(isMine ? { boxShadow: '0 0 0 1.5px var(--chakra-colors-green-300)' } : {})}
       >
         <Image
           src={provider.logo_path}
@@ -161,11 +165,16 @@ export default function WatchProviders({
         .map((o) => `${o.provider}: ${o.seasons} season${o.seasons === 1 ? '' : 's'}`)
     : []
 
+  const footerNotes = [
+    offers.some((o) => o.price != null) && 'Prices via Watchmode · Apple',
+    criticScore != null && `Critics score: ${criticScore}/100`
+  ].filter(Boolean).join(' · ')
+
   return (
     <>
-      <Box p={3} bg='blackAlpha.600' borderRadius='0.5rem' border='1px solid var(--chakra-colors-white-alpha-200)'>
+      <Box p={4} bg='blackAlpha.500' borderRadius='lg' border='1px solid var(--chakra-colors-border-subtle)' backdropFilter='blur(10px)'>
         <Flex align='center' justify='space-between' mb={2} gap={2}>
-          <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' flexShrink={0}>
+          <Text color='gray.100' fontWeight='semibold' fontSize='xs' letterSpacing='0.08em' textTransform='uppercase' flexShrink={0}>
             Where to Watch
           </Text>
           {regionOptions.length > 1 && (
@@ -174,7 +183,7 @@ export default function WatchProviders({
                 value={activeRegion}
                 onChange={(e) => setChosenRegion(e.target.value)}
                 color='gray.300'
-                borderColor='whiteAlpha.300'
+                borderColor='border.subtle'
                 aria-label='Availability region'
                 css={{
                   '& option': { color: 'black' }
@@ -189,14 +198,17 @@ export default function WatchProviders({
           {streamLink && (
             <Link
               href={streamLink}
-              fontSize='xs'
-              color='gray.400'
-              textDecoration='underline'
+              fontSize='2xs'
+              color='gray.500'
+              display='inline-flex'
+              alignItems='center'
+              gap={0.5}
+              transition='color 0.15s'
               _hover={{ color: 'white' }}
               flexShrink={0}
               target='_blank'
               rel='noopener noreferrer'>
-              JustWatch ↗
+              JustWatch <LuArrowUpRight />
             </Link>
           )}
         </Flex>
@@ -253,26 +265,18 @@ export default function WatchProviders({
                 )}
               </Box>
             )}
-            {offers.some((o) => o.price != null) && (
-              <Text color='gray.600' fontSize='2xs' mt={1}>
-                Prices via Watchmode · Apple
-              </Text>
-            )}
-            <VpnLink />
           </>
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <VpnLink />
           </Box>
         )}
-        {criticScore != null && (
-          <Text color='gray.500' fontSize='2xs' mt={2}>
-            Critics score: {criticScore}/100
-          </Text>
-        )}
+        <Flex align='center' justify='space-between' gap={2} mt={2} wrap='wrap'>
+          <Text color='gray.600' fontSize='2xs'>{footerNotes}</Text>
+          <VpnLink />
+        </Flex>
       </Box>
     </>
   );

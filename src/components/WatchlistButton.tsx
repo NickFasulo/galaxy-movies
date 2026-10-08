@@ -25,10 +25,10 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
           size={{ base: 'md', md: 'sm' }}
           width={{ base: '8rem', md: '7rem' }}
           aria-label={label}
-          bg={saved ? '#2b6cb0' : 'blackAlpha.600'}
+          bg={saved ? 'brand.accent' : 'blackAlpha.600'}
           color='white'
-          border='1px solid var(--chakra-colors-white-alpha-300)'
-          _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
+          border='1px solid var(--chakra-colors-border-subtle)'
+          _hover={{ bg: saved ? 'brand.accentHover' : 'blackAlpha.800' }}
           onClick={handleClick}
           {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}{saved ? 'Saved' : 'Save'}</Button>
       </Tooltip>
@@ -43,10 +43,10 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
         aria-label={label}
         size='sm'
         variant='solid'
-        bg={saved ? '#2b6cb0' : 'blackAlpha.600'}
+        bg={saved ? 'brand.accent' : 'blackAlpha.600'}
         color='white'
-        border='1px solid var(--chakra-colors-white-alpha-300)'
-        _hover={{ bg: saved ? '#2c5282' : 'blackAlpha.800' }}
+        border='1px solid var(--chakra-colors-border-subtle)'
+        _hover={{ bg: saved ? 'brand.accentHover' : 'blackAlpha.800' }}
         onClick={handleClick}
         {...props}>{saved ? <BsBookmarkFill /> : <BsBookmark />}</IconButton>
     </Tooltip>

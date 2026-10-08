@@ -322,7 +322,7 @@ export default function ChatWidget() {
           }}
           animationDuration='moderate'>
           <Box
-            bg="#1f252b"
+            bg='surface.raised'
             borderRadius="lg"
             boxShadow="2xl"
             width={{ base: '90vw', md: '400px' }}
@@ -337,7 +337,7 @@ export default function ChatWidget() {
               justify="space-between"
               align="center"
               p="4"
-              bg="linear-gradient(135deg, #001e2e 0%, #003366 100%)"
+              bg="linear-gradient(135deg, var(--chakra-colors-surface-deep) 0%, #003366 100%)"
               color="white"
             >
               <Flex align="center" gap="2">
@@ -368,7 +368,7 @@ export default function ChatWidget() {
               flex="1"
               overflowY="auto"
               p="4"
-              bg="#14181c"
+              bg='surface.canvas'
             >
               {messages.length === 0 && (
                 <VStack gap="4" align="stretch" mt="4">
@@ -381,10 +381,10 @@ export default function ChatWidget() {
                         key={index}
                         size="sm"
                         variant="outline"
-                        bg='#1f252b'
+                        bg='surface.raised'
                         color='white'
-                        borderColor='whiteAlpha.300'
-                        _hover={{ bg: '#2a3138' }}
+                        borderColor='border.subtle'
+                        _hover={{ bg: 'surface.overlay' }}
                         onClick={() => handleQuickAction(action.query)}
                         textAlign="left"
                         justifyContent="flex-start"
@@ -400,7 +400,7 @@ export default function ChatWidget() {
                 {messages.map((message, index) => (
                   <Box
                     key={index}
-                    bg={message.role === 'user' ? 'blue.500' : '#2a3138'}
+                    bg={message.role === 'user' ? 'blue.500' : 'surface.overlay'}
                     color='white'
                     p="3"
                     borderRadius="lg"
@@ -415,7 +415,7 @@ export default function ChatWidget() {
                 ))}
                 {isStreaming && (
                   <Box
-                    bg="#2a3138"
+                    bg='surface.overlay'
                     color="white"
                     p="3"
                     borderRadius="lg"
@@ -431,7 +431,7 @@ export default function ChatWidget() {
               </VStack>
             </Box>
 
-            <Flex p="3" bg="#1f252b" borderTop="1px solid var(--chakra-colors-white-alpha-200)">
+            <Flex p="3" bg='surface.raised' borderTop="1px solid var(--chakra-colors-white-alpha-200)">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -440,16 +440,16 @@ export default function ChatWidget() {
                 mr="2"
                 disabled={isLoading}
                 size="sm"
-                bg="#14181c"
+                bg='surface.canvas'
                 color="white"
-                borderColor="whiteAlpha.300"
+                borderColor='border.subtle'
                 _placeholder={{ color: 'gray.400' }}
               />
               <Button
-                bg='#1f252b'
+                bg='surface.raised'
                 color='white'
-                border='1px solid var(--chakra-colors-white-alpha-300)'
-                _hover={{ bg: '#2a3138' }}
+                border='1px solid var(--chakra-colors-border-subtle)'
+                _hover={{ bg: 'surface.overlay' }}
                 size="sm"
                 onClick={() => handleSendMessage()}
                 disabled={isLoading || !inputValue.trim()}
@@ -465,10 +465,10 @@ export default function ChatWidget() {
             onClick={handleOpen}
             size="lg"
             borderRadius="full"
-            bg="linear-gradient(135deg, #001e2e 0%, #003366 100%)"
+            bg="linear-gradient(135deg, var(--chakra-colors-surface-deep) 0%, #003366 100%)"
             color="white"
             _hover={{
-              bg: 'linear-gradient(135deg, #003366 0%, #001e2e 100%)',
+              bg: 'linear-gradient(135deg, #003366 0%, var(--chakra-colors-surface-deep) 100%)',
               transform: 'scale(1.1)'
             }}
             _active={{

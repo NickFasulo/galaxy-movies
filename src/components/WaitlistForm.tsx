@@ -29,7 +29,7 @@ export default function WaitlistForm() {
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-white-alpha-200)' borderRadius='0.5rem' p={4}>
+    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
       <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
         Streaming alerts
       </Text>
@@ -53,7 +53,7 @@ export default function WaitlistForm() {
                 placeholder='you@example.com'
                 size='sm'
                 bg='blackAlpha.400'
-                borderColor='whiteAlpha.300'
+                borderColor='border.subtle'
                 color='white'
                 _placeholder={{ color: 'gray.500' }}
               />
