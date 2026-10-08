@@ -1,5 +1,5 @@
 import { fetchTmdb } from './tmdb'
-import type { Genre, TitleSummary, TmdbMovie, TmdbPaged } from '../types/tmdb'
+import type { Genre, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../types/tmdb'
 
 type MultiSearchResult = TitleSummary & {
   media_type: string
@@ -63,6 +63,32 @@ export async function getRecentReleases(page = 1): Promise<{ results: TmdbMovie[
   }
 }
 
+export async function getRecentShows(page = 1): Promise<{ results: TmdbTvShow[]; total_pages: number; total_results: number }> {
+  try {
+    const now = new Date()
+    const ninetyDaysAgo = new Date(now)
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    const data = await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', {
+      page,
+      include_adult: false,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 10,
+      'first_air_date.gte': ninetyDaysAgo.toISOString().split('T')[0],
+      'first_air_date.lte': now.toISOString().split('T')[0]
+    })
+
+    return {
+      results: (data.results || []).filter(show => show.poster_path),
+      total_pages: data.total_pages,
+      total_results: data.total_results
+    }
+  } catch (error) {
+    console.error('Error getting recent shows:', error)
+    return { results: [], total_pages: 0, total_results: 0 }
+  }
+}
+
 export function formatMovieForChat(movie: TmdbMovie & { genres?: Genre[] }) {
   return {
     id: movie.id,
@@ -71,6 +97,17 @@ export function formatMovieForChat(movie: TmdbMovie & { genres?: Genre[] }) {
     rating: movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A',
     overview: movie.overview?.substring(0, 200) + ((movie.overview?.length ?? 0) > 200 ? '...' : ''),
     genres: movie.genres?.map(g => g.name).join(', ') || 'N/A'
+  }
+}
+
+export function formatShowForChat(show: TmdbTvShow & { genres?: Genre[] }) {
+  return {
+    id: show.id,
+    title: show.name,
+    year: show.first_air_date ? new Date(show.first_air_date).getFullYear() : 'N/A',
+    rating: show.vote_average ? show.vote_average.toFixed(1) : 'N/A',
+    overview: show.overview?.substring(0, 200) + ((show.overview?.length ?? 0) > 200 ? '...' : ''),
+    genres: show.genres?.map(g => g.name).join(', ') || 'N/A'
   }
 }
 
