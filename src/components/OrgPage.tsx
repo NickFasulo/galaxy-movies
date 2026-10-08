@@ -8,6 +8,7 @@ import { BottomBackdrop } from './Backdrop'
 import PageHead from './PageHead'
 import DetailErrorView from './DetailErrorView'
 import { normalizeTvTitle } from '../utils/tmdb'
+import { getContentIndexability } from '../utils/contentOpportunities'
 import { setSwrCache } from '../utils/ssr'
 import { tmdbImage, SITE_URL } from '../utils/site'
 import { LuExternalLink } from 'react-icons/lu'
@@ -21,7 +22,7 @@ interface OrgConfig {
   discoverQuery: (id: string) => string
   normalize: (results: (TmdbMovie | TmdbTvShow)[]) => TitleSummary[]
   basePath: string
-  crumbRoot: { name: string; path: string }
+  crumbRoot: { name: string; path: string } | null
   accent: string
   titleSuffix: string
   ogLabel: string
@@ -38,7 +39,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
     discoverQuery: (id) => `with_companies=${id}&sort_by=popularity.desc&page=1`,
     normalize: (results) => results as TitleSummary[],
     basePath: '/company',
-    crumbRoot: { name: 'Companies', path: '/company' },
+    crumbRoot: null,
     accent: 'teal',
     titleSuffix: '',
     ogLabel: 'Production Company',
@@ -149,9 +150,10 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
         ogSubtitle={ogSubtitle}
         posterPath={org.logo_path}
         structuredData={structuredData}
+        noindex={!getContentIndexability({ movies: titles }).isIndexable}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: crumbRoot.name, url: `${SITE_URL}${crumbRoot.path}` },
+          ...(crumbRoot ? [{ name: crumbRoot.name, url: `${SITE_URL}${crumbRoot.path}` }] : []),
           { name: org.name, url: canonicalUrl }
         ]}
       />

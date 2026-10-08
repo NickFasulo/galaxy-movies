@@ -253,6 +253,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   const logoOrg = isTv
     ? (title as TmdbTvDetails).networks?.find((n) => n.logo_path)
     : (title as TmdbMovieDetails).production_companies?.find((c) => c.logo_path)
+  const studios = ((isTv ? title.networks : title.production_companies) || [])
+    .filter((org) => org.id && org.name)
+    .slice(0, 4)
   const listItem = isTv ? normalizeTvTitle(title as TmdbTvDetails) : (title as TmdbMovieDetails)
 
   const backdropPath = title.backdrop_path || null
@@ -332,10 +335,13 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         ogTitle={displayTitle}
         ogSubtitle={ogSubtitle}
         posterPath={posterPath}
+        // No overview means no AI synopsis either (generation requires it) —
+        // the page stays thin/duplicative until TMDB adds one.
+        noindex={!title.overview}
         structuredData={[structuredData, trailerSchema]}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: isTv ? 'TV Shows' : 'Movies', url: `${SITE_URL}/${isTv ? 'tv' : 'movies'}` },
+          { name: isTv ? 'TV Shows' : 'Movies', url: `${SITE_URL}${isTv ? '/tv' : '/browse'}` },
           { name: displayTitle, url: canonicalUrl }
         ]}
       />
@@ -404,6 +410,17 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                     <span key={person.id}>
                       {index > 0 && ', '}
                       <DetailCreditLink href={`/person/${person.id}`}>{person.name}</DetailCreditLink>
+                    </span>
+                  ))}
+                </DetailCreditLine>
+              )}
+              {studios.length > 0 && (
+                <DetailCreditLine mt={1}>
+                  {isTv ? 'Airing on ' : 'Produced by '}
+                  {studios.map((org, index) => (
+                    <span key={org.id}>
+                      {index > 0 && ', '}
+                      <DetailCreditLink href={`${isTv ? '/network' : '/company'}/${org.id}`}>{org.name}</DetailCreditLink>
                     </span>
                   ))}
                 </DetailCreditLine>

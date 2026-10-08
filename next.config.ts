@@ -41,6 +41,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },
+  // Breadcrumb targets Googlebot already found: keep the guessed parent paths
+  // (and any stale links) from hard-404ing. /browse and /genre are real pages.
+  async redirects() {
+    return [
+      { source: '/movies', destination: '/', permanent: true },
+      { source: '/person', destination: '/', permanent: true },
+      { source: '/company', destination: '/', permanent: true },
+      { source: '/network', destination: '/tv', permanent: true }
+    ]
+  },
   images: {
     loader: 'custom',
     loaderFile: './src/utils/imageLoader.ts',

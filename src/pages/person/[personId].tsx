@@ -9,6 +9,7 @@ import { BottomBackdrop } from '../../components/Backdrop'
 import PageHead from '../../components/PageHead'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
+import { MIN_INDEXABLE_MOVIES } from '../../utils/contentOpportunities'
 import { setSwrCache } from '../../utils/ssr'
 import { absoluteImageUrl } from '../../utils/schema'
 import { tmdbImage, SITE_URL } from '../../utils/site'
@@ -208,11 +209,13 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
         canonicalUrl={canonicalUrl}
         ogType='profile'
         ogSubtitle={ogSubtitle}
+        // A person with no bio and a small filmography is just a name and a
+        // few posters — keep it out of the index until TMDB fills it out.
+        noindex={!person.biography && totalCredits < MIN_INDEXABLE_MOVIES}
         posterPath={person.profile_path}
         structuredData={structuredData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'People', url: `${SITE_URL}/person` },
           { name: person.name, url: canonicalUrl }
         ]}
       />

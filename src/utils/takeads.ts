@@ -80,6 +80,7 @@ export async function resolveTakeadsLinks(iris: (string | null | undefined)[] = 
     try {
       const response = await fetch(TAKEADS_RESOLVE_URL, {
         method: 'PUT',
+        signal: AbortSignal.timeout(2500),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json'

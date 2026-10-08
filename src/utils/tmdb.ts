@@ -50,10 +50,22 @@ export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promi
         .map(([key, value]) => [key, String(value)])
     )
   })
-  const response = await fetch(`${TMDB_URL}${path}?${searchParams}`)
+  // fetch has no default timeout — a stalled TMDB connection would hold SSR
+  // open until Vercel kills the function (a real 5xx for Googlebot). One retry
+  // absorbs transient 429s, e.g. when the sitemap fan-out bursts upstream.
+  let response: Response | null = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetch(`${TMDB_URL}${path}?${searchParams}`, { signal: AbortSignal.timeout(8000) })
+      if (response.ok || (response.status !== 429 && response.status < 500)) break
+    } catch {
+      response = null
+    }
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 400))
+  }
 
-  if (!response.ok) {
-    throw new Error(`TMDB request failed with status ${response.status}`)
+  if (!response?.ok) {
+    throw new Error(`TMDB request failed with status ${response?.status ?? 'timeout'}`)
   }
 
   return response.json() as Promise<T>

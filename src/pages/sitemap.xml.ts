@@ -1,6 +1,6 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
-import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders } from '../utils/tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
@@ -40,6 +40,17 @@ const PAGES_PER_LIST = 2
 const CREDITS_SAMPLE_SIZE = 60
 const TV_CREDITS_SAMPLE_SIZE = 30
 
+// TMDB allows ~50 req/s — one unbounded Promise.all over ~75 discovers could
+// 429, rejecting the whole block and silently emitting a sitemap with no
+// dynamic entries. Sequential batches keep the render under the limit.
+async function runBatched<R>(tasks: (() => Promise<R>)[], size = 10): Promise<R[]> {
+  const results: R[] = []
+  for (let i = 0; i < tasks.length; i += size) {
+    results.push(...await Promise.all(tasks.slice(i, i + size).map(task => task())))
+  }
+  return results
+}
+
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
   const generatedLists = await getGeneratedLists()
@@ -52,6 +63,8 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/terms`, today),
     urlEntry(`${siteUrl}/contact`, today),
     urlEntry(`${siteUrl}/streaming`, today),
+    urlEntry(`${siteUrl}/browse`, today),
+    urlEntry(`${siteUrl}/genre`, today),
     urlEntry(`${siteUrl}/streaming-in-india`, today),
     urlEntry(`${siteUrl}/justwatch-alternative`, today),
     urlEntry(`${siteUrl}/new-on-streaming`, today),
@@ -104,27 +117,27 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   try {
     const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
     const categories = Object.keys(movieCategories)
-    const categoryResults = await Promise.all(
+    const categoryResults = await runBatched(
       categories.flatMap(category =>
-        pageRange.map(page => fetchDiscoverMovies({ category, page }))
+        pageRange.map(page => () => fetchDiscoverMovies({ category, page }))
       )
     )
 
-    const genreResults = await Promise.all(
+    const genreResults = await runBatched(
       Object.values(movieGenres).flatMap(genre =>
-        pageRange.map(page => fetchDiscoverMovies({ genreId: genre.id, page }))
+        pageRange.map(page => () => fetchDiscoverMovies({ genreId: genre.id, page }))
       )
     )
 
-    const tvCategoryResults = await Promise.all(
+    const tvCategoryResults = await runBatched(
       Object.keys(tvCategories).flatMap(category =>
-        pageRange.map(page => fetchDiscoverTv({ category, page }))
+        pageRange.map(page => () => fetchDiscoverTv({ category, page }))
       )
     )
 
-    const tvGenreResults = await Promise.all(
+    const tvGenreResults = await runBatched(
       Object.values(tvGenres).flatMap(genre =>
-        pageRange.map(page => fetchDiscoverTv({ genreId: genre.id, page }))
+        pageRange.map(page => () => fetchDiscoverTv({ genreId: genre.id, page }))
       )
     )
 
@@ -158,19 +171,18 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       .slice(0, CREDITS_SAMPLE_SIZE)
       .map(id => allMovies.find(movie => movie.id === id))
       .filter((movie): movie is (typeof allMovies)[number] => Boolean(movie))
-    const detailResults = await Promise.allSettled(
-      creditsSampleMovies.map(movie =>
-        fetch(
-          `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits`
-        ).then((r): Promise<(TmdbMovieDetails & { credits?: Credits }) | null> => r.ok ? r.json() : Promise.resolve(null))
+    const detailResults = await runBatched(
+      creditsSampleMovies.map(movie => () =>
+        fetchTmdb<TmdbMovieDetails & { credits?: Credits }>(`/movie/${movie.id}`, { append_to_response: 'credits' })
+          .catch((): null => null)
       )
     )
 
     const KEY_CREW_JOBS = new Set(['Director', 'Writer', 'Screenplay', 'Story', 'Producer'])
 
     for (const result of detailResults) {
-      if (result.status !== 'fulfilled' || !result.value) continue
-      const { credits, production_companies = [] } = result.value
+      if (!result) continue
+      const { credits, production_companies = [] } = result
       const { cast = [], crew = [] } = credits || {}
       const keyCrew = crew.filter(person => KEY_CREW_JOBS.has(person.job))
 
@@ -186,17 +198,16 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       .slice(0, TV_CREDITS_SAMPLE_SIZE)
       .map(id => allShows.find(show => show.id === id))
       .filter((show): show is (typeof allShows)[number] => Boolean(show))
-    const tvDetailResults = await Promise.allSettled(
-      creditsSampleShows.map(show =>
-        fetch(
-          `https://api.themoviedb.org/3/tv/${show.id}?api_key=${process.env.TMDB_API_KEY}&append_to_response=aggregate_credits`
-        ).then((r): Promise<(TmdbTvDetails & { aggregate_credits?: AggregateCredits }) | null> => r.ok ? r.json() : Promise.resolve(null))
+    const tvDetailResults = await runBatched(
+      creditsSampleShows.map(show => () =>
+        fetchTmdb<TmdbTvDetails & { aggregate_credits?: AggregateCredits }>(`/tv/${show.id}`, { append_to_response: 'aggregate_credits' })
+          .catch((): null => null)
       )
     )
 
     for (const result of tvDetailResults) {
-      if (result.status !== 'fulfilled' || !result.value) continue
-      const { aggregate_credits, networks = [], created_by = [] } = result.value
+      if (!result) continue
+      const { aggregate_credits, networks = [], created_by = [] } = result
       const { cast = [] } = aggregate_credits || {}
 
       for (const person of [...cast.slice(0, 10), ...created_by]) {
