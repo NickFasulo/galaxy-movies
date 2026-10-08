@@ -40,7 +40,7 @@ const MEDIA_FOR_CATEGORY: Record<string, string> = { tv: 'tv', trending: 'trendi
 export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   try {
     const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
-    setSwrCache(res)
+    setSwrCache(res, 21600, 86400)
     return { props: { initialMovies: data.results || [], initialTotalPages: data.total_pages || 1 } }
   } catch (error) {
     console.error('Error fetching initial movies for homepage SSR:', error)
