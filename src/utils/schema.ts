@@ -94,27 +94,3 @@ export function titleListSchema({ name, description, url, titles, media, limit =
     items: titles.slice(0, limit).map((t) => titleItem(t, media))
   })
 }
-
-export function buildTrailerSchema({
-  title,
-  uploadDate,
-  thumbnailUrl,
-  videoKey
-}: {
-  title: string
-  uploadDate?: string
-  thumbnailUrl: string
-  videoKey: string
-}) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'VideoObject',
-    name: `${title} Trailer`,
-    description: `Watch the official trailer for ${title}`,
-    inLanguage: 'en',
-    thumbnailUrl,
-    uploadDate: uploadDate ? `${uploadDate}T00:00:00Z` : undefined,
-    contentUrl: `https://www.youtube.com/watch?v=${videoKey}`,
-    embedUrl: `https://www.youtube.com/embed/${videoKey}`
-  }
-}

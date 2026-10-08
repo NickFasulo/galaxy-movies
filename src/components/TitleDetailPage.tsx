@@ -29,7 +29,7 @@ import { isBot, isSearchEngine } from '../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../utils/takeads'
 import { withTimeout } from '../utils/withTimeout'
 import { setSwrCache } from '../utils/ssr'
-import { absoluteImageUrl, aggregateRatingSchema, buildTrailerSchema, personSchema } from '../utils/schema'
+import { absoluteImageUrl, aggregateRatingSchema, personSchema } from '../utils/schema'
 import { tmdbImage, SITE_URL } from '../utils/site'
 import type {
   AggregateCastMember,
@@ -321,10 +321,6 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         } : undefined
       }
 
-  const trailerSchema = videoKey
-    ? buildTrailerSchema({ title: displayTitle, uploadDate: releaseDate || undefined, thumbnailUrl: absoluteImageUrl(posterUrl, SITE_URL), videoKey })
-    : null
-
   return (
     <>
       <PageHead
@@ -338,7 +334,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         // No overview means no AI synopsis either (generation requires it) —
         // the page stays thin/duplicative until TMDB adds one.
         noindex={!title.overview}
-        structuredData={[structuredData, trailerSchema]}
+        structuredData={structuredData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
           { name: isTv ? 'TV Shows' : 'Movies', url: `${SITE_URL}${isTv ? '/tv' : '/browse'}` },
