@@ -257,8 +257,8 @@ export default async function handler(req: NextRequest) {
     }
   )
 
-  imageResponse.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
-  imageResponse.headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  imageResponse.headers.set('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
+  imageResponse.headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
 
   return imageResponse
 }

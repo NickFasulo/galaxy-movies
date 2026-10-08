@@ -39,10 +39,9 @@ export default function Privacy() {
         information from hosting and security services, such as IP address, request timestamps,
         browser type, and approximate location. This information is used to operate, secure, and
         rate-limit the Service.</InfoParagraph>
-      <InfoParagraph><strong>Anonymous analytics.</strong> We use Vercel Analytics to measure
-        aggregated page views and performance. These events do not include movie search terms or
-        personal identifiers. We also record anonymous, aggregated Galaxy Bot usage statistics (such
-        as message counts, session duration, and feature usage) to monitor performance and cost.</InfoParagraph>
+      <InfoParagraph><strong>Anonymous analytics.</strong> We record anonymous, aggregated Galaxy
+        Bot usage statistics (such as message counts, session duration, and feature usage) to
+        monitor performance and cost.</InfoParagraph>
 
       <InfoHeading>2. How We Use Your Information</InfoHeading>
       <List.Root as='ul' mb={4} pl={4} gap={1}>
@@ -58,11 +57,9 @@ export default function Privacy() {
       <InfoHeading>3. Cookies and Local Storage</InfoHeading>
       <InfoParagraph>
         Galaxy Movies does not set tracking cookies. We use your browser&apos;s local storage to keep
-        your watchlist, ratings, and service preferences on your device, to remember an analytics
-        opt-out preference, and — if you confirm a streaming alerts subscription — to hold the sync
-        credential that links this device to your alerts. You can opt out of analytics at any time by setting
-        a <code>disableAnalytics</code> flag in your browser&apos;s local storage, and you can manage
-        or clear cookies and site data through your browser settings.
+        your watchlist, ratings, and service preferences on your device, and — if you confirm a
+        streaming alerts subscription — to hold the sync credential that links this device to your
+        alerts. You can manage or clear cookies and site data through your browser settings.
       </InfoParagraph>
       <InfoParagraph>
         Third parties involved in the Service may set their own cookies — for example, affiliate

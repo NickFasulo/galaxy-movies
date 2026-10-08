@@ -85,6 +85,35 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
 
     try {
       const apiKey = process.env.TMDB_API_KEY
+
+      // Non-indexing bots get a one-request render: they sweep the TMDB id
+      // space in bulk and don't need providers, credits, videos, or AI slots,
+      // so running the full fetch chain for them was the dominant function
+      // duration cost. no-store keeps the stripped page out of the CDN cache
+      // that humans and search engines share.
+      if (isBot(context.req.headers['user-agent']) && !isSearchEngine(context.req.headers['user-agent'])) {
+        const botTitleRes = await fetch(`https://api.themoviedb.org/3/${media}/${id}?api_key=${apiKey}`)
+        if (!botTitleRes.ok) {
+          if (botTitleRes.status === 404) return { notFound: true }
+          return errorProps(`${noun} data is temporarily unavailable. Please try again later.`)
+        }
+        const title: TmdbMovieDetails & TmdbTvDetails = await botTitleRes.json()
+        context.res.setHeader('Cache-Control', 'private, no-store')
+        const thin: CommonProps = {
+          videoKey: null,
+          watchProviders: null,
+          watchProvidersByRegion: {},
+          detectedRegion: 'US',
+          ageRating: 'NR',
+          aiSynopsis: null,
+          similarTitles: [],
+          providerAffiliateLinks: {}
+        }
+        return media === 'movie'
+          ? { props: { ...thin, media, title, director: null, topCast: [] } }
+          : { props: { ...thin, media, title, creators: [], topCast: [] } }
+      }
+
       const [titleRes, providersRes, creditsRes, ratingsRes, recommendationsRes] = await Promise.all([
         fetch(`https://api.themoviedb.org/3/${media}/${id}?api_key=${apiKey}&append_to_response=videos`),
         fetch(`https://api.themoviedb.org/3/${media}/${id}/watch/providers?api_key=${apiKey}`),

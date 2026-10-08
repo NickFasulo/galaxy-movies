@@ -1,0 +1,28 @@
+# High-volume SEO and AI crawlers that sweep the whole catalog but send no
+# readers. Removing a line unblocks that crawler.
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: SemrushBot-SA
+User-agent: SemrushBot-BA
+User-agent: SiteAuditBot
+User-agent: SplitSignalBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: Bytespider
+User-agent: PetalBot
+User-agent: Barkrowler
+User-agent: DataForSeoBot
+User-agent: SEOkicks
+User-agent: ClaudeBot
+User-agent: GPTBot
+User-agent: CCBot
+User-agent: anthropic-ai
+User-agent: meta-externalagent
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://www.galaxymovies.app/sitemap.xml

@@ -5,7 +5,6 @@ import { useRouter } from 'next/router'
 import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query'
 import { Flex, Box } from '@chakra-ui/react'
 import { Provider } from '../components/ui/provider'
-import { Analytics } from '@vercel/analytics/react'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import { useAlertsSync } from '../hooks/useAlertsSync'
 import ChatWidget from '../components/ChatWidget'
@@ -40,17 +39,6 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
             {!isHome && <Footer isDark={isDark} />}
           </Flex>
           <ChatWidget />
-          {process.env.NODE_ENV === 'production' && (
-            <Analytics
-              beforeSend={(event) => {
-                if (localStorage.getItem('disableAnalytics') === 'true') {
-                  return null
-                }
-
-                return event
-              }}
-            />
-          )}
         </Provider>
       </HydrationBoundary>
     </QueryClientProvider>

@@ -56,7 +56,7 @@ function renderMessageContent(content: string, links: ResolvedMention[] | undefi
 }
 
 export default function ChatWidget() {
-  const { open, onToggle, onClose } = useDisclosure()
+  const { open, onOpen, onClose } = useDisclosure()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageLinks, setMessageLinks] = useState<Record<number, ResolvedMention[]>>({})
   const [inputValue, setInputValue] = useState('')
@@ -101,12 +101,24 @@ export default function ChatWidget() {
     }
 
     sessionStartTimeRef.current = Date.now()
-
-    fetch('/api/aiStatus')
-      .then((r) => r.json())
-      .then((d) => setAiAvailable(d.available !== false))
-      .catch(() => setAiAvailable(true))
   }, [])
+
+  // aiStatus is only checked on first open so pageviews that never touch the
+  // widget don't pay a function invocation + Redis read.
+  const handleOpen = async () => {
+    if (aiAvailable === null) {
+      try {
+        const r = await fetch('/api/aiStatus')
+        const d = await r.json()
+        if (d.available === false) {
+          setAiAvailable(false)
+          return
+        }
+        setAiAvailable(true)
+      } catch {}
+    }
+    onOpen()
+  }
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -291,7 +303,7 @@ export default function ChatWidget() {
     sessionStorage.removeItem('chatMessageLinks')
   }
 
-  if (!aiAvailable) return null
+  if (aiAvailable === false) return null
 
   return (
     <>
@@ -450,7 +462,7 @@ export default function ChatWidget() {
 
         {!open && (
           <IconButton
-            onClick={onToggle}
+            onClick={handleOpen}
             size="lg"
             borderRadius="full"
             bg="linear-gradient(135deg, #001e2e 0%, #003366 100%)"
