@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache'
 import { getRedis } from './redis'
 import type { MediaType } from '../types/tmdb'
 
@@ -197,7 +198,23 @@ export async function updateStreamingChanges() {
   return summary
 }
 
-export async function getProviderChanges(providerKeys: string[] = []): Promise<Record<string, ProviderChanges>> {
+// Diffs are rewritten once a day by the streaming-changes cron but were being
+// re-read once per key on every pageview — the memo turns repeat page loads
+// into zero Redis commands. Cron callers pass fresh to skip it, so alerts
+// never match subscribers against a diff the current cron just replaced.
+const CHANGES_MEMO_MS = 10 * 60 * 1000
+const changesMemo = new LRUCache<string, Record<string, ProviderChanges>>({ max: 64, ttl: CHANGES_MEMO_MS })
+
+export async function getProviderChanges(
+  providerKeys: string[] = [],
+  { fresh = false }: { fresh?: boolean } = {}
+): Promise<Record<string, ProviderChanges>> {
+  const memoKey = [...providerKeys].sort().join(',')
+  if (!fresh) {
+    const memoized = changesMemo.get(memoKey)
+    if (memoized) return memoized
+  }
+
   const kv = getRedis()
   if (!kv) return {}
 
@@ -211,5 +228,7 @@ export async function getProviderChanges(providerKeys: string[] = []): Promise<R
       }
     })
   )
-  return Object.fromEntries(entries.filter((entry): entry is [string, ProviderChanges] => Boolean(entry[1])))
+  const changes = Object.fromEntries(entries.filter((entry): entry is [string, ProviderChanges] => Boolean(entry[1])))
+  changesMemo.set(memoKey, changes)
+  return changes
 }

@@ -22,9 +22,10 @@ import { getFirstPlayableKey } from '../utils/youtubeCache'
 import { detectRegion } from '../utils/region'
 import { useUserData } from '../hooks/useUserData'
 import { getProviderId, normalizeTvTitle } from '../utils/tmdb'
-import { getOrGenerateMovieReview } from '../utils/movieReview'
-import { getOrGenerateSimilarMovies, type SimilarTitle } from '../utils/similarMovies'
-import { isBot } from '../utils/rateLimiter'
+import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey } from '../utils/movieReview'
+import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../utils/similarMovies'
+import { getRedis } from '../utils/redis'
+import { isBot, isSearchEngine } from '../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../utils/takeads'
 import { withTimeout } from '../utils/withTimeout'
 import { setSwrCache } from '../utils/ssr'
@@ -136,6 +137,33 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
       const displayTitle = media === 'tv' ? title.name : title.title
       const genres = title.genres?.map((g) => g.name) || []
 
+      // Both AI slots share one MGET — Upstash bills per command, not per key —
+      // and non-indexing bots only see instance-local cache hits: their crawls
+      // sweep the long tail where shared-cache reads are ~all misses anyway.
+      // Search engines keep the shared reads so generated content stays in the
+      // index (their UAs are spoofable; the cost is bounded by the gen budgets).
+      const readSharedAiCache = !skipAi || isSearchEngine(context.req.headers['user-agent'])
+      const reviewKey = reviewCacheKey(title.id, media)
+      const similarKey = similarCacheKey(title.id, media)
+      let reviewCached = peekReviewCache(reviewKey)
+      let similarCached = peekSimilarCache(similarKey)
+      const needReview = Boolean(title.overview) && reviewCached === null
+      const needSimilar = recommendationCandidates.length > 0 && similarCached === null
+      if (readSharedAiCache && (needReview || needSimilar)) {
+        const kv = getRedis()
+        if (kv) {
+          try {
+            const fetchKeys = [...(needReview ? [reviewKey] : []), ...(needSimilar ? [similarKey] : [])]
+            const fetched = await withTimeout(kv.mget<(string | SimilarTitle[] | null)[]>(...fetchKeys), 2000, null)
+            let i = 0
+            if (needReview) reviewCached = (fetched?.[i++] as string | null) ?? null
+            if (needSimilar) similarCached = (fetched?.[i++] as SimilarTitle[] | null) ?? null
+          } catch (err) {
+            console.error('Redis mget error for AI detail cache:', err)
+          }
+        }
+      }
+
       const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks] = await Promise.all([
         withTimeout(getFirstPlayableKey(title.videos?.results), 3000, null),
         title.overview
@@ -145,7 +173,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
               overview: title.overview,
               genres,
               mediaType: media,
-              generate: !skipAi
+              generate: !skipAi,
+              cachedValue: reviewCached
             }), 4500, null)
           : null,
         recommendationCandidates.length > 0
@@ -156,7 +185,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
               genres,
               candidates: recommendationCandidates,
               mediaType: media,
-              generate: !skipAi
+              generate: !skipAi,
+              cachedValue: similarCached
             }), 4500, [])
           : [],
         getProviderAffiliateLinks(providerNames)

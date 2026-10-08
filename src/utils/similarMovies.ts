@@ -33,10 +33,15 @@ const memorySimilarCache = new LRUCache<string, SimilarTitle[]>({ max: 500, ttl:
 const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
-function cacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
+export function similarCacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
   return mediaType === 'tv'
     ? `ai_similar:${SIMILAR_CACHE_VERSION}:tv:${movieId}`
     : `ai_similar:${SIMILAR_CACHE_VERSION}:${movieId}`
+}
+
+// Instance-local peek for callers that batch Redis reads themselves.
+export function peekSimilarCache(key: string): SimilarTitle[] | null {
+  return memorySimilarCache.get(key) ?? null
 }
 
 async function readCache(kv: Redis | null, key: string): Promise<SimilarTitle[] | null> {
@@ -65,7 +70,7 @@ async function writeCache(kv: Redis | null, key: string, value: SimilarTitle[]):
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie', generate = true }: {
+export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie', generate = true, cachedValue }: {
   movieId: number
   title: string
   overview?: string
@@ -73,14 +78,20 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   candidates?: SimilarCandidate[]
   mediaType?: MediaType
   generate?: boolean
+  // undefined reads the shared cache; provided values (null = checked miss)
+  // are trusted so callers can batch several cache reads into one MGET.
+  cachedValue?: SimilarTitle[] | null
 }): Promise<SimilarTitle[]> {
   if (!movieId || !title || candidates.length === 0) return []
 
   const kv = getRedis()
-  const key = cacheKey(movieId, mediaType)
+  const key = similarCacheKey(movieId, mediaType)
 
-  const cached = await readCache(kv, key)
-  if (cached) return cached
+  const cached = cachedValue !== undefined ? cachedValue : await readCache(kv, key)
+  if (cached) {
+    if (cachedValue) memorySimilarCache.set(key, cached)
+    return cached
+  }
 
   if (!generate) return []
 

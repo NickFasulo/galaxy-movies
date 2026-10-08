@@ -89,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const changes = await getProviderChanges([
       'netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max'
-    ])
+    ], { fresh: true })
     const items = gatherItems(changes)
     if (!items.added.length && !items.coming.length) {
       return res.status(200).json({ sent: 0, reason: 'no changes this week' })

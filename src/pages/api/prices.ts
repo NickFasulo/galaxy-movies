@@ -29,16 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const mediaType = req.query.type === 'tv' ? 'tv' : 'movie'
   const regionParam = firstParam(req.query.region) || ''
   const region = /^[A-Z]{2}$/.test(regionParam) ? regionParam : 'US'
-  const clientId = getClientIP(req)
-  const allowed = await checkDistributedRateLimit(clientId, {
-    keyPrefix: 'price_rl',
-    maxRequests: 120,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
-    return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
-  }
-
+  // Cache layers run before the rate limiter: a hit costs zero or one Redis
+  // command, while rate-limiting every request would bill a write even when
+  // the answer is already cached. Only uncached lookups hit upstream, so only
+  // they consume rate-limit budget.
   const cacheKey = `price:${mediaType}:${region}:${tmdbId}`
   const hit = priceCache.get(cacheKey)
   if (hit) {
@@ -54,6 +48,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json(cached)
       }
     } catch {}
+  }
+
+  const clientId = getClientIP(req)
+  const allowed = await checkDistributedRateLimit(clientId, {
+    keyPrefix: 'price_rl',
+    maxRequests: 120,
+    windowSeconds: 60 * 60
+  })
+  if (!allowed) {
+    return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
   }
 
   let payload: PricePayload

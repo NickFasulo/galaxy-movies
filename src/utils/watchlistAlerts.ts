@@ -111,7 +111,7 @@ export async function sendWatchlistAlerts() {
   const kv = getRedis()
   if (!kv) return { error: 'Redis unavailable' }
 
-  const changes = await getProviderChanges(TRACKED_PROVIDERS)
+  const changes = await getProviderChanges(TRACKED_PROVIDERS, { fresh: true })
   if (Object.keys(changes).length === 0) return { sent: 0, reason: 'no changes available' }
 
   const [prefsHash, notifiedHash, unsubTokens] = await Promise.all([

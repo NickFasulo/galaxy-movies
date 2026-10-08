@@ -32,6 +32,25 @@ const boundedInt = (value: unknown, min: number, max: number): number => {
 
 const cleanString = (value: unknown, max: number): string => (typeof value === 'string' ? value.slice(0, max) : '')
 
+// Every INCRBY is a billed Upstash command, so counter deltas accumulate in
+// memory and flush in one batch — stats lag by up to COUNTER_FLUSH_MS and an
+// instance dying loses its unflushed tail (same tradeoff as ai_usage).
+const pendingCounters = new Map<string, number>()
+let lastCounterFlush = 0
+const COUNTER_FLUSH_MS = 30 * 1000
+
+function bumpCounter(key: string, delta: number): void {
+  const kv = getRedis()
+  if (!kv) return
+  pendingCounters.set(key, (pendingCounters.get(key) || 0) + delta)
+  const now = Date.now()
+  if (now - lastCounterFlush < COUNTER_FLUSH_MS) return
+  lastCounterFlush = now
+  const ops = [...pendingCounters.entries()].map(([k, d]) => kv.incrby(k, d))
+  pendingCounters.clear()
+  Promise.all(ops).catch((err) => console.error('Redis analytics counter flush error:', err))
+}
+
 async function trackChatSession(sessionData: Record<string, unknown>): Promise<string> {
   const kv = getRedis()
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -52,8 +71,8 @@ async function trackChatSession(sessionData: Record<string, unknown>): Promise<s
     try {
       await kv.set(`chat_session:${sessionId}`, analyticsData, { ex: 60 * 60 * 24 * 30 })
 
-      await kv.incr('analytics:total_sessions')
-      await kv.incrby('analytics:total_messages', analyticsData.messageCount)
+      bumpCounter('analytics:total_sessions', 1)
+      bumpCounter('analytics:total_messages', analyticsData.messageCount)
 
       return sessionId
     } catch (err) {
@@ -84,8 +103,8 @@ async function recordFeedback(feedbackData: Record<string, unknown>): Promise<st
       await kv.set(`chat_feedback:${feedbackId}`, feedback, { ex: 60 * 60 * 24 * 90 })
 
       if (feedback.rating) {
-        await kv.incrby('analytics:total_rating', feedback.rating)
-        await kv.incr('analytics:rating_count')
+        bumpCounter('analytics:total_rating', feedback.rating)
+        bumpCounter('analytics:rating_count', 1)
       }
 
       return feedbackId
