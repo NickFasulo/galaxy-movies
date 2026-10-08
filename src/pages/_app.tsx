@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
+import Script from 'next/script'
 import { useRouter } from 'next/router'
 import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query'
 import { Flex, Box } from '@chakra-ui/react'
@@ -15,6 +16,8 @@ import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: DehydratedState }>) {
   const queryClient = useMemo(() => new QueryClient(), [])
+  const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID ?? '2c6d34d1-558e-45d3-bdb3-dc1b4f66c6a4'
+  const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC ?? '/assets/starfield.js'
   const router = useRouter()
   const isHome = router.pathname === '/'
   const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|email-status$|$)/.test(router.pathname)
@@ -39,6 +42,15 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
             {!isHome && <Footer isDark={isDark} />}
           </Flex>
           <ChatWidget />
+          {umamiWebsiteId && (
+            <Script
+              src={umamiSrc}
+              data-website-id={umamiWebsiteId}
+              data-host-url={umamiSrc.startsWith('/') ? '/starfield' : undefined}
+              data-domains='galaxymovies.app,www.galaxymovies.app'
+              strategy='afterInteractive'
+            />
+          )}
         </Provider>
       </HydrationBoundary>
     </QueryClientProvider>

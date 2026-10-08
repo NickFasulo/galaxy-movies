@@ -39,9 +39,10 @@ export default function Privacy() {
         information from hosting and security services, such as IP address, request timestamps,
         browser type, and approximate location. This information is used to operate, secure, and
         rate-limit the Service.</InfoParagraph>
-      <InfoParagraph><strong>Anonymous analytics.</strong> We record anonymous, aggregated Galaxy
-        Bot usage statistics (such as message counts, session duration, and feature usage) to
-        monitor performance and cost.</InfoParagraph>
+      <InfoParagraph><strong>Anonymous analytics.</strong> We record anonymous, aggregated site
+        traffic and Galaxy Bot usage statistics (such as page views, message counts, session
+        duration, and feature usage) to monitor performance and cost. Our website analytics do
+        not use cookies or collect personal data.</InfoParagraph>
 
       <InfoHeading>2. How We Use Your Information</InfoHeading>
       <List.Root as='ul' mb={4} pl={4} gap={1}>
@@ -80,7 +81,8 @@ export default function Privacy() {
       <InfoParagraph>To operate the Service we rely on the following providers, each of which
         processes data under its own privacy policy:</InfoParagraph>
       <List.Root as='ul' mb={4} pl={4} gap={1}>
-        <List.Item><strong>Vercel</strong> — hosting, request logs, and aggregated analytics</List.Item>
+        <List.Item><strong>Vercel</strong> — hosting and request logs</List.Item>
+        <List.Item><strong>Umami</strong> — cookieless website analytics</List.Item>
         <List.Item><strong>Upstash</strong> — server-side storage for subscriber emails, synced alert preferences, and anonymous usage statistics</List.Item>
         <List.Item><strong>OpenAI</strong> — generates Galaxy Bot responses from your messages and taste profile</List.Item>
         <List.Item><strong>Resend</strong> — delivers confirmation, alert, digest, and device-linking emails</List.Item>

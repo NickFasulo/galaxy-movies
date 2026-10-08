@@ -51,6 +51,15 @@ const nextConfig: NextConfig = {
       { source: '/network', destination: '/tv', permanent: true }
     ]
   },
+  // First-party Umami proxy: cloud.umami.is and gateway.umami.is sit on ad-blocker
+  // lists, so the tracker script and its /api/send beacon are served same-origin.
+  // Path names deliberately avoid "umami"/"analytics"/"track" filter patterns.
+  async rewrites() {
+    return [
+      { source: '/assets/starfield.js', destination: 'https://cloud.umami.is/script.js' },
+      { source: '/starfield/api/send', destination: 'https://gateway.umami.is/api/send' }
+    ]
+  },
   images: {
     loader: 'custom',
     loaderFile: './src/utils/imageLoader.ts',

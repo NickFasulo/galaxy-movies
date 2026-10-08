@@ -11,5 +11,7 @@ declare namespace NodeJS {
     CRON_SECRET?: string
     TAKEADS_PUBLIC_KEY?: string
     NEXT_PUBLIC_SITE_URL?: string
+    NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
+    NEXT_PUBLIC_UMAMI_SRC?: string
   }
 }
