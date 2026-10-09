@@ -9,7 +9,7 @@ const nowStreamingBadge = (
   </Badge>
 )
 
-export default function MovieGrid({ movies }: { movies: TitleSummary[] }) {
+export default function MovieGrid({ movies, posterFallback }: { movies: TitleSummary[]; posterFallback?: string }) {
   const isStreaming = useStreamingBadges(movies)
 
   return (
@@ -24,6 +24,7 @@ export default function MovieGrid({ movies }: { movies: TitleSummary[] }) {
           movie={movie}
           priority={index < 5}
           badge={isStreaming(movie) ? nowStreamingBadge : null}
+          posterFallback={posterFallback}
         />
       ))}
     </SimpleGrid>

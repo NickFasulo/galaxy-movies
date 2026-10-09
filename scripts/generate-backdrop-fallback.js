@@ -234,6 +234,12 @@ async function main() {
         { file: 'backdrop_bottom.webp', width: 1376, height: 768, format: 'webp', opts: { quality: 82 } }
       ]
     },
+    {
+      frame: { width: 800, height: 1200, seed: 20261008, portrait: true },
+      targets: [
+        { file: 'poster_fallback_galaxy.webp', width: 800, height: 1200, format: 'webp', opts: { quality: 82 } }
+      ]
+    },
     // poster_fallback.webp / profile_fallback.webp are intentionally absent —
     // this renderer produces the old icon designs. Their newer art is committed
     // directly; re-adding jobs here would overwrite it.
