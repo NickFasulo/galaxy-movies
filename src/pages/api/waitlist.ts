@@ -24,7 +24,7 @@ async function sendConfirmationEmail(email: string, token: string): Promise<bool
       html: `
         <div style="font-family: sans-serif; max-width: 480px;">
           <h2>Confirm your alerts signup</h2>
-          <p>You asked to be notified when streaming alerts launch on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email.</p>
+          <p>You signed up for streaming alerts on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email.</p>
           <p><a href="${confirmUrl}" style="display: inline-block; background: #2b6cb0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Confirm my email</a></p>
           <p style="color: #888; font-size: 12px;">Or paste this link: ${confirmUrl}</p>
         </div>`
