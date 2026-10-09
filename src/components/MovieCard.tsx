@@ -6,7 +6,7 @@ import { Box, Badge, Skeleton, Text } from '@chakra-ui/react'
 import WatchlistButton from './WatchlistButton'
 import type { TitleSummary } from '../types/tmdb'
 
-function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSummary; priority?: boolean; badge?: ReactNode }) {
+function MovieCard({ movie, priority = false, badge = null, posterFallback }: { movie: TitleSummary; priority?: boolean; badge?: ReactNode; posterFallback?: string }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const posterUrl = movie.poster_path
   const isTv = movie.mediaType === 'tv'
@@ -50,8 +50,22 @@ function MovieCard({ movie, priority = false, badge = null }: { movie: TitleSumm
                   }}
                 />
               ) : (
-                <Box display='flex' alignItems='center' justifyContent='center' h='100%' p={2}>
-                  <Text color='gray.400' textAlign='center' fontSize='sm'>
+                <Box
+                  display='flex'
+                  alignItems='center'
+                  justifyContent='center'
+                  h='100%'
+                  p={2}
+                  bgImage={posterFallback ? `url(${posterFallback})` : undefined}
+                  backgroundSize='cover'
+                  backgroundPosition='center'
+                >
+                  <Text
+                    color={posterFallback ? 'gray.100' : 'gray.400'}
+                    textAlign='center'
+                    fontSize='sm'
+                    textShadow={posterFallback ? '0 1px 6px rgba(0,0,0,0.9)' : undefined}
+                  >
                     {title}
                   </Text>
                 </Box>

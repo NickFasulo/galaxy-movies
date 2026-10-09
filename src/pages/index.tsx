@@ -333,7 +333,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
               <Box
                 as='footer'
                 position='fixed'
-                bottom='1rem'
+                bottom='0.5rem'
                 left='0'
                 right='0'
                 mx='auto'

@@ -171,7 +171,7 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
             maxW='100%'
             mx='auto'
           >
-            {logoUrl && !hasLogoError ? (
+            {logoUrl && !hasLogoError && (
               <Box
                 position='relative'
                 w='200px'
@@ -195,20 +195,6 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
                   unoptimized={logoUrl.startsWith('/')}
                 />
               </Box>
-            ) : (
-              <Flex
-                w='200px'
-                h='120px'
-                flexShrink={0}
-                bg='whiteAlpha.200'
-                borderRadius='0.5rem'
-                align='center'
-                justify='center'
-                textAlign='center'
-                p={4}
-              >
-                <Text fontWeight='bold' color='gray.300'>{org.name}</Text>
-              </Flex>
             )}
 
             <Flex direction='column' gap={3} textAlign={{ base: 'center', md: 'left' }} flex={1}>
@@ -265,7 +251,7 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
           {titles.length === 0 ? (
             <Text color='gray.400' textAlign='center'>{emptyText}</Text>
           ) : (
-            <MovieGrid movies={titles} />
+            <MovieGrid movies={titles} posterFallback={kind === 'company' ? '/poster_fallback_galaxy.webp' : undefined} />
           )}
         </Box>
       </Box>
