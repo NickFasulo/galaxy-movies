@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # matches .vercel/project.json nodeVersion
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+        env:
+          # Build works without this (SSG pages degrade to empty), but real data
+          # keeps the build representative. Never add the rest of .env.local —
+          # keyless CI guarantees zero Redis/Watchmode/OpenAI spend.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
