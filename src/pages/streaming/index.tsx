@@ -63,7 +63,8 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
 
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
           Want to see what&apos;s new? Check out{' '}
-          <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link>.
+          <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link>, or track{' '}
+          <Link href='/leaving' style={{ textDecoration: 'underline' }}>what&apos;s being added to and leaving each service</Link>.
         </Text>
 
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>

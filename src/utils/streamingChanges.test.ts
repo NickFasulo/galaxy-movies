@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PROVIDER_NAME_MATCH } from './streamingChanges'
+import { PROVIDER_NAME_MATCH } from './tmdb'
 
 const keyFor = (sourceName: string) =>
   Object.entries(PROVIDER_NAME_MATCH).find(([, pattern]) => pattern.test(sourceName))?.[0]

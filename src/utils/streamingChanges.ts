@@ -1,5 +1,6 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from './redis'
+import { PROVIDER_NAME_MATCH } from './tmdb'
 import type { MediaType } from '../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
@@ -7,18 +8,8 @@ const SOURCES_TTL_SECONDS = 60 * 60 * 24 * 30
 const CATALOG_LIMIT = 250
 const CHANGE_LIST_LIMIT = 40
 const COMING_DAYS = 21
-
-// Our provider keys (utils/tmdb streamingProviders) → Watchmode source names.
-export const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
-  'netflix': /^netflix/i,
-  'amazon-prime-video': /^(amazon prime|prime video)/i,
-  'hulu': /^hulu/i,
-  'disney-plus': /disney/i,
-  'apple-tv': /apple ?tv\+?/i,
-  'max': /^(max|hbo max)$/i,
-  'peacock': /^peacock/i,
-  'paramount-plus': /^paramount\+|paramount plus/i
-}
+const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62
+const MONTHLY_LIST_LIMIT = 250
 
 interface WatchmodeSourceInfo {
   id: number
@@ -65,6 +56,19 @@ export interface ProviderChanges {
   coming: ComingTitle[]
 }
 
+export interface DatedCatalogTitle extends CatalogTitle {
+  date: string
+}
+
+export interface MonthlyChanges {
+  source: string
+  month: string
+  updatedAt: number
+  arrived: ComingTitle[]
+  coming: ComingTitle[]
+  departed: DatedCatalogTitle[]
+}
+
 interface CatalogSnapshot {
   titles?: CatalogTitle[]
   updatedAt?: number
@@ -72,6 +76,7 @@ interface CatalogSnapshot {
 
 const catalogKey = (providerKey: string) => `changes:catalog:${providerKey}`
 const changesKey = (providerKey: string) => `changes:diff:${providerKey}`
+const monthlyKey = (providerKey: string, month: string) => `changes:monthly:${providerKey}:${month}`
 
 async function fetchWatchmode<T>(path: string): Promise<T | null> {
   const apiKey = process.env.WATCHMODE_API_KEY
@@ -130,9 +135,11 @@ async function fetchCatalog(sourceId: number): Promise<CatalogTitle[]> {
 const dateStamp = (date: Date) =>
   `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
 
+// Watchmode's /releases can't look backward on our plan — start_date must be
+// today or later. Starting at today lets the monthly record stamp arrivals with
+// their true release date; anything earlier has to come from catalog diffs.
 async function fetchUpcoming(sourceIds: Set<number>): Promise<Record<number, ComingTitle[]>> {
   const start = new Date()
-  start.setDate(start.getDate() + 1)
   const end = new Date()
   end.setDate(end.getDate() + COMING_DAYS)
 
@@ -168,6 +175,17 @@ export async function updateStreamingChanges() {
 
   const upcoming = await fetchUpcoming(new Set(Object.values(sourceMap).map((s) => s.id)))
 
+  const today = new Date().toISOString().split('T')[0]
+  const month = today.slice(0, 7)
+  const prevMonthly = new Map(
+    await Promise.all(
+      keys.map(async (key): Promise<[string, MonthlyChanges | null]> => [
+        key,
+        await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
+      ])
+    )
+  )
+
   const summary: Record<string, { added: number; left: number; coming: number; catalog: number }> = {}
   for (const [key, source] of Object.entries(sourceMap)) {
     const catalog = await fetchCatalog(source.id)
@@ -184,16 +202,49 @@ export async function updateStreamingChanges() {
       ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
       : []
 
+    const releases = upcoming[source.id] || []
     const payload: ProviderChanges = {
       source: source.name,
       updatedAt: Date.now(),
       added: added.slice(0, CHANGE_LIST_LIMIT),
       left: left.slice(0, CHANGE_LIST_LIMIT),
-      coming: (upcoming[source.id] || []).slice(0, CHANGE_LIST_LIMIT)
+      coming: releases.filter((r) => r.date > today).slice(0, CHANGE_LIST_LIMIT)
+    }
+
+    // Dated monthly accumulation backs /leaving/[provider]. Release-feed dates
+    // are the true on-service dates; diff detections get stamped with today.
+    const prev = prevMonthly.get(key)
+    const arrived = new Map<number, ComingTitle>()
+    for (const t of prev?.arrived || []) arrived.set(t.tmdbId, t)
+    for (const t of added) {
+      if (t.tmdbId && !arrived.has(t.tmdbId)) {
+        arrived.set(t.tmdbId, { tmdbId: t.tmdbId, tmdbType: t.tmdbType, title: t.title, date: today, season: null })
+      }
+    }
+    for (const t of releases.filter((r) => r.date <= today)) arrived.set(t.tmdbId, t)
+
+    const departed = new Map<number, DatedCatalogTitle>()
+    for (const t of prev?.departed || []) if (t.tmdbId) departed.set(t.tmdbId, t)
+    for (const t of added) if (t.tmdbId) departed.delete(t.tmdbId)
+    for (const t of left) {
+      if (t.tmdbId) {
+        arrived.delete(t.tmdbId)
+        departed.set(t.tmdbId, { ...t, date: today })
+      }
+    }
+
+    const monthly: MonthlyChanges = {
+      source: source.name,
+      month,
+      updatedAt: Date.now(),
+      arrived: [...arrived.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, MONTHLY_LIST_LIMIT),
+      coming: releases.filter((r) => r.date > today).slice(0, MONTHLY_LIST_LIMIT),
+      departed: [...departed.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, MONTHLY_LIST_LIMIT)
     }
 
     await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now() })
     await kv.set(changesKey(key), payload)
+    await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
     summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
   }
 
@@ -232,5 +283,31 @@ export async function getProviderChanges(
   )
   const changes = Object.fromEntries(entries.filter((entry): entry is [string, ProviderChanges] => Boolean(entry[1])))
   changesMemo.set(memoKey, changes)
+  return changes
+}
+
+const monthlyMemo = new LRUCache<string, Record<string, MonthlyChanges>>({ max: 64, ttl: CHANGES_MEMO_MS })
+
+export async function getMonthlyChanges(providerKeys: string[] = []): Promise<Record<string, MonthlyChanges>> {
+  const kv = getRedis()
+  if (!kv || !providerKeys.length) return {}
+
+  const month = new Date().toISOString().split('T')[0].slice(0, 7)
+  const memoKey = `${month}:${[...providerKeys].sort().join(',')}`
+  const memoized = monthlyMemo.get(memoKey)
+  if (memoized) return memoized
+
+  const entries = await Promise.all(
+    providerKeys.map(async (key): Promise<[string, MonthlyChanges | null]> => {
+      try {
+        const data = await kv.get<MonthlyChanges>(monthlyKey(key, month))
+        return [key, data]
+      } catch {
+        return [key, null]
+      }
+    })
+  )
+  const changes = Object.fromEntries(entries.filter((entry): entry is [string, MonthlyChanges] => Boolean(entry[1])))
+  monthlyMemo.set(memoKey, changes)
   return changes
 }
