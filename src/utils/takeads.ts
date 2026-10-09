@@ -4,6 +4,9 @@ const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/
 
 // TMDB provider_name substrings → homepage. Amazon is intentionally absent:
 // those providers keep the existing Associates search link instead.
+// Offers are GEO-gated per Takeads' merchant list (Oct 2026) — e.g. Disney+
+// only converts in ID/MY/TH, STARZ only in MENA — so some links resolve but
+// only monetize clicks from those regions.
 const PROVIDER_HOME_PAGES: [string, string][] = [
   ['netflix', 'https://www.netflix.com'],
   ['hulu', 'https://www.hulu.com'],
@@ -16,6 +19,7 @@ const PROVIDER_HOME_PAGES: [string, string][] = [
   ['hotstar', 'https://www.hotstar.com'],
   ['zee5', 'https://www.zee5.com'],
   ['sonyliv', 'https://www.sonyliv.com'],
+  ['iqiyi', 'https://www.iq.com'],
   ['crunchyroll', 'https://www.crunchyroll.com'],
   ['fandango', 'https://www.fandangoathome.com'],
   ['vudu', 'https://www.vudu.com'],
@@ -29,12 +33,16 @@ const PROVIDER_HOME_PAGES: [string, string][] = [
   ['pluto', 'https://pluto.tv'],
   ['plex', 'https://www.plex.tv'],
   ['fubo', 'https://www.fubo.tv'],
+  ['espn', 'https://plus.espn.com'],
+  ['dazn', 'https://www.dazn.com'],
+  ['crave', 'https://www.crave.ca'],
   ['starz', 'https://www.starz.com'],
   ['showtime', 'https://www.paramountplus.com'],
   ['mubi', 'https://mubi.com'],
   ['shudder', 'https://www.shudder.com'],
   ['britbox', 'https://www.britbox.com'],
   ['acorn', 'https://acorn.tv'],
+  ['curiosity', 'https://curiositystream.com'],
   ['criterion', 'https://www.criterionchannel.com'],
   ['mgm', 'https://www.mgmplus.com'],
   ['epix', 'https://www.mgmplus.com'],
@@ -54,6 +62,9 @@ const PROVIDER_HOME_PAGES: [string, string][] = [
   ['my5', 'https://www.channel5.com'],
   ['skyshowtime', 'https://www.skyshowtime.com'],
   ['sky', 'https://www.sky.com'],
+  ['canal', 'https://www.canalplus.com'],
+  ['waipu', 'https://www.waipu.tv'],
+  ['zattoo', 'https://zattoo.com'],
   ['sundance now', 'https://www.sundancenow.com'],
   ['fxnow', 'https://fxnow.fxnetworks.com'],
   ['bet+', 'https://www.bet.plus'],

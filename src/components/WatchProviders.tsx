@@ -7,14 +7,15 @@ import { sameStore, type PriceOffer } from '../utils/prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../hooks/useUserData'
 import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../utils/vpnAffiliate'
+import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../utils/gruvAffiliate'
 import { LuArrowUpRight } from 'react-icons/lu'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
-function VpnLink() {
+function AffiliateTextLink({ href, pixel, text }: { href: string; pixel: string; text: string }) {
   return (
     <Box position='relative'>
       <Link
-        href={VPN_AFFILIATE_LINK}
+        href={href}
         rel='sponsored nofollow noopener'
         fontSize='2xs'
         color='gray.500'
@@ -25,11 +26,19 @@ function VpnLink() {
         _hover={{ color: 'white' }}
         target='_blank'
       >
-        {VPN_LINK_TEXT} <LuArrowUpRight />
+        {text} <LuArrowUpRight />
       </Link>
-      <ChakraImage src={VPN_AFFILIATE_PIXEL} alt='' aria-hidden w='1px' h='1px' position='absolute' />
+      <ChakraImage src={pixel} alt='' aria-hidden w='1px' h='1px' position='absolute' />
     </Box>
   );
+}
+
+function VpnLink() {
+  return <AffiliateTextLink href={VPN_AFFILIATE_LINK} pixel={VPN_AFFILIATE_PIXEL} text={VPN_LINK_TEXT} />
+}
+
+function GruvLink({ title }: { title?: string }) {
+  return <AffiliateTextLink href={buildGruvLink(title)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} />
 }
 
 function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
@@ -255,14 +264,15 @@ export default function WatchProviders({
                       <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} />
                     ))}
                 </Flex>
-                {(cheapestRent || cheapestBuy) && (
-                  <Text color='gray.500' fontSize='2xs' mt={1.5}>
+                <Flex align='center' justify='space-between' gap={2} mt={1.5} wrap='wrap'>
+                  <Text color='gray.500' fontSize='2xs'>
                     {[
                       cheapestRent && `Rent from ${formatPrice(cheapestRent)}`,
                       cheapestBuy && `Buy from ${formatPrice(cheapestBuy)}`
                     ].filter(Boolean).join(' · ')}
                   </Text>
-                )}
+                  <GruvLink title={movieTitle} />
+                </Flex>
               </Box>
             )}
           </>
@@ -271,6 +281,7 @@ export default function WatchProviders({
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
+            <GruvLink title={movieTitle} />
           </Box>
         )}
         <Flex align='center' justify='space-between' gap={2} mt={2} wrap='wrap'>
