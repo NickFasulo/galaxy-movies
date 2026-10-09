@@ -9,7 +9,7 @@ const CHANGE_LIST_LIMIT = 40
 const COMING_DAYS = 21
 
 // Our provider keys (utils/tmdb streamingProviders) → Watchmode source names.
-const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
+export const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
   'netflix': /^netflix/i,
   'amazon-prime-video': /^(amazon prime|prime video)/i,
   'hulu': /^hulu/i,

@@ -8,14 +8,14 @@ const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus
 const MAX_NOTIFIED_KEYS = 500
 const MAX_MATCHES_PER_EMAIL = 20
 
-interface AlertPrefs {
+export interface AlertPrefs {
   watchlist: { id: number; mediaType: MediaType; title: string }[]
   services: string[]
   region: string
   updatedAt: number
 }
 
-interface MatchedItem {
+export interface MatchedItem {
   kind: 'added' | 'coming'
   notifiedKey: string
   tmdbId: number
@@ -28,14 +28,14 @@ interface MatchedItem {
 
 // @upstash/redis auto-deserializes JSON hash values, so this is already an
 // object (or whatever a hand-edited/corrupt value happens to be) — not a string.
-function parsePrefs(raw: unknown): AlertPrefs | null {
+export function parsePrefs(raw: unknown): AlertPrefs | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
   if (!Array.isArray(obj.watchlist) || !Array.isArray(obj.services)) return null
   return obj as unknown as AlertPrefs
 }
 
-function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderChanges>, notified: Set<string>): MatchedItem[] {
+export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderChanges>, notified: Set<string>): MatchedItem[] {
   const watchlistKeys = new Set(prefs.watchlist.map((w) => `${w.mediaType}:${w.id}`))
   const out: MatchedItem[] = []
 
@@ -78,7 +78,7 @@ const prettyDate = (stamp: string | null | undefined) => {
 
 const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 
-function buildEmail(items: MatchedItem[], email: string, unsubToken: string) {
+export function buildEmail(items: MatchedItem[], email: string, unsubToken: string) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) => {
