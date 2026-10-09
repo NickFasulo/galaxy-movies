@@ -353,7 +353,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   return (
     <>
       <PageHead
-        title={isTv ? `${displayTitle} (TV Series)` : displayTitle}
+        // "Where to watch {title}" is the dominant title-query phrasing — the
+        // tag front-loads it while the on-page H1 stays the bare title.
+        title={isTv ? `Where to Watch ${displayTitle} (TV Series)` : `Where to Watch ${displayTitle}`}
         description={description}
         canonicalUrl={canonicalUrl}
         ogType={isTv ? 'video.tv_show' : 'video.movie'}
