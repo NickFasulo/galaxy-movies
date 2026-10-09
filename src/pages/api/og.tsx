@@ -1,10 +1,6 @@
-import type { NextRequest } from 'next/server'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { ImageResponse } from '@vercel/og'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-
-export const config = {
-  runtime: 'edge',
-}
 
 async function toJpegDataUri(url: string): Promise<string | null> {
   try {
@@ -15,13 +11,7 @@ async function toJpegDataUri(url: string): Promise<string | null> {
     const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
     if (!['image/jpeg', 'image/png', 'image/gif'].includes(contentType)) return null
     const buf = await res.arrayBuffer()
-    const bytes = new Uint8Array(buf)
-    let binary = ''
-    const CHUNK = 8192
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
-    }
-    return `data:${contentType};base64,${btoa(binary)}`
+    return `data:${contentType};base64,${Buffer.from(buf).toString('base64')}`
   } catch {
     return null
   }
@@ -30,9 +20,10 @@ async function toJpegDataUri(url: string): Promise<string | null> {
 // Only TMDB poster URLs are fetched server-side, so ?poster= can't be used for SSRF or as an open image proxy.
 const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'GET, HEAD' } })
+    res.setHeader('Allow', 'GET, HEAD')
+    return res.status(405).send('Method Not Allowed')
   }
 
   const allowed = await checkDistributedRateLimit(getClientIP(req), {
@@ -41,11 +32,13 @@ export default async function handler(req: NextRequest) {
     windowSeconds: 60 * 60
   })
   if (!allowed) {
-    return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '3600' } })
+    res.setHeader('Retry-After', '3600')
+    return res.status(429).send('Too Many Requests')
   }
 
-  const reqUrl = new URL(req.url)
-  const { searchParams, origin } = reqUrl
+  const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`
+  const reqUrl = new URL(req.url || '/', origin)
+  const { searchParams } = reqUrl
 
   const title = (searchParams.get('title') || 'Galaxy Movies').slice(0, 120)
   const subtitle = (searchParams.get('subtitle') || 'Discover Popular & New Films').slice(0, 300)
@@ -257,8 +250,10 @@ export default async function handler(req: NextRequest) {
     }
   )
 
-  imageResponse.headers.set('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
-  imageResponse.headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
+  res.setHeader('Content-Type', 'image/png')
+  res.setHeader('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
+  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
 
-  return imageResponse
+  if (req.method === 'HEAD') return res.status(200).end()
+  return res.status(200).send(Buffer.from(await imageResponse.arrayBuffer()))
 }
