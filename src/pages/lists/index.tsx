@@ -29,6 +29,7 @@ export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePr
   const staticEntries = Object.entries(curatedLists).map(([slug, list]) => ({ slug, ...list }))
   const moodLists = staticEntries.filter((entry) => entry.group === 'mood')
   const curatedOnly = staticEntries.filter((entry) => entry.group === 'curated')
+  const guides = staticEntries.filter((entry) => entry.group === 'guides')
   const entries = [...staticEntries, ...generatedLists]
 
   const itemListData = itemListSchema({
@@ -71,6 +72,15 @@ export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePr
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
           {curatedOnly.map(renderCard)}
         </SimpleGrid>
+
+        {guides.length > 0 && (
+          <>
+            <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Guides</Heading>
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+              {guides.map(renderCard)}
+            </SimpleGrid>
+          </>
+        )}
 
         {generatedLists.length > 0 && (
           <>
