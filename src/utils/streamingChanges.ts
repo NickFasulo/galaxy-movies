@@ -15,7 +15,9 @@ const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
   'hulu': /^hulu/i,
   'disney-plus': /disney/i,
   'apple-tv': /apple ?tv\+?/i,
-  'max': /^(max|hbo max)$/i
+  'max': /^(max|hbo max)$/i,
+  'peacock': /^peacock/i,
+  'paramount-plus': /^paramount\+|paramount plus/i
 }
 
 interface WatchmodeSourceInfo {

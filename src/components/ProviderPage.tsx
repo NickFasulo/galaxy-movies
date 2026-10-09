@@ -97,7 +97,7 @@ export default function ProviderPage({ media, provider, title, titles, dataError
   const { basePath, otherBasePath, crumbRoot, noun, plural, itemWord, genreSlugs, genreTarget } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${provider}`
   const providerLabel = title.replace(' Movies', '')
-  const pageTitle = media === 'tv' ? `${providerLabel} Shows` : title
+  const pageTitle = media === 'tv' ? `Best Shows on ${providerLabel}` : `Best Movies on ${providerLabel}`
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(regions)
   const description = availableInRegion

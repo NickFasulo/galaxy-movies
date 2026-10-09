@@ -204,6 +204,8 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   'disney-plus': { title: 'Disney+ Movies', ids: { default: 337 }, regions: ['US'] },
   'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
   max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
+  peacock: { title: 'Peacock Movies', ids: { default: 386 }, regions: ['US'] },
+  'paramount-plus': { title: 'Paramount+ Movies', ids: { default: 531 }, regions: ['US'] },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
   zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
   sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] }
