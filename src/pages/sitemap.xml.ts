@@ -55,56 +55,58 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
   const generatedLists = await getGeneratedLists()
 
+  // lastmod is only emitted where a real change date exists — emitting
+  // "today" everywhere taught Google the field was meaningless.
   const staticEntries = [
-    urlEntry(`${siteUrl}/`, today),
-    urlEntry(`${siteUrl}/disclosure`, today),
-    urlEntry(`${siteUrl}/about`, today),
-    urlEntry(`${siteUrl}/privacy`, today),
-    urlEntry(`${siteUrl}/terms`, today),
-    urlEntry(`${siteUrl}/contact`, today),
-    urlEntry(`${siteUrl}/streaming`, today),
-    urlEntry(`${siteUrl}/browse`, today),
-    urlEntry(`${siteUrl}/genre`, today),
-    urlEntry(`${siteUrl}/streaming-in-india`, today),
-    urlEntry(`${siteUrl}/justwatch-alternative`, today),
-    urlEntry(`${siteUrl}/new-on-streaming`, today),
-    urlEntry(`${siteUrl}/free`, today),
-    urlEntry(`${siteUrl}/collections`, today),
-    urlEntry(`${siteUrl}/lists`, today),
-    urlEntry(`${siteUrl}/tv`, today),
-    ...franchiseCollectionIds.map((id) => urlEntry(`${siteUrl}/collections/${id}`, today)),
+    urlEntry(`${siteUrl}/`),
+    urlEntry(`${siteUrl}/disclosure`),
+    urlEntry(`${siteUrl}/about`),
+    urlEntry(`${siteUrl}/privacy`),
+    urlEntry(`${siteUrl}/terms`),
+    urlEntry(`${siteUrl}/contact`),
+    urlEntry(`${siteUrl}/streaming`),
+    urlEntry(`${siteUrl}/browse`),
+    urlEntry(`${siteUrl}/genre`),
+    urlEntry(`${siteUrl}/streaming-in-india`),
+    urlEntry(`${siteUrl}/justwatch-alternative`),
+    urlEntry(`${siteUrl}/new-on-streaming`),
+    urlEntry(`${siteUrl}/free`),
+    urlEntry(`${siteUrl}/collections`),
+    urlEntry(`${siteUrl}/lists`),
+    urlEntry(`${siteUrl}/tv`),
+    ...franchiseCollectionIds.map((id) => urlEntry(`${siteUrl}/collections/${id}`)),
   ]
 
   const listingEntries = [
     ...Object.keys(movieCategories).map(category =>
-      urlEntry(`${siteUrl}/browse/${category}`, today)
+      urlEntry(`${siteUrl}/browse/${category}`)
     ),
     ...Object.keys(movieGenres).map(genre =>
-      urlEntry(`${siteUrl}/genre/${genre}`, today)
+      urlEntry(`${siteUrl}/genre/${genre}`)
     ),
     ...Object.keys(streamingProviders).map(provider =>
-      urlEntry(`${siteUrl}/streaming/${provider}`, today)
+      urlEntry(`${siteUrl}/streaming/${provider}`)
     ),
     ...getProviderGenreTargets().map(({ providerKey, genreKey }) =>
-      urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`, today)
+      urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`)
     ),
     ...Object.keys(tvCategories).map(category =>
-      urlEntry(`${siteUrl}/tv/browse/${category}`, today)
+      urlEntry(`${siteUrl}/tv/browse/${category}`)
     ),
     ...Object.keys(tvGenres).map(genre =>
-      urlEntry(`${siteUrl}/tv/genre/${genre}`, today)
+      urlEntry(`${siteUrl}/tv/genre/${genre}`)
     ),
     ...Object.keys(streamingProviders).map(provider =>
-      urlEntry(`${siteUrl}/tv/streaming/${provider}`, today)
+      urlEntry(`${siteUrl}/tv/streaming/${provider}`)
     ),
     ...getTvProviderGenreTargets().map(({ providerKey, genreKey }) =>
-      urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`, today)
+      urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`)
     ),
     ...Object.keys(curatedLists).map(slug =>
-      urlEntry(`${siteUrl}/lists/${slug}`, today)
+      urlEntry(`${siteUrl}/lists/${slug}`)
     ),
-    ...Object.keys(generatedLists).map(slug =>
-      urlEntry(`${siteUrl}/lists/${slug}`, today)
+    ...Object.entries(generatedLists).map(([slug, list]) =>
+      urlEntry(`${siteUrl}/lists/${slug}`, list.createdAt ? formatDate(new Date(list.createdAt).toISOString()) : null)
     ),
   ]
 
@@ -230,15 +232,15 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   )
 
   const dynamicPersonEntries = Array.from(personIds, id =>
-    urlEntry(`${siteUrl}/person/${id}`, today)
+    urlEntry(`${siteUrl}/person/${id}`)
   )
 
   const dynamicCompanyEntries = Array.from(companyIds, id =>
-    urlEntry(`${siteUrl}/company/${id}`, today)
+    urlEntry(`${siteUrl}/company/${id}`)
   )
 
   const dynamicNetworkEntries = Array.from(networkIds, id =>
-    urlEntry(`${siteUrl}/network/${id}`, today)
+    urlEntry(`${siteUrl}/network/${id}`)
   )
 
   const allEntries = [

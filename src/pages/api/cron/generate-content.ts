@@ -24,6 +24,8 @@ import {
 import { curatedLists } from '../../../utils/curatedLists'
 import { isCronAuthorized } from '../../../utils/auth'
 import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../../utils/openai'
+import { pingIndexNow } from '../../../utils/indexnow'
+import { SITE_URL } from '../../../utils/site'
 
 export const config = { maxDuration: 60 }
 
@@ -398,6 +400,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     skipped: results.filter((r) => r.status === 'skipped' || r.status === 'error')
   }
   await appendRunLog(summary)
+
+  const approvedSlugs = summary.approved.map((r) => r.slug)
+  if (approvedSlugs.length) {
+    await pingIndexNow([`${SITE_URL}/lists`, ...approvedSlugs.map((slug) => `${SITE_URL}/lists/${slug}`)])
+  }
 
   return res.status(200).json(summary)
 }
