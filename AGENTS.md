@@ -12,7 +12,7 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 
 ## Deploys
 
-Vercel auto-deploys **previews only** — `vercel.json` sets `git.deploymentEnabled.main: false`, so merging to `main` never ships to production on its own. To release, open the PR's preview deployment in the Vercel dashboard and click **Promote to production** (or `vercel promote <preview-url>`). Crons keep running on the current production deployment. Branch protection on `main` requires a PR with a green `check` job (`ci.yml`: typecheck, lint, test, build).
+Vercel auto-deploys **previews only** — `vercel.json` sets `git.deploymentEnabled.main: false`, so merging to `main` never ships to production on its own. To release, open the PR's preview deployment in the Vercel dashboard and click **Promote to production** (or `vercel promote <preview-url>`). Crons keep running on the current production deployment. Commits that only touch docs/CI config skip preview builds via `ignoreCommand` in vercel.json. Branch protection on `main` requires a PR with a green `check` job (`ci.yml`: typecheck, lint, test, build).
 - `npm run lhci` — build + Lighthouse CI (`lighthouserc.cjs`)
 
 ## Conventions
