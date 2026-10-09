@@ -203,7 +203,7 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   hulu: { title: 'Hulu Movies', ids: { default: 15 }, regions: ['US'] },
   'disney-plus': { title: 'Disney+ Movies', ids: { default: 337 }, regions: ['US'] },
   'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
-  max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
+  max: { title: 'HBO Max Movies', ids: { default: 1899 }, regions: ['US'] },
   peacock: { title: 'Peacock Movies', ids: { default: 386 }, regions: ['US'] },
   'paramount-plus': { title: 'Paramount+ Movies', ids: { default: 531 }, regions: ['US'] },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
