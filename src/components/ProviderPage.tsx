@@ -12,6 +12,7 @@ import {
   streamingProviders,
   getProviderId,
   isProviderAvailableInRegion,
+  PROVIDER_NAME_MATCH,
   type DiscoverOptions,
   type StreamingProvider
 } from '../utils/tmdb'
@@ -130,6 +131,9 @@ export default function ProviderPage({ media, provider, title, titles, dataError
         <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
           Looking for {media === 'tv' ? 'movies' : 'shows'} instead? Browse{' '}
           <Link href={`${otherBasePath}/${provider}`} style={{ textDecoration: 'underline' }}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
+          {PROVIDER_NAME_MATCH[provider] && (
+            <> See what&apos;s <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>new and leaving {providerLabel} this month</Link>.</>
+          )}
         </Text>
         {media === 'movie' && (
           <VpnBanner

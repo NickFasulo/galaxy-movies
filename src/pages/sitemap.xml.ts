@@ -1,6 +1,6 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
-import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders } from '../utils/tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../utils/tmdb'
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
@@ -70,6 +70,8 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/streaming-in-india`),
     urlEntry(`${siteUrl}/justwatch-alternative`),
     urlEntry(`${siteUrl}/new-on-streaming`),
+    urlEntry(`${siteUrl}/leaving`),
+    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`)),
     urlEntry(`${siteUrl}/free`),
     urlEntry(`${siteUrl}/collections`),
     urlEntry(`${siteUrl}/lists`),
