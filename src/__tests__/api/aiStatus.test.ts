@@ -41,7 +41,7 @@ beforeEach(async () => {
   vi.clearAllMocks()
   vi.unstubAllEnvs()
   getRedis.mockReturnValue(null)
-  handler = (await import('./aiStatus')).default
+  handler = (await import('../../pages/api/aiStatus')).default
 })
 
 describe('GET /api/aiStatus', () => {

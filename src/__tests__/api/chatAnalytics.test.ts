@@ -60,7 +60,7 @@ beforeEach(async () => {
   vi.unstubAllEnvs()
   vi.stubEnv('CRON_SECRET', 'test-secret')
   getRedis.mockReturnValue(null)
-  handler = (await import('./chatAnalytics')).default
+  handler = (await import('../../pages/api/chatAnalytics')).default
 })
 
 describe('POST actions', () => {

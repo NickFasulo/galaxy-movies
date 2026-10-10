@@ -67,7 +67,7 @@ beforeEach(async () => {
   vi.stubEnv('TMDB_API_KEY', 'test-key')
   getRedis.mockReturnValue(null)
   fetchMock.mockResolvedValue(tmdbPage([]))
-  handler = (await import('./allMovies')).default
+  handler = (await import('../../pages/api/allMovies')).default
 })
 
 describe('request gating', () => {

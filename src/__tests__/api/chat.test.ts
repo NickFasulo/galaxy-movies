@@ -172,7 +172,7 @@ beforeEach(async () => {
   mocks.formatMovieForChat.mockImplementation((m: { id: number; title: string }) => ({ id: m.id, title: m.title, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
   mocks.formatShowForChat.mockImplementation((s: { id: number; name: string }) => ({ id: s.id, title: s.name, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
   mocks.create.mockResolvedValue(makeStream(['ok']))
-  handler = (await import('./chat')).default
+  handler = (await import('../../pages/api/chat')).default
 })
 
 describe('request gating', () => {
