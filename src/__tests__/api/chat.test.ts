@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import OpenAI from 'openai'
+import { createHash } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { BILLING_KEY, SYNCKEY_KEY } from '../../utils/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -12,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getRedis: vi.fn((): unknown => null),
   kvGet: vi.fn(),
   kvSet: vi.fn(async () => 'OK'),
+  kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
   kvEval: vi.fn(async () => 1),
   extractTitleMentions: vi.fn((): Array<{ match: string; title: string; year?: string; quoted: boolean }> => []),
   resolveMovieMentions: vi.fn(async (): Promise<Array<{ match: string; movieId: number; mediaType: string }>> => []),
@@ -363,6 +366,36 @@ describe('rate limiting and budget', () => {
     expect(res.statusCode).toBe(503)
     expect((res.jsonBody as { error: string }).error).toContain('busy')
     expect(mocks.create).not.toHaveBeenCalled()
+  })
+
+  const PLUS_EMAIL = 'plus@example.com'
+  const PLUS_KEY = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const kvWithBilling = () => ({ eval: mocks.kvEval, hget: mocks.kvHget, get: mocks.kvGet, set: mocks.kvSet })
+
+  it('puts verified plus subscribers on the per-email 100/hr bucket', async () => {
+    mocks.getRedis.mockReturnValue(kvWithBilling())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PLUS_KEY : key === BILLING_KEY ? { status: 'active' } : null)
+    const res = makeRes()
+    await handler(makeReq({ messages: [userMsg('hi')], alerts: { email: PLUS_EMAIL, key: PLUS_KEY } }), res)
+    expect(res.statusCode).toBe(200)
+    const expectedKey = `chat_rl:plus:${createHash('sha256').update(PLUS_EMAIL).digest('hex').slice(0, 32)}`
+    expect(mocks.kvEval).toHaveBeenCalledWith(expect.anything(), [expectedKey], [1, 3600, 100])
+  })
+
+  it.each([
+    ['a wrong sync key', { email: PLUS_EMAIL, key: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' }, { status: 'active' }],
+    ['a canceled subscription', { email: PLUS_EMAIL, key: PLUS_KEY }, { status: 'inactive' }],
+    ['no billing record', { email: PLUS_EMAIL, key: PLUS_KEY }, null]
+  ])('keeps the per-IP free bucket for %s', async (_label, alerts, billing) => {
+    mocks.getRedis.mockReturnValue(kvWithBilling())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PLUS_KEY : key === BILLING_KEY ? billing : null)
+    const ip = '192.0.2.77'
+    const res = makeRes()
+    await handler(makeReq({ messages: [userMsg('hi')], alerts }, { ip }), res)
+    expect(res.statusCode).toBe(200)
+    expect(mocks.kvEval).toHaveBeenCalledWith(expect.anything(), [`chat_rl:${ip}`], [1, 3600, 10])
   })
 })
 

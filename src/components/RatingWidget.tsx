@@ -15,7 +15,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
   const shown = hovered ?? rating ?? 0
 
   const pick = (n: number) => {
-    setRating(movie.id, n === rating ? null : n, movie.title || movie.name || '', mediaType)
+    setRating(movie, n === rating ? null : n, mediaType)
     onClose()
   }
 

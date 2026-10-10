@@ -20,8 +20,9 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC ?? '/assets/starfield.js'
   const router = useRouter()
   const isHome = router.pathname === '/'
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|email-status$|$)/.test(router.pathname)
-  const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]'
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|plus$|email-status$|$)/.test(router.pathname)
+  // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
+  const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 
   useScrollRestore()
   useAlertsSync()

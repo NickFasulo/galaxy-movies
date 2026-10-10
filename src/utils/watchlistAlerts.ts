@@ -1,22 +1,32 @@
 import { getRedis } from './redis'
 import { getProviderChanges, type ProviderChanges } from './streamingChanges'
-import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY } from './waitlistStore'
+import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY } from './waitlistStore'
+import { isPlusActive, parseBillingRecord } from './billing'
+import { fetchRecommendedMovies, fetchRecommendedTv } from './tmdb'
 import { SITE_URL } from './site'
 import type { MediaType } from '../types/tmdb'
 
 const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
 const MAX_NOTIFIED_KEYS = 500
 const MAX_MATCHES_PER_EMAIL = 20
+// Taste matching: a plus subscriber's strongest ratings seed TMDB rec lists,
+// cached per source title and shared across all subscribers.
+const TASTE_MIN_RATING = 7
+const TASTE_SOURCES_PER_SUB = 5
+const MAX_RECS_FETCHES_PER_RUN = 25
+const RECS_TTL_SECONDS = 60 * 60 * 24 * 30
 
 export interface AlertPrefs {
   watchlist: { id: number; mediaType: MediaType; title: string }[]
   services: string[]
   region: string
+  // Absent on snapshots stored before ratings synced — treat as unrated.
+  ratings?: { id: number; mediaType: MediaType; title: string; rating: number }[]
   updatedAt: number
 }
 
 export interface MatchedItem {
-  kind: 'added' | 'coming'
+  kind: 'added' | 'coming' | 'leaving' | 'taste'
   notifiedKey: string
   tmdbId: number
   tmdbType: MediaType
@@ -24,6 +34,8 @@ export interface MatchedItem {
   provider: string
   date?: string
   season?: number | null
+  // For 'taste' matches: the highly-rated title this recommendation came from.
+  via?: string
 }
 
 // @upstash/redis auto-deserializes JSON hash values, so this is already an
@@ -35,9 +47,21 @@ export function parsePrefs(raw: unknown): AlertPrefs | null {
   return obj as unknown as AlertPrefs
 }
 
-export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderChanges>, notified: Set<string>): MatchedItem[] {
+export interface MatchOptions {
+  // Plus: watchlist titles that left a subscribed provider.
+  leaving?: boolean
+  // Plus: 'movie:123' -> the subscriber's rated title that seeded the rec.
+  taste?: Map<string, string>
+}
+
+export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderChanges>, notified: Set<string>, opts: MatchOptions = {}): MatchedItem[] {
   const watchlistKeys = new Set(prefs.watchlist.map((w) => `${w.mediaType}:${w.id}`))
   const out: MatchedItem[] = []
+
+  const push = (match: MatchedItem) => {
+    if (notified.has(match.notifiedKey)) return
+    out.push(match)
+  }
 
   for (const providerKey of prefs.services) {
     const change = changes[providerKey]
@@ -46,19 +70,49 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
     for (const kind of ['added', 'coming'] as const) {
       for (const item of change[kind]) {
         if (!item.tmdbId || !watchlistKeys.has(`${item.tmdbType}:${item.tmdbId}`)) continue
-
-        const notifiedKey = `${kind}:${item.tmdbType}:${item.tmdbId}@${providerKey}`
-        if (notified.has(notifiedKey)) continue
-
-        out.push({
+        push({
           kind,
-          notifiedKey,
+          notifiedKey: `${kind}:${item.tmdbType}:${item.tmdbId}@${providerKey}`,
           tmdbId: item.tmdbId,
           tmdbType: item.tmdbType,
           title: item.title,
           provider: change.source,
           date: 'date' in item ? item.date : undefined,
           season: 'season' in item ? item.season : undefined
+        })
+      }
+    }
+
+    if (opts.leaving) {
+      for (const item of change.left) {
+        if (!item.tmdbId || !watchlistKeys.has(`${item.tmdbType}:${item.tmdbId}`)) continue
+        push({
+          kind: 'leaving',
+          notifiedKey: `leaving:${item.tmdbType}:${item.tmdbId}@${providerKey}`,
+          tmdbId: item.tmdbId,
+          tmdbType: item.tmdbType,
+          title: item.title,
+          provider: change.source
+        })
+      }
+    }
+
+    if (opts.taste?.size) {
+      for (const item of change.added) {
+        if (!item.tmdbId) continue
+        const key = `${item.tmdbType}:${item.tmdbId}`
+        // Watchlisted arrivals already matched as 'added' above.
+        if (watchlistKeys.has(key)) continue
+        const via = opts.taste.get(key)
+        if (!via) continue
+        push({
+          kind: 'taste',
+          notifiedKey: `taste:${item.tmdbType}:${item.tmdbId}@${providerKey}`,
+          tmdbId: item.tmdbId,
+          tmdbType: item.tmdbType,
+          title: item.title,
+          provider: change.source,
+          via
         })
       }
     }
@@ -78,16 +132,26 @@ const prettyDate = (stamp: string | null | undefined) => {
 
 const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 
+function statusLine(item: MatchedItem): string {
+  switch (item.kind) {
+    case 'coming':
+      return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
+    case 'leaving':
+      return `Leaving ${escapeHtml(item.provider)} soon`
+    case 'taste':
+      return `Now on ${escapeHtml(item.provider)} — because you rated ${escapeHtml(item.via || '')} highly`
+    default:
+      return `Now on ${escapeHtml(item.provider)}`
+  }
+}
+
 export function buildEmail(items: MatchedItem[], email: string, unsubToken: string) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
-    .map((item) => {
-      const status = item.kind === 'coming'
-        ? `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
-        : `Now on ${escapeHtml(item.provider)}`
-      return `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
-        `<span style="color: #666;"> — ${status}</span></li>`
-    })
+    .map((item) =>
+      `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
+      `<span style="color: #666;"> — ${statusLine(item)}</span></li>`
+    )
     .join('')
 
   const html = `
@@ -105,6 +169,73 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
+function topRatedTitles(prefs: AlertPrefs): { id: number; mediaType: MediaType; title: string }[] {
+  return (prefs.ratings || [])
+    .filter((r) => r.rating >= TASTE_MIN_RATING && typeof r.id === 'number')
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, TASTE_SOURCES_PER_SUB)
+}
+
+const recsCacheKey = (mediaType: MediaType, id: number) => `recs:v1:${mediaType}:${id}`
+
+// Every plus subscriber's top-rated titles, deduped. Rec lists live in Redis
+// keyed by source title so they're shared across subscribers — one MGET warms
+// most of the index, and TMDB backfills are capped to bound run cost.
+async function loadRecsIndex(plusPrefs: AlertPrefs[]): Promise<Map<string, number[]>> {
+  const kv = getRedis()
+  const index = new Map<string, number[]>()
+  if (!kv) return index
+
+  const wanted = new Map<string, { id: number; mediaType: MediaType }>()
+  for (const prefs of plusPrefs) {
+    for (const r of topRatedTitles(prefs)) wanted.set(`${r.mediaType}:${r.id}`, r)
+  }
+  if (!wanted.size) return index
+
+  const keys = [...wanted.keys()]
+  const cached = await kv.mget<(number[] | null)[]>(...keys.map((k) => {
+    const [mediaType, id] = k.split(':')
+    return recsCacheKey(mediaType as MediaType, Number(id))
+  }))
+
+  let fetches = 0
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    const val = cached[i]
+    if (Array.isArray(val)) {
+      index.set(key, val)
+      continue
+    }
+    if (fetches >= MAX_RECS_FETCHES_PER_RUN) continue
+    fetches++
+    const { id, mediaType } = wanted.get(key)!
+    try {
+      const data = mediaType === 'tv' ? await fetchRecommendedTv(id) : await fetchRecommendedMovies(id)
+      const ids = (data.results || [])
+        .map((r) => r?.id)
+        .filter((n): n is number => typeof n === 'number')
+        .slice(0, 50)
+      index.set(key, ids)
+      await kv.set(recsCacheKey(mediaType, id), ids, { ex: RECS_TTL_SECONDS })
+    } catch (err) {
+      console.error(`Recs fetch failed for ${key}:`, err)
+    }
+  }
+  return index
+}
+
+// 'mediaType:recId' -> the title the subscriber rated that produced the rec.
+function tasteIndexFor(prefs: AlertPrefs, recsIndex: Map<string, number[]>): Map<string, string> {
+  const taste = new Map<string, string>()
+  for (const r of topRatedTitles(prefs)) {
+    for (const recId of recsIndex.get(`${r.mediaType}:${r.id}`) || []) {
+      const key = `${r.mediaType}:${recId}`
+      if (!taste.has(key)) taste.set(key, r.title)
+    }
+  }
+  return taste
+}
+
 export async function sendWatchlistAlerts() {
   if (!process.env.RESEND_API_KEY) return { skipped: 'RESEND_API_KEY not set' }
 
@@ -114,14 +245,23 @@ export async function sendWatchlistAlerts() {
   const changes = await getProviderChanges(TRACKED_PROVIDERS, { fresh: true })
   if (Object.keys(changes).length === 0) return { sent: 0, reason: 'no changes available' }
 
-  const [prefsHash, notifiedHash, unsubTokens] = await Promise.all([
+  const [prefsHash, notifiedHash, unsubTokens, billingHash] = await Promise.all([
     kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
     kv.hgetall<Record<string, unknown>>(ALERTS_NOTIFIED_KEY),
-    kv.hgetall<Record<string, string>>(CONFIRMED_KEY)
+    kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
+    kv.hgetall<Record<string, unknown>>(BILLING_KEY)
   ])
 
   const entries = Object.entries(prefsHash || {})
   if (!entries.length) return { sent: 0, reason: 'no subscribers' }
+
+  const plusByEmail = new Map<string, AlertPrefs>()
+  for (const [email, raw] of entries) {
+    if (!isPlusActive(parseBillingRecord(billingHash?.[email]))) continue
+    const prefs = parsePrefs(raw)
+    if (prefs) plusByEmail.set(email, prefs)
+  }
+  const recsIndex = await loadRecsIndex([...plusByEmail.values()])
 
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
@@ -133,9 +273,13 @@ export async function sendWatchlistAlerts() {
     const unsubToken = unsubTokens?.[email]
     if (!prefs || !unsubToken) continue
 
+    const isPlus = plusByEmail.has(email)
     const storedNotified = notifiedHash?.[email]
     const notified = new Set<string>(Array.isArray(storedNotified) ? storedNotified : [])
-    const matches = matchItems(prefs, changes, notified)
+    const matches = matchItems(prefs, changes, notified, {
+      leaving: isPlus,
+      taste: isPlus ? tasteIndexFor(prefs, recsIndex) : undefined
+    })
     if (!matches.length) continue
 
     const { html, headers } = buildEmail(matches, email, unsubToken)

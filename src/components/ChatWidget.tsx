@@ -16,6 +16,7 @@ import {
 } from '@chakra-ui/react'
 import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../utils/userData'
+import { getAlertsCredentials } from '../utils/alertsSync'
 import type { ResolvedMention } from '../utils/movieSearch'
 import { LuMessageCircle, LuX } from 'react-icons/lu';
 
@@ -191,7 +192,8 @@ export default function ChatWidget() {
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
-          tasteProfile: buildTasteProfile()
+          tasteProfile: buildTasteProfile(),
+          alerts: getAlertsCredentials()
         }),
         signal: abortController.signal
       })

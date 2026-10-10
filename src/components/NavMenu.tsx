@@ -28,7 +28,8 @@ export default function NavMenu() {
             <Menu.Item {...menuItemProps} value='item-4' asChild><NextLink href='/free'>Free to Watch</NextLink></Menu.Item>
             <Menu.Item {...menuItemProps} value='item-5' asChild><NextLink href='/new-on-streaming'>New Releases</NextLink></Menu.Item>
             <Menu.Item {...menuItemProps} value='item-6' asChild><NextLink href='/watchlist'>My List</NextLink></Menu.Item>
-            <Menu.Item {...menuItemProps} value='item-7' asChild><NextLink href='/about'>About</NextLink></Menu.Item>
+            <Menu.Item {...menuItemProps} value='item-7' asChild><NextLink href='/plus'>Plus</NextLink></Menu.Item>
+            <Menu.Item {...menuItemProps} value='item-8' asChild><NextLink href='/about'>About</NextLink></Menu.Item>
           </Menu.Content></Menu.Positioner></Portal>
     </Menu.Root>
   );

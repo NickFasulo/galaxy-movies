@@ -1,8 +1,9 @@
-import type { UserData } from './userData'
+import { ratingEntries, type SyncedPrefs, type UserData } from './userData'
 
 const CREDS_KEY = 'gm.alerts.v1'
 const LAST_SYNCED_KEY = 'gm.alerts.lastSynced'
 const SYNC_DEBOUNCE_MS = 4000
+const MAX_SNAPSHOT_RATINGS = 500
 
 export interface AlertsCredentials {
   email: string
@@ -26,21 +27,50 @@ export function setAlertsCredentials(email: string, key: string): void {
   } catch {}
 }
 
-function buildSnapshot(data: UserData) {
+function snapshotRatings(data: UserData): NonNullable<SyncedPrefs['ratings']> {
+  return ratingEntries(data.ratings).map((entry) => ({
+    id: entry.id,
+    mediaType: entry.mediaType,
+    title: entry.title || '',
+    rating: entry.rating,
+    poster_path: entry.poster_path ?? null,
+    year: entry.year ?? null
+  })).slice(0, MAX_SNAPSHOT_RATINGS)
+}
+
+export function buildSnapshot(data: UserData): SyncedPrefs {
   return {
-    watchlist: data.watchlist.map((item) => ({ id: item.id, mediaType: item.mediaType, title: item.title || '' })),
+    watchlist: data.watchlist.map((item) => ({
+      id: item.id,
+      mediaType: item.mediaType,
+      title: item.title || '',
+      poster_path: item.poster_path ?? null,
+      year: item.year ?? null
+    })),
     services: data.services.providers,
-    region: data.services.region
+    region: data.services.region,
+    ratings: snapshotRatings(data)
   }
 }
 
-async function postPrefs(creds: AlertsCredentials, snapshot: ReturnType<typeof buildSnapshot>): Promise<boolean> {
+async function postPrefs(creds: AlertsCredentials, snapshot: SyncedPrefs): Promise<boolean> {
   const resp = await fetch('/api/alerts-prefs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: creds.email, key: creds.key, ...snapshot })
   })
   return resp.ok
+}
+
+export async function fetchSyncedPrefs(creds: AlertsCredentials): Promise<SyncedPrefs | null> {
+  try {
+    const resp = await fetch(`/api/alerts-prefs?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`)
+    if (!resp.ok) return null
+    const body = await resp.json()
+    return body?.prefs && typeof body.prefs === 'object' ? (body.prefs as SyncedPrefs) : null
+  } catch {
+    return null
+  }
 }
 
 // Skips the request entirely if nothing changed since the last successful

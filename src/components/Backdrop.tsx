@@ -27,6 +27,11 @@ export const BACKDROP_FALLBACKS = {
   galaxy: {
     src: '/backdrop_fallback_lg.webp',
     srcSet: '/backdrop_fallback.webp 1376w, /backdrop_fallback_lg.webp 2560w'
+  },
+  // spiral-galaxy art for /plus — scripts/generate-plus-backdrop.js
+  plus: {
+    src: '/backdrop_plus_lg.webp',
+    srcSet: '/backdrop_plus.webp 1376w, /backdrop_plus_lg.webp 2560w'
   }
 } satisfies Record<string, { src: string; srcSet: string }>
 

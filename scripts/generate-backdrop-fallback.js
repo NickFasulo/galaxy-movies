@@ -260,4 +260,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { buildFrame }
+module.exports = { buildFrame, mulberry32, makeNoiseLayer, fbm }

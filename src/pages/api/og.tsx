@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ImageResponse } from 'next/og'
+import { readFile } from 'fs/promises'
+import path from 'path'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 
 async function toJpegDataUri(url: string): Promise<string | null> {
@@ -42,8 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(429).send('Too Many Requests')
   }
 
-  const proto = req.headers['x-forwarded-proto'] || 'https'
-  const origin = `${proto}://${req.headers.host}`
   const firstParam = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
   const title = (firstParam(req.query.title) || 'Galaxy Movies').slice(0, 120)
@@ -57,14 +57,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const titleFontSize =
     title.length > 40 ? '48px' : title.length > 24 ? '60px' : '76px'
 
-  const [fontData, interBoldData, interRegularData, backdropDataUri, posterDataUri] =
+  // Read bundled assets from disk — a self-fetch to the site origin is an
+  // unverified client to the edge and gets the bot-checkpoint HTML, not bytes.
+  const [fontData, interBoldData, interRegularData, backdropBuf, posterDataUri] =
     await Promise.all([
-      fetch(`${origin}/fonts/SpaceRangerLaserItalic-J7an.otf`).then((r) => r.arrayBuffer()),
-      fetch(`${origin}/fonts/Inter-Bold.ttf`).then((r) => r.arrayBuffer()),
-      fetch(`${origin}/fonts/Inter-Regular.ttf`).then((r) => r.arrayBuffer()),
-      toJpegDataUri(`${origin}/backdrop_fallback.jpg`),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'SpaceRangerLaserItalic-J7an.otf')),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf')),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf')),
+      readFile(path.join(process.cwd(), 'public', 'backdrop_fallback.jpg')),
       poster ? toJpegDataUri(poster) : Promise.resolve(null),
     ])
+  const backdropDataUri = `data:image/jpeg;base64,${backdropBuf.toString('base64')}`
 
   const imageResponse = new ImageResponse(
     (

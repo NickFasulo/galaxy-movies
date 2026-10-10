@@ -47,6 +47,8 @@ export default function Header({ isHome = false, isDark = false }) {
           </Menu.Root>
           <Link color='whiteAlpha.800' transition='color 0.15s' _hover={{ color: 'white' }} asChild><NextLink href='/watchlist'>My List
                       </NextLink></Link>
+          <Link color='whiteAlpha.800' transition='color 0.15s' _hover={{ color: 'white' }} asChild><NextLink href='/plus'>Plus
+                      </NextLink></Link>
           <Link color='whiteAlpha.800' transition='color 0.15s' _hover={{ color: 'white' }} asChild><NextLink href='/about'>About
                       </NextLink></Link>
         </Flex>

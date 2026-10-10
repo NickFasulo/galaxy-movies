@@ -21,7 +21,7 @@ import { useUserData } from '../hooks/useUserData'
 import { fetchDiscoverMovies, fetchListMovies, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders } from '../utils/tmdb'
 import { getProviderCatalog } from '../utils/providerCatalog'
 import { detectRegion } from '../utils/region'
-import { setServices } from '../utils/userData'
+import { ratingEntries, setServices } from '../utils/userData'
 import { setSwrCache } from '../utils/ssr'
 import { SITE_URL } from '../utils/site'
 import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
@@ -129,7 +129,8 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
   const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
-  const { services } = useUserData()
+  const { services, ratings } = useUserData()
+  const [tastePicks, setTastePicks] = useState<{ sourceTitle: string; sourceRating: number; movies: TitleSummary[] } | null>(null)
   const catalogMap = useProviderCatalog(services.region, services.region === region ? providerCatalog : undefined)
 
   useEffect(() => {
@@ -148,6 +149,25 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     const handler = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400)
     return () => clearTimeout(handler)
   }, [searchInput])
+
+  // Personalized rail off the strongest self-rating — post-mount only, so SSR
+  // output stays identical for everyone.
+  useEffect(() => {
+    const top = ratingEntries(ratings)
+      .filter((r) => r.rating >= 8)
+      .sort((a, b) => b.rating - a.rating)[0]
+    if (!top) return
+    let cancelled = false
+    fetch(`/api/recommendations?mediaType=${top.mediaType}&id=${top.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && Array.isArray(d?.results) && d.results.length) {
+          setTastePicks({ sourceTitle: top.title, sourceRating: top.rating, movies: d.results })
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [ratings])
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
 
@@ -401,6 +421,15 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
 
             {!activeSearch && (
               <>
+                {tastePicks && (
+                  <TitleRail
+                    title={`Because you rated ${tastePicks.sourceTitle} ${tastePicks.sourceRating}/10`}
+                    movies={tastePicks.movies}
+                    badgeFor={badgeFor}
+                    onCardEnter={handleCardMouseEnter}
+                    onCardLeave={handleCardMouseLeave}
+                  />
+                )}
                 <TitleRail
                   title='Trending this week'
                   movies={trendingRail}

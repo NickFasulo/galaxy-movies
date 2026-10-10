@@ -10,6 +10,11 @@ declare namespace NodeJS {
     RESEND_FROM?: string
     CRON_SECRET?: string
     TAKEADS_PUBLIC_KEY?: string
+    POLAR_ACCESS_TOKEN?: string
+    POLAR_API_BASE?: string
+    POLAR_WEBHOOK_SECRET?: string
+    POLAR_PRODUCT_MONTHLY?: string
+    POLAR_PRODUCT_YEARLY?: string
     NEXT_PUBLIC_SITE_URL?: string
     NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
     NEXT_PUBLIC_UMAMI_SRC?: string
