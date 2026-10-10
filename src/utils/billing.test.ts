@@ -15,9 +15,13 @@ describe('isPlusActive', () => {
     expect(isPlusActive({ status: 'canceled' }, now)).toBe(false)
   })
 
+  it('keeps past_due subscribers entitled during dunning retries', () => {
+    expect(isPlusActive({ status: 'past_due' }, now)).toBe(true)
+  })
+
   it('is not entitled for inactive states or missing records', () => {
     expect(isPlusActive({ status: 'inactive' }, now)).toBe(false)
-    expect(isPlusActive({ status: 'past_due' }, now)).toBe(false)
+    expect(isPlusActive({ status: 'unpaid' }, now)).toBe(false)
     expect(isPlusActive(null, now)).toBe(false)
     expect(isPlusActive(undefined, now)).toBe(false)
   })
