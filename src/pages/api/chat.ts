@@ -186,7 +186,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.write(`data: ${JSON.stringify({ content: cachedEntry.text })}\n\n`)
     if (cachedEntry.links.length > 0) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
     res.write('data: [DONE]\n\n')
-    return res.end()
+    res.end()
+    return
   }
 
   const client = getOpenAIClient()
