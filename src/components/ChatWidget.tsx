@@ -19,6 +19,8 @@ import { buildTasteProfile } from '../utils/userData'
 import type { ResolvedMention } from '../utils/movieSearch'
 import { LuMessageCircle, LuX } from 'react-icons/lu';
 
+const INTRO_STORAGE_KEY = 'gm.chat.seen.v1'
+
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -68,6 +70,8 @@ export default function ChatWidget() {
   const messageCountRef = useRef(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const [showIntro, setShowIntro] = useState(false)
+  const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const quickActions = [
     { label: 'What should I watch tonight?', query: 'What should I watch tonight?' },
@@ -101,11 +105,37 @@ export default function ChatWidget() {
     }
 
     sessionStartTimeRef.current = Date.now()
+
+    if (!localStorage.getItem(INTRO_STORAGE_KEY)) {
+      introTimerRef.current = setTimeout(() => setShowIntro(true), 3000)
+    }
+
+    return () => {
+      if (introTimerRef.current) clearTimeout(introTimerRef.current)
+    }
   }, [])
+
+  const dismissIntro = useCallback(() => {
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current)
+      introTimerRef.current = null
+    }
+    setShowIntro(false)
+    try {
+      localStorage.setItem(INTRO_STORAGE_KEY, '1')
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    if (!showIntro) return
+    const t = setTimeout(dismissIntro, 14000)
+    return () => clearTimeout(t)
+  }, [showIntro, dismissIntro])
 
   // aiStatus is only checked on first open so pageviews that never touch the
   // widget don't pay a function invocation + Redis read.
   const handleOpen = async () => {
+    dismissIntro()
     if (aiAvailable === null) {
       try {
         const r = await fetch('/api/aiStatus')
@@ -457,6 +487,58 @@ export default function ChatWidget() {
                 Send
               </Button>
             </Flex>
+          </Box>
+        </Presence>
+
+        <Presence
+          present={!open && showIntro}
+          unmountOnExit
+          animationStyle={{
+            _open: 'scale-fade-in',
+            _closed: 'scale-fade-out'
+          }}
+          animationDuration='moderate'
+          transformOrigin='bottom right'>
+          <Box
+            position='absolute'
+            bottom='calc(100% + 0.75rem)'
+            right='0'
+            width='230px'
+            bg='surface.raised'
+            border='1px solid'
+            borderColor='border.subtle'
+            borderRadius='lg'
+            boxShadow='xl'
+            p='3'
+            cursor='pointer'
+            onClick={handleOpen}>
+            <Flex justify='space-between' align='flex-start' gap='2'>
+              <Text fontSize='sm' color='whiteAlpha.900' lineHeight='short'>
+                <Text as='span' fontWeight='bold' color='white'>Ask Galaxy Bot</Text>
+                {' '}for movie &amp; TV picks based on what you&apos;re in the mood for.
+              </Text>
+              <IconButton
+                size='xs'
+                variant='ghost'
+                color='whiteAlpha.700'
+                _hover={{ color: 'white', bg: 'whiteAlpha.200' }}
+                onClick={(e) => { e.stopPropagation(); dismissIntro() }}
+                aria-label='Dismiss'
+                mt='-1'
+                mr='-1'><LuX /></IconButton>
+            </Flex>
+            <Box
+              position='absolute'
+              bottom='-6px'
+              right='18px'
+              width='12px'
+              height='12px'
+              bg='surface.raised'
+              borderRight='1px solid'
+              borderBottom='1px solid'
+              borderColor='border.subtle'
+              transform='rotate(45deg)'
+            />
           </Box>
         </Presence>
 
