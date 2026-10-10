@@ -6,7 +6,7 @@ const eslintConfig = [
   ...coreWebVitals,
   ...typescript,
   {
-    // @vercel/og renders raw HTML to an image — next/image and alt text don't apply.
+    // next/og renders raw HTML to an image — next/image and alt text don't apply.
     files: ['src/pages/api/og.tsx'],
     rules: {
       '@next/next/no-img-element': 'off',

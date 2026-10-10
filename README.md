@@ -15,7 +15,7 @@
 * **📖 AI Synopses:** Get quick, objective film summaries generated via the OpenAI API before deciding what to watch.
 
 
-* **🌌 Dynamic Edge OG Cards:** Generates high-resolution social share cards dynamically using `@vercel/og` on Vercel Edge Runtime.
+* **🌌 Dynamic OG Cards:** Generates high-resolution social share cards dynamically using `next/og`.
 
 
 * **🤖 Galaxy Bot:** A conversational AI movie assistant designed to eliminate choice paralysis by providing tailored recommendations based on mood, group preferences, time limits, and real-time streaming availability.
@@ -29,7 +29,7 @@
 * **Framework:** [Next.js](https://nextjs.org/?utm_source=gemini) (Pages Router)
 
 
-* **Runtime:** [Vercel Edge Runtime](https://vercel.com/edge?utm_source=gemini) & `@vercel/og`
+* **OG images:** [`next/og`](https://nextjs.org/docs/app/api-reference/functions/image-response) (`ImageResponse`)
 
 * **State & Caching:** [React Query](https://tanstack.com/query?utm_source=gemini)
 
