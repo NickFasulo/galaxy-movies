@@ -7,7 +7,7 @@ import PageShell from './PageShell'
 import {
   fetchDiscoverMovies,
   fetchDiscoverTv,
-  getProviderId,
+  getProviderIds,
   isProviderAvailableInRegion,
   movieGenres,
   tvGenres,
@@ -82,7 +82,8 @@ export function providerGenreServerSideProps(media: MediaType) {
     if (!target) return { notFound: true }
 
     const region = detectRegion(req)
-    const providerId = getProviderId(providerSlug, region)
+    const providerIds = getProviderIds(providerSlug, region)
+    const providerId = providerIds.length ? providerIds.join('|') : null
     const genreId = genres[genreSlug].id
     const availableInRegion = isProviderAvailableInRegion(providerSlug, region)
 

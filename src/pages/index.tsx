@@ -1,27 +1,41 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { useRouter } from 'next/router'
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Badge, Box, Flex, Heading, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Heading, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
 import Wordmark from '../components/Wordmark'
 import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
-import TopBackdrop from '../components/TopBackdrop'
+import HomeHero from '../components/HomeHero'
+import ProviderBar from '../components/ProviderBar'
+import TitleRail from '../components/TitleRail'
+import CardProviderIcons from '../components/CardProviderIcons'
 import PageHead from '../components/PageHead'
 import LegalLinks from '../components/LegalLinks'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
-import { fetchDiscoverMovies } from '../utils/tmdb'
+import { useProviderCatalog } from '../hooks/useProviderCatalog'
+import { useUserData } from '../hooks/useUserData'
+import { fetchDiscoverMovies, fetchListMovies, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders } from '../utils/tmdb'
+import { getProviderCatalog } from '../utils/providerCatalog'
+import { detectRegion } from '../utils/region'
+import { setServices } from '../utils/userData'
 import { setSwrCache } from '../utils/ssr'
 import { SITE_URL } from '../utils/site'
-import type { TitleSummary, TmdbMovie } from '../types/tmdb'
+import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
 import { LuArrowUp } from 'react-icons/lu';
 
 interface Props {
   initialMovies: TmdbMovie[]
   initialTotalPages: number
+  region: string
+  featured: TitleSummary | null
+  featuredProviders: WatchProvider[]
+  providerCatalog: WatchProvider[]
+  trendingRail: TitleSummary[]
+  newOn: { providerKey: string; providerLabel: string; movies: TmdbMovie[] }
 }
 
 interface FeedPage {
@@ -38,18 +52,75 @@ const nowStreamingBadge = (
 // Feed values that route to non-movie TMDB media via the `media` query param.
 const MEDIA_FOR_CATEGORY: Record<string, string> = { tv: 'tv', trending: 'trending' }
 
-export async function getServerSideProps({ res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
-  try {
-    const data = await fetchDiscoverMovies({ category: 'popular', page: 1 })
-    setSwrCache(res, 21600, 86400)
-    return { props: { initialMovies: data.results || [], initialTotalPages: data.total_pages || 1 } }
-  } catch (error) {
-    console.error('Error fetching initial movies for homepage SSR:', error)
-    return { props: { initialMovies: [], initialTotalPages: 1 } }
+type TrendingItem = TitleSummary & { media_type?: string }
+
+// Same 45-day "recently released" window as the /new-on-streaming page.
+const NEW_ON_WINDOW_DAYS = 45
+const RAIL_SIZE = 12
+
+export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
+  const region = detectRegion(req)
+  // Registry order = display order; the first provider available in the region
+  // anchors the "New on …" rail (Netflix in US/IN).
+  const railProviderKey = Object.keys(streamingProviders).find((key) => isProviderAvailableInRegion(key, region)) || 'netflix'
+  const railProviderIds = getProviderIds(railProviderKey, region)
+
+  const windowStart = new Date()
+  windowStart.setDate(windowStart.getDate() - NEW_ON_WINDOW_DAYS)
+
+  const [popularData, trendingData, catalog, newOnData] = await Promise.all([
+    fetchDiscoverMovies({ category: 'popular', page: 1 }).catch(() => null),
+    fetchTmdb<TmdbPaged<TrendingItem>>('/trending/all/week', { page: 1 }).catch(() => null),
+    getProviderCatalog(region).catch(() => [] as WatchProvider[]),
+    railProviderIds.length
+      ? fetchListMovies({
+          'primary_release_date.gte': windowStart.toISOString().split('T')[0],
+          'primary_release_date.lte': new Date().toISOString().split('T')[0],
+          sort_by: 'primary_release_date.desc',
+          with_watch_providers: railProviderIds.join('|'),
+          watch_region: region
+        }).catch(() => null)
+      : Promise.resolve(null)
+  ])
+
+  const trendingItems: TitleSummary[] = (trendingData?.results || [])
+    .filter((item) => item?.poster_path && (item.media_type === 'movie' || item.media_type === 'tv'))
+    .map((item) => item.media_type === 'tv'
+      ? { ...item, title: item.name, release_date: item.first_air_date, mediaType: 'tv' as const }
+      : { ...item, mediaType: 'movie' as const })
+
+  const featured = trendingItems.find((item) => item.backdrop_path) || null
+
+  let featuredProviders: WatchProvider[] = []
+  if (featured) {
+    const mediaType = featured.mediaType === 'tv' ? 'tv' : 'movie'
+    featuredProviders = await fetchTmdb<WatchProvidersResponse>(`/${mediaType}/${featured.id}/watch/providers`)
+      .then((data) => data.results?.[region]?.flatrate || [])
+      .catch(() => [])
+  }
+
+  setSwrCache(res, 21600, 86400)
+  return {
+    props: {
+      region,
+      initialMovies: popularData?.results || [],
+      initialTotalPages: popularData?.total_pages || 1,
+      featured,
+      featuredProviders,
+      providerCatalog: catalog,
+      trendingRail: trendingItems
+        .filter((item) => item.id !== featured?.id || item.mediaType !== featured?.mediaType)
+        .slice(0, RAIL_SIZE),
+      newOn: {
+        providerKey: railProviderKey,
+        providerLabel: streamingProviders[railProviderKey]?.title.replace(' Movies', '') || railProviderKey,
+        movies: (newOnData?.results || []).slice(0, RAIL_SIZE)
+      }
+    }
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages }: Props) {
+export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
@@ -58,6 +129,8 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
   const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
+  const { services } = useUserData()
+  const catalogMap = useProviderCatalog(services.region, services.region === region ? providerCatalog : undefined)
 
   useEffect(() => {
     const savedCategory = localStorage.getItem('category')
@@ -78,7 +151,12 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
 
   const activeSearch = debouncedSearch.length > 2 ? debouncedSearch : ''
 
-  const initialInfiniteData = (category === 'popular' && !activeSearch)
+  // TMDB search can't filter by watch provider — selected services only reach the
+  // API on browse feeds; during search they're applied client-side below.
+  const providerKeys = services.providers
+  const feedProviders = activeSearch ? '' : providerKeys.join(',')
+
+  const initialInfiniteData = (category === 'popular' && !activeSearch && !feedProviders)
     ? { pages: [{ results: initialMovies, total_pages: initialTotalPages }], pageParams: [1] }
     : undefined
 
@@ -91,7 +169,7 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery<FeedPage, Error>({
-    queryKey: ['infiniteMovies', category, activeSearch],
+    queryKey: ['infiniteMovies', category, activeSearch, feedProviders, services.region],
     queryFn: async ({ pageParam }): Promise<FeedPage> => {
       const now = Date.now()
       const timeSinceLastFetch = now - lastFetchTimeRef.current
@@ -105,11 +183,12 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
       
       const media = MEDIA_FOR_CATEGORY[category]
       const mediaParam = media ? `&media=${media}` : ''
+      const providersParam = feedProviders ? `&providers=${encodeURIComponent(feedProviders)}&region=${encodeURIComponent(services.region)}` : ''
       const url = activeSearch
         ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}${mediaParam}`
         : media
-          ? `/api/allMovies?media=${media}&page=${pageParam}`
-          : `/api/allMovies?category=${category}&page=${pageParam}`
+          ? `/api/allMovies?media=${media}&page=${pageParam}${providersParam}`
+          : `/api/allMovies?category=${category}&page=${pageParam}${providersParam}`
 
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load movies')
@@ -154,7 +233,25 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
     return uniqueMovies
   }, [data])
 
-  const isStreaming = useStreamingBadges(moviesList)
+  // Rails share the badge/icon lookups — one extra chunk of ids at most.
+  const badgeTitles = useMemo(() => [...moviesList, ...trendingRail, ...newOn.movies], [moviesList, trendingRail, newOn.movies])
+  const { isStreaming, providersFor, myProviderIds, isReady: providersReady } = useStreamingBadges(badgeTitles)
+
+  // Provider-filtered search results wait for the badge lookups to land —
+  // hiding on an empty providersFor would flash an empty grid first.
+  const visibleMovies = activeSearch && myProviderIds.size > 0 && providersReady
+    ? moviesList.filter((movie) => providersFor(movie).some((id) => myProviderIds.has(id)))
+    : moviesList
+
+  const clearServices = useCallback(() => setServices(services.region, []), [services.region])
+
+  const badgeFor = (movie: TitleSummary): ReactNode => {
+    const providers = providersFor(movie)
+      .map((id) => catalogMap?.get(id))
+      .filter((p): p is WatchProvider => Boolean(p))
+    if (providers.length > 0) return <CardProviderIcons providers={providers} myProviderIds={myProviderIds} />
+    return isStreaming(movie) ? nowStreamingBadge : null
+  }
 
   const hasReachedEnd = Boolean(
     data?.pages?.length &&
@@ -255,19 +352,18 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
 
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 
-      <TopBackdrop
-        top='-4.25rem'
-        zIndex={0}
-        opacity={isBgVisible && hoveredBg ? 0 : 1}
-        transition='opacity 0.6s ease-in-out'
-        willChange='opacity'
-      />
-
       <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
+        <HomeHero
+          featured={featured}
+          providers={featuredProviders}
+          myProviderIds={myProviderIds}
+          dimmed={Boolean(isBgVisible && hoveredBg)}
+        >
           <Heading as='h1' textAlign='center' mt='2rem'>
             <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
           </Heading>
           <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
+        </HomeHero>
 
         <SearchBar
           category={category}
@@ -275,6 +371,8 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
           searchInput={searchInput}
           setSearchInput={setSearchInput}
         />
+
+        <ProviderBar catalog={catalogMap} />
 
         {isLoading && moviesList.length === 0 ? (
           <CustomSpinner />
@@ -288,10 +386,48 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
           </Text>
         ) : (
           <>
+            {providerKeys.length > 0 && (
+              <Flex justify='center' mt='1.5rem' mx='1.5rem'>
+                <Flex align='center' gap={3} bg='surface.raised' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='full' px={4} py={1.5}>
+                  <Text fontSize='xs' color='gray.300'>
+                    Showing {activeSearch ? 'results' : 'titles'} on your services
+                  </Text>
+                  <Button size='2xs' variant='ghost' color='gray.300' onClick={clearServices} _hover={{ color: 'white' }}>
+                    Clear
+                  </Button>
+                </Flex>
+              </Flex>
+            )}
+
+            {!activeSearch && (
+              <>
+                <TitleRail
+                  title='Trending this week'
+                  movies={trendingRail}
+                  badgeFor={badgeFor}
+                  onCardEnter={handleCardMouseEnter}
+                  onCardLeave={handleCardMouseLeave}
+                />
+                <TitleRail
+                  title={`New on ${newOn.providerLabel}`}
+                  href='/new-on-streaming'
+                  movies={newOn.movies}
+                  badgeFor={badgeFor}
+                  onCardEnter={handleCardMouseEnter}
+                  onCardLeave={handleCardMouseLeave}
+                />
+              </>
+            )}
+
+            {visibleMovies.length === 0 ? (
+              <Text textAlign='center' mt='3rem' fontWeight='bold' fontSize='lg' color='gray.500'>
+                Nothing on your services matches{activeSearch ? ` “${debouncedSearch}”` : ' this feed'}.
+              </Text>
+            ) : (
             <InfiniteScroll
               next={fetchNextPage}
               hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
-              dataLength={moviesList.length}
+              dataLength={visibleMovies.length}
               scrollThreshold={0.95}
               loader={
                 <Text textAlign='center' color='gray.500' p='1rem'>
@@ -307,21 +443,22 @@ export default function Home({ initialMovies, initialTotalPages }: Props) {
                 minChildWidth={{ base: '45%', md: '12rem' }}
                 minH='100vh'
               >
-                {moviesList.map((movie, index) => (
+                {visibleMovies.map((movie, index) => (
                   <Box
-                    key={movie.id}
+                    key={`${movie.mediaType || 'movie'}:${movie.id}`}
                     onMouseEnter={() => handleCardMouseEnter(movie.backdrop_path)}
                     onMouseLeave={handleCardMouseLeave}
                   >
                     <MovieCard
                       movie={movie}
                       priority={index < 5}
-                      badge={isStreaming(movie) ? nowStreamingBadge : null}
+                      badge={badgeFor(movie)}
                     />
                   </Box>
                 ))}
               </SimpleGrid>
             </InfiniteScroll>
+            )}
 
             {hasReachedEnd && (
               <Text textAlign='center' color='gray.500' p='1rem' mb='3rem'>

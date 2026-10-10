@@ -246,6 +246,65 @@ describe('browse routing', () => {
   })
 })
 
+describe('provider filtering', () => {
+  it('adds with_watch_providers + watch_region for a known provider', async () => {
+    await handler(makeReq({ providers: 'netflix' }), makeRes())
+    const url = calledUrl()
+    expect(url.pathname).toBe('/3/discover/movie')
+    expect(url.searchParams.get('with_watch_providers')).toBe('8')
+    expect(url.searchParams.get('watch_region')).toBe('US')
+    expect(url.searchParams.get('with_watch_monetization_types')).toBe('flatrate|free|ads')
+  })
+
+  it('ORs multiple providers with a pipe separator', async () => {
+    await handler(makeReq({ providers: 'netflix,max' }), makeRes())
+    expect(calledUrl().searchParams.get('with_watch_providers')).toBe('8|1899')
+  })
+
+  it('expands multi-tier providers to all their TMDB ids', async () => {
+    await handler(makeReq({ providers: 'paramount-plus' }), makeRes())
+    expect(calledUrl().searchParams.get('with_watch_providers')).toBe('2303|2616')
+  })
+
+  it('resolves region-specific provider ids', async () => {
+    await handler(makeReq({ providers: 'amazon-prime-video', region: 'IN' }), makeRes())
+    const url = calledUrl()
+    expect(url.searchParams.get('with_watch_providers')).toBe('119')
+    expect(url.searchParams.get('watch_region')).toBe('IN')
+  })
+
+  it('ignores unknown provider keys', async () => {
+    await handler(makeReq({ providers: 'not-a-service' }), makeRes())
+    expect(calledUrl().searchParams.has('with_watch_providers')).toBe(false)
+  })
+
+  it.each([
+    ['media=tv', { media: 'tv', providers: 'netflix' }, '/3/discover/tv'],
+    ['a genre feed', { category: 'comedy', providers: 'netflix' }, '/3/discover/movie']
+  ])('applies the filter to %s', async (_label, query, path) => {
+    await handler(makeReq(query), makeRes())
+    const url = calledUrl()
+    expect(url.pathname).toBe(path)
+    expect(url.searchParams.get('with_watch_providers')).toBe('8')
+  })
+
+  it.each([
+    ['search', { search: 'dune', providers: 'netflix' }],
+    ['trending', { media: 'trending', providers: 'netflix' }]
+  ])('does not apply the filter to %s', async (_label, query) => {
+    await handler(makeReq(query), makeRes())
+    expect(calledUrl().searchParams.has('with_watch_providers')).toBe(false)
+  })
+
+  it('swaps top_rated to an equivalent discover query when providers are set', async () => {
+    await handler(makeReq({ category: 'top_rated', providers: 'netflix' }), makeRes())
+    const url = calledUrl()
+    expect(url.pathname).toBe('/3/discover/movie')
+    expect(url.searchParams.get('sort_by')).toBe('vote_average.desc')
+    expect(url.searchParams.get('with_watch_providers')).toBe('8')
+  })
+})
+
 describe('page param', () => {
   it.each([
     ['3', '3'],

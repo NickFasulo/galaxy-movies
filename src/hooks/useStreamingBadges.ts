@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { useUserData } from './useUserData'
-import { getProviderId } from '../utils/tmdb'
+import { getProviderIds } from '../utils/tmdb'
 import type { MediaType, TitleSummary } from '../types/tmdb'
 
 type BadgeTitle = Pick<TitleSummary, 'id' | 'mediaType'>
@@ -11,11 +11,16 @@ type BadgeTitle = Pick<TitleSummary, 'id' | 'mediaType'>
 // membership is keyed `type:id`.
 const CHUNK = 50
 
-export function useStreamingBadges(movies: BadgeTitle[]): (movie: BadgeTitle) => boolean {
+export function useStreamingBadges(movies: BadgeTitle[]): {
+  isStreaming: (movie: BadgeTitle) => boolean
+  providersFor: (movie: BadgeTitle) => number[]
+  myProviderIds: Set<number>
+  isReady: boolean
+} {
   const { services } = useUserData()
 
   const myProviderIds = useMemo(() => new Set(
-    services.providers.map((key) => getProviderId(key, services.region)).filter((id): id is number => Boolean(id))
+    services.providers.flatMap((key) => getProviderIds(key, services.region))
   ), [services])
 
   const chunks = useMemo(() => {
@@ -46,13 +51,20 @@ export function useStreamingBadges(movies: BadgeTitle[]): (movie: BadgeTitle) =>
     }))
   })
 
-  const streamingIds = new Set<string>()
+  const providersByKey = new Map<string, number[]>()
   results.forEach((r, i) => {
     const type = chunks[i]?.type || 'movie'
     for (const [id, providerIds] of Object.entries(r.data?.results || {})) {
-      if (providerIds.some((pid) => myProviderIds.has(pid))) streamingIds.add(`${type}:${id}`)
+      providersByKey.set(`${type}:${id}`, providerIds)
     }
   })
 
-  return (movie) => streamingIds.has(`${movie.mediaType === 'tv' ? 'tv' : 'movie'}:${movie.id}`)
+  const keyOf = (movie: BadgeTitle) => `${movie.mediaType === 'tv' ? 'tv' : 'movie'}:${movie.id}`
+
+  return {
+    myProviderIds,
+    isReady: chunks.length > 0 && results.every((r) => r.isSuccess || r.isError),
+    providersFor: (movie) => providersByKey.get(keyOf(movie)) || [],
+    isStreaming: (movie) => (providersByKey.get(keyOf(movie)) || []).some((pid) => myProviderIds.has(pid))
+  }
 }

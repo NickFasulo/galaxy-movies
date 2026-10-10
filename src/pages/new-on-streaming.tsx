@@ -5,7 +5,7 @@ import { Box, Flex, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import { streamingProviders, getProviderId, isProviderAvailableInRegion, fetchListMovies } from '../utils/tmdb'
+import { streamingProviders, getProviderIds, isProviderAvailableInRegion, fetchListMovies } from '../utils/tmdb'
 import { detectRegion } from '../utils/region'
 import { withTimeout } from '../utils/withTimeout'
 import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
@@ -56,10 +56,10 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
   try {
     const results = await Promise.all(
       availableProviders.map(async ([key, provider]) => {
-        const providerId = getProviderId(key, region)
+        const providerIds = getProviderIds(key, region)
         const data = await fetchListMovies({
           ...dateParams,
-          with_watch_providers: providerId,
+          with_watch_providers: providerIds.join('|'),
           watch_region: region
         })
         return { key, label: provider.title.replace(' Movies', ''), movies: (data.results || []).slice(0, MOVIES_PER_PROVIDER) }

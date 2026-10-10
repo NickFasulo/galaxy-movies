@@ -10,7 +10,7 @@ import {
   fetchDiscoverMovies,
   fetchDiscoverTv,
   streamingProviders,
-  getProviderId,
+  getProviderIds,
   isProviderAvailableInRegion,
   type DiscoverOptions,
   type StreamingProvider
@@ -78,7 +78,8 @@ export function providerServerSideProps(media: MediaType) {
 
     const region = detectRegion(req)
     const availableInRegion = isProviderAvailableInRegion(slug, region)
-    const providerId = getProviderId(slug, region)
+    const providerIds = getProviderIds(slug, region)
+    const providerId = providerIds.length ? providerIds.join('|') : null
     const base = { media, provider: slug, ...provider, region, availableInRegion }
 
     try {

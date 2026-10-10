@@ -23,7 +23,7 @@ export interface GenreDef {
 
 export interface StreamingProvider {
   title: string
-  ids: { default: number; [region: string]: number }
+  ids: { default: number | number[]; [region: string]: number | number[] }
   regions?: string[]
 }
 
@@ -205,16 +205,23 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
   max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
   peacock: { title: 'Peacock Movies', ids: { default: 386 }, regions: ['US'] },
-  'paramount-plus': { title: 'Paramount+ Movies', ids: { default: 531 }, regions: ['US'] },
+  // TMDB retired the single Paramount+ id (531) and split it into Premium and
+  // Essential tiers — both count as "on Paramount+".
+  'paramount-plus': { title: 'Paramount+ Movies', ids: { default: [2303, 2616] }, regions: ['US'] },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
   zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
   sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] }
 }
 
-export function getProviderId(providerKey: string, region = 'US'): number | null {
+export function getProviderIds(providerKey: string, region = 'US'): number[] {
   const provider = streamingProviders[providerKey]
-  if (!provider) return null
-  return provider.ids[region] ?? provider.ids.default
+  if (!provider) return []
+  const ids = provider.ids[region] ?? provider.ids.default
+  return Array.isArray(ids) ? ids : [ids]
+}
+
+export function getProviderId(providerKey: string, region = 'US'): number | null {
+  return getProviderIds(providerKey, region)[0] ?? null
 }
 
 export function isProviderAvailableInRegion(providerKey: string, region = 'US'): boolean {
