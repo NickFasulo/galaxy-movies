@@ -14,6 +14,8 @@ export interface BillingRecord {
   updatedAt?: number
 }
 
+// past_due keeps access during Polar's dunning retries — a failed renewal
+// charge is not yet a dead subscription; Polar resolves it to revoked/unpaid.
 // Webhook writes are rare and reads happen on chat/alert hot paths — a short
 // LRU keeps entitlement checks off the Upstash bill for repeat callers. The
 // wrapper object is because lru-cache can't store a null hit.
@@ -21,7 +23,7 @@ const billingCache = new LRUCache<string, { record: BillingRecord | null }>({ ma
 
 export function isPlusActive(record: BillingRecord | null | undefined, now = Date.now()): boolean {
   if (!record) return false
-  if (record.status === 'active' || record.status === 'trialing') return true
+  if (record.status === 'active' || record.status === 'trialing' || record.status === 'past_due') return true
   // Canceled-but-paid-through stays entitled until the period ends.
   return record.status === 'canceled' && typeof record.currentPeriodEnd === 'number' && record.currentPeriodEnd > now
 }

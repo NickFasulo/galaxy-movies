@@ -152,11 +152,68 @@ describe('POST /api/webhooks/polar', () => {
     expect(written.rawStatus).toBe('unpaid')
   })
 
+  it('stores lifecycle statuses verbatim so isPlusActive can interpret them', async () => {
+    for (const status of ['canceled', 'past_due', 'active']) {
+      mocks.kvHset.mockClear()
+      const body = subscriptionEvent({ status })
+      const res = makeRes()
+      await handler(makeReq(body, headersFor(body)), res)
+      expect(res.statusCode).toBe(200)
+      const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as { status: string }
+      expect(written.status).toBe(status)
+    }
+  })
+
+  it('skips the write when no email can be resolved', async () => {
+    const body = subscriptionEvent({ customer: {}, customer_email: undefined, metadata: undefined })
+    const res = makeRes()
+    await handler(makeReq(body, headersFor(body)), res)
+    expect(res.statusCode).toBe(200)
+    expect(mocks.kvHset).not.toHaveBeenCalled()
+  })
+
+  it('503s when the webhook secret is not configured', async () => {
+    delete process.env.POLAR_WEBHOOK_SECRET
+    const body = subscriptionEvent()
+    const res = makeRes()
+    await handler(makeReq(body, headersFor(body)), res)
+    expect(res.statusCode).toBe(503)
+    expect(mocks.kvHset).not.toHaveBeenCalled()
+  })
+
   it('ignores non-subscription events', async () => {
     const body = JSON.stringify({ type: 'order.paid', data: {} })
     const res = makeRes()
     await handler(makeReq(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHset).not.toHaveBeenCalled()
+  })
+})
+
+// The record the webhook writes must satisfy the entitlement reader — this is
+// the contract that decides whether a paying customer actually gets Plus.
+describe('webhook → isPlusActive chain', () => {
+  it('grants access on active, past_due, and canceled-until-period-end; revokes it on terminal states', async () => {
+    const { isPlusActive } = await import('../../utils/billing')
+    const futureEnd = new Date(Date.now() + 30 * 86400_000).toISOString()
+
+    const cases: Array<{ status: string; periodEnd?: string; entitled: boolean }> = [
+      { status: 'active', periodEnd: futureEnd, entitled: true },
+      { status: 'trialing', periodEnd: futureEnd, entitled: true },
+      { status: 'past_due', periodEnd: futureEnd, entitled: true },
+      { status: 'canceled', periodEnd: futureEnd, entitled: true },
+      { status: 'canceled', periodEnd: '2020-01-01T00:00:00.000Z', entitled: false },
+      { status: 'revoked', periodEnd: futureEnd, entitled: false },
+      { status: 'unpaid', periodEnd: futureEnd, entitled: false }
+    ]
+
+    for (const c of cases) {
+      mocks.kvHset.mockClear()
+      const body = subscriptionEvent({ status: c.status, current_period_end: c.periodEnd })
+      const res = makeRes()
+      await handler(makeReq(body, headersFor(body)), res)
+      const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as Parameters<typeof isPlusActive>[0]
+      expect({ status: c.status, entitled: isPlusActive(written) }).toEqual({ status: c.status, entitled: c.entitled })
+    }
   })
 })
