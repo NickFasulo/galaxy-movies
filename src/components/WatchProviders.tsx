@@ -281,13 +281,18 @@ export default function WatchProviders({
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <GruvLink title={movieTitle} />
+            <Flex align='center' gap={4} wrap='wrap'>
+              <GruvLink title={movieTitle} />
+              <VpnLink />
+            </Flex>
           </Box>
         )}
-        <Flex align='center' justify='space-between' gap={2} mt={2} wrap='wrap'>
-          <Text color='gray.600' fontSize='2xs'>{footerNotes}</Text>
-          <VpnLink />
-        </Flex>
+        {(hasProviders || !!footerNotes) && (
+          <Flex align='center' justify='space-between' gap={2} mt={2} wrap='wrap'>
+            <Text color='gray.600' fontSize='2xs'>{footerNotes}</Text>
+            {hasProviders && <VpnLink />}
+          </Flex>
+        )}
       </Box>
     </>
   );
