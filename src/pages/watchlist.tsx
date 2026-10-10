@@ -136,7 +136,7 @@ export default function Watchlist() {
                     Manage subscription
                   </a>
                   {' · '}
-                  <button type='button' onClick={exportData} style={{ textDecoration: 'underline' }}>
+                  <button type='button' onClick={exportData} style={{ textDecoration: 'underline', cursor: 'pointer' }}>
                     Export my data
                   </button>
                 </Text>
