@@ -10,7 +10,7 @@ const nowStreamingBadge = (
 )
 
 export default function MovieGrid({ movies, posterFallback }: { movies: TitleSummary[]; posterFallback?: string }) {
-  const isStreaming = useStreamingBadges(movies)
+  const { isStreaming } = useStreamingBadges(movies)
 
   return (
     <SimpleGrid

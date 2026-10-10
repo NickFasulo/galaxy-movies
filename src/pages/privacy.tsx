@@ -22,10 +22,10 @@ export default function Privacy() {
         your browser storage.</InfoParagraph>
       <InfoParagraph><strong>Synced alert preferences (optional).</strong> If you join streaming
         alerts and confirm your email, the device you confirmed on stores a sync credential and
-        uploads a snapshot of your watchlist titles, chosen streaming services, and region to our
-        servers. We use this snapshot to email you when a saved title arrives on one of your
-        services. Your ratings are never uploaded. Unsubscribing deletes your synced data from our
-        servers.</InfoParagraph>
+        uploads a snapshot of your watchlist titles, ratings, chosen streaming services, and region
+        to our servers. We use this snapshot to email you when a saved title arrives on one of your
+        services and to restore your list and ratings on other devices you link. Unsubscribing
+        deletes your synced data from our servers.</InfoParagraph>
       <InfoParagraph><strong>Email address (optional).</strong> If you join streaming alerts, we ask
         you to confirm your email address and store it to send you watchlist alerts, a weekly
         streaming digest, and related service emails (such as device-linking links).</InfoParagraph>
@@ -86,6 +86,7 @@ export default function Privacy() {
         <List.Item><strong>Upstash</strong> — server-side storage for subscriber emails, synced alert preferences, and anonymous usage statistics</List.Item>
         <List.Item><strong>OpenAI</strong> — generates Galaxy Bot responses from your messages and taste profile</List.Item>
         <List.Item><strong>Resend</strong> — delivers confirmation, alert, digest, and device-linking emails</List.Item>
+        <List.Item><strong>Polar</strong> — merchant of record for Galaxy Plus; processes your payment and sends receipts (we never see your card details)</List.Item>
         <List.Item><strong>Web3Forms</strong> — delivers contact form submissions to us</List.Item>
         <List.Item><strong>TMDB and Watchmode</strong> — supply movie metadata and streaming availability</List.Item>
         <List.Item><strong>YouTube</strong> — embedded trailers (loaded via the youtube-nocookie.com domain)</List.Item>
@@ -101,6 +102,7 @@ export default function Privacy() {
       <List.Root as='ul' mb={4} pl={4} gap={1}>
         <List.Item>Watchlist, ratings, and preferences: stored only on your device until you clear them</List.Item>
         <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</List.Item>
+        <List.Item>Galaxy Plus subscription status (plan state, customer and subscription IDs): kept while your subscription is active; payment records are retained by Polar as merchant of record</List.Item>
         <List.Item>Galaxy Bot anonymous session statistics: retained for up to 30 days; optional feedback for up to 90 days</List.Item>
         <List.Item>Chat responses may be cached server-side for up to 30 minutes to improve performance</List.Item>
         <List.Item>Hosting and security logs: retained by Vercel under their standard retention periods</List.Item>

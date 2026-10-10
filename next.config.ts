@@ -38,6 +38,16 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // /api/og reads these from disk (fs) — NFT doesn't always trace public/ files
+  // into the serverless bundle, so pin them explicitly or the route 500s.
+  outputFileTracingIncludes: {
+    '/api/og': [
+      './public/fonts/SpaceRangerLaserItalic-J7an.otf',
+      './public/fonts/Inter-Bold.ttf',
+      './public/fonts/Inter-Regular.ttf',
+      './public/backdrop_fallback.jpg'
+    ]
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

@@ -14,6 +14,9 @@ export interface RatingEntry {
   rating: number
   title: string
   mediaType: MediaType
+  id?: number
+  poster_path?: string | null
+  year?: string | null
 }
 
 export interface UserData {
@@ -150,14 +153,32 @@ export function isWatchlisted(id: number, data: UserData = getUserData(), mediaT
   return data.watchlist.some((item) => item.id === id && (item.mediaType || 'movie') === mediaType)
 }
 
+// Ratings are keyed 'tv:{id}' or bare id; newer entries also store the id on
+// the value. Flatten both shapes so consumers always get a usable id.
+export function ratingEntries(ratings: UserData['ratings']): (RatingEntry & { id: number })[] {
+  return Object.entries(ratings).flatMap(([key, entry]) => {
+    const tv = key.startsWith('tv:')
+    const id = entry.id ?? Number(tv ? key.slice(3) : key)
+    if (!Number.isFinite(id)) return []
+    return [{ ...entry, id, mediaType: entry.mediaType || (tv ? 'tv' : 'movie') }]
+  })
+}
+
 // rating is 1..10; null/undefined removes the rating.
 // tv ratings are namespaced ('tv:{id}') since movie/tv ids overlap in TMDB.
-export function setRating(id: number, rating: number | null | undefined, title: string, mediaType: MediaType = 'movie'): void {
+export function setRating(movie: WatchlistableTitle, rating: number | null | undefined, mediaType: MediaType = 'movie'): void {
   update((data) => {
     const ratings = { ...data.ratings }
-    const key = mediaType === 'tv' ? `tv:${id}` : id
+    const key = mediaType === 'tv' ? `tv:${movie.id}` : movie.id
     if (rating == null) delete ratings[key]
-    else ratings[key] = { rating, title, mediaType }
+    else ratings[key] = {
+      rating,
+      title: movie.title || movie.name || '',
+      mediaType,
+      id: movie.id,
+      poster_path: movie.poster_path || null,
+      year: (movie.release_date || movie.first_air_date || '').slice(0, 4) || null
+    }
     return { ...data, ratings }
   })
 }
@@ -188,4 +209,101 @@ export function buildTasteProfile(data: UserData = getUserData()) {
     .map((key) => streamingProviders[key]?.title?.replace(' Movies', ''))
     .filter((title): title is string => Boolean(title))
   return { topRated, disliked, watchlist, services }
+}
+
+// Shape of the snapshot stored server-side in gm:alerts:prefs — mirrors
+// alertsSync's buildSnapshot. poster_path/year optional: older snapshots lack them.
+export interface SyncedPrefs {
+  watchlist?: { id: number; mediaType?: MediaType; title: string; poster_path?: string | null; year?: string | null }[]
+  services?: string[]
+  region?: string
+  ratings?: { id: number; mediaType?: MediaType; title: string; rating: number; poster_path?: string | null; year?: string | null }[]
+  updatedAt?: number
+}
+
+// Local wins every conflict (this device was used most recently) — there are
+// no per-entry timestamps to do better. Server data only fills gaps.
+export function mergePrefsIntoData(data: UserData, prefs: SyncedPrefs): UserData {
+  const watchlist = [...data.watchlist]
+  const seen = new Set(watchlist.map((item) => `${item.mediaType || 'movie'}:${item.id}`))
+  for (const item of prefs.watchlist || []) {
+    if (typeof item?.id !== 'number' || !item.title) continue
+    const mediaType = item.mediaType === 'tv' ? 'tv' : 'movie'
+    const key = `${mediaType}:${item.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    watchlist.push({
+      id: item.id,
+      mediaType,
+      title: item.title,
+      poster_path: item.poster_path || null,
+      year: item.year || null,
+      added_at: new Date().toISOString()
+    })
+  }
+
+  const ratings = { ...data.ratings }
+  for (const r of prefs.ratings || []) {
+    if (typeof r?.id !== 'number' || typeof r.rating !== 'number') continue
+    const mediaType = r.mediaType === 'tv' ? 'tv' : 'movie'
+    const key: string | number = mediaType === 'tv' ? `tv:${r.id}` : r.id
+    if (key in ratings) continue
+    ratings[key] = {
+      rating: Math.min(10, Math.max(1, Math.round(r.rating))),
+      title: r.title || '',
+      mediaType,
+      id: r.id,
+      poster_path: r.poster_path || null,
+      year: r.year || null
+    }
+  }
+
+  // An untouched local services block (default region, no providers) adopts the
+  // server's; anything the user changed locally stays.
+  const services = data.services.providers.length === 0 && data.services.region === 'US' && prefs.region
+    ? { region: prefs.region, providers: Array.isArray(prefs.services) ? prefs.services : [] }
+    : data.services
+
+  return { watchlist, ratings, services }
+}
+
+export function mergeSyncedPrefs(prefs: SyncedPrefs): void {
+  update((data) => mergePrefsIntoData(data, prefs))
+}
+
+export interface RatingMetaPatch {
+  id: number
+  mediaType?: MediaType
+  poster_path?: string | null
+  year?: string | null
+  title?: string
+}
+
+// Fills gaps on existing rating entries only — entries rated before the schema
+// carried poster_path/year get patched by the watchlist backfill; newer fields
+// never overwrite.
+export function mergeRatingMetaIntoData(data: UserData, items: RatingMetaPatch[]): UserData {
+  const ratings = { ...data.ratings }
+  for (const item of items) {
+    if (!Number.isInteger(item?.id) || item.id <= 0) continue
+    const mediaType = item.mediaType === 'tv' ? 'tv' : 'movie'
+    const key: string | number = mediaType === 'tv' ? `tv:${item.id}` : item.id
+    const entry = ratings[key]
+    if (!entry) continue
+    const needsPatch = (item.poster_path && !entry.poster_path) || (item.year && !entry.year) || (item.title && !entry.title)
+    if (!needsPatch) continue
+    ratings[key] = {
+      ...entry,
+      id: entry.id ?? item.id,
+      poster_path: entry.poster_path ?? item.poster_path ?? null,
+      year: entry.year ?? item.year ?? null,
+      title: entry.title || item.title || ''
+    }
+  }
+  return { ...data, ratings }
+}
+
+export function backfillRatingMeta(items: RatingMetaPatch[]): void {
+  if (!items.length) return
+  update((data) => mergeRatingMetaIntoData(data, items))
 }

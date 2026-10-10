@@ -17,6 +17,9 @@ export const SYNCKEY_KEY = 'gm:alerts:synckey'
 export const ALERTS_PREFS_KEY = 'gm:alerts:prefs'
 // email => JSON string[] of already-sent "kind:type:id@provider" keys
 export const ALERTS_NOTIFIED_KEY = 'gm:alerts:notified'
+// email => JSON { status, subscriptionId, customerId, currentPeriodEnd, updatedAt } —
+// written only by the Polar webhook, never by client-facing routes.
+export const BILLING_KEY = 'gm:billing'
 
 export async function getOrCreateSyncKey(kv: Redis, email: string): Promise<string> {
   const existing = await kv.hget<string>(SYNCKEY_KEY, email)

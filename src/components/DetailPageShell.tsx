@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Box, Flex } from '@chakra-ui/react';
 import TopBackdrop from './TopBackdrop'
-import Backdrop, { BACKDROP_OVERLAYS, BottomBackdrop } from './Backdrop'
+import Backdrop, { BACKDROP_OVERLAYS } from './Backdrop'
 
 export default function DetailPageShell({
   backdropPath,
@@ -30,7 +30,6 @@ export default function DetailPageShell({
         display={{ base: backdropPath ? 'block' : 'none', md: 'block' }}
         zIndex={0}
       />
-      <BottomBackdrop />
 
       <Flex position='relative' zIndex={1} justify='center' align='flex-start' minH='100vh' pt={{ base: '6rem', md: '12rem' }} pb={{ base: '2rem', md: '4rem' }}>
         <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} justify='center' maxW='1200px' w='100%' px='1rem' gap={{ base: '1.5rem', md: '2.5rem' }}>

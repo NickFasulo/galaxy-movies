@@ -228,13 +228,6 @@ async function main() {
       ]
     },
     {
-      frame: { width: 2560, height: 1440, seed: 20261006 },
-      targets: [
-        { file: 'backdrop_bottom_lg.webp', width: 2560, height: 1440, format: 'webp', opts: { quality: 82 } },
-        { file: 'backdrop_bottom.webp', width: 1376, height: 768, format: 'webp', opts: { quality: 82 } }
-      ]
-    },
-    {
       frame: { width: 800, height: 1200, seed: 20261008, portrait: true },
       targets: [
         { file: 'poster_fallback_galaxy.webp', width: 800, height: 1200, format: 'webp', opts: { quality: 82 } }
@@ -267,4 +260,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { buildFrame }
+module.exports = { buildFrame, mulberry32, makeNoiseLayer, fbm }

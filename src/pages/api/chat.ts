@@ -7,6 +7,7 @@ import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../..
 import { requireMethod, rejectBot } from '../../utils/api'
 import { aiModel, aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../utils/openai'
 import { getRedis } from '../../utils/redis'
+import { isPlusSubscriber } from '../../utils/billing'
 
 interface ChatTurn {
   role: 'user' | 'assistant'
@@ -102,6 +103,7 @@ async function getRecentShowsContext(): Promise<string> {
 }
 
 const MAX_REQUESTS_PER_HOUR = 10
+const PLUS_MAX_REQUESTS_PER_HOUR = 100
 const MAX_CONVERSATION_LENGTH = 8
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60
 const MAX_MESSAGE_LENGTH = 500
@@ -141,6 +143,16 @@ function sanitizeTasteProfile(tp: Record<string, unknown> | null | undefined): T
   return hasAny ? profile : null
 }
 
+// Plus subscribers send the same email+synckey pair used for alerts sync —
+// verified against Redis, it lifts them onto a per-email rate bucket instead
+// of the per-IP free one.
+function sanitizeAlertsCreds(input: unknown): { email: string; key: string } | null {
+  if (!input || typeof input !== 'object') return null
+  const { email, key } = input as Record<string, unknown>
+  if (typeof email !== 'string' || email.length > 254 || typeof key !== 'string' || !/^[0-9a-f-]{36}$/i.test(key)) return null
+  return { email: email.trim().toLowerCase(), key }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'POST')) return
   if (rejectBot(req, res)) return
@@ -168,9 +180,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_HISTORY_MESSAGE_LENGTH) }))
 
   const clientId = getClientIP(req)
-  const allowed = await checkDistributedRateLimit(clientId, {
+  let limitKey = clientId
+  let maxRequests = MAX_REQUESTS_PER_HOUR
+  const creds = sanitizeAlertsCreds(req.body?.alerts)
+  if (creds && await isPlusSubscriber(creds.email, creds.key)) {
+    limitKey = `plus:${createHash('sha256').update(creds.email).digest('hex').slice(0, 32)}`
+    maxRequests = PLUS_MAX_REQUESTS_PER_HOUR
+  }
+  const allowed = await checkDistributedRateLimit(limitKey, {
     keyPrefix: 'chat_rl',
-    maxRequests: MAX_REQUESTS_PER_HOUR,
+    maxRequests,
     windowSeconds: RATE_LIMIT_WINDOW_SECONDS
   })
   if (!allowed) {
@@ -184,9 +203,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.write(`data: ${JSON.stringify({ content: cachedEntry.text })}\n\n`)
-    if (cachedEntry.links.length > 0) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
+    if (cachedEntry.links?.length) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
     res.write('data: [DONE]\n\n')
-    return res.end()
+    res.end()
+    return
   }
 
   const client = getOpenAIClient()

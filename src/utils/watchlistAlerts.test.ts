@@ -87,6 +87,50 @@ describe('matchItems', () => {
     )
     expect(matches).toHaveLength(20)
   })
+
+  it('matches watchlisted departures only when leaving alerts are on', () => {
+    const changes = { netflix: providerChanges({ left: [catalogTitle(1)] }) }
+    expect(matchItems(prefs(), changes, new Set())).toHaveLength(0)
+    const matches = matchItems(prefs(), changes, new Set(), { leaving: true })
+    expect(matches).toHaveLength(1)
+    expect(matches[0]).toMatchObject({ kind: 'leaving', notifiedKey: 'leaving:movie:1@netflix' })
+  })
+
+  it('taste-matches added titles against the rec index, crediting the rated title', () => {
+    const taste = new Map([['movie:99', 'Inception']])
+    const matches = matchItems(
+      prefs(),
+      { netflix: providerChanges({ added: [catalogTitle(99)] }) },
+      new Set(),
+      { taste }
+    )
+    expect(matches).toHaveLength(1)
+    expect(matches[0]).toMatchObject({ kind: 'taste', tmdbId: 99, via: 'Inception' })
+  })
+
+  it('does not double-report a watchlisted title as a taste match', () => {
+    const taste = new Map([['movie:1', 'Inception']])
+    const matches = matchItems(
+      prefs(),
+      { netflix: providerChanges({ added: [catalogTitle(1)] }) },
+      new Set(),
+      { taste }
+    )
+    expect(matches).toHaveLength(1)
+    expect(matches[0].kind).toBe('added')
+  })
+
+  it('taste matches respect the notified set', () => {
+    const taste = new Map([['movie:99', 'Inception']])
+    const notified = new Set(['taste:movie:99@netflix'])
+    const matches = matchItems(
+      prefs(),
+      { netflix: providerChanges({ added: [catalogTitle(99)] }) },
+      notified,
+      { taste }
+    )
+    expect(matches).toHaveLength(0)
+  })
 })
 
 describe('buildEmail', () => {
@@ -118,5 +162,13 @@ describe('buildEmail', () => {
     const { html } = buildEmail([coming], 'a@b.com', 'tok')
     expect(html).toContain('Coming to Hulu, Jan 15, season 2')
     expect(html).toContain('/tv/1')
+  })
+
+  it('renders leaving and taste rows', () => {
+    const leaving: MatchedItem = { ...item, kind: 'leaving' }
+    const taste: MatchedItem = { ...item, kind: 'taste', tmdbId: 99, via: 'Inception' }
+    const { html } = buildEmail([leaving, taste], 'a@b.com', 'tok')
+    expect(html).toContain('Leaving Netflix soon')
+    expect(html).toContain('because you rated Inception highly')
   })
 })

@@ -1,10 +1,8 @@
-import type { NextRequest } from 'next/server'
-import { ImageResponse } from '@vercel/og'
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { ImageResponse } from 'next/og'
+import { readFile } from 'fs/promises'
+import path from 'path'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-
-export const config = {
-  runtime: 'edge',
-}
 
 async function toJpegDataUri(url: string): Promise<string | null> {
   try {
@@ -30,9 +28,10 @@ async function toJpegDataUri(url: string): Promise<string | null> {
 // Only TMDB poster URLs are fetched server-side, so ?poster= can't be used for SSRF or as an open image proxy.
 const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'GET, HEAD' } })
+    res.setHeader('Allow', 'GET, HEAD')
+    return res.status(405).send('Method Not Allowed')
   }
 
   const allowed = await checkDistributedRateLimit(getClientIP(req), {
@@ -41,15 +40,15 @@ export default async function handler(req: NextRequest) {
     windowSeconds: 60 * 60
   })
   if (!allowed) {
-    return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '3600' } })
+    res.setHeader('Retry-After', '3600')
+    return res.status(429).send('Too Many Requests')
   }
 
-  const reqUrl = new URL(req.url)
-  const { searchParams, origin } = reqUrl
+  const firstParam = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
-  const title = (searchParams.get('title') || 'Galaxy Movies').slice(0, 120)
-  const subtitle = (searchParams.get('subtitle') || 'Discover Popular & New Films').slice(0, 300)
-  const posterParam = searchParams.get('poster')
+  const title = (firstParam(req.query.title) || 'Galaxy Movies').slice(0, 120)
+  const subtitle = (firstParam(req.query.subtitle) || 'Discover Popular & New Films').slice(0, 300)
+  const posterParam = firstParam(req.query.poster)
   const poster = posterParam && TMDB_POSTER_PATTERN.test(posterParam) ? posterParam : null
 
   const subtitleTrimmed =
@@ -58,14 +57,17 @@ export default async function handler(req: NextRequest) {
   const titleFontSize =
     title.length > 40 ? '48px' : title.length > 24 ? '60px' : '76px'
 
-  const [fontData, interBoldData, interRegularData, backdropDataUri, posterDataUri] =
+  // Read bundled assets from disk — a self-fetch to the site origin is an
+  // unverified client to the edge and gets the bot-checkpoint HTML, not bytes.
+  const [fontData, interBoldData, interRegularData, backdropBuf, posterDataUri] =
     await Promise.all([
-      fetch(`${origin}/fonts/SpaceRangerLaserItalic-J7an.otf`).then((r) => r.arrayBuffer()),
-      fetch(`${origin}/fonts/Inter-Bold.ttf`).then((r) => r.arrayBuffer()),
-      fetch(`${origin}/fonts/Inter-Regular.ttf`).then((r) => r.arrayBuffer()),
-      toJpegDataUri(`${origin}/backdrop_fallback.jpg`),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'SpaceRangerLaserItalic-J7an.otf')),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf')),
+      readFile(path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf')),
+      readFile(path.join(process.cwd(), 'public', 'backdrop_fallback.jpg')),
       poster ? toJpegDataUri(poster) : Promise.resolve(null),
     ])
+  const backdropDataUri = `data:image/jpeg;base64,${backdropBuf.toString('base64')}`
 
   const imageResponse = new ImageResponse(
     (
@@ -130,28 +132,17 @@ export default async function handler(req: NextRequest) {
         >
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#001e2e',
-              borderRadius: '6px',
-              padding: '6px 18px',
-              transform: 'skewX(-15deg)',
+              fontFamily: 'SpaceRangerLaserItalic',
+              fontSize: '36px',
+              color: '#ffffff',
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+              textShadow: '0 0 14px rgba(125, 175, 255, 0.28)',
               marginBottom: '28px',
+              display: 'flex',
             }}
           >
-            <div
-              style={{
-                fontFamily: 'SpaceRangerLaserItalic',
-                fontSize: '22px',
-                color: '#ffffff',
-                letterSpacing: '0.04em',
-                transform: 'skewX(15deg)',
-                display: 'flex',
-              }}
-            >
-              galaxy movies
-            </div>
+            Galaxy Movies
           </div>
 
           <div
@@ -257,8 +248,8 @@ export default async function handler(req: NextRequest) {
     }
   )
 
-  imageResponse.headers.set('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
-  imageResponse.headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
-
-  return imageResponse
+  res.setHeader('Content-Type', 'image/png')
+  res.setHeader('Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
+  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=604800, stale-while-revalidate=2592000')
+  return res.send(Buffer.from(await imageResponse.arrayBuffer()))
 }

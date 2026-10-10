@@ -25,6 +25,12 @@ export function peekReviewCache(key: string): string | null {
   return memoryReviewCache.get(key) ?? null
 }
 
+// Generations come back with markdown-style *title* emphasis the UI renders as
+// italics — strip the markers for contexts that need plain text (JSON-LD).
+export function stripEmphasis(text: string): string {
+  return text.replace(/\*\*([^*]+)\*\*|\*([^*]+)\*/g, '$1$2')
+}
+
 async function readCache(kv: Redis | null, key: string): Promise<string | null> {
   const local = memoryReviewCache.get(key)
   if (local) return local

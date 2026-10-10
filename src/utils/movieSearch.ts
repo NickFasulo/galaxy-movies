@@ -95,7 +95,7 @@ export function formatMovieForChat(movie: TmdbMovie & { genres?: Genre[] }) {
     title: movie.title,
     year: movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A',
     rating: movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A',
-    overview: movie.overview?.substring(0, 200) + ((movie.overview?.length ?? 0) > 200 ? '...' : ''),
+    overview: (movie.overview ?? '').substring(0, 200) + ((movie.overview?.length ?? 0) > 200 ? '...' : ''),
     genres: movie.genres?.map(g => g.name).join(', ') || 'N/A'
   }
 }
@@ -106,18 +106,19 @@ export function formatShowForChat(show: TmdbTvShow & { genres?: Genre[] }) {
     title: show.name,
     year: show.first_air_date ? new Date(show.first_air_date).getFullYear() : 'N/A',
     rating: show.vote_average ? show.vote_average.toFixed(1) : 'N/A',
-    overview: show.overview?.substring(0, 200) + ((show.overview?.length ?? 0) > 200 ? '...' : ''),
+    overview: (show.overview ?? '').substring(0, 200) + ((show.overview?.length ?? 0) > 200 ? '...' : ''),
     genres: show.genres?.map(g => g.name).join(', ') || 'N/A'
   }
 }
 
 // The prompt asks for "Title (YYYY)", but match loosely: quotes optional when
-// a year is present, curly quotes accepted, quoted title alone as fallback.
-// Title capture groups are 1, 3, 5, 7 in alternation order — only group 5
-// (bare Title (YYYY)) is unquoted. Non-year forms must start uppercase/digit
-// so lowercase quoted prose ("feel-good") doesn't linkify.
+// a year is present; curly quotes and CJK title brackets (「」『』《》) accepted;
+// quoted title alone as fallback. Title capture groups are 1, 3, 5, 7 in
+// alternation order — only group 5 (bare Title (YYYY)) is unquoted. Non-year
+// forms must start uppercase/digit/caseless-letter so lowercase quoted prose
+// ("feel-good") doesn't linkify while CJK titles (no case) still can.
 const TITLE_MENTION_PATTERN =
-  /["“]([^"“”\n]{1,80}?)\s\((\d{4})\)["”]|["“]([\p{Lu}\p{N}][^"“”()\n]{1,79})["”]\s?\((\d{4})\)|([\p{Lu}\p{N}][^\n"“”()]{1,79}?)\s\((\d{4})\)|["“]([\p{Lu}\p{N}][^"“”()\n]{1,79})["”]/gu
+  /["“「『《]([^"“”「」『』《》\n]{1,80}?)\s\((\d{4})\)["”」』》]|["“「『《]([\p{Lu}\p{Lo}\p{N}][^"“”「」『』《》()\n]{1,79})["”」』》]\s?\((\d{4})\)|([\p{Lu}\p{Lo}\p{N}][^\n"“”「」『』《》()]{1,79}?)\s\((\d{4})\)|["“「『《]([\p{Lu}\p{Lo}\p{N}][^"“”「」『』《》()\n]{1,79})["”」』》]/gu
 
 export function extractTitleMentions(text: string | null | undefined, maxMentions = 5): MovieMention[] {
   if (!text) return []

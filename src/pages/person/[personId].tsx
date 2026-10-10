@@ -5,7 +5,6 @@ import { useState, type ReactNode } from 'react'
 import { Flex, Box, Heading, Text, SimpleGrid, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import DetailErrorView from '../../components/DetailErrorView'
-import { BottomBackdrop } from '../../components/Backdrop'
 import PageHead from '../../components/PageHead'
 import dateFormatter from '../../utils/dateFormatter'
 import { normalizeTvTitle } from '../../utils/tmdb'
@@ -221,7 +220,6 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
       />
 
       <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '5em', md: '6rem' }} px='1rem'>
-        <BottomBackdrop />
         <Flex justify='center' position='relative' zIndex={1}>
           <Flex
             direction={{ base: 'column', md: 'row' }}

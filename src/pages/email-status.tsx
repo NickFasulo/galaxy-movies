@@ -4,8 +4,8 @@ import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import BackButton from '../components/BackButton'
 import { Box } from '@chakra-ui/react'
 import { firstParam } from '../utils/query'
-import { setAlertsCredentials, syncAlertsNow } from '../utils/alertsSync'
-import { getUserData } from '../utils/userData'
+import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../utils/alertsSync'
+import { getUserData, mergeSyncedPrefs } from '../utils/userData'
 
 const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {
@@ -37,7 +37,15 @@ export default function EmailStatus() {
 
     setAlertsCredentials(email, key)
     window.history.replaceState(null, '', window.location.pathname + window.location.search)
-    void syncAlertsNow(getUserData(), { email, key })
+
+    // Pull the server snapshot first so a freshly-linked device merges the
+    // existing profile instead of overwriting it with empty local state.
+    const creds = { email, key }
+    void (async () => {
+      const prefs = await fetchSyncedPrefs(creds)
+      if (prefs) mergeSyncedPrefs(prefs)
+      await syncAlertsNow(getUserData(), creds)
+    })()
   }, [query.status])
 
   return (

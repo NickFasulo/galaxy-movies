@@ -15,7 +15,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
   const shown = hovered ?? rating ?? 0
 
   const pick = (n: number) => {
-    setRating(movie.id, n === rating ? null : n, movie.title || movie.name || '', mediaType)
+    setRating(movie, n === rating ? null : n, mediaType)
     onClose()
   }
 
@@ -30,6 +30,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
           aria-label={rating ? `Your rating: ${rating}/10` : `Rate this ${mediaType === 'tv' ? 'show' : 'movie'}`}
           color={rating ? 'white' : 'gray.400'}
           fontSize='xs'
+          cursor='pointer'
           _hover={{ color: 'white' }}
           asChild><button type='button' onClick={onToggle}>
             <Icon boxSize={3} color={rating ? 'gold' : 'inherit'} asChild><LuStar fill={rating ? 'currentColor' : 'none'} /></Icon>
@@ -45,7 +46,7 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
                 <Tooltip key={n} content={n === rating ? 'Clear' : `${n}/10`} showArrow positioning={{
                   placement: 'top'
                 }}>
-                  <Box aria-label={`Rate ${n} out of 10`} asChild><button
+                  <Box aria-label={`Rate ${n} out of 10`} cursor='pointer' asChild><button
                       type='button'
                       onMouseEnter={() => setHovered(n)}
                       onMouseLeave={() => setHovered(null)}

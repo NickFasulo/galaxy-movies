@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { normalizeTvTitle } from '../../utils/tmdb'
+import { normalizeTvTitle, getProviderIds } from '../../utils/tmdb'
 import { firstParam } from '../../utils/query'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
@@ -32,7 +32,7 @@ type RawResult = TitleSummary & TmdbTvShow
 function normalizeResults(results: RawResult[] | undefined) {
   return (results || [])
     .filter(item => {
-      if (!item.poster_path) return false
+      if (!item?.poster_path) return false
       // /search/multi and /trending/all return mixed types; keep movie + tv only
       if (item.media_type && item.media_type !== 'movie' && item.media_type !== 'tv') return false
       return true
@@ -64,6 +64,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const media = String(firstParam(req.query.media) || 'movie')
   const search = String(firstParam(req.query.search) || '').slice(0, MAX_SEARCH_LENGTH)
   const page = firstParam(req.query.page) || '1'
+  const regionParam = String(firstParam(req.query.region) || '')
+  const region = /^[A-Z]{2}$/.test(regionParam) ? regionParam : 'US'
+  const providerIds = String(firstParam(req.query.providers) || '')
+    .split(',')
+    .map((key) => key.trim())
+    .filter(Boolean)
+    .flatMap((key) => getProviderIds(key, region))
+  // TMDB search/trending/movie-list endpoints don't support watch-provider
+  // filtering — only discover endpoints get it appended below.
+  const providerFilter = providerIds.length
+    ? `&with_watch_providers=${providerIds.join('%7C')}&watch_region=${region}&with_watch_monetization_types=flatrate%7Cfree%7Cads`
+    : ''
 
   if (!MEDIA_TYPES.has(media) || !VALID_CATEGORIES.has(category)) {
     return res.status(400).json({ message: 'Invalid category or media type' })
@@ -94,17 +106,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
       }
     } else if (media === 'tv') {
-      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10`
+      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10${providerFilter}`
     } else if (media === 'trending') {
       endpoint = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&page=${pageNum}`
     } else if (GENRE_MAP[category]) {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=primary_release_date.desc&primary_release_date.lte=${todayStr}&vote_count.gte=50&with_genres=${GENRE_MAP[category]}`
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=primary_release_date.desc&primary_release_date.lte=${todayStr}&vote_count.gte=50&with_genres=${GENRE_MAP[category]}${providerFilter}`
     } else if (category === 'popular') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${popularCutoffDate}`
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${popularCutoffDate}${providerFilter}`
     } else if (category === 'now_playing') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${ninetyDaysAgo}&primary_release_date.lte=${todayStr}`
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${ninetyDaysAgo}&primary_release_date.lte=${todayStr}${providerFilter}`
     } else if (category === 'upcoming') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${todayStr}`
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${todayStr}${providerFilter}`
+    } else if (category === 'top_rated' && providerFilter) {
+      // /movie/top_rated can't filter by provider — swap to an equivalent discover query
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=vote_average.desc&vote_count.gte=200${providerFilter}`
     } else {
       endpoint = `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${pageNum}&include_adult=false`
     }
@@ -129,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rawMovies = data.results || []
 
     const filteredMovies = rawMovies.filter(movie => {
-      if (!movie.poster_path) return false
+      if (!movie?.poster_path) return false
       
       if (search.trim().length > 0) {
         return true
