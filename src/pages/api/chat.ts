@@ -184,7 +184,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.write(`data: ${JSON.stringify({ content: cachedEntry.text })}\n\n`)
-    if (cachedEntry.links.length > 0) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
+    if (cachedEntry.links?.length) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
     res.write('data: [DONE]\n\n')
     res.end()
     return

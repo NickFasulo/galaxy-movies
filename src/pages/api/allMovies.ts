@@ -32,7 +32,7 @@ type RawResult = TitleSummary & TmdbTvShow
 function normalizeResults(results: RawResult[] | undefined) {
   return (results || [])
     .filter(item => {
-      if (!item.poster_path) return false
+      if (!item?.poster_path) return false
       // /search/multi and /trending/all return mixed types; keep movie + tv only
       if (item.media_type && item.media_type !== 'movie' && item.media_type !== 'tv') return false
       return true
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rawMovies = data.results || []
 
     const filteredMovies = rawMovies.filter(movie => {
-      if (!movie.poster_path) return false
+      if (!movie?.poster_path) return false
       
       if (search.trim().length > 0) {
         return true

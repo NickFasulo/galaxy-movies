@@ -112,12 +112,13 @@ export function formatShowForChat(show: TmdbTvShow & { genres?: Genre[] }) {
 }
 
 // The prompt asks for "Title (YYYY)", but match loosely: quotes optional when
-// a year is present, curly quotes accepted, quoted title alone as fallback.
-// Title capture groups are 1, 3, 5, 7 in alternation order — only group 5
-// (bare Title (YYYY)) is unquoted. Non-year forms must start uppercase/digit
-// so lowercase quoted prose ("feel-good") doesn't linkify.
+// a year is present; curly quotes and CJK title brackets (「」『』《》) accepted;
+// quoted title alone as fallback. Title capture groups are 1, 3, 5, 7 in
+// alternation order — only group 5 (bare Title (YYYY)) is unquoted. Non-year
+// forms must start uppercase/digit/caseless-letter so lowercase quoted prose
+// ("feel-good") doesn't linkify while CJK titles (no case) still can.
 const TITLE_MENTION_PATTERN =
-  /["“]([^"“”\n]{1,80}?)\s\((\d{4})\)["”]|["“]([\p{Lu}\p{N}][^"“”()\n]{1,79})["”]\s?\((\d{4})\)|([\p{Lu}\p{N}][^\n"“”()]{1,79}?)\s\((\d{4})\)|["“]([\p{Lu}\p{N}][^"“”()\n]{1,79})["”]/gu
+  /["“「『《]([^"“”「」『』《》\n]{1,80}?)\s\((\d{4})\)["”」』》]|["“「『《]([\p{Lu}\p{Lo}\p{N}][^"“”「」『』《》()\n]{1,79})["”」』》]\s?\((\d{4})\)|([\p{Lu}\p{Lo}\p{N}][^\n"“”「」『』《》()]{1,79}?)\s\((\d{4})\)|["“「『《]([\p{Lu}\p{Lo}\p{N}][^"“”「」『』《》()\n]{1,79})["”」』》]/gu
 
 export function extractTitleMentions(text: string | null | undefined, maxMentions = 5): MovieMention[] {
   if (!text) return []

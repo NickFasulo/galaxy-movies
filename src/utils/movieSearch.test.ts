@@ -76,6 +76,17 @@ describe('extractTitleMentions', () => {
 
   it('ignores lowercase quoted prose like "feel-good"', () => {
     expect(extractTitleMentions('a "feel-good" classic')).toHaveLength(0)
+    expect(extractTitleMentions('a 「feel-good」 classic')).toHaveLength(0)
+  })
+
+  it.each([
+    ['corner brackets', '「千と千尋の神隠し (2001)」', '千と千尋の神隠し', '2001'],
+    ['double corner brackets', '『Dune (2021)』', 'Dune', '2021'],
+    ['Chinese title marks', '《流浪地球 (2019)》', '流浪地球', '2019'],
+    ['year-less CJK title', '「となりのトトロ」がおすすめ', 'となりのトトロ', undefined]
+  ])('extracts %s', (_label, text, title, year) => {
+    const [m] = extractTitleMentions(text)
+    expect(m).toMatchObject({ title, year, quoted: true })
   })
 
   it('still loosely captures a bare mid-sentence Title (YYYY) for downstream filtering', () => {
@@ -138,6 +149,16 @@ describe('resolveMovieMentions', () => {
     fetchTmdb.mockResolvedValue(multiPage([tmdbHit({ title: 'Junebug', release_date: '2005-01-01' })]))
     const resolved = await resolveMovieMentions([mention({ match: 'June (2020)', title: 'June', year: '2020', quoted: false })])
     expect(resolved).toEqual([])
+  })
+
+  it('resolves a CJK title via original_title match', async () => {
+    fetchTmdb.mockResolvedValue(
+      multiPage([tmdbHit({ title: 'Spirited Away', original_title: '千と千尋の神隠し', release_date: '2001-07-20' })])
+    )
+    const resolved = await resolveMovieMentions([
+      mention({ match: '「千と千尋の神隠し (2001)」', title: '千と千尋の神隠し', year: '2001' })
+    ])
+    expect(resolved).toEqual([{ match: '「千と千尋の神隠し (2001)」', movieId: 949, mediaType: 'movie' }])
   })
 
   it('matches titles via original_title/name too', async () => {
