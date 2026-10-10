@@ -22,7 +22,7 @@ import { getFirstPlayableKey } from '../utils/youtubeCache'
 import { detectRegion } from '../utils/region'
 import { useUserData } from '../hooks/useUserData'
 import { getProviderId, normalizeTvTitle } from '../utils/tmdb'
-import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey } from '../utils/movieReview'
+import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey, stripEmphasis } from '../utils/movieReview'
 import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../utils/similarMovies'
 import { getRedis } from '../utils/redis'
 import { isBot, isSearchEngine } from '../utils/rateLimiter'
@@ -346,7 +346,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         review: aiSynopsis ? {
           '@type': 'Review',
           author: { '@type': 'Organization', name: 'Galaxy Movies' },
-          reviewBody: aiSynopsis
+          reviewBody: stripEmphasis(aiSynopsis)
         } : undefined
       }
 
