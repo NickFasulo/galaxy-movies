@@ -21,7 +21,7 @@ import dateFormatter from '../utils/dateFormatter'
 import { getFirstPlayableKey } from '../utils/youtubeCache'
 import { detectRegion } from '../utils/region'
 import { useUserData } from '../hooks/useUserData'
-import { getProviderId, normalizeTvTitle } from '../utils/tmdb'
+import { getProviderIds, normalizeTvTitle } from '../utils/tmdb'
 import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey, stripEmphasis } from '../utils/movieReview'
 import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../utils/similarMovies'
 import { getRedis } from '../utils/redis'
@@ -302,7 +302,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
   const { services } = useUserData()
   const myProviderIds = new Set(
-    services.providers.map((key) => getProviderId(key, services.region)).filter((id): id is number => Boolean(id))
+    services.providers.flatMap((key) => getProviderIds(key, services.region))
   )
 
   const canonicalUrl = `${SITE_URL}/${isTv ? 'tv' : 'movies'}/${title.id}`
@@ -440,14 +440,33 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                 </DetailCreditLine>
               )}
               {studios.length > 0 && (
-                <DetailCreditLine mt={1}>
+                // <details> isn't valid inside <p>; reparenting breaks hydration.
+                <DetailCreditLine mt={1} as='div'>
                   {isTv ? 'Airing on ' : 'Produced by '}
-                  {studios.map((org, index) => (
-                    <span key={org.id}>
-                      {index > 0 && ', '}
-                      <DetailCreditLink href={`${isTv ? '/network' : '/company'}/${org.id}`}>{org.name}</DetailCreditLink>
-                    </span>
-                  ))}
+                  <DetailCreditLink muted href={`${isTv ? '/network' : '/company'}/${studios[0].id}`}>
+                    {studios[0].name}
+                  </DetailCreditLink>
+                  {studios.length > 1 && (
+                    // SEO: extra companies must live in the SSR HTML — no click-to-mount.
+                    <Box as='details' display='inline'>
+                      <Box
+                        as='summary'
+                        display='inline'
+                        cursor='pointer'
+                        color='gray.500'
+                        _hover={{ color: 'white' }}
+                        css={{ listStyle: 'none', '&::-webkit-details-marker': { display: 'none' } }}
+                      >
+                        {' …'}
+                      </Box>
+                      {studios.slice(1).map((org, index) => (
+                        <span key={org.id}>
+                          {index === 0 ? ' ' : ', '}
+                          <DetailCreditLink muted href={`${isTv ? '/network' : '/company'}/${org.id}`}>{org.name}</DetailCreditLink>
+                        </span>
+                      ))}
+                    </Box>
+                  )}
                 </DetailCreditLine>
               )}
             </Box>
@@ -490,11 +509,11 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
               <Flex align='center' justify='flex-end'>
                 <RatingWidget movie={listItem} />
               </Flex>
-              <Flex align='center' justify='flex-end'>
-                {logoOrg ? (
+              {logoOrg && (
+                <Flex align='center' justify='flex-end'>
                   <CompanyLogoLink href={`${isTv ? '/network' : '/company'}/${logoOrg.id}`} company={logoOrg} />
-                ) : null}
-              </Flex>
+                </Flex>
+              )}
             </Flex>
 
             <GalaxyBotTake synopsis={aiSynopsis} />

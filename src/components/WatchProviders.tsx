@@ -62,6 +62,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
           src={provider.logo_path}
           alt={provider.provider_name}
           fill
+          sizes='32px'
           style={{ borderRadius: '0.375rem', objectFit: 'cover' }}
         />
       </Box>
