@@ -6,7 +6,9 @@ import { SYNCKEY_KEY } from '../../utils/waitlistStore'
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
   kvEval: vi.fn(async () => 1),
-  fetch: vi.fn(async () => ({ ok: true, json: async () => ({ url: 'https://pay.polar.test/x' }) } as Response))
+  fetch: vi.fn<(input?: unknown, init?: RequestInit) => Promise<Response>>(
+    async () => ({ ok: true, json: async () => ({ url: 'https://pay.polar.test/x' }) } as Response)
+  )
 }))
 
 vi.mock('../../utils/redis', () => ({

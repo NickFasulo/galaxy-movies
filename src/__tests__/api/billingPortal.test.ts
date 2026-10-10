@@ -5,7 +5,9 @@ import { BILLING_KEY, SYNCKEY_KEY } from '../../utils/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
-  fetch: vi.fn(async () => ({ ok: true, json: async () => ({ customer_portal_url: 'https://portal.polar.test/s' }) } as Response))
+  fetch: vi.fn<(input?: unknown, init?: RequestInit) => Promise<Response>>(
+    async () => ({ ok: true, json: async () => ({ customer_portal_url: 'https://portal.polar.test/s' }) } as Response)
+  )
 }))
 
 vi.mock('../../utils/redis', () => ({
@@ -27,12 +29,14 @@ function makeReq(email: string): NextApiRequest {
 
 interface MockRes extends NextApiResponse {
   statusCode: number
+  jsonBody: unknown
   redirectTo?: { code: number; url: string }
 }
 
 function makeRes(): MockRes {
   const res = {
     statusCode: 200,
+    jsonBody: undefined as unknown,
     setHeader() {},
     status(code: number) {
       res.statusCode = code
@@ -47,7 +51,7 @@ function makeRes(): MockRes {
       return res
     },
     end() { return res }
-  } as MockRes
+  } as unknown as MockRes
   return res
 }
 
