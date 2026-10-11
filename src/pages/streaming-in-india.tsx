@@ -5,7 +5,7 @@ import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import LinkTile from '../components/LinkTile'
 import VpnBanner from '../components/VpnBanner'
-import { fetchDiscoverMovies } from '../utils/tmdb'
+import { fetchDiscoverMovies, streamingProviders, isProviderAvailableInRegion, movieCategories, tvCategories } from '../utils/tmdb'
 import { setSwrCache } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
@@ -28,40 +28,17 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext): Pr
   }
 }
 
-const INDIA_PROVIDERS = [
-  { key: 'netflix', label: 'Netflix' },
-  { key: 'amazon-prime-video', label: 'Amazon Prime Video' },
-  { key: 'jiohotstar', label: 'JioHotstar' },
-  { key: 'zee5', label: 'ZEE5' },
-  { key: 'sonyliv', label: 'SonyLIV' },
-  { key: 'apple-tv', label: 'Apple TV' },
-  { key: 'hoichoi', label: 'Hoichoi' },
-  { key: 'manoramamax', label: 'ManoramaMAX' },
-  { key: 'aha', label: 'aha' },
-  { key: 'sun-nxt', label: 'Sun NXT' },
-  { key: 'mx-player', label: 'MX Player' },
-  { key: 'shemaroome', label: 'ShemarooMe' }
-]
+const INDIA_PROVIDERS = Object.entries(streamingProviders)
+  .filter(([key]) => isProviderAvailableInRegion(key, 'IN'))
+  .map(([key, provider]) => ({ key, label: provider.title.replace(' Movies', '') }))
 
-const INDIAN_LANGUAGE_CATEGORIES = [
-  { key: 'bollywood', label: 'Bollywood (Hindi) Movies' },
-  { key: 'tamil', label: 'Tamil Movies' },
-  { key: 'telugu', label: 'Telugu Movies' },
-  { key: 'bengali', label: 'Bengali Movies' },
-  { key: 'malayalam', label: 'Malayalam Movies' },
-  { key: 'kannada', label: 'Kannada Movies' },
-  { key: 'marathi', label: 'Marathi Movies' }
-]
+const INDIAN_LANGUAGE_CATEGORIES = Object.entries(movieCategories)
+  .filter(([, category]) => category.language)
+  .map(([key, category]) => ({ key, label: category.title }))
 
-const INDIAN_SHOW_CATEGORIES = [
-  { key: 'hindi', label: 'Hindi Shows' },
-  { key: 'tamil', label: 'Tamil Shows' },
-  { key: 'telugu', label: 'Telugu Shows' },
-  { key: 'bengali', label: 'Bengali Shows' },
-  { key: 'malayalam', label: 'Malayalam Shows' },
-  { key: 'kannada', label: 'Kannada Shows' },
-  { key: 'marathi', label: 'Marathi Shows' }
-]
+const INDIAN_SHOW_CATEGORIES = Object.entries(tvCategories)
+  .filter(([, category]) => category.language)
+  .map(([key, category]) => ({ key, label: category.title }))
 
 export default function StreamingInIndia({ movies, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/streaming-in-india`
