@@ -30,7 +30,25 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
         pb={2}
         mx={{ base: '-1.5rem', md: '-3rem', xl: 0 }}
         px={{ base: '1.5rem', md: '3rem', xl: 0 }}
-        css={{ scrollSnapType: 'x proximity', scrollbarWidth: 'thin' }}
+        css={{
+          scrollSnapType: 'x proximity',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'transparent transparent',
+          transition: 'scrollbar-color 0.25s ease',
+          '&::-webkit-scrollbar': { height: '6px' },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'transparent',
+            borderRadius: '9999px',
+            transition: 'background-color 0.25s ease'
+          },
+          '&:hover': {
+            scrollbarColor: 'var(--chakra-colors-gray-500) transparent'
+          },
+          '&:hover::-webkit-scrollbar-thumb': {
+            backgroundColor: 'var(--chakra-colors-gray-500)'
+          }
+        }}
       >
         {movies.map((movie) => (
           <Box
