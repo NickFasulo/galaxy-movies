@@ -18,7 +18,7 @@ export default function PageShell({
   children?: ReactNode
 }) {
   return (
-    <Box flex='1' bg='transparent' color='white' pt={{ base: '5em', md: '6rem' }} pb={pb ?? { base: 6, md: 10 }}>
+    <Box flex='1' bg='transparent' color='white' pt={{ base: '5rem', md: '6rem' }} pb={pb ?? { base: 6, md: 10 }}>
       <Box maxW={maxW} mx='auto' px={6}>
         {title && <Heading as='h1' textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>}
         {description && <Text maxW='42rem' mt={3} color='gray.400'>{description}</Text>}

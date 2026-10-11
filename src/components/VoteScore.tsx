@@ -9,7 +9,7 @@ export default function VoteScore({ voteAverage }: { voteAverage?: number }) {
         fontSize='lg'
         ml={2}
         color='white'
-        textShadow='2px 0 4px black'
+        textShadow='0 0 4px black'
         textAlign='center'
       >
         {voteAverage ? Math.round(voteAverage * 10) / 10 : 'TBD'}

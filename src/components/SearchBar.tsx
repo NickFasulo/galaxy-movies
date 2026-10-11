@@ -97,6 +97,7 @@ export default function SearchBar({
             _active={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
           <Input
             ref={inputRef}
+            aria-label='Search movies and shows'
             value={searchInput}
             onChange={handleInputChange}
             onBlur={() => !isSearchActive && setIsExpanded(false)}

@@ -157,7 +157,7 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
         ]}
       />
 
-      <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: 8, md: 12 }} pt={{ base: 14, md: 16 }} px={{ base: 4, md: 12 }}>
+      <Box position='relative' minH='100vh' bg='transparent' color='white' pb={{ base: 8, md: 12 }} pt={{ base: '5rem', md: '6rem' }} px={{ base: 4, md: 12 }}>
         <Box maxW='1200px' mx='auto' position='relative' zIndex={1}>
           <Flex
             direction={{ base: 'column', md: 'row' }}

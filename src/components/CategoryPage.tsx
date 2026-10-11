@@ -115,7 +115,7 @@ export default function CategoryPage({ media, category, title, description, titl
       />
       <PageShell title={title} description={description} withBackButton>
         {dataError ? (
-          <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : <MovieGrid movies={titles} />}
         <Text textAlign='center' mt={8}>
           {FOOTER_LINKS[media]}

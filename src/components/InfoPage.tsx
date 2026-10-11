@@ -5,14 +5,14 @@ import PageHead from './PageHead'
 import PageShell from './PageShell'
 import { SITE_URL } from '../utils/site'
 
-export default function InfoPage({ title, description, noindex, children }: { title: string; description: string; noindex?: boolean; children?: ReactNode }) {
+export default function InfoPage({ title, description, noindex, withBackButton, children }: { title: string; description: string; noindex?: boolean; withBackButton?: boolean; children?: ReactNode }) {
   const { asPath } = useRouter()
   const canonicalUrl = `${SITE_URL}${asPath.split('?')[0]}`
 
   return (
     <>
       <PageHead title={title} description={description} canonicalUrl={canonicalUrl} noindex={noindex} />
-      <PageShell maxW='48rem' pb={12}>
+      <PageShell maxW='48rem' pb={12} withBackButton={withBackButton}>
         <Heading as='h1' mb={6} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
         {children}
       </PageShell>

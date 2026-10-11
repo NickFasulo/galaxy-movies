@@ -104,7 +104,7 @@ export default function DropDown({ category, changeCategory }: { category: strin
                   key={genre.value}
                   onSelect={() => changeCategory(genre.value)}
                   {...menuItemProps}
-                  value='item-7'>
+                  value={`genre-${genre.value}`}>
                   {genre.label}
                 </Menu.Item>
               ))}

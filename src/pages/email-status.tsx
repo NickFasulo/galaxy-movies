@@ -1,8 +1,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import BackButton from '../components/BackButton'
-import { Box } from '@chakra-ui/react'
 import { firstParam } from '../utils/query'
 import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../utils/alertsSync'
 import { getUserData, mergeSyncedPrefs } from '../utils/userData'
@@ -50,11 +48,8 @@ export default function EmailStatus() {
 
   return (
     <>
-      <InfoPage title={status.title} description={status.body} noindex>
+      <InfoPage title={status.title} description={status.body} noindex withBackButton>
         <InfoParagraph>{status.body}</InfoParagraph>
-        <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-          <BackButton />
-        </Box>
       </InfoPage>
     </>
   )

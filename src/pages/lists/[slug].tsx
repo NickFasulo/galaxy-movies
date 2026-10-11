@@ -143,7 +143,7 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
             </>
           )
         ) : dataError ? (
-          <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
         ) : movies.length === 0 ? (
           <Text mt={10} color='gray.500'>No movies currently match this collection.</Text>
         ) : (

@@ -1,6 +1,6 @@
-import Link from 'next/link'
+import NextLink from 'next/link'
 import type { ReactNode } from 'react'
-import { Box, Flex, Heading } from '@chakra-ui/react'
+import { Box, Flex, Heading, Link } from '@chakra-ui/react'
 import MovieCard from './MovieCard'
 import type { TitleSummary } from '../types/tmdb'
 
@@ -19,8 +19,8 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
       <Flex align='baseline' justify='space-between' mb={4} gap={3}>
         <Heading as='h2' size='md'>{title}</Heading>
         {href && (
-          <Link href={href} style={{ fontSize: 'var(--chakra-font-sizes-xs)', color: 'var(--chakra-colors-gray-400)', whiteSpace: 'nowrap' }}>
-            See all →
+          <Link color='gray.400' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
+            <NextLink href={href}>See all →</NextLink>
           </Link>
         )}
       </Flex>

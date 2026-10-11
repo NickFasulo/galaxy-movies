@@ -494,31 +494,29 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
                 You&apos;ve reached the end.
               </Text>
             )}
-
-            <Flex align='center' justify='center'>
-              <Box
-                as='footer'
-                position='fixed'
-                bottom='0.5rem'
-                left='0'
-                right='0'
-                mx='auto'
-                zIndex={9}
-                py='0.25rem'
-                px='1rem'
-                w='fit-content'
-                bg='rgba(31, 37, 43, 0.72)'
-                border='1px solid var(--chakra-colors-border-subtle)'
-                borderRadius='full'
-                backdropFilter='blur(10px)'
-              >
-                <Text textAlign='center'>
-                  <LegalLinks />
-                </Text>
-              </Box>
-            </Flex>
           </>
         )}
+
+        <Box
+          as='footer'
+          position='fixed'
+          bottom='0.5rem'
+          left='0'
+          right='0'
+          mx='auto'
+          zIndex={9}
+          py='0.25rem'
+          px='1rem'
+          w='fit-content'
+          bg='rgba(31, 37, 43, 0.72)'
+          border='1px solid var(--chakra-colors-border-subtle)'
+          borderRadius='full'
+          backdropFilter='blur(10px)'
+        >
+          <Text textAlign='center'>
+            <LegalLinks />
+          </Text>
+        </Box>
 
         {showScrollTop && (
           <IconButton

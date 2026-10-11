@@ -173,7 +173,7 @@ export default function ProviderGenrePage({
         </Text>
 
         {dataError ? (
-          <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
           <Text mt={10} color='gray.500'>No {plural} currently match this streaming collection.</Text>
         ) : (

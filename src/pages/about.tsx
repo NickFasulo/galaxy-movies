@@ -1,10 +1,9 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import BackButton from '../components/BackButton'
-import { Box, Flex } from '@chakra-ui/react'
+import { Flex } from '@chakra-ui/react'
 
 export default function About() {
   return (
-    <InfoPage title='About Galaxy Movies' description='Learn about Galaxy Movies and its movie discovery features.'>
+    <InfoPage title='About Galaxy Movies' description='Learn about Galaxy Movies and its movie discovery features.' withBackButton>
       <InfoParagraph>
         Galaxy Movies helps people discover popular, new, and upcoming movies in one place.
       </InfoParagraph>
@@ -21,9 +20,6 @@ export default function About() {
           <img src="https://www.shipnlaunch.com/badges/featured-dark.svg" alt="Featured on ShipNLaunch" width="240" height="56" />
         </a>
       </Flex>
-      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-        <BackButton />
-      </Box>
     </InfoPage>
   )
 }

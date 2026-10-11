@@ -74,7 +74,7 @@ export default function TvIndex({ shows, dataError }: Props) {
       />
       <PageShell title='TV Shows' description={description} withBackButton>
         {dataError ? (
-          <Text mt={10}>Show data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>Show data is temporarily unavailable. Please try again later.</Text>
         ) : <MovieGrid movies={shows} />}
 
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>

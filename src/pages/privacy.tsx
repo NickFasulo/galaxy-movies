@@ -1,11 +1,10 @@
 import Link from 'next/link'
 import InfoPage, { InfoParagraph, InfoHeading } from '../components/InfoPage'
-import BackButton from '../components/BackButton'
-import { Box, List } from '@chakra-ui/react';
+import { List } from '@chakra-ui/react';
 
 export default function Privacy() {
   return (
-    <InfoPage title='Privacy Policy' description='Read the Galaxy Movies privacy policy.'>
+    <InfoPage title='Privacy Policy' description='Read the Galaxy Movies privacy policy.' withBackButton>
       <InfoParagraph><em>Last updated: October 6, 2026</em></InfoParagraph>
       <InfoParagraph>
         Galaxy Movies (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates galaxymovies.app (the
@@ -148,9 +147,6 @@ export default function Privacy() {
         us through the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>.
       </InfoParagraph>
 
-      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-        <BackButton />
-      </Box>
     </InfoPage>
   );
 }
