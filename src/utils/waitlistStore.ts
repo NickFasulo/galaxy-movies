@@ -27,6 +27,9 @@ export const TRAKT_KEY = 'gm:alerts:trakt'
 export const DISCORD_KEY = 'gm:alerts:discord'
 
 export const TELEGRAM_KEY = 'gm:alerts:telegram'
+// email => JSON [{endpoint, keys:{p256dh, auth}, createdAt}] — one entry per
+// device/browser the subscriber enabled Web Push on.
+export const PUSH_KEY = 'gm:alerts:push'
 // email => shareId — Plus-only read-only share token; deliberately separate
 // from SYNCKEY_KEY, which is a write credential and must never leak into a URL.
 export const SHARE_KEY = 'gm:alerts:share'

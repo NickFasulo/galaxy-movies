@@ -12,7 +12,9 @@ export default function Document() {
           html,body{font-family:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
         `}} />
         <meta name='theme-color' content='#14181c' />
+        <meta name='mobile-web-app-capable' content='yes' />
         <link rel='manifest' href='/manifest.json' />
+        <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' />
         <link rel='preconnect' href='https://image.tmdb.org' />
         <link rel='dns-prefetch' href='https://api.themoviedb.org' />
         <link rel='preload' href='/fonts/inter-var-latin.woff2' as='font' type='font/woff2' crossOrigin='anonymous' />

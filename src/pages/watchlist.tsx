@@ -9,6 +9,7 @@ import WaitlistForm from '../components/WaitlistForm'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import PlusTools from '../components/PlusTools'
+import PushAlerts from '../components/PushAlerts'
 import { useUserData } from '../hooks/useUserData'
 import { usePlusStatus } from '../hooks/usePlus'
 import { backfillRatingMeta, ratingEntries } from '../utils/userData'
@@ -127,6 +128,7 @@ export default function Watchlist() {
                 </Text>
               </>
             )}
+            {creds && <PushAlerts creds={creds} />}
           </Box>
         )}
       </PageShell>

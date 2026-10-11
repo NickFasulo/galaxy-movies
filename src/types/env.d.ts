@@ -20,6 +20,9 @@ declare namespace NodeJS {
     TELEGRAM_BOT_TOKEN?: string
     TELEGRAM_WEBHOOK_SECRET?: string
     NEXT_PUBLIC_SITE_URL?: string
+  NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
+  WEBPUSH_PRIVATE_KEY?: string
+  WEBPUSH_SUBJECT?: string
     NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
     NEXT_PUBLIC_UMAMI_SRC?: string
   }

@@ -1,7 +1,8 @@
 import { getRedis } from './redis'
 import { getProviderChanges, PROVIDER_NAME_MATCH, IN_TRACKED_PROVIDERS, type ProviderChanges } from './streamingChanges'
-import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY } from './waitlistStore'
+import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY } from './waitlistStore'
 import { sendTelegramAlert } from './telegram'
+import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, parseBillingRecord } from './billing'
 import { fetchRecommendedMovies, fetchRecommendedTv } from './tmdb'
 import { SITE_URL } from './site'
@@ -328,13 +329,14 @@ export async function sendWatchlistAlerts() {
     return { sent: 0, reason: 'no changes available' }
   }
 
-  const [prefsHash, notifiedHash, unsubTokens, billingHash, discordHash, telegramHash] = await Promise.all([
+  const [prefsHash, notifiedHash, unsubTokens, billingHash, discordHash, telegramHash, pushHash] = await Promise.all([
     kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
     kv.hgetall<Record<string, unknown>>(ALERTS_NOTIFIED_KEY),
     kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
     kv.hgetall<Record<string, unknown>>(BILLING_KEY),
     kv.hgetall<Record<string, string>>(DISCORD_KEY),
-    kv.hgetall<Record<string, string>>(TELEGRAM_KEY)
+    kv.hgetall<Record<string, string>>(TELEGRAM_KEY),
+    kv.hgetall<Record<string, unknown>>(PUSH_KEY)
   ])
 
   const entries = Object.entries(prefsHash || {})
@@ -372,8 +374,9 @@ export async function sendWatchlistAlerts() {
     if (!matches.length) continue
 
     // Plus subscribers can route alerts to Telegram DMs and/or a Discord
-    // webhook — both free for us and them. Email is the fallback when no
-    // channel is configured or every attempt fails.
+    // webhook — both free for us and them. Push is the free tier's own free
+    // channel. Email is the fallback when no channel is configured or every
+    // attempt fails.
     let ok = false
     if (isPlus && telegramHash?.[email]) {
       ok = await sendTelegramAlert(telegramHash[email], matches)
@@ -381,6 +384,21 @@ export async function sendWatchlistAlerts() {
     if (isPlus && discordHash?.[email]) {
       ok = (await sendDiscord(discordHash[email], matches)) || ok
     }
+
+    const subs = parseStoredSubs(pushHash?.[email])
+    if (subs.length) {
+      const push = await sendPushAlert(subs, matches)
+      ok = push.ok || ok
+      if (push.dead.length) {
+        const kept = subs.filter((s) => !push.dead.includes(s.endpoint))
+        if (kept.length) {
+          await kv.hset(PUSH_KEY, { [email]: kept })
+        } else {
+          await kv.hdel(PUSH_KEY, email)
+        }
+      }
+    }
+
     if (!ok) ok = await sendAlertEmail(from, matches, email, unsubToken)
 
     if (ok) {
