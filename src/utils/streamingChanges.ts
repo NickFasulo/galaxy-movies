@@ -18,7 +18,15 @@ export const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
   'apple-tv': /apple ?tv\+?/i,
   'max': /^(max|hbo max)$/i,
   'peacock': /^peacock/i,
-  'paramount-plus': /^paramount\+|paramount plus/i
+  'paramount-plus': /^paramount\+|paramount plus/i,
+  'tubi': /^tubi/i,
+  'pluto-tv': /^pluto/i,
+  'roku-channel': /roku channel/i,
+  'starz': /^starz/i,
+  'amc-plus': /^amc\+|amc plus/i,
+  'mgm-plus': /^mgm/i,
+  'crunchyroll': /^crunchyroll/i,
+  'discovery-plus': /^discovery/i
 }
 
 interface WatchmodeSourceInfo {
@@ -105,7 +113,9 @@ export async function getSourceIdMap(): Promise<Record<string, WatchmodeSourceIn
 
   const map: Record<string, WatchmodeSourceInfo> = {}
   for (const [key, pattern] of Object.entries(PROVIDER_NAME_MATCH)) {
-    const source = sources.find((s) => s.type === 'sub' && pattern.test(s.name))
+    // 'free' alongside 'sub' — ad-supported services (tubi/pluto/roku) are
+    // typed free in Watchmode's source list, not subscription.
+    const source = sources.find((s) => (s.type === 'sub' || s.type === 'free') && pattern.test(s.name))
     if (source) map[key] = { id: source.id, name: source.name }
   }
 

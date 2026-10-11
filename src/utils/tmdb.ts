@@ -263,11 +263,19 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   hulu: { title: 'Hulu Movies', ids: { default: 15 }, regions: ['US'] },
   'disney-plus': { title: 'Disney+ Movies', ids: { default: 337 }, regions: ['US'] },
   'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
-  max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
+  max: { title: 'HBO Max Movies', ids: { default: 1899 }, regions: ['US'] },
   peacock: { title: 'Peacock Movies', ids: { default: 386 }, regions: ['US'] },
   // TMDB retired the single Paramount+ id (531) and split it into Premium and
   // Essential tiers — both count as "on Paramount+".
   'paramount-plus': { title: 'Paramount+ Movies', ids: { default: [2303, 2616] }, regions: ['US'] },
+  tubi: { title: 'Tubi Movies', ids: { default: 73 }, regions: ['US'] },
+  'pluto-tv': { title: 'Pluto TV Movies', ids: { default: 300 }, regions: ['US'] },
+  'roku-channel': { title: 'The Roku Channel Movies', ids: { default: 207 }, regions: ['US'] },
+  starz: { title: 'Starz Movies', ids: { default: 43 }, regions: ['US'] },
+  'amc-plus': { title: 'AMC+ Movies', ids: { default: 526 }, regions: ['US'] },
+  'mgm-plus': { title: 'MGM+ Movies', ids: { default: 34 }, regions: ['US'] },
+  crunchyroll: { title: 'Crunchyroll Movies', ids: { default: 283 }, regions: ['US'] },
+  'discovery-plus': { title: 'Discovery+ Movies', ids: { default: 520, IN: 510 } },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
   zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
   sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] },
@@ -277,7 +285,12 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   aha: { title: 'aha Movies', ids: { default: 532 }, regions: ['IN'] },
   'sun-nxt': { title: 'Sun NXT Movies', ids: { default: 309 }, regions: ['IN'] },
   'mx-player': { title: 'MX Player Movies', ids: { default: 515 }, regions: ['IN'] },
-  shemaroome: { title: 'ShemarooMe Movies', ids: { default: 474 }, regions: ['IN'] }
+  shemaroome: { title: 'ShemarooMe Movies', ids: { default: 474 }, regions: ['IN'] },
+  'lionsgate-play': { title: 'Lionsgate Play Movies', ids: { default: 561 }, regions: ['IN'] },
+  'hungama-play': { title: 'Hungama Play Movies', ids: { default: 437 }, regions: ['IN'] },
+  // TMDB's name for the Vodafone Vi service — kept verbatim so the picker
+  // label (' Movies' suffix strip) renders it correctly.
+  'vi-movies': { title: 'VI movies and tv', ids: { default: 614 }, regions: ['IN'] }
 }
 
 export function getProviderIds(providerKey: string, region = 'US'): number[] {
