@@ -51,10 +51,17 @@ export default function HomeHero({ featured, providers, myProviderIds, dimmed, c
           opacity={dimmed ? 0 : 1}
           transition='opacity 0.6s ease-in-out'
           willChange='opacity'
+          css={{
+            // Feather the element's bottom edge to 0 alpha: during the card-hover
+            // crossfade, a hard edge steps between faded-hero and preview pixels —
+            // the "tearing" line above the search bar.
+            WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 calc(100% - 3.5rem), transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, #000 0%, #000 calc(100% - 3.5rem), transparent 100%)'
+          }}
         />
       </Box>
 
-      <Box position='relative' h={{ base: '21.75rem', md: '27.75rem' }}>
+      <Box position='relative' display='flow-root' h={{ base: '21.75rem', md: '27.75rem' }}>
         {children}
         <Flex
           position='absolute'
