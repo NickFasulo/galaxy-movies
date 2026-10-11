@@ -34,13 +34,33 @@ const INDIA_PROVIDERS = [
   { key: 'jiohotstar', label: 'JioHotstar' },
   { key: 'zee5', label: 'ZEE5' },
   { key: 'sonyliv', label: 'SonyLIV' },
-  { key: 'apple-tv', label: 'Apple TV' }
+  { key: 'apple-tv', label: 'Apple TV' },
+  { key: 'hoichoi', label: 'Hoichoi' },
+  { key: 'manoramamax', label: 'ManoramaMAX' },
+  { key: 'aha', label: 'aha' },
+  { key: 'sun-nxt', label: 'Sun NXT' },
+  { key: 'mx-player', label: 'MX Player' },
+  { key: 'shemaroome', label: 'ShemarooMe' }
 ]
 
 const INDIAN_LANGUAGE_CATEGORIES = [
   { key: 'bollywood', label: 'Bollywood (Hindi) Movies' },
   { key: 'tamil', label: 'Tamil Movies' },
-  { key: 'telugu', label: 'Telugu Movies' }
+  { key: 'telugu', label: 'Telugu Movies' },
+  { key: 'bengali', label: 'Bengali Movies' },
+  { key: 'malayalam', label: 'Malayalam Movies' },
+  { key: 'kannada', label: 'Kannada Movies' },
+  { key: 'marathi', label: 'Marathi Movies' }
+]
+
+const INDIAN_SHOW_CATEGORIES = [
+  { key: 'hindi', label: 'Hindi Shows' },
+  { key: 'tamil', label: 'Tamil Shows' },
+  { key: 'telugu', label: 'Telugu Shows' },
+  { key: 'bengali', label: 'Bengali Shows' },
+  { key: 'malayalam', label: 'Malayalam Shows' },
+  { key: 'kannada', label: 'Kannada Shows' },
+  { key: 'marathi', label: 'Marathi Shows' }
 ]
 
 export default function StreamingInIndia({ movies, dataError }: Props) {
@@ -74,10 +94,19 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
 
         <VpnBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
 
-        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil, Telugu &amp; regional-language movies</Heading>
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
           {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
             <LinkTile key={category.key} href={`/browse/${category.key}`}>
+              <Text fontWeight='medium' textAlign='center'>{category.label}</Text>
+            </LinkTile>
+          ))}
+        </SimpleGrid>
+
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Indian-language shows</Heading>
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+          {INDIAN_SHOW_CATEGORIES.map((category) => (
+            <LinkTile key={category.key} href={`/tv/browse/${category.key}`}>
               <Text fontWeight='medium' textAlign='center'>{category.label}</Text>
             </LinkTile>
           ))}

@@ -1,22 +1,26 @@
 import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Badge, Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { useRouter } from 'next/router'
+import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import MovieCard from '../components/MovieCard'
 import ServicesPicker from '../components/ServicesPicker'
 import WaitlistForm from '../components/WaitlistForm'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
+import PlusTools from '../components/PlusTools'
 import { useUserData } from '../hooks/useUserData'
 import { usePlusStatus } from '../hooks/usePlus'
-import { fetchSyncedPrefs } from '../utils/alertsSync'
 import { backfillRatingMeta, ratingEntries } from '../utils/userData'
+import { firstParam } from '../utils/query'
 import type { TitleSummary } from '../types/tmdb'
 
 export default function Watchlist() {
   const data = useUserData()
   const { watchlist } = data
-  const { loading: plusLoading, creds, plus } = usePlusStatus()
+  const { loading: plusLoading, creds, plus, features, refresh } = usePlusStatus()
+  const { query } = useRouter()
+  const traktStatus = firstParam(query.trakt)
 
   // Ratings written before poster_path existed render as gray cards — resolve
   // them against TMDB once and merge back; the change re-syncs server-side too.
@@ -34,19 +38,6 @@ export default function Watchlist() {
       })
       .catch(() => {})
   }, [data.ratings])
-
-  const exportData = async () => {
-    if (!creds) return
-    const prefs = await fetchSyncedPrefs(creds)
-    if (!prefs) return
-    const blob = new Blob([JSON.stringify(prefs, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'galaxy-movies-data.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
 
   const rated = useMemo(() =>
     ratingEntries(data.ratings)
@@ -123,24 +114,7 @@ export default function Watchlist() {
         {!plusLoading && (
           <Box mt={6} maxW='36rem' bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
             {plus && creds ? (
-              <>
-                <Flex align='center' gap={2} mb={1}>
-                  <Badge colorPalette='yellow'>Plus</Badge>
-                  <Text color='white' fontWeight='bold' fontSize='sm'>Galaxy Plus is active</Text>
-                </Flex>
-                <Text color='gray.400' fontSize='sm'>
-                  <a
-                    href={`/api/billing/portal?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`}
-                    style={{ textDecoration: 'underline' }}
-                  >
-                    Manage subscription
-                  </a>
-                  {' · '}
-                  <button type='button' onClick={exportData} style={{ textDecoration: 'underline', cursor: 'pointer' }}>
-                    Export my data
-                  </button>
-                </Text>
-              </>
+              <PlusTools creds={creds} features={features} refresh={refresh} traktStatus={traktStatus} />
             ) : (
               <>
                 <Text color='white' fontWeight='bold' fontSize='sm' mb={1}>Galaxy Plus</Text>

@@ -10,11 +10,15 @@ import { usePlusStatus } from '../hooks/usePlus'
 import { firstParam } from '../utils/query'
 
 const FEATURES = [
-  'Alerts for new arrivals on your services, matched to what you rate highly',
+  'Alerts for new arrivals on your services, matched to what you rate highly — every tracked service in your region, from Peacock and Paramount+ in the US to JioHotstar, ZEE5, SonyLIV, Hoichoi and more in India',
   'Leaving-soon warnings when something on your list is about to disappear',
   'Galaxy Bot goes from 10 to 100 messages an hour',
-  'Export your whole list and ratings as JSON anytime',
-  'List, ratings, and services synced across every device you link'
+  'One-click sync to Trakt — list and ratings pushed straight to your profile, shows included',
+  'Export as JSON or Letterboxd-ready CSVs anytime',
+  'A calendar feed of upcoming releases for your watchlist — plug it into Google or Apple Calendar',
+  'Alerts delivered to your Telegram DMs or your own Discord channel instead of email, if you want',
+  'A shareable public link for your list and ratings',
+  'Bigger limits: 1,000 list entries and 2,500 ratings synced across every device you link'
 ]
 
 export default function Plus() {

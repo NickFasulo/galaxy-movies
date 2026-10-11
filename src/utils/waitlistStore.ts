@@ -21,6 +21,18 @@ export const ALERTS_NOTIFIED_KEY = 'gm:alerts:notified'
 // written only by the Polar webhook, never by client-facing routes.
 export const BILLING_KEY = 'gm:billing'
 
+// email => JSON { refreshToken } — Trakt OAuth refresh token for Plus sync.
+export const TRAKT_KEY = 'gm:alerts:trakt'
+// email => discord webhook URL — Plus subscribers' opt-in alert channel.
+export const DISCORD_KEY = 'gm:alerts:discord'
+
+export const TELEGRAM_KEY = 'gm:alerts:telegram'
+// email => shareId — Plus-only read-only share token; deliberately separate
+// from SYNCKEY_KEY, which is a write credential and must never leak into a URL.
+export const SHARE_KEY = 'gm:alerts:share'
+// shareId => email — reverse index so a share link resolves without scanning.
+export const SHARE_LOOKUP_KEY = 'gm:share:lookup'
+
 export async function getOrCreateSyncKey(kv: Redis, email: string): Promise<string> {
   const existing = await kv.hget<string>(SYNCKEY_KEY, email)
   if (existing) return existing

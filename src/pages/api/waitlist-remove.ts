@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY } from '../../utils/waitlistStore'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, TRAKT_KEY, DISCORD_KEY, TELEGRAM_KEY, SHARE_KEY, SHARE_LOOKUP_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
 import { requireMethod } from '../../utils/api'
 
@@ -26,6 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await kv.hdel(SYNCKEY_KEY, email)
     await kv.hdel(ALERTS_PREFS_KEY, email)
     await kv.hdel(ALERTS_NOTIFIED_KEY, email)
+    await kv.hdel(TRAKT_KEY, email)
+    await kv.hdel(DISCORD_KEY, email)
+    await kv.hdel(TELEGRAM_KEY, email)
+    const shareId = await kv.hget<string>(SHARE_KEY, email)
+    if (shareId) {
+      await kv.hdel(SHARE_KEY, email)
+      await kv.hdel(SHARE_LOOKUP_KEY, shareId)
+    }
     return redirect('unsubscribed')
   } catch (err) {
     console.error('Waitlist remove error:', err)

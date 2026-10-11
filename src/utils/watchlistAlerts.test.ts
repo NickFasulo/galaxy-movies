@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEmail, matchItems, parsePrefs, type AlertPrefs, type MatchedItem } from './watchlistAlerts'
+import { buildDiscordMessage, buildEmail, matchItems, parsePrefs, type AlertPrefs, type MatchedItem } from './watchlistAlerts'
 import type { CatalogTitle, ProviderChanges } from './streamingChanges'
 
 const catalogTitle = (tmdbId: number | null, tmdbType: 'movie' | 'tv' = 'movie'): CatalogTitle => ({
@@ -130,6 +130,49 @@ describe('matchItems', () => {
       { taste }
     )
     expect(matches).toHaveLength(0)
+  })
+
+  it('gates provider coverage to the allowlist even when diffs exist', () => {
+    const sub = prefs({ services: ['netflix', 'peacock'] })
+    const changes = {
+      netflix: providerChanges({ added: [catalogTitle(1)] }),
+      peacock: providerChanges({ source: 'Peacock', added: [catalogTitle(2)] })
+    }
+    const wideWatchlist = [...sub.watchlist, { id: 2, mediaType: 'movie' as const, title: 'Title 2' }]
+    const free = matchItems(prefs({ ...sub, watchlist: wideWatchlist }), changes, new Set(), {
+      providers: ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
+    })
+    expect(free.map((m) => m.tmdbId)).toEqual([1])
+    const plus = matchItems(prefs({ ...sub, watchlist: wideWatchlist }), changes, new Set(), {
+      providers: ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max', 'peacock', 'paramount-plus']
+    })
+    expect(plus.map((m) => m.tmdbId).sort()).toEqual([1, 2])
+  })
+})
+
+describe('buildDiscordMessage', () => {
+  const item: MatchedItem = {
+    kind: 'added',
+    notifiedKey: 'added:movie:1@netflix',
+    tmdbId: 1,
+    tmdbType: 'movie',
+    title: 'Some Film',
+    provider: 'Netflix'
+  }
+
+  it('renders a single embed with markdown links and a status line', () => {
+    const msg = buildDiscordMessage([item])
+    expect(msg.embeds).toHaveLength(1)
+    expect(msg.embeds[0]!.description).toContain('[Some Film](https://www.galaxymovies.app/movies/1)')
+    expect(msg.embeds[0]!.description).toContain('Now on Netflix')
+  })
+
+  it('renders coming and taste status lines', () => {
+    const coming: MatchedItem = { ...item, kind: 'coming', date: '20260115', season: 2 }
+    const taste: MatchedItem = { ...item, kind: 'taste', via: 'Inception' }
+    const { embeds } = buildDiscordMessage([coming, taste])
+    expect(embeds[0]!.description).toContain('Coming to Netflix, Jan 15, season 2')
+    expect(embeds[0]!.description).toContain('because you rated Inception highly')
   })
 })
 

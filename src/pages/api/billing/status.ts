@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireMethod, rejectBot } from '../../../utils/api'
 import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
 import { getBillingRecord, getLinkedEmail, isPlusActive } from '../../../utils/billing'
+import { getRedis, TRAKT_KEY, SHARE_KEY, DISCORD_KEY, TELEGRAM_KEY } from '../../../utils/waitlistStore'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return
@@ -22,5 +23,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const record = await getBillingRecord(email)
-  return res.status(200).json({ entitlement: isPlusActive(record) ? 'plus' : 'free' })
+  if (!isPlusActive(record)) {
+    return res.status(200).json({ entitlement: 'free' })
+  }
+
+  // Perk state rides along so the Plus UI doesn't fan out extra requests.
+  const kv = getRedis()
+  const [trakt, share, discordWebhook, telegramChatId] = kv
+    ? await Promise.all([
+        kv.hget(TRAKT_KEY, email).catch(() => null),
+        kv.hget<string>(SHARE_KEY, email).catch(() => null),
+        kv.hget<string>(DISCORD_KEY, email).catch(() => null),
+        kv.hget<string>(TELEGRAM_KEY, email).catch(() => null)
+      ])
+    : [null, null, null, null]
+
+  return res.status(200).json({
+    entitlement: 'plus',
+    traktConnected: Boolean(trakt),
+    shareId: share || null,
+    discordWebhook: discordWebhook || null,
+    telegramConnected: Boolean(telegramChatId)
+  })
 }

@@ -40,8 +40,20 @@ function normalizeResults(results: RawResult[] | undefined) {
     .map(item => (item.media_type === 'movie' ? { ...item, mediaType: 'movie' } : normalizeTvTitle(item)))
 }
 
+// Homepage feed keys → TMDB with_original_language — the same ids the
+// /browse/<category> movie pages already use.
+const LANGUAGE_MAP: Record<string, string> = {
+  bollywood: 'hi',
+  tamil: 'ta',
+  telugu: 'te',
+  bengali: 'bn',
+  malayalam: 'ml',
+  kannada: 'kn',
+  marathi: 'mr'
+}
+
 const MEDIA_TYPES = new Set(['movie', 'tv', 'trending'])
-const VALID_CATEGORIES = new Set([...Object.keys(GENRE_MAP), 'popular', 'now_playing', 'upcoming', 'top_rated'])
+const VALID_CATEGORIES = new Set([...Object.keys(GENRE_MAP), ...Object.keys(LANGUAGE_MAP), 'popular', 'now_playing', 'upcoming', 'top_rated'])
 const MAX_SEARCH_LENGTH = 100
 const MAX_PAGE = 500
 
@@ -109,6 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10${providerFilter}`
     } else if (media === 'trending') {
       endpoint = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&page=${pageNum}`
+    } else if (LANGUAGE_MAP[category]) {
+      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10&with_original_language=${LANGUAGE_MAP[category]}${providerFilter}`
     } else if (GENRE_MAP[category]) {
       endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=primary_release_date.desc&primary_release_date.lte=${todayStr}&vote_count.gte=50&with_genres=${GENRE_MAP[category]}${providerFilter}`
     } else if (category === 'popular') {

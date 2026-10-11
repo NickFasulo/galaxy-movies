@@ -27,8 +27,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   sci_fi: 'Sci-Fi',
   thriller: 'Thriller',
   war: 'War',
-  western: 'Western'
+  western: 'Western',
+  bollywood: 'Bollywood',
+  tamil: 'Tamil',
+  telugu: 'Telugu',
+  bengali: 'Bengali',
+  malayalam: 'Malayalam',
+  kannada: 'Kannada',
+  marathi: 'Marathi'
 }
+
+const LANGUAGES = [
+  { label: 'Bollywood', value: 'bollywood' },
+  { label: 'Tamil', value: 'tamil' },
+  { label: 'Telugu', value: 'telugu' },
+  { label: 'Bengali', value: 'bengali' },
+  { label: 'Malayalam', value: 'malayalam' },
+  { label: 'Kannada', value: 'kannada' },
+  { label: 'Marathi', value: 'marathi' }
+]
 
 const GENRES = [
   { label: 'Action', value: 'action' },
@@ -93,13 +110,25 @@ export default function DropDown({ category, changeCategory }: { category: strin
                 value='item-5'>TV Shows</Menu.Item>
             </Menu.ItemGroup>
             <Menu.Separator borderColor='border.subtle' />
+            <Menu.ItemGroup><Menu.ItemGroupLabel>Languages</Menu.ItemGroupLabel>
+              {LANGUAGES.map((language) => (
+                <Menu.Item
+                  key={language.value}
+                  onSelect={() => changeCategory(language.value)}
+                  {...menuItemProps}
+                  value='item-6'>
+                  {language.label}
+                </Menu.Item>
+              ))}
+            </Menu.ItemGroup>
+            <Menu.Separator borderColor='border.subtle' />
             <Menu.ItemGroup><Menu.ItemGroupLabel>Genres</Menu.ItemGroupLabel>
               {GENRES.map((genre) => (
                 <Menu.Item
                   key={genre.value}
                   onSelect={() => changeCategory(genre.value)}
                   {...menuItemProps}
-                  value='item-6'>
+                  value='item-7'>
                   {genre.label}
                 </Menu.Item>
               ))}

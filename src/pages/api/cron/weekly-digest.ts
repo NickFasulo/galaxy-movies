@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis } from '../../../utils/redis'
-import { getProviderChanges, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
-import { CONFIRMED_KEY } from '../../../utils/waitlistStore'
+import { getProviderChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
+import { ALERTS_PREFS_KEY, CONFIRMED_KEY } from '../../../utils/waitlistStore'
+import { parsePrefs } from '../../../utils/watchlistAlerts'
 import { isCronAuthorized } from '../../../utils/auth'
 import { SITE_URL } from '../../../utils/site'
 
@@ -87,15 +88,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const changes = await getProviderChanges([
-      'netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max'
-    ], { fresh: true })
-    const items = gatherItems(changes)
-    if (!items.added.length && !items.coming.length) {
+    const [usChanges, inChanges] = await Promise.all([
+      getProviderChanges([
+        'netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max'
+      ], { fresh: true }),
+      getProviderChanges(IN_TRACKED_PROVIDERS, { fresh: true, region: 'IN' })
+    ])
+    const usItems = gatherItems(usChanges)
+    const inItems = gatherItems(inChanges)
+    if (!usItems.added.length && !usItems.coming.length && !inItems.added.length && !inItems.coming.length) {
       return res.status(200).json({ sent: 0, reason: 'no changes this week' })
     }
 
-    const confirmed = await kv.hgetall<Record<string, string>>(CONFIRMED_KEY)
+    const [confirmed, prefsHash] = await Promise.all([
+      kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
+      kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY)
+    ])
     const entries = Object.entries(confirmed || {})
     if (!entries.length) {
       return res.status(200).json({ sent: 0, reason: 'no subscribers' })
@@ -105,6 +113,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const results = await Promise.allSettled(
       entries.map(([email, token]) => {
+        const prefs = parsePrefs(prefsHash?.[email])
+        // IN subscribers get the India digest when it has items; the US list is
+        // the fallback so nobody loses the weekly email on a quiet week.
+        const inHasItems = inItems.added.length + inItems.coming.length > 0
+        const items = prefs?.region === 'IN' && inHasItems ? inItems : usItems
         const { html, headers } = buildEmail(items, email, token)
         return fetch('https://api.resend.com/emails', {
           method: 'POST',

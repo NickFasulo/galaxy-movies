@@ -1,6 +1,7 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from './redis'
-import type { MediaType } from '../types/tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, isProviderAvailableInRegion, streamingProviders } from './tmdb'
+import type { MediaType, TitleSummary } from '../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const SOURCES_TTL_SECONDS = 60 * 60 * 24 * 30
@@ -70,8 +71,11 @@ interface CatalogSnapshot {
   updatedAt?: number
 }
 
-const catalogKey = (providerKey: string) => `changes:catalog:${providerKey}`
-const changesKey = (providerKey: string) => `changes:diff:${providerKey}`
+// US keys keep their original unprefixed shape; other regions are namespaced.
+const catalogKey = (providerKey: string, region = 'US') =>
+  region === 'US' ? `changes:catalog:${providerKey}` : `changes:catalog:${region}:${providerKey}`
+const changesKey = (providerKey: string, region = 'US') =>
+  region === 'US' ? `changes:diff:${providerKey}` : `changes:diff:${region}:${providerKey}`
 
 async function fetchWatchmode<T>(path: string): Promise<T | null> {
   const apiKey = process.env.WATCHMODE_API_KEY
@@ -127,6 +131,37 @@ async function fetchCatalog(sourceId: number): Promise<CatalogTitle[]> {
   return (data?.titles || []).map(normalizeTitle).filter((t) => t.tmdbId)
 }
 
+export const IN_TRACKED_PROVIDERS = Object.keys(streamingProviders).filter((key) => isProviderAvailableInRegion(key, 'IN'))
+
+// India's daily snapshots come from TMDB discover, not Watchmode — its source
+// list is US-centric and TMDB calls here are free. TMDB only exposes current
+// availability, so IN diffs track added/left but never "coming soon".
+const TMDB_CATALOG_PAGES = 13 // ~250 titles per media type at 20/page
+
+async function fetchTmdbCatalog(providerKey: string): Promise<CatalogTitle[]> {
+  const providerId = getProviderIds(providerKey, 'IN').join('|')
+  const seen = new Map<string, CatalogTitle>()
+  for (const tmdbType of ['movie', 'tv'] as const) {
+    for (let page = 1; page <= TMDB_CATALOG_PAGES; page++) {
+      const data = tmdbType === 'movie'
+        ? await fetchDiscoverMovies({ providerId, region: 'IN', page })
+        : await fetchDiscoverTv({ providerId, region: 'IN', page })
+      const results = (data.results || []) as TitleSummary[]
+      for (const t of results) {
+        const year = (t.release_date || t.first_air_date || '').slice(0, 4)
+        seen.set(`${tmdbType}:${t.id}`, {
+          tmdbId: t.id,
+          tmdbType,
+          title: t.title || t.name || '',
+          year: year ? Number(year) : null
+        })
+      }
+      if (results.length < 20 || page >= (data.total_pages || 1)) break
+    }
+  }
+  return [...seen.values()].slice(0, CATALOG_LIMIT)
+}
+
 const dateStamp = (date: Date) =>
   `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
 
@@ -162,39 +197,78 @@ export async function updateStreamingChanges() {
   const kv = getRedis()
   if (!kv) return { error: 'Redis unavailable' }
 
+  const summary: Record<string, { added: number; left: number; coming: number; catalog: number } | string> = {}
+
   const sourceMap = await getSourceIdMap()
-  const keys = Object.keys(sourceMap)
-  if (keys.length === 0) return { error: 'No Watchmode sources resolved' }
+  if (Object.keys(sourceMap).length === 0) {
+    summary.error = 'No Watchmode sources resolved'
+  }
+  if (Object.keys(sourceMap).length > 0) {
+    const upcoming = await fetchUpcoming(new Set(Object.values(sourceMap).map((s) => s.id)))
 
-  const upcoming = await fetchUpcoming(new Set(Object.values(sourceMap).map((s) => s.id)))
+    for (const [key, source] of Object.entries(sourceMap)) {
+      const catalog = await fetchCatalog(source.id)
+      // An empty fetch means Watchmode errored (or the source vanished) — skip
+      // rather than overwriting the baseline and reporting every title as left.
+      if (!catalog.length) {
+        summary[key] = 'skipped: empty catalog'
+        continue
+      }
+      const previous = await kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null)
 
-  const summary: Record<string, { added: number; left: number; coming: number; catalog: number }> = {}
-  for (const [key, source] of Object.entries(sourceMap)) {
-    const catalog = await fetchCatalog(source.id)
-    const previous = await kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null)
+      const prevIds = new Set((previous?.titles || []).map((t) => t.tmdbId))
+      const nextIds = new Set(catalog.map((t) => t.tmdbId))
 
-    const prevIds = new Set((previous?.titles || []).map((t) => t.tmdbId))
-    const nextIds = new Set(catalog.map((t) => t.tmdbId))
+      // First run seeds the baseline with no diff — otherwise every title in the
+      // catalog would show as "just added".
+      const hasBaseline = Array.isArray(previous?.titles)
+      const added = hasBaseline ? catalog.filter((t) => !prevIds.has(t.tmdbId)) : []
+      const left = hasBaseline
+        ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
+        : []
 
-    // First run seeds the baseline with no diff — otherwise every title in the
-    // catalog would show as "just added".
-    const hasBaseline = Array.isArray(previous?.titles)
-    const added = hasBaseline ? catalog.filter((t) => !prevIds.has(t.tmdbId)) : []
-    const left = hasBaseline
-      ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
-      : []
+      const payload: ProviderChanges = {
+        source: source.name,
+        updatedAt: Date.now(),
+        added: added.slice(0, CHANGE_LIST_LIMIT),
+        left: left.slice(0, CHANGE_LIST_LIMIT),
+        coming: (upcoming[source.id] || []).slice(0, CHANGE_LIST_LIMIT)
+      }
 
-    const payload: ProviderChanges = {
-      source: source.name,
-      updatedAt: Date.now(),
-      added: added.slice(0, CHANGE_LIST_LIMIT),
-      left: left.slice(0, CHANGE_LIST_LIMIT),
-      coming: (upcoming[source.id] || []).slice(0, CHANGE_LIST_LIMIT)
+      await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now() })
+      await kv.set(changesKey(key), payload)
+      summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
     }
+  }
 
-    await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now() })
-    await kv.set(changesKey(key), payload)
-    summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
+  for (const key of IN_TRACKED_PROVIDERS) {
+    try {
+      const catalog = await fetchTmdbCatalog(key)
+      if (!catalog.length) continue
+      const previous = await kv.get<CatalogSnapshot>(catalogKey(key, 'IN')).catch(() => null)
+
+      const prevIds = new Set((previous?.titles || []).map((t) => t.tmdbId))
+      const nextIds = new Set(catalog.map((t) => t.tmdbId))
+      const hasBaseline = Array.isArray(previous?.titles)
+      const added = hasBaseline ? catalog.filter((t) => !prevIds.has(t.tmdbId)) : []
+      const left = hasBaseline
+        ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
+        : []
+
+      const payload: ProviderChanges = {
+        source: streamingProviders[key].title.replace(/ Movies$/, ''),
+        updatedAt: Date.now(),
+        added: added.slice(0, CHANGE_LIST_LIMIT),
+        left: left.slice(0, CHANGE_LIST_LIMIT),
+        coming: []
+      }
+
+      await kv.set(catalogKey(key, 'IN'), { titles: catalog, updatedAt: Date.now() })
+      await kv.set(changesKey(key, 'IN'), payload)
+      summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: catalog.length }
+    } catch (error) {
+      console.error(`in catalog update failed for ${key}:`, error)
+    }
   }
 
   return summary
@@ -209,9 +283,9 @@ const changesMemo = new LRUCache<string, Record<string, ProviderChanges>>({ max:
 
 export async function getProviderChanges(
   providerKeys: string[] = [],
-  { fresh = false }: { fresh?: boolean } = {}
+  { fresh = false, region = 'US' }: { fresh?: boolean; region?: string } = {}
 ): Promise<Record<string, ProviderChanges>> {
-  const memoKey = [...providerKeys].sort().join(',')
+  const memoKey = `${region}:${[...providerKeys].sort().join(',')}`
   if (!fresh) {
     const memoized = changesMemo.get(memoKey)
     if (memoized) return memoized
@@ -223,7 +297,7 @@ export async function getProviderChanges(
   const entries = await Promise.all(
     providerKeys.map(async (key): Promise<[string, ProviderChanges | null]> => {
       try {
-        const data = await kv.get<ProviderChanges>(changesKey(key))
+        const data = await kv.get<ProviderChanges>(changesKey(key, region))
         return [key, data]
       } catch {
         return [key, null]
