@@ -36,6 +36,8 @@ yarn-error.log*
 
 # devin local config (may contain personal keys)
 .devin/mcp_config.local.json
+# personal agent rules — local only, not for the repo
+.devin/rules/personal/
 
 # typescript
 *.tsbuildinfo

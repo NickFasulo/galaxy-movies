@@ -2,7 +2,7 @@ import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Text } from '@chakra-ui/react'
-import MovieGrid from './MovieGrid'
+import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
 import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, tvCategories, type DiscoverOptions } from '../utils/tmdb'
@@ -47,6 +47,7 @@ export interface CategoryPageProps {
   title: string
   description: string
   titles: TitleSummary[]
+  totalPages: number
   dataError?: boolean
 }
 
@@ -63,11 +64,11 @@ export function categoryServerSideProps(media: MediaType) {
     try {
       const data = await discover({ category: slug })
       setSwrCache(res)
-      return { props: { ...base, titles: data.results } }
+      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1 } }
     } catch (error) {
       console.error(error)
       res.statusCode = 502
-      return { props: { ...base, titles: [], dataError: true } }
+      return { props: { ...base, titles: [], totalPages: 1, dataError: true } }
     }
   }
 }
@@ -95,7 +96,7 @@ const FOOTER_LINKS: Record<MediaType, ReactNode> = {
   )
 }
 
-export default function CategoryPage({ media, category, title, description, titles, dataError }: CategoryPageProps) {
+export default function CategoryPage({ media, category, title, description, titles, totalPages, dataError }: CategoryPageProps) {
   const { basePath, crumbRoot, noun } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${category}`
 
@@ -116,7 +117,14 @@ export default function CategoryPage({ media, category, title, description, titl
       <PageShell title={title} description={description} withBackButton>
         {dataError ? (
           <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
-        ) : <MovieGrid movies={titles} />}
+        ) : (
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            queryKey={['category', media, category]}
+            fetchUrl={(page) => `/api/discover?type=${media}&category=${category}&page=${page}`}
+          />
+        )}
         <Text textAlign='center' mt={8}>
           {FOOTER_LINKS[media]}
         </Text>

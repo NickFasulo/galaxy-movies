@@ -11,12 +11,13 @@ import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../utils/gr
 import { LuArrowUpRight } from 'react-icons/lu'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 
-function AffiliateTextLink({ href, pixel, text }: { href: string; pixel: string; text: string }) {
+function AffiliateTextLink({ href, pixel, text, event }: { href: string; pixel: string; text: string; event: string }) {
   return (
     <Box position='relative'>
       <Link
         href={href}
         rel='sponsored nofollow noopener'
+        data-umami-event={event}
         fontSize='2xs'
         color='gray.500'
         display='inline-flex'
@@ -34,19 +35,20 @@ function AffiliateTextLink({ href, pixel, text }: { href: string; pixel: string;
 }
 
 function VpnLink() {
-  return <AffiliateTextLink href={VPN_AFFILIATE_LINK} pixel={VPN_AFFILIATE_PIXEL} text={VPN_LINK_TEXT} />
+  return <AffiliateTextLink href={VPN_AFFILIATE_LINK} pixel={VPN_AFFILIATE_PIXEL} text={VPN_LINK_TEXT} event='vpn-click' />
 }
 
 function GruvLink({ title }: { title?: string }) {
-  return <AffiliateTextLink href={buildGruvLink(title)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} />
+  return <AffiliateTextLink href={buildGruvLink(title)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} event='gruv-click' />
 }
 
-function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
+function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, bucket }: {
   provider: WatchProvider
   movieTitle?: string
   affiliateLink?: string | null
   isMine?: boolean
   offer: PriceOffer | null
+  bucket: 'stream' | 'free' | 'rent-buy'
 }) {
   const caption = offer?.price != null ? `$${offer.price.toFixed(2)}` : null
   const icon = (
@@ -86,6 +88,10 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
         <Link
           href={href}
           rel='sponsored nofollow noopener'
+          data-umami-event='provider-click'
+          data-umami-event-provider={provider.provider_name}
+          data-umami-event-bucket={bucket}
+          data-umami-event-title={movieTitle}
           _hover={{ transform: 'scale(1.05)' }}
           transition='transform 0.15s'
           target='_blank'
@@ -208,6 +214,7 @@ export default function WatchProviders({
           {streamLink && (
             <Link
               href={streamLink}
+              data-umami-event='justwatch-click'
               fontSize='2xs'
               color='gray.500'
               display='inline-flex'
@@ -231,7 +238,7 @@ export default function WatchProviders({
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {flatrate.map((provider) => (
-                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} />
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} bucket='stream' />
                   ))}
                 </Flex>
                 {seasonNotes.length > 0 && (
@@ -248,7 +255,7 @@ export default function WatchProviders({
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {freeAds.map((provider) => (
-                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} />
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='free' />
                   ))}
                 </Flex>
               </Box>
@@ -262,7 +269,7 @@ export default function WatchProviders({
                   {[...rent, ...buy]
                     .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
                     .map((provider) => (
-                      <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} />
+                      <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='rent-buy' />
                     ))}
                 </Flex>
                 <Flex align='center' justify='space-between' gap={2} mt={1.5} wrap='wrap'>

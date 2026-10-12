@@ -1,7 +1,7 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
 import { Text } from '@chakra-ui/react'
-import MovieGrid from './MovieGrid'
+import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
 import {
@@ -65,6 +65,7 @@ export interface ProviderGenrePageProps {
   genre: string
   target: ProviderGenreTarget
   titles: TitleSummary[]
+  totalPages: number
   dataError?: boolean
   region: string
   availableInRegion: boolean
@@ -106,6 +107,7 @@ export function providerGenreServerSideProps(media: MediaType) {
         props: {
           ...base,
           titles,
+          totalPages: data.total_pages || 1,
           isIndexable: indexability.isIndexable,
           indexabilityReason: indexability.reason
         }
@@ -119,6 +121,7 @@ export function providerGenreServerSideProps(media: MediaType) {
         props: {
           ...base,
           titles: [],
+          totalPages: 1,
           dataError: true,
           isIndexable: indexability.isIndexable,
           indexabilityReason: indexability.reason
@@ -134,6 +137,7 @@ export default function ProviderGenrePage({
   genre,
   target,
   titles,
+  totalPages,
   dataError,
   region,
   availableInRegion,
@@ -177,7 +181,12 @@ export default function ProviderGenrePage({
         ) : titles.length === 0 ? (
           <Text mt={10} color='gray.500'>No {plural} currently match this streaming collection.</Text>
         ) : (
-          <MovieGrid movies={titles} />
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            queryKey={['providerGenre', media, provider, genre, region]}
+            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${page}`}
+          />
         )}
 
         {!isIndexable && indexabilityReason && (

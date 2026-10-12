@@ -1,7 +1,7 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
-import { Heading, SimpleGrid, Text } from '@chakra-ui/react'
-import MovieGrid from './MovieGrid'
+import { Badge, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import PaginatedGrid from './PaginatedGrid'
 import LinkTile from './LinkTile'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
@@ -16,6 +16,7 @@ import {
   type StreamingProvider
 } from '../utils/tmdb'
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
+import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
 import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, type ProviderGenreTarget } from '../utils/contentOpportunities'
 import { setSwrCache } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
@@ -63,6 +64,8 @@ export type ProviderPageProps = StreamingProvider & {
   media: MediaType
   provider: string
   titles: TitleSummary[]
+  totalPages: number
+  changes: ProviderChanges | null
   dataError?: boolean
   region: string
   availableInRegion: boolean
@@ -83,18 +86,28 @@ export function providerServerSideProps(media: MediaType) {
     const base = { media, provider: slug, ...provider, region, availableInRegion }
 
     try {
-      const data = await discover({ providerId, region })
+      // Diffs only exist for US (Watchmode) and IN (TMDB snapshots) catalogs;
+      // IN diffs live under `changes:diff:IN:{key}` — passing the prefixed key
+      // reads them through the same memoized lookup. LRU-memoized, so repeat
+      // renders cost zero Redis commands.
+      const changeKey = region === 'IN' ? `IN:${slug}` : slug
+      const [data, changesMap] = await Promise.all([
+        discover({ providerId, region }),
+        media === 'movie' && (region === 'US' || region === 'IN')
+          ? getProviderChanges([changeKey]).catch((): Record<string, ProviderChanges> => ({}))
+          : Promise.resolve<Record<string, ProviderChanges>>({})
+      ])
       setSwrCache(res)
-      return { props: { ...base, titles: data.results } }
+      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[changeKey] || null } }
     } catch (error) {
       console.error(error)
       res.statusCode = 502
-      return { props: { ...base, titles: [], dataError: true } }
+      return { props: { ...base, titles: [], totalPages: 1, changes: null, dataError: true } }
     }
   }
 }
 
-export default function ProviderPage({ media, provider, title, titles, dataError, region, availableInRegion, regions }: ProviderPageProps) {
+export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, availableInRegion, regions }: ProviderPageProps) {
   const { basePath, otherBasePath, crumbRoot, noun, plural, itemWord, genreSlugs, genreTarget } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${provider}`
   const providerLabel = title.replace(' Movies', '')
@@ -112,6 +125,9 @@ export default function ProviderPage({ media, provider, title, titles, dataError
   const genreTargets = genreSlugs
     .map((genreKey) => genreTarget(provider, genreKey))
     .filter((target): target is ProviderGenreTarget => Boolean(target))
+  const siblingProviders = Object.keys(streamingProviders)
+    .filter((key) => key !== provider && isProviderAvailableInRegion(key, region))
+    .slice(0, 7)
 
   return (
     <>
@@ -143,7 +159,14 @@ export default function ProviderPage({ media, provider, title, titles, dataError
           <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
           <Text mt={10} color='gray.500'>No {plural} currently found for this service in your region.</Text>
-        ) : <MovieGrid movies={titles} />}
+        ) : (
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            queryKey={['provider', media, provider, region]}
+            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${page}`}
+          />
+        )}
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
           Browse {providerLabel}{media === 'tv' ? ' Shows' : ''} by Genre
         </Heading>
@@ -153,6 +176,65 @@ export default function ProviderPage({ media, provider, title, titles, dataError
               <Text fontWeight='medium' textAlign='center'>{target.genreLabel}</Text>
             </LinkTile>
           ))}
+        </SimpleGrid>
+
+        {changes && (changes.coming.length > 0 || changes.left.length > 0) && (
+          <>
+            {changes.coming.length > 0 && (
+              <>
+                <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+                  Coming soon to {providerLabel}
+                </Heading>
+                <Flex wrap='wrap' gap={2} justify={{ base: 'center', md: 'flex-start' }}>
+                  {changes.coming.slice(0, 10).map((item) => (
+                    <Link
+                      key={`${item.tmdbType}:${item.tmdbId}`}
+                      href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
+                      data-umami-event='coming-soon-click'
+                      style={{ textDecoration: 'none' }}>
+                      <Badge cursor='pointer' px={2.5} py={1} borderRadius='md' bg='whiteAlpha.200' color='white' fontSize='xs' _hover={{ bg: 'whiteAlpha.300' }}>
+                        {item.title}{item.date ? ` · ${item.date}` : ''}
+                      </Badge>
+                    </Link>
+                  ))}
+                </Flex>
+              </>
+            )}
+            {changes.left.filter((item) => item.tmdbId).length > 0 && (
+              <>
+                <Heading as='h2' size='sm' mt={8} mb={3} textAlign={{ base: 'center', md: 'left' }} color='gray.300'>
+                  Recently left {providerLabel}
+                </Heading>
+                <Flex wrap='wrap' gap={2} justify={{ base: 'center', md: 'flex-start' }}>
+                  {changes.left.filter((item) => item.tmdbId).slice(0, 8).map((item) => (
+                    <Link
+                      key={`${item.tmdbType}:${item.tmdbId}`}
+                      href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
+                      data-umami-event='leaving-click'
+                      style={{ textDecoration: 'none' }}>
+                      <Badge cursor='pointer' px={2.5} py={1} borderRadius='md' bg='whiteAlpha.100' color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>
+                        {item.title}
+                      </Badge>
+                    </Link>
+                  ))}
+                </Flex>
+              </>
+            )}
+          </>
+        )}
+
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+          Compare other services
+        </Heading>
+        <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
+          {siblingProviders.map((key) => (
+            <LinkTile key={key} href={`${basePath}/${key}`}>
+              <Text fontWeight='medium' textAlign='center'>{streamingProviders[key].title.replace(' Movies', '')}</Text>
+            </LinkTile>
+          ))}
+          <LinkTile href={media === 'tv' ? '/tv' : '/streaming'}>
+            <Text fontWeight='medium' textAlign='center'>All services →</Text>
+          </LinkTile>
         </SimpleGrid>
         <Text textAlign='center' mt={8} color='gray.400'>
           Availability changes by region and over time. Check the {itemWord} page for current provider information.

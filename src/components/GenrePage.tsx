@@ -1,6 +1,7 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
-import { Text } from '@chakra-ui/react'
-import MovieGrid from './MovieGrid'
+import { Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import LinkTile from './LinkTile'
+import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
 import { fetchDiscoverMovies, fetchDiscoverTv, movieGenres, tvGenres, type DiscoverOptions, type GenreDef } from '../utils/tmdb'
@@ -42,6 +43,7 @@ export interface GenrePageProps {
   genre: string
   title: string
   titles: TitleSummary[]
+  totalPages: number
   dataError?: boolean
 }
 
@@ -58,17 +60,17 @@ export function genreServerSideProps(media: MediaType) {
     try {
       const data = await discover({ genreId: genre.id })
       setSwrCache(res)
-      return { props: { ...base, titles: data.results } }
+      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1 } }
     } catch (error) {
       console.error(error)
       res.statusCode = 502
-      return { props: { ...base, titles: [], dataError: true } }
+      return { props: { ...base, titles: [], totalPages: 1, dataError: true } }
     }
   }
 }
 
-export default function GenrePage({ media, genre, title, titles, dataError }: GenrePageProps) {
-  const { basePath, crumbRoot, noun, plural } = CONFIG[media]
+export default function GenrePage({ media, genre, title, titles, totalPages, dataError }: GenrePageProps) {
+  const { basePath, crumbRoot, noun, plural, genres } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${genre}`
   const description = `Discover ${title.toLowerCase()}, including popular picks and ${plural} worth watching.`
 
@@ -89,7 +91,26 @@ export default function GenrePage({ media, genre, title, titles, dataError }: Ge
       <PageShell title={title} description={description} withBackButton>
         {dataError ? (
           <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
-        ) : <MovieGrid movies={titles} />}
+        ) : (
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            queryKey={['genre', media, genre]}
+            fetchUrl={(page) => `/api/discover?type=${media}&genre=${genre}&page=${page}`}
+          />
+        )}
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+          More {media === 'tv' ? 'show' : 'movie'} genres
+        </Heading>
+        <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
+          {Object.entries(genres)
+            .filter(([key]) => key !== genre)
+            .map(([key, g]) => (
+              <LinkTile key={key} href={`${basePath}/${key}`}>
+                <Text fontWeight='medium' textAlign='center'>{g.title}</Text>
+              </LinkTile>
+            ))}
+        </SimpleGrid>
       </PageShell>
     </>
   );

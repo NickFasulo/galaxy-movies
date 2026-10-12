@@ -97,6 +97,7 @@ export default function SearchBar({
             _active={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
           <Input
             ref={inputRef}
+            id='home-search-input'
             value={searchInput}
             onChange={handleInputChange}
             onBlur={() => !isSearchActive && setIsExpanded(false)}

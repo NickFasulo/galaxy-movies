@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { Box, Flex, Heading, Text, Badge, Link as ChakraLink, Icon } from '@chakra-ui/react'
 import BackButton from './BackButton'
-import MovieGrid from './MovieGrid'
+import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import DetailErrorView from './DetailErrorView'
 import { normalizeTvTitle } from '../utils/tmdb'
@@ -66,7 +66,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
 
 export type OrgPageProps =
   | { kind: OrgKind; error: string }
-  | { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[] }
+  | { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number }
 
 export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPageProps> {
   const { apiSegment, discoverPath, discoverQuery, normalize, noun } = CONFIG[kind]
@@ -99,7 +99,8 @@ export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPagePro
         props: {
           kind,
           org,
-          titles: normalize(titlesData.results || [])
+          titles: normalize(titlesData.results || []),
+          totalPages: titlesData.total_pages || 1
         }
       }
     } catch (error) {
@@ -113,10 +114,10 @@ export default function OrgPage(props: OrgPageProps) {
   if ('error' in props) {
     return <DetailErrorView title={`${CONFIG[props.kind].noun} unavailable`} message={props.error} />
   }
-  return <OrgContent kind={props.kind} org={props.org} titles={props.titles} />
+  return <OrgContent kind={props.kind} org={props.org} titles={props.titles} totalPages={props.totalPages} />
 }
 
-function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[] }) {
+function OrgContent({ kind, org, titles, totalPages }: { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number }) {
   const { basePath, crumbRoot, accent, titleSuffix, ogLabel, releasesHeading, emptyText, fallbackDescription } = CONFIG[kind]
   const logoUrl = tmdbImage(org.logo_path)
   const [hasLogoError, setHasLogoError] = useState(false)
@@ -249,7 +250,13 @@ function OrgContent({ kind, org, titles }: { kind: OrgKind; org: TmdbCompany; ti
           {titles.length === 0 ? (
             <Text color='gray.400' textAlign='center'>{emptyText}</Text>
           ) : (
-            <MovieGrid movies={titles} posterFallback={kind === 'company' ? '/poster_fallback_galaxy.webp' : undefined} />
+            <PaginatedGrid
+              initialTitles={titles}
+              initialTotalPages={totalPages}
+              queryKey={['org', kind, org.id]}
+              fetchUrl={(page) => `/api/discover?${kind === 'company' ? 'company' : 'network'}=${org.id}&page=${page}`}
+              posterFallback={kind === 'company' ? '/poster_fallback_galaxy.webp' : undefined}
+            />
           )}
         </Box>
       </Box>

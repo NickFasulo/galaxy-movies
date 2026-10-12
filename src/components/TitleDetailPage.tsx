@@ -24,6 +24,7 @@ import { useUserData } from '../hooks/useUserData'
 import { getProviderIds, normalizeTvTitle } from '../utils/tmdb'
 import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey, stripEmphasis } from '../utils/movieReview'
 import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../utils/similarMovies'
+import { findSimilarListRef, type SimilarListRef } from '../utils/generatedLists'
 import { getRedis } from '../utils/redis'
 import { isBot, isSearchEngine } from '../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../utils/takeads'
@@ -63,6 +64,7 @@ interface CommonProps {
   ageRating: string
   aiSynopsis: string | null
   similarTitles: SimilarTitle[]
+  similarListRef: SimilarListRef | null
   providerAffiliateLinks: Record<string, string | null>
 }
 
@@ -107,6 +109,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           ageRating: 'NR',
           aiSynopsis: null,
           similarTitles: [],
+          similarListRef: null,
           providerAffiliateLinks: {}
         }
         return media === 'movie'
@@ -193,7 +196,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         }
       }
 
-      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks] = await Promise.all([
+      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef] = await Promise.all([
         withTimeout(getFirstPlayableKey(title.videos?.results), 3000, null),
         title.overview
           ? withTimeout(getOrGenerateMovieReview({
@@ -218,7 +221,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
               cachedValue: similarCached
             }), 4500, [])
           : [],
-        getProviderAffiliateLinks(providerNames)
+        getProviderAffiliateLinks(providerNames),
+        withTimeout(findSimilarListRef(media, title.id), 2000, null)
       ])
 
       // Bot renders skip AI generation, so a page whose generated slots came
@@ -242,6 +246,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         ageRating: cert,
         aiSynopsis: aiSynopsis || null,
         similarTitles: similarTitles || [],
+        similarListRef,
         providerAffiliateLinks
       }
 
@@ -265,7 +270,7 @@ export default function TitleDetailPage(props: TitleDetailProps) {
 function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>) {
   const { media, title } = props
   const isTv = media === 'tv'
-  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, providerAffiliateLinks, topCast } = props
+  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
   const releaseDate = isTv ? (title as TmdbTvDetails).first_air_date : (title as TmdbMovieDetails).release_date
@@ -381,7 +386,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
               onError={() => setPosterSrc('/poster_fallback.webp')}
             />
 
-            <GenreBadges genres={title.genres} />
+            <GenreBadges genres={title.genres} mediaType={media} />
 
             <Box w='20rem' maxH='300px'>
               <WatchProviders
@@ -520,9 +525,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <DetailActions videoKey={videoKey} item={listItem} />
 
-            <CastSection cast={topCast} />
+            <SimilarMovies movies={similarTitles} listRef={similarListRef} />
 
-            <SimilarMovies movies={similarTitles} />
+            <CastSection cast={topCast} />
       </DetailPageShell>
     </>
   );

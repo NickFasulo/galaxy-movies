@@ -145,6 +145,28 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }, [])
 
+  // /?search=… is the WebSite schema's SearchAction target — a landing URL
+  // with a term must run the search, not show the generic feed. HeaderSearch
+  // routes here from every non-home page. Prev-check setState-during-render:
+  // the param only exists after hydration, so a lazy initializer can't see it.
+  const querySearch = router.query.search
+  const [prevQuerySearch, setPrevQuerySearch] = useState(querySearch)
+  if (prevQuerySearch !== querySearch) {
+    setPrevQuerySearch(querySearch)
+    const term = typeof querySearch === 'string' ? querySearch.trim() : ''
+    if (term) {
+      setSearchInput(term)
+      setDebouncedSearch(term)
+    }
+  }
+
+  // /?focus=search lands with the input focused (mobile header search entry).
+  useEffect(() => {
+    if (router.query.focus === 'search') {
+      document.getElementById('home-search-input')?.focus()
+    }
+  }, [router.query.focus])
+
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400)
     return () => clearTimeout(handler)

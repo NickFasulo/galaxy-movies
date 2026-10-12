@@ -3,6 +3,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useState } from 'react'
 import { useUserData } from '../hooks/useUserData'
 import { getRating, setRating } from '../utils/userData'
+import { trackEvent } from '../utils/umami'
 import type { TitleSummary } from '../types/tmdb'
 import { LuStar } from 'react-icons/lu';
 
@@ -15,7 +16,9 @@ export default function RatingWidget({ movie }: { movie: TitleSummary }) {
   const shown = hovered ?? rating ?? 0
 
   const pick = (n: number) => {
-    setRating(movie, n === rating ? null : n, mediaType)
+    const clearing = n === rating
+    setRating(movie, clearing ? null : n, mediaType)
+    trackEvent('rate-title', { rating: clearing ? 'clear' : n })
     onClose()
   }
 

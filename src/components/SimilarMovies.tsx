@@ -3,8 +3,13 @@ import Link from 'next/link'
 import { Box, Flex, Text, Wrap, WrapItem } from '@chakra-ui/react'
 import type { SimilarTitle } from '../utils/similarMovies'
 
-export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | null }) {
-  if (!movies || movies.length === 0) return null
+export interface SimilarListRef {
+  slug: string
+  title: string
+}
+
+export default function SimilarMovies({ movies, listRef }: { movies?: SimilarTitle[] | null; listRef?: SimilarListRef | null }) {
+  if ((!movies || movies.length === 0) && !listRef) return null
 
   return (
     <Box mb={4}>
@@ -25,10 +30,21 @@ export default function SimilarMovies({ movies }: { movies?: SimilarTitle[] | nu
       >
         More Like This
       </Text>
+      {listRef && (
+        <Flex justify='center' mb={3}>
+          <Link
+            href={`/lists/${listRef.slug}`}
+            data-umami-event='similar-list-click'
+            style={{ textDecoration: 'none' }}
+          >
+            <Text color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>Full list: {listRef.title} →</Text>
+          </Link>
+        </Flex>
+      )}
       <Wrap gap={3} justify='center'>
-        {movies.map((movie) => (
+        {(movies || []).map((movie) => (
           <WrapItem key={movie.id} w='15.5rem' maxW='100%'>
-            <Link href={`/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`} passHref>
+            <Link href={`/${movie.mediaType === 'tv' ? 'tv' : 'movies'}/${movie.id}`} passHref data-umami-event='similar-click'>
               <Flex
                 bg='rgba(255, 255, 255, 0.1)'
                 borderRadius='0.5rem'

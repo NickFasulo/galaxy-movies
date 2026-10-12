@@ -4,6 +4,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
 import { useUserData } from '../hooks/useUserData'
 import { isWatchlisted, toggleWatchlist, type WatchlistableTitle } from '../utils/userData'
+import { trackEvent } from '../utils/umami'
 
 export default function WatchlistButton({ movie, withLabel = false, ...props }: { movie: WatchlistableTitle; withLabel?: boolean } & Omit<ButtonProps, 'onClick'>) {
   const data = useUserData()
@@ -14,6 +15,7 @@ export default function WatchlistButton({ movie, withLabel = false, ...props }: 
     e.preventDefault()
     e.stopPropagation()
     toggleWatchlist(movie)
+    trackEvent(saved ? 'watchlist-remove' : 'watchlist-add', { title: movie.title || '' })
   }
 
   if (withLabel) {
