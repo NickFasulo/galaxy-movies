@@ -139,7 +139,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     if (savedCategory) setCategory(savedCategory)
 
     const savedSearch = sessionStorage.getItem('homeSearchInput')
-    if (savedSearch) {
+    if (savedSearch && !router.query.search) {
       setSearchInput(savedSearch)
       setDebouncedSearch(savedSearch.trim())
     }
@@ -150,7 +150,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   // routes here from every non-home page. Prev-check setState-during-render:
   // the param only exists after hydration, so a lazy initializer can't see it.
   const querySearch = router.query.search
-  const [prevQuerySearch, setPrevQuerySearch] = useState(querySearch)
+  const [prevQuerySearch, setPrevQuerySearch] = useState<typeof querySearch>()
   if (prevQuerySearch !== querySearch) {
     setPrevQuerySearch(querySearch)
     const term = typeof querySearch === 'string' ? querySearch.trim() : ''
