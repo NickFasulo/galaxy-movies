@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, useRef, type ChangeEvent } from 'react'
 import { flushSync } from 'react-dom'
-import { Flex, Input, Box, IconButton, useBreakpointValue } from '@chakra-ui/react'
+import { Flex, Box, IconButton } from '@chakra-ui/react'
 import DropDown from './DropDown'
 import NavMenu from './NavMenu'
+import SearchInput from './SearchInput'
 import { LuSearch } from 'react-icons/lu';
 
 export default function SearchBar({
@@ -23,7 +24,6 @@ export default function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null)
   const [headerTop, setHeaderTop] = useState(0)
   const isCollapsed = isSticky && !isExpanded && !isSearchActive
-  const placeholder = useBreakpointValue({ base: 'Search...', md: 'Search movies & shows...' })
 
   const [prevIsSticky, setPrevIsSticky] = useState(isSticky)
   if (prevIsSticky !== isSticky) {
@@ -95,17 +95,12 @@ export default function SearchBar({
             display={{ base: isCollapsed ? 'inline-flex' : 'none', md: 'none' }}
             _hover={{ bg: 'whiteAlpha.200' }}
             _active={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
-          <Input
+          <SearchInput
             ref={inputRef}
             id='home-search-input'
             value={searchInput}
             onChange={handleInputChange}
             onBlur={() => !isSearchActive && setIsExpanded(false)}
-            placeholder={placeholder}
-            background='surface.raised'
-            color='white'
-            borderColor='border.subtle'
-            _placeholder={{ color: 'gray.400' }}
             flex='1'
             display={{ base: isCollapsed ? 'none' : 'block', md: 'block' }}
           />

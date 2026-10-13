@@ -1,9 +1,10 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { Box, Input, Text } from '@chakra-ui/react'
+import { Box, Text } from '@chakra-ui/react'
 import PaginatedGrid from '../components/PaginatedGrid'
 import PageHead from '../components/PageHead'
+import SearchInput from '../components/SearchInput'
 import StickySearchBar from '../components/StickySearchBar'
 import ScrollTopButton from '../components/ScrollTopButton'
 import { fetchTmdb, normalizeTvTitle } from '../utils/tmdb'
@@ -85,17 +86,12 @@ export default function SearchPage({ initialQ, initialTitles, initialTotalPages 
       <Box flex='1' pt={{ base: '5rem', md: '6rem' }} pb='4rem'>
         <StickySearchBar>
           <Box maxW='40rem' mx='auto' px={4} py={3}>
-            <Input
+            <SearchInput
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder='Search movies & shows…'
               aria-label='Search movies and shows'
               enterKeyHint='search'
               autoFocus
-              bg='surface.raised'
-              color='white'
-              borderColor='border.subtle'
-              _placeholder={{ color: 'gray.400' }}
             />
           </Box>
         </StickySearchBar>

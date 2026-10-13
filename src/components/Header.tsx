@@ -1,8 +1,9 @@
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Box, Flex, IconButton, Input, Link, Menu, Portal } from '@chakra-ui/react';
+import { Box, Flex, IconButton, Link, Menu, Portal } from '@chakra-ui/react';
 import NavMenu, { menuItemProps } from './NavMenu'
+import SearchInput from './SearchInput'
 import Wordmark from './Wordmark'
 import { LuChevronDown, LuSearch, LuX } from 'react-icons/lu';
 
@@ -36,18 +37,13 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
       pb={3}
       bg='surface.canvas'
     >
-      <Input
+      <SearchInput
         ref={inputRef}
         value={term}
         onChange={(e) => setTerm(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
-        placeholder='Search movies & shows…'
         aria-label='Search'
         enterKeyHint='search'
-        bg='surface.raised'
-        color='white'
-        borderColor='border.subtle'
-        _placeholder={{ color: 'gray.500' }}
         flex='1'
       />
       <IconButton
@@ -83,16 +79,11 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
   return (
     <>
       <Box as='form' onSubmit={submit} display={{ base: 'none', md: 'flex' }} alignItems='center'>
-        <Input
+        <SearchInput
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder='Search…'
           size='sm'
           w='9rem'
-          bg='blackAlpha.500'
-          color='white'
-          borderColor='border.subtle'
-          _placeholder={{ color: 'gray.500' }}
         />
         <IconButton
           type='submit'
