@@ -117,7 +117,14 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
 
 // isHome: hide the logo (the homepage's h1 already is the logo)
 export default function Header({ isHome = false, isDark = false }) {
+  const router = useRouter()
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+
+  useEffect(() => {
+    const close = () => setMobileSearchOpen(false)
+    router.events.on('routeChangeStart', close)
+    return () => router.events.off('routeChangeStart', close)
+  }, [router])
 
   return (
     <Box

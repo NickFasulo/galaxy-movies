@@ -30,6 +30,7 @@ import { LuArrowUp } from 'react-icons/lu';
 interface Props {
   initialMovies: TmdbMovie[]
   initialTotalPages: number
+  initialSearch: string
   region: string
   featured: TitleSummary | null
   featuredProviders: WatchProvider[]
@@ -58,8 +59,9 @@ type TrendingItem = TitleSummary & { media_type?: string }
 const NEW_ON_WINDOW_DAYS = 45
 const RAIL_SIZE = 12
 
-export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
+export async function getServerSideProps({ req, res, query }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   const region = detectRegion(req)
+  const initialSearch = typeof query.search === 'string' ? query.search.trim() : ''
   // Registry order = display order; the first provider available in the region
   // anchors the "New on …" rail (Netflix in US/IN).
   const railProviderKey = Object.keys(streamingProviders).find((key) => isProviderAvailableInRegion(key, region)) || 'netflix'
@@ -105,6 +107,7 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
       region,
       initialMovies: popularData?.results || [],
       initialTotalPages: popularData?.total_pages || 1,
+      initialSearch,
       featured,
       featuredProviders,
       providerCatalog: catalog,
@@ -120,11 +123,11 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
+export default function Home({ initialMovies, initialTotalPages, initialSearch, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
-  const [searchInput, setSearchInput] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchInput, setSearchInput] = useState(initialSearch)
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
@@ -153,11 +156,15 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const querySearch = router.query.search
   const [prevQuerySearch, setPrevQuerySearch] = useState<typeof querySearch>()
   if (prevQuerySearch !== querySearch) {
+    const hadSearch = Boolean(prevQuerySearch)
     setPrevQuerySearch(querySearch)
     const term = typeof querySearch === 'string' ? querySearch.trim() : ''
     if (term) {
       setSearchInput(term)
       setDebouncedSearch(term)
+    } else if (hadSearch) {
+      setSearchInput('')
+      setDebouncedSearch('')
     }
   }
 
@@ -396,17 +403,19 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 
       <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
-        <HomeHero
-          featured={featured}
-          providers={featuredProviders}
-          myProviderIds={myProviderIds}
-          dimmed={Boolean(isBgVisible && hoveredBg)}
-        >
-          <Heading as='h1' textAlign='center' mt='2rem'>
-            <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
-          </Heading>
-          <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
-        </HomeHero>
+        {!activeSearch && (
+          <HomeHero
+            featured={featured}
+            providers={featuredProviders}
+            myProviderIds={myProviderIds}
+            dimmed={Boolean(isBgVisible && hoveredBg)}
+          >
+            <Heading as='h1' textAlign='center' mt='2rem'>
+              <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
+            </Heading>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
+          </HomeHero>
+        )}
 
         <SearchBar
           category={category}
