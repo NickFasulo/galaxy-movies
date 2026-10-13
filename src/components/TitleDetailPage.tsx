@@ -390,9 +390,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <GenreBadges genres={title.genres} mediaType={media} />
 
-            {/* maxH keeps the sticky sidebar bounded; without overflow the
-                provider list spills onto the title below on mobile */}
-            <Box w='20rem' maxH='300px' maxW='100%' overflowY='auto'>
+            {/* Bounded+scrollable only where the sidebar is sticky (desktop);
+                mobile flows full-height so there's no inner scroll */}
+            <Box w='20rem' maxW='100%' maxH={{ base: 'none', md: '300px' }} overflowY='auto'>
               <WatchProviders
                 watchProviders={watchProviders}
                 allWatchProviders={watchProvidersByRegion}
