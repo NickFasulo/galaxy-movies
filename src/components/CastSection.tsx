@@ -27,17 +27,19 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
       >
         Cast
       </Text>
-      <Wrap gap={3} justify='center'>
+      <Wrap gap={{ base: 2, md: 3 }} justify='center'>
         {cast.map((actor) => (
-          <WrapItem key={actor.id}>
+          // ~9.5rem cap + clamped name keeps two pills per row on mobile
+          <WrapItem key={actor.id} maxW={{ base: '9.5rem', md: 'none' }}>
             <Link href={`/person/${actor.id}`} passHref>
               <Flex
                 align='center'
                 bg='rgba(255, 255, 255, 0.1)'
-                px={2.5}
-                py={1.5}
+                px={{ base: 2, md: 2.5 }}
+                py={{ base: 1, md: 1.5 }}
                 borderRadius='full'
-                gap={2.5}
+                gap={{ base: 1.5, md: 2.5 }}
+                minW={0}
                 cursor='pointer'
                 transition='all 0.2s ease-in-out'
                 _hover={{
@@ -45,8 +47,10 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
                   transform: 'translateY(-2px)'
                 }}
               >
-                <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
-                <Text fontSize='sm' color='white' fontWeight='medium' textShadow='0 0 4px black'>
+                <Box flexShrink={0}>
+                  <ActorAvatar profilePath={actor.profile_path} name={actor.name} />
+                </Box>
+                <Text fontSize={{ base: 'xs', md: 'sm' }} color='white' fontWeight='medium' textShadow='0 0 4px black' lineClamp={1} minW={0}>
                   {actor.name}
                 </Text>
               </Flex>
