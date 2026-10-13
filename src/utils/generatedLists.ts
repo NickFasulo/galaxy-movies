@@ -1,5 +1,5 @@
 import { getRedis } from './redis'
-import { curatedLists, type ListDef } from './curatedLists'
+import type { ListDef } from './curatedLists'
 import type { MediaType } from '../types/tmdb'
 import type { TmdbParams } from './tmdb'
 
@@ -80,11 +80,6 @@ export async function getGeneratedLists(): Promise<Record<string, ListDef>> {
     console.error('Redis error reading generated lists:', err)
     return {}
   }
-}
-
-export async function getAllLists(): Promise<Record<string, ListDef>> {
-  const generated = await getGeneratedLists()
-  return { ...generated, ...curatedLists }
 }
 
 export interface SimilarListRef {

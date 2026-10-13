@@ -4,9 +4,6 @@
 export const GRUV_AFFILIATE_LINK = 'https://www.anrdoezrs.net/click-101891488-15735954'
 export const GRUV_AFFILIATE_PIXEL = 'https://www.ftjcfx.com/image-101891488-15735954'
 
-export const GRUV_DEAL_LINK = 'https://www.kqzyfj.com/click-101891488-15032169'
-export const GRUV_DEAL_PIXEL = 'https://www.lduhtrp.net/image-101891488-15032169'
-
 export const GRUV_LINK_TEXT = 'Buy the disc at Gruv'
 
 // This CJ program honors a ?url= deep-link destination: the click redirects to
