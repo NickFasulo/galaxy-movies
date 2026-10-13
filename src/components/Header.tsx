@@ -8,7 +8,7 @@ import { LuChevronDown, LuSearch, LuX } from 'react-icons/lu';
 
 // Full-width slide-down row on mobile — the expandable-search pattern: the
 // icon expands an input inline instead of routing home first, and submit
-// lands on /?search=… same as the desktop form.
+// lands on /search?q=… same as the desktop form.
 function MobileSearchBar({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const [term, setTerm] = useState('')
@@ -22,7 +22,7 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     const q = term.trim()
     if (!q) return
-    router.push(`/?search=${encodeURIComponent(q)}`)
+    router.push(`/search?q=${encodeURIComponent(q)}`)
   }
 
   return (
@@ -77,7 +77,7 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
     e.preventDefault()
     const q = term.trim()
     if (!q) return
-    router.push(`/?search=${encodeURIComponent(q)}`)
+    router.push(`/search?q=${encodeURIComponent(q)}`)
   }
 
   return (
@@ -115,8 +115,10 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
   )
 }
 
-// isHome: hide the logo (the homepage's h1 already is the logo)
-export default function Header({ isHome = false, isDark = false }) {
+// isHome: hide the logo (the homepage's h1 already is the logo).
+// hideSearch: the search page has its own input — a second one in the header
+// would duplicate the affordance on the same screen.
+export default function Header({ isHome = false, isDark = false, hideSearch = false }) {
   const router = useRouter()
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
@@ -145,7 +147,7 @@ export default function Header({ isHome = false, isDark = false }) {
             </NextLink></Link>
         )}
         <Flex align='center' gap={{ base: 1, md: 3 }}>
-          {!isHome && <HeaderSearch onMobileSearchOpen={() => setMobileSearchOpen(true)} />}
+          {!isHome && !hideSearch && <HeaderSearch onMobileSearchOpen={() => setMobileSearchOpen(true)} />}
           <Flex display={{ base: 'none', md: 'flex' }} align='center' gap={5} fontSize='sm' fontWeight='medium' color='whiteAlpha.800'>
           <Menu.Root>
             <Menu.Trigger asChild><Box
@@ -181,7 +183,7 @@ export default function Header({ isHome = false, isDark = false }) {
           </Box>
         </Flex>
       </Flex>
-      {!isHome && mobileSearchOpen && (
+      {!isHome && !hideSearch && mobileSearchOpen && (
         <MobileSearchBar onClose={() => setMobileSearchOpen(false)} />
       )}
     </Box>

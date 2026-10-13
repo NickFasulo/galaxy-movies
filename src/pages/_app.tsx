@@ -20,7 +20,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC ?? '/assets/starfield.js'
   const router = useRouter()
   const isHome = router.pathname === '/'
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|plus$|email-status$|$)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|plus$|email-status$|search$|$)/.test(router.pathname)
   // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 
@@ -36,7 +36,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
           </Head>
           <Flex direction='column' minH='100vh' position='relative' bg={isDark ? 'surface.canvas' : undefined}>
             {showTopBackdrop && <TopBackdrop />}
-            <Header isHome={isHome} isDark={isDark} />
+            <Header isHome={isHome} isDark={isDark} hideSearch={router.pathname === '/search'} />
             <Box position='relative' zIndex={1} flex='1' display='flex' flexDirection='column'>
               <Component {...pageProps} />
             </Box>

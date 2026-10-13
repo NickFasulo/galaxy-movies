@@ -30,7 +30,6 @@ import { LuArrowUp } from 'react-icons/lu';
 interface Props {
   initialMovies: TmdbMovie[]
   initialTotalPages: number
-  initialSearch: string
   region: string
   featured: TitleSummary | null
   featuredProviders: WatchProvider[]
@@ -61,7 +60,13 @@ const RAIL_SIZE = 12
 
 export async function getServerSideProps({ req, res, query }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   const region = detectRegion(req)
-  const initialSearch = typeof query.search === 'string' ? query.search.trim() : ''
+  // /?search=… stays a valid entry (old links, schema SearchAction history) —
+  // the dedicated /search page owns results now, so forward before spending
+  // any TMDB calls on a homepage payload the user will never see.
+  const searchTerm = typeof query.search === 'string' ? query.search.trim() : ''
+  if (searchTerm) {
+    return { redirect: { destination: `/search?q=${encodeURIComponent(searchTerm)}`, permanent: false } }
+  }
   // Registry order = display order; the first provider available in the region
   // anchors the "New on …" rail (Netflix in US/IN).
   const railProviderKey = Object.keys(streamingProviders).find((key) => isProviderAvailableInRegion(key, region)) || 'netflix'
@@ -107,7 +112,6 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
       region,
       initialMovies: popularData?.results || [],
       initialTotalPages: popularData?.total_pages || 1,
-      initialSearch,
       featured,
       featuredProviders,
       providerCatalog: catalog,
@@ -123,11 +127,11 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages, initialSearch, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
+export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
-  const [searchInput, setSearchInput] = useState(initialSearch)
-  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch)
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [showScrollTop, setShowScrollTop] = useState(false)
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
@@ -142,38 +146,11 @@ export default function Home({ initialMovies, initialTotalPages, initialSearch, 
     if (savedCategory) setCategory(savedCategory)
 
     const savedSearch = sessionStorage.getItem('homeSearchInput')
-    if (savedSearch && !router.query.search) {
+    if (savedSearch) {
       setSearchInput(savedSearch)
       setDebouncedSearch(savedSearch.trim())
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only restore; re-running on query changes would clobber the hydrate
   }, [])
-
-  // /?search=… is the WebSite schema's SearchAction target — a landing URL
-  // with a term must run the search, not show the generic feed. HeaderSearch
-  // routes here from every non-home page. Prev-check setState-during-render:
-  // the param only exists after hydration, so a lazy initializer can't see it.
-  const querySearch = router.query.search
-  const [prevQuerySearch, setPrevQuerySearch] = useState<typeof querySearch>()
-  if (prevQuerySearch !== querySearch) {
-    const hadSearch = Boolean(prevQuerySearch)
-    setPrevQuerySearch(querySearch)
-    const term = typeof querySearch === 'string' ? querySearch.trim() : ''
-    if (term) {
-      setSearchInput(term)
-      setDebouncedSearch(term)
-    } else if (hadSearch) {
-      setSearchInput('')
-      setDebouncedSearch('')
-    }
-  }
-
-  // /?focus=search lands with the input focused (mobile header search entry).
-  useEffect(() => {
-    if (router.query.focus === 'search') {
-      document.getElementById('home-search-input')?.focus()
-    }
-  }, [router.query.focus])
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400)
@@ -358,7 +335,7 @@ export default function Home({ initialMovies, initialTotalPages, initialSearch, 
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${SITE_URL}/?search={search_term_string}`
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
     }

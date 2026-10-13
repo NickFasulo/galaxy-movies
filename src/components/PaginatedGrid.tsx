@@ -3,6 +3,7 @@ import InfiniteScroll from 'react-infinite-scroll-component'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Box, Button, Flex, Text } from '@chakra-ui/react'
 import MovieGrid from './MovieGrid'
+import CustomSpinner from './CustomSpinner'
 import type { TitleSummary } from '../types/tmdb'
 
 interface FeedPage {
@@ -14,12 +15,13 @@ interface FeedPage {
 // deeper scroll would bury the sibling links and footer below the grid.
 const AUTO_PAGES = 3
 
-export default function PaginatedGrid({ initialTitles, initialTotalPages, queryKey, fetchUrl, posterFallback }: {
-  initialTitles: TitleSummary[]
-  initialTotalPages: number
+export default function PaginatedGrid({ initialTitles, initialTotalPages = 1, queryKey, fetchUrl, posterFallback, emptyMessage }: {
+  initialTitles?: TitleSummary[]
+  initialTotalPages?: number
   queryKey: readonly unknown[]
   fetchUrl: (page: number) => string
   posterFallback?: string
+  emptyMessage?: string
 }) {
   const {
     data,
@@ -35,7 +37,9 @@ export default function PaginatedGrid({ initialTitles, initialTotalPages, queryK
       return resp.json() as Promise<FeedPage>
     },
     initialPageParam: 1,
-    initialData: { pages: [{ results: initialTitles, total_pages: initialTotalPages }], pageParams: [1] },
+    initialData: initialTitles
+      ? { pages: [{ results: initialTitles, total_pages: initialTotalPages }], pageParams: [1] }
+      : undefined,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 60,
     refetchOnWindowFocus: false,
@@ -65,17 +69,27 @@ export default function PaginatedGrid({ initialTitles, initialTotalPages, queryK
   const loadedPages = data?.pages.length ?? 1
   const autoLoad = loadedPages < AUTO_PAGES
 
+  // No initial data means the first page is still loading (status 'pending'
+  // isn't in the narrowed union once initialData is an option).
+  if (!data && status !== 'error') {
+    return <Flex justify='center' py={16}><CustomSpinner /></Flex>
+  }
+
   return (
     <Box>
-      <InfiniteScroll
-        next={fetchNextPage}
-        hasMore={autoLoad && Boolean(hasNextPage) && !isFetchingNextPage}
-        dataLength={titles.length}
-        scrollThreshold={0.95}
-        loader={<Text textAlign='center' color='gray.500' p='1rem'>Loading more titles...</Text>}
-      >
-        <MovieGrid movies={titles} posterFallback={posterFallback} />
-      </InfiniteScroll>
+      {titles.length === 0 && emptyMessage ? (
+        <Text textAlign='center' color='gray.500' py={16}>{emptyMessage}</Text>
+      ) : (
+        <InfiniteScroll
+          next={fetchNextPage}
+          hasMore={autoLoad && Boolean(hasNextPage) && !isFetchingNextPage}
+          dataLength={titles.length}
+          scrollThreshold={0.95}
+          loader={<Text textAlign='center' color='gray.500' p='1rem'>Loading more titles...</Text>}
+        >
+          <MovieGrid movies={titles} posterFallback={posterFallback} />
+        </InfiniteScroll>
+      )}
       {status === 'error' && (
         <Text textAlign='center' color='gray.500' mb={4}>Couldn&rsquo;t load more titles — try again.</Text>
       )}
