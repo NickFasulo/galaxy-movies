@@ -5,7 +5,7 @@ import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import LinkTile from '../components/LinkTile'
 import VpnBanner from '../components/VpnBanner'
-import { fetchDiscoverMovies } from '../utils/tmdb'
+import { fetchDiscoverMovies, streamingProviders, isProviderAvailableInRegion, movieCategories, tvCategories } from '../utils/tmdb'
 import { setSwrCache } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
@@ -28,20 +28,17 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext): Pr
   }
 }
 
-const INDIA_PROVIDERS = [
-  { key: 'netflix', label: 'Netflix' },
-  { key: 'amazon-prime-video', label: 'Amazon Prime Video' },
-  { key: 'jiohotstar', label: 'JioHotstar' },
-  { key: 'zee5', label: 'ZEE5' },
-  { key: 'sonyliv', label: 'SonyLIV' },
-  { key: 'apple-tv', label: 'Apple TV' }
-]
+const INDIA_PROVIDERS = Object.entries(streamingProviders)
+  .filter(([key]) => isProviderAvailableInRegion(key, 'IN'))
+  .map(([key, provider]) => ({ key, label: provider.title.replace(' Movies', '') }))
 
-const INDIAN_LANGUAGE_CATEGORIES = [
-  { key: 'bollywood', label: 'Bollywood (Hindi) Movies' },
-  { key: 'tamil', label: 'Tamil Movies' },
-  { key: 'telugu', label: 'Telugu Movies' }
-]
+const INDIAN_LANGUAGE_CATEGORIES = Object.entries(movieCategories)
+  .filter(([, category]) => category.language)
+  .map(([key, category]) => ({ key, label: category.title }))
+
+const INDIAN_SHOW_CATEGORIES = Object.entries(tvCategories)
+  .filter(([, category]) => category.language)
+  .map(([key, category]) => ({ key, label: category.title }))
 
 export default function StreamingInIndia({ movies, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/streaming-in-india`
@@ -74,7 +71,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
 
         <VpnBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
 
-        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil &amp; Telugu movies</Heading>
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil, Telugu &amp; regional-language movies</Heading>
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
           {INDIAN_LANGUAGE_CATEGORIES.map((category) => (
             <LinkTile key={category.key} href={`/browse/${category.key}`}>
@@ -83,9 +80,18 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
           ))}
         </SimpleGrid>
 
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Indian-language shows</Heading>
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+          {INDIAN_SHOW_CATEGORIES.map((category) => (
+            <LinkTile key={category.key} href={`/tv/browse/${category.key}`}>
+              <Text fontWeight='medium' textAlign='center'>{category.label}</Text>
+            </LinkTile>
+          ))}
+        </SimpleGrid>
+
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Popular movies to watch now</Heading>
         {dataError ? (
-          <Text mt={4}>Movie data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={4} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
         ) : (
           <MovieGrid movies={movies} />
         )}

@@ -9,14 +9,15 @@ const nowStreamingBadge = (
   </Badge>
 )
 
-export default function MovieGrid({ movies, posterFallback }: { movies: TitleSummary[]; posterFallback?: string }) {
+export default function MovieGrid({ movies, posterFallback, compact }: { movies: TitleSummary[]; posterFallback?: string; compact?: boolean }) {
   const { isStreaming } = useStreamingBadges(movies)
 
   return (
     <SimpleGrid
       my={{ base: '2rem', md: '3rem' }}
       gap={{ base: 8, md: 10 }}
-      minChildWidth={{ base: '45%', md: '12rem' }}
+      columns={compact ? { base: 3, md: 5, xl: 6 } : undefined}
+      minChildWidth={compact ? undefined : { base: '45%', md: '12rem' }}
     >
       {movies.map((movie, index) => (
         <MovieCard

@@ -1,7 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { Box, Button } from '@chakra-ui/react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { Button, Field, Flex, Input, Text, Textarea } from '@chakra-ui/react'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import BackButton from '../components/BackButton'
 
 export default function Contact() {
   const [result, setResult] = useState('')
@@ -38,80 +37,63 @@ export default function Contact() {
     }
   }
 
+  const field = (label: string, control: ReactNode) => (
+    <Field.Root>
+      <Field.Label>{label}</Field.Label>
+      {control}
+    </Field.Root>
+  )
+
+  const inputProps = {
+    bg: 'surface.raised',
+    color: 'white',
+    borderColor: 'border.subtle',
+    _placeholder: { color: 'gray.400' }
+  } as const
+
   return (
     <InfoPage
       title='Contact Galaxy Movies'
       description='Contact Galaxy Movies about corrections, feedback, or business inquiries.'
+      withBackButton
     >
       <InfoParagraph>
         For corrections, accessibility feedback, or partnership inquiries, use the form below to get in touch.
       </InfoParagraph>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
-        <div>
-          <label htmlFor="name" style={{ display: 'block', marginBottom: '0.25rem' }}>Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
-          />
-        </div>
+      <Flex asChild direction='column' gap={4} mt={6}>
+        <form onSubmit={handleSubmit}>
+          {field('Name', <Input type='text' name='name' required {...inputProps} />)}
+          {field('Email', <Input type='email' name='email' required {...inputProps} />)}
+          {field('Subject / Movie Title', <Input type='text' name='subject' placeholder='e.g., Inaccurate streaming info' {...inputProps} />)}
 
-        <div>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: '0.25rem' }}>Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
-          />
-        </div>
+          <input type='checkbox' name='botcheck' tabIndex={-1} autoComplete='off' style={{ display: 'none' }} aria-hidden='true' />
+          {field('Message', (
+            <Textarea
+              name='message'
+              rows={5}
+              required
+              placeholder='Please include movie title and page URL if reporting inaccurate information.'
+              {...inputProps}
+            />
+          ))}
 
-        <div>
-          <label htmlFor="subject" style={{ display: 'block', marginBottom: '0.25rem' }}>Subject / Movie Title</label>
-          <input
-            type="text"
-            id="subject"
-            name="subject"
-            placeholder="e.g., Inaccurate streaming info"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
-          />
-        </div>
+          <Button
+            type='submit'
+            disabled={status === 'submitting'}
+            colorPalette='blue'
+            alignSelf='flex-start'
+          >
+            {status === 'submitting' ? 'Sending...' : 'Send Message'}
+          </Button>
 
-        <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" style={{ display: 'none' }} aria-hidden="true" />
-        <div>
-          <label htmlFor="message" style={{ display: 'block', marginBottom: '0.25rem' }}>Message</label>
-          <textarea
-            id="message"
-            name="message"
-            rows={5}
-            required
-            placeholder="Please include movie title and page URL if reporting inaccurate information."
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--chakra-colors-border-subtle)', backgroundColor: 'var(--chakra-colors-surface-raised)', color: '#fff' }}
-          />
-        </div>
-
-        <Button
-          type='submit'
-          disabled={status === 'submitting'}
-          colorPalette='blue'
-        >
-          {status === 'submitting' ? 'Sending...' : 'Send Message'}
-        </Button>
-
-        {result && (
-          <p style={{ marginTop: '0.5rem', color: status === 'error' ? '#fc8181' : '#68d391' }}>
-            {result}
-          </p>
-        )}
-      </form>
-
-      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-        <BackButton />
-      </Box>
+          {result && (
+            <Text mt={2} color={status === 'error' ? 'red.300' : 'green.300'}>
+              {result}
+            </Text>
+          )}
+        </form>
+      </Flex>
     </InfoPage>
   );
 }

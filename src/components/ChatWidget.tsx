@@ -310,7 +310,7 @@ export default function ChatWidget() {
     }
   }, [inputValue, messages, isLoading, sessionId, onClose])
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
@@ -363,7 +363,7 @@ export default function ChatWidget() {
             flexDirection="column"
             overflow="hidden"
             borderWidth="1px"
-            borderColor="whiteAlpha.200"
+            borderColor="border.subtle"
           >
             <Flex
               justify="space-between"
@@ -432,7 +432,7 @@ export default function ChatWidget() {
                 {messages.map((message, index) => (
                   <Box
                     key={index}
-                    bg={message.role === 'user' ? 'blue.500' : 'surface.overlay'}
+                    bg={message.role === 'user' ? 'brand.accent' : 'surface.overlay'}
                     color='white'
                     p="3"
                     borderRadius="lg"
@@ -463,11 +463,11 @@ export default function ChatWidget() {
               </VStack>
             </Box>
 
-            <Flex p="3" bg='surface.raised' borderTop="1px solid var(--chakra-colors-white-alpha-200)">
+            <Flex p="3" bg='surface.raised' borderTop="1px solid var(--chakra-colors-border-subtle)">
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
                 placeholder="Ask about movies or shows..."
                 mr="2"
                 disabled={isLoading}

@@ -6,7 +6,7 @@ export const menuItemProps = {
   bg: 'transparent',
   cursor: 'pointer',
   _hover: { bg: 'surface.overlay' },
-  _focus: { bg: 'surface.overlay' }
+  _highlighted: { bg: 'surface.overlay' }
 }
 
 export default function NavMenu() {

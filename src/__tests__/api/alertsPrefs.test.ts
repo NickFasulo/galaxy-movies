@@ -1,16 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/alerts-prefs'
-import { SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
+import { SYNCKEY_KEY, ALERTS_PREFS_KEY, DISCORD_KEY } from '../../utils/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
   kvHset: vi.fn<(key: string, fields: Record<string, unknown>) => Promise<number>>(async () => 1),
+  kvHdel: vi.fn<(key: string, field: string) => Promise<number>>(async () => 1),
   kvEval: vi.fn(async () => 1)
 }))
 
 vi.mock('../../utils/redis', () => ({
-  getRedis: () => ({ hget: mocks.kvHget, hset: mocks.kvHset, eval: mocks.kvEval })
+  getRedis: () => ({ hget: mocks.kvHget, hset: mocks.kvHset, hdel: mocks.kvHdel, eval: mocks.kvEval })
 }))
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
@@ -115,6 +116,38 @@ describe('POST /api/alerts-prefs', () => {
     expect(res.statusCode).toBe(403)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
+
+  it('stores a valid Discord webhook without touching prefs', async () => {
+    const res = makeRes()
+    await handler(makeReq({ body: {
+      email: EMAIL,
+      key: SYNC_KEY,
+      discordWebhook: 'https://discord.com/api/webhooks/123/abc'
+    } }), res)
+    expect(res.statusCode).toBe(200)
+    expect(mocks.kvHset).toHaveBeenCalledWith(DISCORD_KEY, { [EMAIL]: 'https://discord.com/api/webhooks/123/abc' })
+    expect(mocks.kvHset).not.toHaveBeenCalledWith(ALERTS_PREFS_KEY, expect.anything())
+  })
+
+  it('clears the webhook on an empty string', async () => {
+    const res = makeRes()
+    await handler(makeReq({ body: { email: EMAIL, key: SYNC_KEY, discordWebhook: '' } }), res)
+    expect(res.statusCode).toBe(200)
+    expect(mocks.kvHdel).toHaveBeenCalledWith(DISCORD_KEY, EMAIL)
+  })
+
+  it.each([
+    'https://evil.com/api/webhooks/123/abc',
+    'http://discord.com/api/webhooks/123/abc',
+    'https://discord.com.evil.com/api/webhooks/123/abc',
+    'https://discord.com/users/@me',
+    'not a url'
+  ])('rejects non-Discord webhook %s', async (url) => {
+    const res = makeRes()
+    await handler(makeReq({ body: { email: EMAIL, key: SYNC_KEY, discordWebhook: url } }), res)
+    expect(res.statusCode).toBe(400)
+    expect(mocks.kvHset).not.toHaveBeenCalledWith(DISCORD_KEY, expect.anything())
+  })
 })
 
 describe('GET /api/alerts-prefs', () => {
@@ -126,14 +159,14 @@ describe('GET /api/alerts-prefs', () => {
     const res = makeRes()
     await handler(getReq(), res)
     expect(res.statusCode).toBe(200)
-    expect(res.jsonBody).toEqual({ prefs })
+    expect(res.jsonBody).toEqual({ prefs, discordWebhook: null })
   })
 
   it('returns null prefs when nothing is stored yet', async () => {
     const res = makeRes()
     await handler(getReq(), res)
     expect(res.statusCode).toBe(200)
-    expect(res.jsonBody).toEqual({ prefs: null })
+    expect(res.jsonBody).toEqual({ prefs: null, discordWebhook: null })
   })
 
   it('rejects a wrong key without reading prefs', async () => {

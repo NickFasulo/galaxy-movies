@@ -1,6 +1,6 @@
 import Image from 'next/image'
-import Link from 'next/link'
-import { Box, Flex, Text } from '@chakra-ui/react'
+import NextLink from 'next/link'
+import { Box, Flex, Link, Text } from '@chakra-ui/react'
 import { Tooltip } from './ui/tooltip'
 import { useUserData } from '../hooks/useUserData'
 import { setServices } from '../utils/userData'
@@ -28,8 +28,8 @@ export default function ProviderBar({ catalog }: { catalog: Map<number, WatchPro
         <Text fontSize='xs' fontWeight='bold' letterSpacing='0.12em' textTransform='uppercase' color='gray.400'>
           My services
         </Text>
-        <Link href='/streaming' style={{ fontSize: 'var(--chakra-font-sizes-xs)', color: 'var(--chakra-colors-gray-400)' }}>
-          Browse all services
+        <Link color='gray.400' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
+          <NextLink href='/streaming'>Browse all services</NextLink>
         </Link>
       </Flex>
       <Flex mt={1} gap={{ base: 3, md: 4 }} overflowX='auto' mx='-0.5rem' px='0.5rem' py='0.5rem' role='group' aria-label='Your streaming services'>

@@ -100,7 +100,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer }: {
     <Tooltip key={provider.provider_id} content={provider.provider_name} showArrow positioning={{
       placement: 'top'
     }}>
-      {icon}
+      <Box tabIndex={0}>{icon}</Box>
     </Tooltip>
   );
 }

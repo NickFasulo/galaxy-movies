@@ -27,7 +27,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   sci_fi: 'Sci-Fi',
   thriller: 'Thriller',
   war: 'War',
-  western: 'Western'
+  western: 'Western',
+  bollywood: 'Bollywood'
 }
 
 const GENRES = [
@@ -91,6 +92,10 @@ export default function DropDown({ category, changeCategory }: { category: strin
                 onSelect={() => changeCategory('tv')}
                 {...menuItemProps}
                 value='item-5'>TV Shows</Menu.Item>
+              <Menu.Item
+                onSelect={() => changeCategory('bollywood')}
+                {...menuItemProps}
+                value='item-5b'>Bollywood</Menu.Item>
             </Menu.ItemGroup>
             <Menu.Separator borderColor='border.subtle' />
             <Menu.ItemGroup><Menu.ItemGroupLabel>Genres</Menu.ItemGroupLabel>
@@ -99,7 +104,7 @@ export default function DropDown({ category, changeCategory }: { category: strin
                   key={genre.value}
                   onSelect={() => changeCategory(genre.value)}
                   {...menuItemProps}
-                  value='item-6'>
+                  value={`genre-${genre.value}`}>
                   {genre.label}
                 </Menu.Item>
               ))}

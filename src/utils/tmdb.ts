@@ -14,6 +14,7 @@ export interface MovieCategory {
 export interface TvCategory {
   title: string
   description: string
+  language?: string
 }
 
 export interface GenreDef {
@@ -104,6 +105,30 @@ export const movieCategories: Record<string, MovieCategory> = {
     description: 'Explore popular Telugu-language movies from Tollywood cinema.',
     sortBy: 'popularity.desc',
     language: 'te'
+  },
+  bengali: {
+    title: 'Bengali Movies',
+    description: 'Discover popular Bengali-language movies, from new releases to all-time favorites.',
+    sortBy: 'popularity.desc',
+    language: 'bn'
+  },
+  malayalam: {
+    title: 'Malayalam Movies',
+    description: 'Discover popular Malayalam-language movies, from new releases to all-time favorites.',
+    sortBy: 'popularity.desc',
+    language: 'ml'
+  },
+  kannada: {
+    title: 'Kannada Movies',
+    description: 'Discover popular Kannada-language movies, from new releases to all-time favorites.',
+    sortBy: 'popularity.desc',
+    language: 'kn'
+  },
+  marathi: {
+    title: 'Marathi Movies',
+    description: 'Discover popular Marathi-language movies, from new releases to all-time favorites.',
+    sortBy: 'popularity.desc',
+    language: 'mr'
   }
 }
 
@@ -140,6 +165,41 @@ export const tvCategories: Record<string, TvCategory> = {
   'top-rated': {
     title: 'Top Rated TV Shows',
     description: 'Discover the highest-rated TV shows of all time, ranked by audience scores.'
+  },
+  hindi: {
+    title: 'Hindi Shows',
+    description: 'Popular Hindi-language TV shows and streaming originals.',
+    language: 'hi'
+  },
+  tamil: {
+    title: 'Tamil Shows',
+    description: 'Popular Tamil-language TV shows and streaming originals.',
+    language: 'ta'
+  },
+  telugu: {
+    title: 'Telugu Shows',
+    description: 'Popular Telugu-language TV shows and streaming originals.',
+    language: 'te'
+  },
+  bengali: {
+    title: 'Bengali Shows',
+    description: 'Popular Bengali-language TV shows and streaming originals.',
+    language: 'bn'
+  },
+  malayalam: {
+    title: 'Malayalam Shows',
+    description: 'Popular Malayalam-language TV shows and streaming originals.',
+    language: 'ml'
+  },
+  kannada: {
+    title: 'Kannada Shows',
+    description: 'Popular Kannada-language TV shows and streaming originals.',
+    language: 'kn'
+  },
+  marathi: {
+    title: 'Marathi Shows',
+    description: 'Popular Marathi-language TV shows and streaming originals.',
+    language: 'mr'
   }
 }
 
@@ -203,14 +263,34 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   hulu: { title: 'Hulu Movies', ids: { default: 15 }, regions: ['US'] },
   'disney-plus': { title: 'Disney+ Movies', ids: { default: 337 }, regions: ['US'] },
   'apple-tv': { title: 'Apple TV Movies', ids: { default: 2 } },
-  max: { title: 'Max Movies', ids: { default: 1899 }, regions: ['US'] },
+  max: { title: 'HBO Max Movies', ids: { default: 1899 }, regions: ['US'] },
   peacock: { title: 'Peacock Movies', ids: { default: 386 }, regions: ['US'] },
   // TMDB retired the single Paramount+ id (531) and split it into Premium and
   // Essential tiers — both count as "on Paramount+".
   'paramount-plus': { title: 'Paramount+ Movies', ids: { default: [2303, 2616] }, regions: ['US'] },
+  tubi: { title: 'Tubi Movies', ids: { default: 73 }, regions: ['US'] },
+  'pluto-tv': { title: 'Pluto TV Movies', ids: { default: 300 }, regions: ['US'] },
+  'roku-channel': { title: 'The Roku Channel Movies', ids: { default: 207 }, regions: ['US'] },
+  starz: { title: 'Starz Movies', ids: { default: 43 }, regions: ['US'] },
+  'amc-plus': { title: 'AMC+ Movies', ids: { default: 526 }, regions: ['US'] },
+  'mgm-plus': { title: 'MGM+ Movies', ids: { default: 34 }, regions: ['US'] },
+  crunchyroll: { title: 'Crunchyroll Movies', ids: { default: 283 }, regions: ['US'] },
+  'discovery-plus': { title: 'Discovery+ Movies', ids: { default: 520, IN: 510 } },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
   zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
-  sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] }
+  sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] },
+  // Regional-language services — a big share of Indian subscribers' catalogs.
+  hoichoi: { title: 'Hoichoi Movies', ids: { default: 315 }, regions: ['IN'] },
+  'manoramamax': { title: 'ManoramaMAX Movies', ids: { default: 482 }, regions: ['IN'] },
+  aha: { title: 'aha Movies', ids: { default: 532 }, regions: ['IN'] },
+  'sun-nxt': { title: 'Sun NXT Movies', ids: { default: 309 }, regions: ['IN'] },
+  'mx-player': { title: 'MX Player Movies', ids: { default: 515 }, regions: ['IN'] },
+  shemaroome: { title: 'ShemarooMe Movies', ids: { default: 474 }, regions: ['IN'] },
+  'lionsgate-play': { title: 'Lionsgate Play Movies', ids: { default: 561 }, regions: ['IN'] },
+  'hungama-play': { title: 'Hungama Play Movies', ids: { default: 437 }, regions: ['IN'] },
+  // TMDB's name for the Vodafone Vi service — kept verbatim so the picker
+  // label (' Movies' suffix strip) renders it correctly.
+  'vi-movies': { title: 'VI movies and tv', ids: { default: 614 }, regions: ['IN'] }
 }
 
 export function getProviderIds(providerKey: string, region = 'US'): number[] {
@@ -308,6 +388,11 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
     params['vote_count.gte'] = 200
   } else {
     params.sort_by = 'popularity.desc'
+  }
+
+  const categoryLanguage = category && tvCategories[category]?.language
+  if (categoryLanguage) {
+    params.with_original_language = categoryLanguage
   }
 
   withCatalogFilters(params, { genreId, providerId, region })

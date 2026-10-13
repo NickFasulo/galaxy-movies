@@ -1,12 +1,21 @@
 import { getRedis } from './redis'
-import { getProviderChanges, type ProviderChanges } from './streamingChanges'
-import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY } from './waitlistStore'
+import { getProviderChanges, PROVIDER_NAME_MATCH, IN_TRACKED_PROVIDERS, type ProviderChanges } from './streamingChanges'
+import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY } from './waitlistStore'
+import { sendTelegramAlert } from './telegram'
+import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, parseBillingRecord } from './billing'
 import { fetchRecommendedMovies, fetchRecommendedTv } from './tmdb'
 import { SITE_URL } from './site'
 import type { MediaType } from '../types/tmdb'
 
 const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
+// The streaming-changes cron already fetches and caches diffs for every source
+// in PROVIDER_NAME_MATCH — peacock/paramount+ diffs exist but were never read.
+// Plus subscribers get matched against all of them at zero added cost.
+const PLUS_TRACKED_PROVIDERS = Object.keys(PROVIDER_NAME_MATCH)
+// India diffs come from TMDB, not Watchmode — the free tier gets the six
+// mainstream services; regional-language providers stay Plus-only.
+const IN_BASE_PROVIDERS = ['netflix', 'amazon-prime-video', 'apple-tv', 'jiohotstar', 'zee5', 'sonyliv']
 const MAX_NOTIFIED_KEYS = 500
 const MAX_MATCHES_PER_EMAIL = 20
 // Taste matching: a plus subscriber's strongest ratings seed TMDB rec lists,
@@ -52,6 +61,9 @@ export interface MatchOptions {
   leaving?: boolean
   // Plus: 'movie:123' -> the subscriber's rated title that seeded the rec.
   taste?: Map<string, string>
+  // Restricts which of the subscriber's chosen services get matched — free
+  // users stay on the base six even though diffs exist for more.
+  providers?: string[]
 }
 
 export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderChanges>, notified: Set<string>, opts: MatchOptions = {}): MatchedItem[] {
@@ -63,7 +75,9 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
     out.push(match)
   }
 
+  const allowed = opts.providers ? new Set(opts.providers) : null
   for (const providerKey of prefs.services) {
+    if (allowed && !allowed.has(providerKey)) continue
     const change = changes[providerKey]
     if (!change) continue
 
@@ -169,6 +183,71 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
+// Discord status lines can't reuse statusLine — embeds render markdown, not HTML.
+function discordStatusLine(item: MatchedItem): string {
+  switch (item.kind) {
+    case 'coming':
+      return `Coming to ${item.provider}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
+    case 'leaving':
+      return `Leaving ${item.provider} soon`
+    case 'taste':
+      return `Now on ${item.provider} — because you rated ${item.via || ''} highly`
+    default:
+      return `Now on ${item.provider}`
+  }
+}
+
+export function buildDiscordMessage(items: MatchedItem[]) {
+  const description = items
+    .map((item) => `• [${item.title}](${SITE_URL}${titlePath(item)}) — ${discordStatusLine(item)}`)
+    .join('\n')
+    .slice(0, 4000)
+  return {
+    embeds: [{
+      title: 'Something on your list just moved',
+      description,
+      color: 0xf5c518
+    }]
+  }
+}
+
+async function sendDiscord(webhookUrl: string, items: MatchedItem[]): Promise<boolean> {
+  try {
+    const resp = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildDiscordMessage(items))
+    })
+    return resp.ok
+  } catch {
+    return false
+  }
+}
+
+async function sendAlertEmail(from: string, items: MatchedItem[], email: string, unsubToken: string): Promise<boolean> {
+  const { html, headers } = buildEmail(items, email, unsubToken)
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: email,
+        subject: 'Something on your watchlist just moved',
+        html,
+        headers
+      })
+    })
+    return resp.ok
+  } catch (err) {
+    console.error('Watchlist alert send failed:', err)
+    return false
+  }
+}
+
 function topRatedTitles(prefs: AlertPrefs): { id: number; mediaType: MediaType; title: string }[] {
   return (prefs.ratings || [])
     .filter((r) => r.rating >= TASTE_MIN_RATING && typeof r.id === 'number')
@@ -242,14 +321,22 @@ export async function sendWatchlistAlerts() {
   const kv = getRedis()
   if (!kv) return { error: 'Redis unavailable' }
 
-  const changes = await getProviderChanges(TRACKED_PROVIDERS, { fresh: true })
-  if (Object.keys(changes).length === 0) return { sent: 0, reason: 'no changes available' }
+  const [usChanges, inChanges] = await Promise.all([
+    getProviderChanges(PLUS_TRACKED_PROVIDERS, { fresh: true }),
+    getProviderChanges(IN_TRACKED_PROVIDERS, { fresh: true, region: 'IN' })
+  ])
+  if (Object.keys(usChanges).length === 0 && Object.keys(inChanges).length === 0) {
+    return { sent: 0, reason: 'no changes available' }
+  }
 
-  const [prefsHash, notifiedHash, unsubTokens, billingHash] = await Promise.all([
+  const [prefsHash, notifiedHash, unsubTokens, billingHash, discordHash, telegramHash, pushHash] = await Promise.all([
     kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
     kv.hgetall<Record<string, unknown>>(ALERTS_NOTIFIED_KEY),
     kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
-    kv.hgetall<Record<string, unknown>>(BILLING_KEY)
+    kv.hgetall<Record<string, unknown>>(BILLING_KEY),
+    kv.hgetall<Record<string, string>>(DISCORD_KEY),
+    kv.hgetall<Record<string, string>>(TELEGRAM_KEY),
+    kv.hgetall<Record<string, unknown>>(PUSH_KEY)
   ])
 
   const entries = Object.entries(prefsHash || {})
@@ -274,40 +361,51 @@ export async function sendWatchlistAlerts() {
     if (!prefs || !unsubToken) continue
 
     const isPlus = plusByEmail.has(email)
+    const isIndia = prefs.region === 'IN'
     const storedNotified = notifiedHash?.[email]
     const notified = new Set<string>(Array.isArray(storedNotified) ? storedNotified : [])
-    const matches = matchItems(prefs, changes, notified, {
+    const matches = matchItems(prefs, isIndia ? inChanges : usChanges, notified, {
       leaving: isPlus,
-      taste: isPlus ? tasteIndexFor(prefs, recsIndex) : undefined
+      taste: isPlus ? tasteIndexFor(prefs, recsIndex) : undefined,
+      providers: isIndia
+        ? (isPlus ? IN_TRACKED_PROVIDERS : IN_BASE_PROVIDERS)
+        : (isPlus ? PLUS_TRACKED_PROVIDERS : TRACKED_PROVIDERS)
     })
     if (!matches.length) continue
 
-    const { html, headers } = buildEmail(matches, email, unsubToken)
-    try {
-      const resp = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from,
-          to: email,
-          subject: 'Something on your watchlist just moved',
-          html,
-          headers
-        })
-      })
+    // Plus subscribers can route alerts to Telegram DMs and/or a Discord
+    // webhook — both free for us and them. Push is the free tier's own free
+    // channel. Email is the fallback when no channel is configured or every
+    // attempt fails.
+    let ok = false
+    if (isPlus && telegramHash?.[email]) {
+      ok = await sendTelegramAlert(telegramHash[email], matches)
+    }
+    if (isPlus && discordHash?.[email]) {
+      ok = (await sendDiscord(discordHash[email], matches)) || ok
+    }
 
-      if (resp.ok) {
-        sent++
-        const nextNotified = [...notified, ...matches.map((m) => m.notifiedKey)].slice(-MAX_NOTIFIED_KEYS)
-        await kv.hset(ALERTS_NOTIFIED_KEY, { [email]: nextNotified })
-      } else {
-        failed++
+    const subs = parseStoredSubs(pushHash?.[email])
+    if (subs.length) {
+      const push = await sendPushAlert(subs, matches)
+      ok = push.ok || ok
+      if (push.dead.length) {
+        const kept = subs.filter((s) => !push.dead.includes(s.endpoint))
+        if (kept.length) {
+          await kv.hset(PUSH_KEY, { [email]: kept })
+        } else {
+          await kv.hdel(PUSH_KEY, email)
+        }
       }
-    } catch (err) {
-      console.error('Watchlist alert send failed:', err)
+    }
+
+    if (!ok) ok = await sendAlertEmail(from, matches, email, unsubToken)
+
+    if (ok) {
+      sent++
+      const nextNotified = [...notified, ...matches.map((m) => m.notifiedKey)].slice(-MAX_NOTIFIED_KEYS)
+      await kv.hset(ALERTS_NOTIFIED_KEY, { [email]: nextNotified })
+    } else {
       failed++
     }
   }

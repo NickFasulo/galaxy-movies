@@ -66,27 +66,24 @@ export default function FreeStreaming({ movies, shows, dataError }: Props) {
           { name: 'Free to Stream', url: canonicalUrl }
         ]}
       />
-      <PageShell withBackButton>
-        <Heading as='h1' ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-        <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
-
+      <PageShell title={title} description={description} withBackButton>
         {dataError ? (
-          <Text mt={10}>Streaming data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>Streaming data is temporarily unavailable. Please try again later.</Text>
         ) : (
           <>
-            <Heading as='h2' size='md' mt={10} mb={4} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
+            <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
               Free movies
             </Heading>
-            {movies.length > 0 ? <MovieGrid movies={movies} /> : <Text color='gray.500' ml={{ base: '1rem', md: '5rem' }}>No free movies found in your region right now.</Text>}
+            {movies.length > 0 ? <MovieGrid movies={movies} /> : <Text color='gray.500'>No free movies found in your region right now.</Text>}
 
-            <Heading as='h2' size='md' mt={10} mb={4} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
+            <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
               Free TV shows
             </Heading>
-            {shows.length > 0 ? <MovieGrid movies={shows} /> : <Text color='gray.500' ml={{ base: '1rem', md: '5rem' }}>No free shows found in your region right now.</Text>}
+            {shows.length > 0 ? <MovieGrid movies={shows} /> : <Text color='gray.500'>No free shows found in your region right now.</Text>}
           </>
         )}
 
-        <Text maxW='42rem' mt={10} ml={{ base: '1rem', md: '5rem' }} color='gray.400' fontStyle='italic'>
+        <Text maxW='42rem' mt={10} color='gray.400' fontStyle='italic'>
           Rather rent or buy instead? Compare prices on any movie page, or browse by{' '}
           <Link href='/streaming' style={{ textDecoration: 'underline' }}>streaming service</Link> and{' '}
           <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases</Link>.

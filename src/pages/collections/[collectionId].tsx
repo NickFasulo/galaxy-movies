@@ -1,5 +1,5 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
-import { Heading, Text } from '@chakra-ui/react'
+import { Text } from '@chakra-ui/react'
 import MovieGrid from '../../components/MovieGrid'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
@@ -59,10 +59,7 @@ export default function Collection({ collection, movies }: Props) {
           { name: collection.name, url: canonicalUrl }
         ]}
       />
-      <PageShell withBackButton>
-        <Heading as='h1' ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-        <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
-
+      <PageShell title={title} description={description} withBackButton>
         <MovieGrid movies={movies} />
 
         <Text textAlign='center' mt={8} color='gray.400'>

@@ -30,11 +30,7 @@ function MovieCard({ movie, priority = false, badge = null, posterFallback }: { 
             <Skeleton
               loading={!(isLoaded || !posterUrl)}
               position='absolute'
-              inset={0}
-              css={{
-                '--start-color': 'var(--colors-gray-700)',
-                '--end-color': 'var(--colors-gray-900)'
-              }}>
+              inset={0}>
               {posterUrl ? (
                 <Image
                   src={posterUrl}

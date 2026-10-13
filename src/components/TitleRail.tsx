@@ -1,6 +1,6 @@
-import Link from 'next/link'
+import NextLink from 'next/link'
 import type { ReactNode } from 'react'
-import { Box, Flex, Heading } from '@chakra-ui/react'
+import { Box, Flex, Heading, Link } from '@chakra-ui/react'
 import MovieCard from './MovieCard'
 import type { TitleSummary } from '../types/tmdb'
 
@@ -19,8 +19,8 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
       <Flex align='baseline' justify='space-between' mb={4} gap={3}>
         <Heading as='h2' size='md'>{title}</Heading>
         {href && (
-          <Link href={href} style={{ fontSize: 'var(--chakra-font-sizes-xs)', color: 'var(--chakra-colors-gray-400)', whiteSpace: 'nowrap' }}>
-            See all →
+          <Link color='gray.400' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
+            <NextLink href={href}>See all →</NextLink>
           </Link>
         )}
       </Flex>
@@ -30,7 +30,25 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
         pb={2}
         mx={{ base: '-1.5rem', md: '-3rem', xl: 0 }}
         px={{ base: '1.5rem', md: '3rem', xl: 0 }}
-        css={{ scrollSnapType: 'x proximity', scrollbarWidth: 'thin' }}
+        css={{
+          scrollSnapType: 'x proximity',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'transparent transparent',
+          transition: 'scrollbar-color 0.25s ease',
+          '&::-webkit-scrollbar': { height: '6px' },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'transparent',
+            borderRadius: '9999px',
+            transition: 'background-color 0.25s ease'
+          },
+          '&:hover': {
+            scrollbarColor: 'var(--chakra-colors-gray-500) transparent'
+          },
+          '&:hover::-webkit-scrollbar-thumb': {
+            backgroundColor: 'var(--chakra-colors-gray-500)'
+          }
+        }}
       >
         {movies.map((movie) => (
           <Box

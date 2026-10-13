@@ -137,18 +137,15 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
           { name: 'New on Streaming', url: canonicalUrl }
         ]}
       />
-      <PageShell withBackButton>
-          <Heading as='h1' ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>{title}</Heading>
-          <Text maxW='42rem' mt={3} ml={{ base: '1rem', md: '5rem' }} color='gray.400'>{description}</Text>
-
+      <PageShell title={title} description={description} withBackButton>
           {dataError ? (
-            <Text mt={10}>Movie data is temporarily unavailable. Please try again later.</Text>
+            <Text mt={10} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : sections.length === 0 ? (
             <Text mt={10} color='gray.500'>No recent releases found for your region right now.</Text>
           ) : (
             sections.map((section) => (
               <Box key={section.key} mt={10}>
-                <Heading as='h2' size='md' mb={4} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
+                <Heading as='h2' size='md' mb={4} textAlign={{ base: 'center', md: 'left' }}>
                   <Link href={`/streaming/${section.key}`} style={{ textDecoration: 'underline' }}>{section.label}</Link>
                 </Heading>
                 <MovieGrid movies={section.movies} />
@@ -158,10 +155,10 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
 
           {Object.keys(changes).length > 0 && (
             <Box mt={14}>
-              <Heading as='h2' size='md' mb={6} ml={{ base: 0, md: '5rem' }} textAlign={{ base: 'center', md: 'left' }}>
+              <Heading as='h2' size='md' mb={6} textAlign={{ base: 'center', md: 'left' }}>
                 Coming soon &amp; recently changed
               </Heading>
-              <Box ml={{ base: 0, md: '5rem' }}>
+              <Box>
                 {Object.entries(changes).map(([key, change]) => (
                   <Box key={key} mb={8}>
                     <Heading as='h3' size='sm' mb={3}>

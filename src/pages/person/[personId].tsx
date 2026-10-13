@@ -219,7 +219,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
         ]}
       />
 
-      <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '5em', md: '6rem' }} px='1rem'>
+      <Box position='relative' minH='100vh' bg='transparent' color='white' py={{ base: '2rem', md: '4rem' }} pt={{ base: '5rem', md: '6rem' }} px='1rem'>
         <Flex justify='center' position='relative' zIndex={1}>
           <Flex
             direction={{ base: 'column', md: 'row' }}

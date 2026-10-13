@@ -5,7 +5,7 @@ export default function CustomSpinner({ height = '100vh' }) {
     <Center h={height}>
       <Spinner
         borderWidth='4px'
-        color='green.500'
+        color='brand.accent'
         size='xl'
       />
     </Center>

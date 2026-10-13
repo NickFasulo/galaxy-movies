@@ -1,12 +1,11 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import BackButton from '../components/BackButton'
-import { Box } from '@chakra-ui/react'
 
 export default function Disclosure() {
   return (
     <InfoPage
       title='Affiliate Disclosure'
       description='Learn how Galaxy Movies may earn commission from qualifying links.'
+      withBackButton
     >
       <InfoParagraph>
         Some outbound links on Galaxy Movies are affiliate links — including
@@ -26,9 +25,6 @@ export default function Disclosure() {
         As an Amazon Associate, Galaxy Movies may earn from qualifying
         purchases.
       </InfoParagraph>
-      <Box mt='2rem' textAlign={{ base: 'center', md: 'left' }}>
-        <BackButton />
-      </Box>
     </InfoPage>
   )
 }

@@ -2,15 +2,26 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
 import { requireMethod, rejectBot } from '../../utils/api'
-import { getRedis, SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
+import { getRedis, SYNCKEY_KEY, ALERTS_PREFS_KEY, DISCORD_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
+import { getBillingRecord, isPlusActive } from '../../utils/billing'
 import { streamingProviders } from '../../utils/tmdb'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i
-const MAX_WATCHLIST_ITEMS = 200
-const MAX_SERVICES = 20
-const MAX_RATINGS = 500
+const FREE_LIMITS = { watchlist: 200, services: 20, ratings: 500 }
+const PLUS_LIMITS = { watchlist: 1000, services: 40, ratings: 2500 }
+
+// Only real inbound-webhook URLs — anything else is an SSRF hole.
+function isDiscordWebhook(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 300) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && url.hostname === 'discord.com' && url.pathname.startsWith('/api/webhooks/')
+  } catch {
+    return false
+  }
+}
 
 interface StoredItem {
   id: number
@@ -37,8 +48,8 @@ function parseIdTitleMedia(item: unknown): Pick<StoredItem, 'id' | 'mediaType' |
   return { id, mediaType, title }
 }
 
-function parseWatchlist(input: unknown): StoredItem[] | null {
-  if (!Array.isArray(input) || input.length > MAX_WATCHLIST_ITEMS) return null
+function parseWatchlist(input: unknown, max: number): StoredItem[] | null {
+  if (!Array.isArray(input) || input.length > max) return null
   const out: StoredItem[] = []
   for (const raw of input) {
     const item = parseIdTitleMedia(raw)
@@ -50,9 +61,9 @@ function parseWatchlist(input: unknown): StoredItem[] | null {
 }
 
 // Absent ratings array = old client — treated as empty rather than invalid.
-function parseRatings(input: unknown): StoredRating[] | null {
+function parseRatings(input: unknown, max: number): StoredRating[] | null {
   if (input === undefined || input === null) return []
-  if (!Array.isArray(input) || input.length > MAX_RATINGS) return null
+  if (!Array.isArray(input) || input.length > max) return null
   const out: StoredRating[] = []
   for (const raw of input) {
     const item = parseIdTitleMedia(raw)
@@ -64,8 +75,8 @@ function parseRatings(input: unknown): StoredRating[] | null {
   return out
 }
 
-function parseServices(input: unknown): string[] | null {
-  if (!Array.isArray(input) || input.length > MAX_SERVICES) return null
+function parseServices(input: unknown, max: number): string[] | null {
+  if (!Array.isArray(input) || input.length > max) return null
   if (!input.every((key) => typeof key === 'string' && key in streamingProviders)) return null
   return input as string[]
 }
@@ -103,13 +114,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'GET') {
-      const prefs = await kv.hget(ALERTS_PREFS_KEY, email)
-      return res.status(200).json({ prefs: prefs ?? null })
+      const [prefs, discordWebhook] = await Promise.all([
+        kv.hget(ALERTS_PREFS_KEY, email),
+        kv.hget<string>(DISCORD_KEY, email)
+      ])
+      return res.status(200).json({ prefs: prefs ?? null, discordWebhook: discordWebhook ?? null })
     }
 
-    const watchlist = parseWatchlist(req.body?.watchlist)
-    const services = parseServices(req.body?.services)
-    const ratings = parseRatings(req.body?.ratings)
+    // An absent field leaves the stored webhook alone; '' clears it.
+    const { discordWebhook } = req.body || {}
+    if (discordWebhook !== undefined) {
+      if (discordWebhook === '') {
+        await kv.hdel(DISCORD_KEY, email)
+      } else if (isDiscordWebhook(discordWebhook)) {
+        await kv.hset(DISCORD_KEY, { [email]: discordWebhook })
+      } else {
+        return res.status(400).json({ error: 'Not a valid Discord webhook URL' })
+      }
+    }
+
+    // A webhook-only update (from the settings UI) skips the prefs payload.
+    if (req.body?.watchlist === undefined && req.body?.services === undefined) {
+      return res.status(200).json({ ok: true })
+    }
+
+    const limits = isPlusActive(await getBillingRecord(email)) ? PLUS_LIMITS : FREE_LIMITS
+    const watchlist = parseWatchlist(req.body?.watchlist, limits.watchlist)
+    const services = parseServices(req.body?.services, limits.services)
+    const ratings = parseRatings(req.body?.ratings, limits.ratings)
     const region = typeof req.body?.region === 'string' ? req.body.region.slice(0, 8) : 'US'
     if (!watchlist || !services || !ratings) {
       return res.status(400).json({ error: 'Invalid watchlist, services, or ratings payload' })

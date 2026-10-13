@@ -140,7 +140,7 @@ export default function ProviderPage({ media, provider, title, titles, dataError
           />
         )}
         {dataError ? (
-          <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
           <Text mt={10} color='gray.500'>No {plural} currently found for this service in your region.</Text>
         ) : <MovieGrid movies={titles} />}

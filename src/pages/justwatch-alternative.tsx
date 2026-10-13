@@ -160,7 +160,7 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Popular movies to watch now</Heading>
           {dataError ? (
-            <Text mt={4}>Movie data is temporarily unavailable. Please try again later.</Text>
+            <Text mt={4} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : (
             <MovieGrid movies={movies} />
           )}
