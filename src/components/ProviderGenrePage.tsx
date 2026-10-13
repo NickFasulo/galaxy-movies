@@ -176,6 +176,15 @@ export default function ProviderGenrePage({
           <Link href={`${genreBasePath}/${genre}`} style={{ textDecoration: 'underline' }}>{target.genreLabel.toLowerCase()} {plural}</Link>.
         </Text>
 
+        {!isIndexable && indexabilityReason && (
+          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+            This page is available for browsing but held out of search indexing for now: {indexabilityReason}
+          </Text>
+        )}
+        <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+          Availability changes by region and over time. Check the {itemWord} page for current provider information.
+        </Text>
+
         {dataError ? (
           <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
@@ -188,15 +197,6 @@ export default function ProviderGenrePage({
             fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${page}`}
           />
         )}
-
-        {!isIndexable && indexabilityReason && (
-          <Text textAlign='center' mt={8} color='gray.500' fontSize='sm'>
-            This page is available for browsing but held out of search indexing for now: {indexabilityReason}
-          </Text>
-        )}
-        <Text textAlign='center' mt={8} color='gray.400'>
-          Availability changes by region and over time. Check the {itemWord} page for current provider information.
-        </Text>
       </PageShell>
     </>
   );

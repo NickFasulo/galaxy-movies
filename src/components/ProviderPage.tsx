@@ -155,18 +155,6 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
               : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
           />
         )}
-        {dataError ? (
-          <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
-        ) : titles.length === 0 ? (
-          <Text mt={10} color='gray.500'>No {plural} currently found for this service in your region.</Text>
-        ) : (
-          <PaginatedGrid
-            initialTitles={titles}
-            initialTotalPages={totalPages}
-            queryKey={['provider', media, provider, region]}
-            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${page}`}
-          />
-        )}
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
           Browse {providerLabel}{media === 'tv' ? ' Shows' : ''} by Genre
         </Heading>
@@ -236,9 +224,21 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
             <Text fontWeight='medium' textAlign='center'>All services →</Text>
           </LinkTile>
         </SimpleGrid>
-        <Text textAlign='center' mt={8} color='gray.400'>
+        <Text textAlign={{ base: 'center', md: 'left' }} mt={8} color='gray.500' fontSize='sm'>
           Availability changes by region and over time. Check the {itemWord} page for current provider information.
         </Text>
+        {dataError ? (
+          <Text mt={10}>{noun} data is temporarily unavailable. Please try again later.</Text>
+        ) : titles.length === 0 ? (
+          <Text mt={10} color='gray.500'>No {plural} currently found for this service in your region.</Text>
+        ) : (
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            queryKey={['provider', media, provider, region]}
+            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${page}`}
+          />
+        )}
       </PageShell>
     </>
   );
