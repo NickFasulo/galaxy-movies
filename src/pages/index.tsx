@@ -143,6 +143,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
       setSearchInput(savedSearch)
       setDebouncedSearch(savedSearch.trim())
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only restore; re-running on query changes would clobber the hydrate
   }, [])
 
   // /?search=… is the WebSite schema's SearchAction target — a landing URL

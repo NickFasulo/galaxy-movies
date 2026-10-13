@@ -1,14 +1,75 @@
 import NextLink from 'next/link'
 import { useRouter } from 'next/router'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Box, Flex, IconButton, Input, Link, Menu, Portal } from '@chakra-ui/react';
 import NavMenu, { menuItemProps } from './NavMenu'
 import Wordmark from './Wordmark'
-import { LuChevronDown, LuSearch } from 'react-icons/lu';
+import { LuChevronDown, LuSearch, LuX } from 'react-icons/lu';
+
+// Full-width slide-down row on mobile — the expandable-search pattern: the
+// icon expands an input inline instead of routing home first, and submit
+// lands on /?search=… same as the desktop form.
+function MobileSearchBar({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  const [term, setTerm] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const q = term.trim()
+    if (!q) return
+    router.push(`/?search=${encodeURIComponent(q)}`)
+  }
+
+  return (
+    <Box
+      as='form'
+      onSubmit={submit}
+      display={{ base: 'flex', md: 'none' }}
+      alignItems='center'
+      gap={1}
+      px={4}
+      pb={3}
+      bg='surface.canvas'
+    >
+      <Input
+        ref={inputRef}
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
+        placeholder='Search movies & shows…'
+        aria-label='Search'
+        enterKeyHint='search'
+        bg='surface.raised'
+        color='white'
+        borderColor='border.subtle'
+        _placeholder={{ color: 'gray.500' }}
+        flex='1'
+      />
+      <IconButton
+        type='submit'
+        aria-label='Submit search'
+        variant='ghost'
+        color='whiteAlpha.800'
+        data-umami-event='header-search'
+        _hover={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
+      <IconButton
+        aria-label='Close search'
+        variant='ghost'
+        color='whiteAlpha.800'
+        onClick={onClose}
+        _hover={{ bg: 'whiteAlpha.200' }}><LuX /></IconButton>
+    </Box>
+  )
+}
 
 // Every non-home page gets a search affordance — a visitor who landed on the
 // wrong title otherwise has no way to find the right one without going home.
-function HeaderSearch() {
+function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }) {
   const router = useRouter()
   const [term, setTerm] = useState('')
 
@@ -48,8 +109,7 @@ function HeaderSearch() {
         size='sm'
         display={{ base: 'inline-flex', md: 'none' }}
         color='whiteAlpha.800'
-        data-umami-event='header-search'
-        onClick={() => router.push('/?focus=search')}
+        onClick={onMobileSearchOpen}
         _hover={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
     </>
   )
@@ -57,6 +117,8 @@ function HeaderSearch() {
 
 // isHome: hide the logo (the homepage's h1 already is the logo)
 export default function Header({ isHome = false, isDark = false }) {
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+
   return (
     <Box
       as='header'
@@ -76,7 +138,7 @@ export default function Header({ isHome = false, isDark = false }) {
             </NextLink></Link>
         )}
         <Flex align='center' gap={{ base: 1, md: 3 }}>
-          {!isHome && <HeaderSearch />}
+          {!isHome && <HeaderSearch onMobileSearchOpen={() => setMobileSearchOpen(true)} />}
           <Flex display={{ base: 'none', md: 'flex' }} align='center' gap={5} fontSize='sm' fontWeight='medium' color='whiteAlpha.800'>
           <Menu.Root>
             <Menu.Trigger asChild><Box
@@ -112,6 +174,9 @@ export default function Header({ isHome = false, isDark = false }) {
           </Box>
         </Flex>
       </Flex>
+      {!isHome && mobileSearchOpen && (
+        <MobileSearchBar onClose={() => setMobileSearchOpen(false)} />
+      )}
     </Box>
   );
 }
