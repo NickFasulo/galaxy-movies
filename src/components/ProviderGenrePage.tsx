@@ -1,7 +1,7 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
 import { Text } from '@chakra-ui/react'
-import MovieGrid from './MovieGrid'
+import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
 import {
@@ -17,7 +17,7 @@ import {
 } from '../utils/tmdb'
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
 import { getContentIndexability, getProviderGenreTarget, getTvProviderGenreTarget, type ProviderGenreTarget } from '../utils/contentOpportunities'
-import { setSwrCache } from '../utils/ssr'
+import { setSwrCache, getPageParam } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
@@ -65,22 +65,28 @@ export interface ProviderGenrePageProps {
   genre: string
   target: ProviderGenreTarget
   titles: TitleSummary[]
+  totalPages: number
   dataError?: boolean
   region: string
   availableInRegion: boolean
+  page: number
   isIndexable: boolean
   indexabilityReason: string | null
 }
 
 export function providerGenreServerSideProps(media: MediaType) {
-  const { discover, genres, genreTarget } = CONFIG[media]
+  const { discover, genres, genreTarget, basePath } = CONFIG[media]
 
-  return async function getServerSideProps({ params, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<ProviderGenrePageProps>> {
+  return async function getServerSideProps({ params, query, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<ProviderGenrePageProps>> {
     const providerSlug = params?.provider ?? ''
     const genreSlug = params?.genre ?? ''
     const target = genreTarget(providerSlug, genreSlug)
     if (!target) return { notFound: true }
 
+    const { page, requested } = getPageParam(query)
+    if (requested && page === 1) {
+      return { redirect: { destination: `${basePath}/${providerSlug}/${genreSlug}`, permanent: true } }
+    }
     const region = detectRegion(req)
     const providerIds = getProviderIds(providerSlug, region)
     const providerId = providerIds.length ? providerIds.join('|') : null
@@ -93,12 +99,14 @@ export function providerGenreServerSideProps(media: MediaType) {
       genre: genreSlug,
       target,
       region,
-      availableInRegion
+      availableInRegion,
+      page
     }
 
     try {
-      const data = await discover({ providerId, genreId, region })
+      const data = await discover({ providerId, genreId, region, page })
       const titles = data.results || []
+      if (page > 1 && !titles.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: titles })
 
       setSwrCache(res)
@@ -106,6 +114,7 @@ export function providerGenreServerSideProps(media: MediaType) {
         props: {
           ...base,
           titles,
+          totalPages: data.total_pages || 1,
           isIndexable: indexability.isIndexable,
           indexabilityReason: indexability.reason
         }
@@ -119,6 +128,7 @@ export function providerGenreServerSideProps(media: MediaType) {
         props: {
           ...base,
           titles: [],
+          totalPages: 1,
           dataError: true,
           isIndexable: indexability.isIndexable,
           indexabilityReason: indexability.reason
@@ -134,14 +144,16 @@ export default function ProviderGenrePage({
   genre,
   target,
   titles,
+  totalPages,
   dataError,
   region,
   availableInRegion,
+  page,
   isIndexable,
   indexabilityReason
 }: ProviderGenrePageProps) {
   const { basePath, genreBasePath, crumbRoot, noun, plural, itemWord } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${provider}/${genre}`
+  const canonicalUrl = `${SITE_URL}${basePath}/${provider}/${genre}${page > 1 ? `?page=${page}` : ''}`
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(streamingProviders[provider]?.regions)
   const description = availableInRegion
@@ -151,7 +163,7 @@ export default function ProviderGenrePage({
   return (
     <>
       <PageHead
-        title={target.title}
+        title={page > 1 ? `${target.title} — Page ${page}` : target.title}
         description={description}
         canonicalUrl={canonicalUrl}
         noindex={!isIndexable}
@@ -172,22 +184,29 @@ export default function ProviderGenrePage({
           <Link href={`${genreBasePath}/${genre}`} style={{ textDecoration: 'underline' }}>{target.genreLabel.toLowerCase()} {plural}</Link>.
         </Text>
 
+        {!isIndexable && indexabilityReason && (
+          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+            This page is available for browsing but held out of search indexing for now: {indexabilityReason}
+          </Text>
+        )}
+        <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+          Availability changes by region and over time. Check the {itemWord} page for current provider information.
+        </Text>
+
         {dataError ? (
           <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
           <Text mt={10} color='gray.500'>No {plural} currently match this streaming collection.</Text>
         ) : (
-          <MovieGrid movies={titles} />
+          <PaginatedGrid
+            initialTitles={titles}
+            initialTotalPages={totalPages}
+            initialPage={page}
+            queryKey={['providerGenre', media, provider, genre, region, page]}
+            fetchUrl={(p) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${p}`}
+            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${provider}/${genre}?page=${p}` }}
+          />
         )}
-
-        {!isIndexable && indexabilityReason && (
-          <Text textAlign='center' mt={8} color='gray.500' fontSize='sm'>
-            This page is available for browsing but held out of search indexing for now: {indexabilityReason}
-          </Text>
-        )}
-        <Text textAlign='center' mt={8} color='gray.400'>
-          Availability changes by region and over time. Check the {itemWord} page for current provider information.
-        </Text>
       </PageShell>
     </>
   );

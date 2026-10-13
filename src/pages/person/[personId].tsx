@@ -31,7 +31,9 @@ const toCardCredit = (m: MovieCredit): MovieCredit => ({
   poster_path: m.poster_path,
   release_date: m.release_date,
   vote_average: m.vote_average,
-  character: m.character
+  // Crew/director credits carry `job`, not `character` — undefined would fail
+  // gSSP's JSON serialization.
+  character: m.character ?? ''
 })
 
 export const getServerSideProps: GetServerSideProps<Props> = async (context) => {

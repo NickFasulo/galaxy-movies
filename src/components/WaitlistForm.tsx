@@ -59,6 +59,8 @@ export default function WaitlistForm({ purpose = 'alerts' }: { purpose?: 'alerts
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder='you@example.com'
                 size='sm'
+                // iOS Safari auto-zooms inputs under 16px on focus
+                fontSize={{ base: '16px', md: 'sm' }}
                 bg='blackAlpha.400'
                 borderColor='border.subtle'
                 color='white'

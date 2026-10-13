@@ -11,6 +11,7 @@ import { useAlertsSync } from '../hooks/useAlertsSync'
 import ChatWidget from '../components/ChatWidget'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import FooterPill from '../components/FooterPill'
 import TopBackdrop from '../components/TopBackdrop'
 import '../styles/globals.css'
 
@@ -20,7 +21,10 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC ?? '/assets/starfield.js'
   const router = useRouter()
   const isHome = router.pathname === '/'
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|genre|browse|watchlist$|plus$|email-status$|$)/.test(router.pathname)
+  // Pages whose main feed is infinite-scroll — an in-flow footer is
+  // unreachable below an endless feed, so they get the floating pill instead.
+  const hasInfiniteScroll = /^\/($|search$|browse\/.|genre\/.|tv\/(browse|genre|streaming)\/.|streaming\/.|company\/.|network\/.)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|plus$|email-status$|search$|$)/.test(router.pathname)
   // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 
@@ -34,13 +38,13 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
-          <Flex direction='column' minH='100vh' position='relative' bg={isDark ? 'surface.canvas' : undefined}>
+          <Flex direction='column' minH='100dvh' position='relative' bg={isDark ? 'surface.canvas' : undefined}>
             {showTopBackdrop && <TopBackdrop />}
-            <Header isHome={isHome} isDark={isDark} />
+            <Header isHome={isHome} isDark={isDark} hideSearch={router.pathname === '/search'} />
             <Box position='relative' zIndex={1} flex='1' display='flex' flexDirection='column'>
               <Component {...pageProps} />
             </Box>
-            {!isHome && <Footer isDark={isDark} />}
+            {hasInfiniteScroll ? <FooterPill /> : (!isHome && <Footer isDark={isDark} />)}
           </Flex>
           <ChatWidget />
           {umamiWebsiteId && (

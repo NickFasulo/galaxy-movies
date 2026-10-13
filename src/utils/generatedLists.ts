@@ -1,5 +1,6 @@
 import { getRedis } from './redis'
 import { curatedLists, type ListDef } from './curatedLists'
+import type { MediaType } from '../types/tmdb'
 import type { TmdbParams } from './tmdb'
 
 // Each Redis command is billed on Upstash's free tier, so lists and seed
@@ -84,6 +85,36 @@ export async function getGeneratedLists(): Promise<Record<string, ListDef>> {
 export async function getAllLists(): Promise<Record<string, ListDef>> {
   const generated = await getGeneratedLists()
   return { ...generated, ...curatedLists }
+}
+
+export interface SimilarListRef {
+  slug: string
+  title: string
+}
+
+// media:tmdbId → generated 'X-like' list. The whole hash is one HGETALL and
+// the result is memoized briefly, so hot detail renders don't pay a Redis
+// command each — the map only changes when the content cron writes a list.
+const LIST_REF_TTL = 10 * 60 * 1000
+let listRefCache: { at: number; map: Map<string, SimilarListRef> } | null = null
+
+export async function findSimilarListRef(media: MediaType, tmdbId: number): Promise<SimilarListRef | null> {
+  try {
+    if (!listRefCache || Date.now() - listRefCache.at > LIST_REF_TTL) {
+      const lists = await getGeneratedLists()
+      const map = new Map<string, SimilarListRef>()
+      for (const [slug, def] of Object.entries(lists)) {
+        if (def.type === 'similar' && def.movieId) {
+          map.set(`${def.media || 'movie'}:${def.movieId}`, { slug, title: def.title })
+        }
+      }
+      listRefCache = { at: Date.now(), map }
+    }
+    return listRefCache.map.get(`${media}:${tmdbId}`) || null
+  } catch (err) {
+    console.error('Error resolving similar list ref:', err)
+    return null
+  }
 }
 
 export async function saveGeneratedList(slug: string, def: ListDef): Promise<boolean> {

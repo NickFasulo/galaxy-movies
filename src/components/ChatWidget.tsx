@@ -472,6 +472,7 @@ export default function ChatWidget() {
                 mr="2"
                 disabled={isLoading}
                 size="sm"
+                fontSize={{ base: '16px', md: 'sm' }}
                 bg='surface.canvas'
                 color="white"
                 borderColor='border.subtle'

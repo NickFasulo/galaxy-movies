@@ -1,20 +1,16 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import InfiniteScroll from 'react-infinite-scroll-component'
-import { Badge, Box, Button, Flex, Heading, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
+import { InfiniteTitleGrid, usePaginatedFeed, type FeedPage } from '../components/PaginatedGrid'
 import Wordmark from '../components/Wordmark'
-import MovieCard from '../components/MovieCard'
-import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import HomeHero from '../components/HomeHero'
 import ProviderBar from '../components/ProviderBar'
 import TitleRail from '../components/TitleRail'
 import CardProviderIcons from '../components/CardProviderIcons'
 import PageHead from '../components/PageHead'
-import LegalLinks from '../components/LegalLinks'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import { useProviderCatalog } from '../hooks/useProviderCatalog'
 import { useUserData } from '../hooks/useUserData'
@@ -25,7 +21,6 @@ import { ratingEntries, setServices } from '../utils/userData'
 import { setSwrCache } from '../utils/ssr'
 import { SITE_URL } from '../utils/site'
 import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
-import { LuArrowUp } from 'react-icons/lu';
 
 interface Props {
   initialMovies: TmdbMovie[]
@@ -36,11 +31,6 @@ interface Props {
   providerCatalog: WatchProvider[]
   trendingRail: TitleSummary[]
   newOn: { providerKey: string; providerLabel: string; movies: TmdbMovie[] }
-}
-
-interface FeedPage {
-  results?: TitleSummary[]
-  total_pages?: number
 }
 
 const nowStreamingBadge = (
@@ -58,8 +48,15 @@ type TrendingItem = TitleSummary & { media_type?: string }
 const NEW_ON_WINDOW_DAYS = 45
 const RAIL_SIZE = 12
 
-export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
+export async function getServerSideProps({ req, res, query }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
   const region = detectRegion(req)
+  // /?search=… stays a valid entry (old links, schema SearchAction history) —
+  // the dedicated /search page owns results now, so forward before spending
+  // any TMDB calls on a homepage payload the user will never see.
+  const searchTerm = typeof query.search === 'string' ? query.search.trim() : ''
+  if (searchTerm) {
+    return { redirect: { destination: `/search?q=${encodeURIComponent(searchTerm)}`, permanent: false } }
+  }
   // Registry order = display order; the first provider available in the region
   // anchors the "New on …" rail (Netflix in US/IN).
   const railProviderKey = Object.keys(streamingProviders).find((key) => isProviderAvailableInRegion(key, region)) || 'netflix'
@@ -125,7 +122,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [showScrollTop, setShowScrollTop] = useState(false)
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
   const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
@@ -176,56 +172,39 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const providerKeys = services.providers
   const feedProviders = activeSearch ? '' : providerKeys.join(',')
 
-  const initialInfiniteData = (category === 'popular' && !activeSearch && !feedProviders)
-    ? { pages: [{ results: initialMovies, total_pages: initialTotalPages }], pageParams: [1] }
-    : undefined
+  const feedQueryFn = useCallback(async (page: number): Promise<FeedPage> => {
+    const now = Date.now()
+    const timeSinceLastFetch = now - lastFetchTimeRef.current
+    const MIN_FETCH_DELAY = 500
 
-  const {
-    data,
-    status,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading
-  } = useInfiniteQuery<FeedPage, Error>({
-    queryKey: ['infiniteMovies', category, activeSearch, feedProviders, services.region],
-    queryFn: async ({ pageParam }): Promise<FeedPage> => {
-      const now = Date.now()
-      const timeSinceLastFetch = now - lastFetchTimeRef.current
-      const MIN_FETCH_DELAY = 500
-      
-      if (timeSinceLastFetch < MIN_FETCH_DELAY) {
-        await new Promise(resolve => setTimeout(resolve, MIN_FETCH_DELAY - timeSinceLastFetch))
-      }
-      
-      lastFetchTimeRef.current = Date.now()
-      
-      const media = MEDIA_FOR_CATEGORY[category]
-      const mediaParam = media ? `&media=${media}` : ''
-      const providersParam = feedProviders ? `&providers=${encodeURIComponent(feedProviders)}&region=${encodeURIComponent(services.region)}` : ''
-      const url = activeSearch
-        ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${pageParam}${mediaParam}`
-        : media
-          ? `/api/allMovies?media=${media}&page=${pageParam}${providersParam}`
-          : `/api/allMovies?category=${category}&page=${pageParam}${providersParam}`
-
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to load movies')
-      return res.json()
-    },
-    initialPageParam: 1,
-    initialData: initialInfiniteData,
-    staleTime: 1000 * 60 * 10,
-    gcTime: 1000 * 60 * 60,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    getNextPageParam: (lastPage, pages) => {
-      if (!lastPage?.results?.length) return undefined
-      const totalPages = lastPage?.total_pages || 1
-      return pages.length < totalPages ? pages.length + 1 : undefined
+    if (timeSinceLastFetch < MIN_FETCH_DELAY) {
+      await new Promise(resolve => setTimeout(resolve, MIN_FETCH_DELAY - timeSinceLastFetch))
     }
+
+    lastFetchTimeRef.current = Date.now()
+
+    const media = MEDIA_FOR_CATEGORY[category]
+    const mediaParam = media ? `&media=${media}` : ''
+    const providersParam = feedProviders ? `&providers=${encodeURIComponent(feedProviders)}&region=${encodeURIComponent(services.region)}` : ''
+    const url = activeSearch
+      ? `/api/allMovies?search=${encodeURIComponent(activeSearch)}&page=${page}${mediaParam}`
+      : media
+        ? `/api/allMovies?media=${media}&page=${page}${providersParam}`
+        : `/api/allMovies?category=${category}&page=${page}${providersParam}`
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Failed to load movies')
+    return res.json()
+  }, [category, activeSearch, feedProviders, services.region])
+
+  const feed = usePaginatedFeed({
+    queryKey: ['infiniteMovies', category, activeSearch, feedProviders, services.region],
+    queryFn: feedQueryFn,
+    initialTitles: (category === 'popular' && !activeSearch && !feedProviders) ? initialMovies : undefined,
+    initialTotalPages
   })
+
+  const moviesList = feed.titles
 
   const changeCategory = useCallback((selectedCategory: string) => {
     setCategory(selectedCategory)
@@ -235,33 +214,17 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     lastFetchTimeRef.current = 0
   }, [])
 
-  const moviesList = useMemo(() => {
-    if (!data?.pages) return []
-    const seenIds = new Set<string>()
-    const uniqueMovies: TitleSummary[] = []
-
-    for (const page of data.pages) {
-      if (!page.results) continue
-      for (const movie of page.results) {
-        const key = `${movie?.mediaType || 'movie'}:${movie?.id}`
-        if (movie?.id && !seenIds.has(key)) {
-          seenIds.add(key)
-          uniqueMovies.push(movie)
-        }
-      }
-    }
-    return uniqueMovies
-  }, [data])
-
   // Rails share the badge/icon lookups — one extra chunk of ids at most.
   const badgeTitles = useMemo(() => [...moviesList, ...trendingRail, ...newOn.movies], [moviesList, trendingRail, newOn.movies])
   const { isStreaming, providersFor, myProviderIds, isReady: providersReady } = useStreamingBadges(badgeTitles)
 
   // Provider-filtered search results wait for the badge lookups to land —
   // hiding on an empty providersFor would flash an empty grid first.
-  const visibleMovies = activeSearch && myProviderIds.size > 0 && providersReady
-    ? moviesList.filter((movie) => providersFor(movie).some((id) => myProviderIds.has(id)))
-    : moviesList
+  const filterForServices = useCallback((list: TitleSummary[]) =>
+    activeSearch && myProviderIds.size > 0 && providersReady
+      ? list.filter((movie) => providersFor(movie).some((id) => myProviderIds.has(id)))
+      : list,
+  [activeSearch, myProviderIds, providersReady, providersFor])
 
   const clearServices = useCallback(() => setServices(services.region, []), [services.region])
 
@@ -272,11 +235,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     if (providers.length > 0) return <CardProviderIcons providers={providers} myProviderIds={myProviderIds} />
     return isStreaming(movie) ? nowStreamingBadge : null
   }
-
-  const hasReachedEnd = Boolean(
-    data?.pages?.length &&
-      (!hasNextPage || data.pages.some((page) => page?.results?.length === 0))
-  )
 
   useEffect(() => {
     const handleRouteChange = () => {
@@ -304,16 +262,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }, [moviesList.length])
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const shouldShow = window.scrollY > 160
-      setShowScrollTop((current) => (current === shouldShow ? current : shouldShow))
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
   const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
 
@@ -328,7 +276,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${SITE_URL}/?search={search_term_string}`
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
     }
@@ -373,17 +321,19 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
       <HoverBackground hoveredBg={hoveredBg} isBgVisible={isBgVisible} />
 
       <Box position='relative' zIndex={1} h='100%' pb='4rem' color='white'>
-        <HomeHero
-          featured={featured}
-          providers={featuredProviders}
-          myProviderIds={myProviderIds}
-          dimmed={Boolean(isBgVisible && hoveredBg)}
-        >
-          <Heading as='h1' textAlign='center' mt='2rem'>
-            <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
-          </Heading>
-          <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
-        </HomeHero>
+        {!activeSearch && (
+          <HomeHero
+            featured={featured}
+            providers={featuredProviders}
+            myProviderIds={myProviderIds}
+            dimmed={Boolean(isBgVisible && hoveredBg)}
+          >
+            <Heading as='h1' textAlign='center' mt='2rem'>
+              <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
+            </Heading>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
+          </HomeHero>
+        )}
 
         <SearchBar
           category={category}
@@ -394,146 +344,72 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
 
         <ProviderBar catalog={catalogMap} />
 
-        {isLoading && moviesList.length === 0 ? (
-          <CustomSpinner />
-        ) : status === 'error' ? (
-          <Text textAlign='center' mt='8rem' fontWeight='bold' fontSize='xl'>
-            {error?.message || 'Error loading movies'}
-          </Text>
-        ) : moviesList.length === 0 ? (
-          <Text textAlign='center' mt='8rem' fontWeight='bold' fontSize='xl' color='gray.500'>
-            No movies found
-          </Text>
-        ) : (
+        {providerKeys.length > 0 && (
+          <Flex justify='center' mt='1.5rem' mx='1.5rem'>
+            <Flex align='center' gap={3} bg='surface.raised' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='full' px={4} py={1.5}>
+              <Text fontSize='xs' color='gray.300'>
+                Showing {activeSearch ? 'results' : 'titles'} on your services
+              </Text>
+              <Button size='2xs' variant='ghost' color='gray.300' onClick={clearServices} _hover={{ color: 'white' }}>
+                Clear
+              </Button>
+            </Flex>
+          </Flex>
+        )}
+
+        {!activeSearch && (
           <>
-            {providerKeys.length > 0 && (
-              <Flex justify='center' mt='1.5rem' mx='1.5rem'>
-                <Flex align='center' gap={3} bg='surface.raised' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='full' px={4} py={1.5}>
-                  <Text fontSize='xs' color='gray.300'>
-                    Showing {activeSearch ? 'results' : 'titles'} on your services
-                  </Text>
-                  <Button size='2xs' variant='ghost' color='gray.300' onClick={clearServices} _hover={{ color: 'white' }}>
-                    Clear
-                  </Button>
-                </Flex>
-              </Flex>
+            {tastePicks && (
+              <TitleRail
+                title={`Because you rated ${tastePicks.sourceTitle} ${tastePicks.sourceRating}/10`}
+                movies={tastePicks.movies}
+                badgeFor={badgeFor}
+                onCardEnter={handleCardMouseEnter}
+                onCardLeave={handleCardMouseLeave}
+              />
             )}
-
-            {!activeSearch && (
-              <>
-                {tastePicks && (
-                  <TitleRail
-                    title={`Because you rated ${tastePicks.sourceTitle} ${tastePicks.sourceRating}/10`}
-                    movies={tastePicks.movies}
-                    badgeFor={badgeFor}
-                    onCardEnter={handleCardMouseEnter}
-                    onCardLeave={handleCardMouseLeave}
-                  />
-                )}
-                <TitleRail
-                  title='Trending this week'
-                  movies={trendingRail}
-                  badgeFor={badgeFor}
-                  onCardEnter={handleCardMouseEnter}
-                  onCardLeave={handleCardMouseLeave}
-                />
-                <TitleRail
-                  title={`New on ${newOn.providerLabel}`}
-                  href='/new-on-streaming'
-                  movies={newOn.movies}
-                  badgeFor={badgeFor}
-                  onCardEnter={handleCardMouseEnter}
-                  onCardLeave={handleCardMouseLeave}
-                />
-              </>
-            )}
-
-            {visibleMovies.length === 0 ? (
-              <Text textAlign='center' mt='3rem' fontWeight='bold' fontSize='lg' color='gray.500'>
-                Nothing on your services matches{activeSearch ? ` “${debouncedSearch}”` : ' this feed'}.
-              </Text>
-            ) : (
-            <InfiniteScroll
-              next={fetchNextPage}
-              hasMore={Boolean(hasNextPage) && !isFetchingNextPage}
-              dataLength={visibleMovies.length}
-              scrollThreshold={0.95}
-              loader={
-                <Text textAlign='center' color='gray.500' p='1rem'>
-                  Loading more movies...
-                </Text>
-              }
-            >
-              <SimpleGrid
-                my={{ base: '3rem', md: '5rem' }}
-                mx={{ base: '1.5rem', md: '3rem', xl: 'auto' }}
-                maxW={{ xl: '80rem' }}
-                gap={{ base: 8, md: 10 }}
-                minChildWidth={{ base: '45%', md: '12rem' }}
-                minH='100vh'
-              >
-                {visibleMovies.map((movie, index) => (
-                  <Box
-                    key={`${movie.mediaType || 'movie'}:${movie.id}`}
-                    onMouseEnter={() => handleCardMouseEnter(movie.backdrop_path)}
-                    onMouseLeave={handleCardMouseLeave}
-                  >
-                    <MovieCard
-                      movie={movie}
-                      priority={index < 5}
-                      badge={badgeFor(movie)}
-                    />
-                  </Box>
-                ))}
-              </SimpleGrid>
-            </InfiniteScroll>
-            )}
-
-            {hasReachedEnd && (
-              <Text textAlign='center' color='gray.500' p='1rem' mb='3rem'>
-                You&apos;ve reached the end.
-              </Text>
-            )}
+            <TitleRail
+              title='Trending this week'
+              movies={trendingRail}
+              badgeFor={badgeFor}
+              onCardEnter={handleCardMouseEnter}
+              onCardLeave={handleCardMouseLeave}
+            />
+            <TitleRail
+              title={`New on ${newOn.providerLabel}`}
+              href='/new-on-streaming'
+              movies={newOn.movies}
+              badgeFor={badgeFor}
+              onCardEnter={handleCardMouseEnter}
+              onCardLeave={handleCardMouseLeave}
+            />
           </>
         )}
 
-        <Box
-          as='footer'
-          position='fixed'
-          bottom='0.5rem'
-          left='0'
-          right='0'
-          mx='auto'
-          zIndex={9}
-          py='0.25rem'
-          px='1rem'
-          w='fit-content'
-          bg='rgba(31, 37, 43, 0.72)'
-          border='1px solid var(--chakra-colors-border-subtle)'
-          borderRadius='full'
-          backdropFilter='blur(10px)'
-        >
-          <Text textAlign='center'>
-            <LegalLinks />
-          </Text>
-        </Box>
-
-        {showScrollTop && (
-          <IconButton
-            aria-label='Scroll to top'
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            position='fixed'
-            size='lg'
-            right='1.5rem'
-            bottom='9rem'
-            zIndex={10}
-            borderRadius='full'
-            boxShadow='lg'
-            bg='surface.raised'
-            color='white'
-            border='1px solid var(--chakra-colors-border-subtle)'
-            _hover={{ bg: 'surface.overlay' }}><Icon boxSize={6} asChild><LuArrowUp /></Icon></IconButton>
-        )}
+        <InfiniteTitleGrid
+          titles={moviesList}
+          hasData={Boolean(feed.data)}
+          status={feed.status}
+          loadedPages={feed.data?.pages.length ?? 1}
+          fetchNextPage={feed.fetchNextPage}
+          hasNextPage={Boolean(feed.hasNextPage)}
+          isFetchingNextPage={feed.isFetchingNextPage}
+          filterTitles={filterForServices}
+          emptyMessage={
+            providerKeys.length > 0
+              ? `Nothing on your services matches${activeSearch ? ` “${debouncedSearch}”` : ' this feed'}.`
+              : 'No movies found'
+          }
+          gridProps={{
+            badgeFor,
+            onCardEnter: handleCardMouseEnter,
+            onCardLeave: handleCardMouseLeave,
+            my: { base: '3rem', md: '5rem' },
+            mx: { base: '1.5rem', md: '3rem', xl: 'auto' },
+            maxW: { xl: '80rem' },
+            minH: '100vh'
+          }}
+        />
       </Box>
     </>
   );

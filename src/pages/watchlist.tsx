@@ -78,7 +78,7 @@ export default function Watchlist() {
             and hit the bookmark to save it here.
           </Text>
         ) : (
-          <MovieGrid movies={watchlist} compact />
+          <MovieGrid movies={watchlist} />
         )}
 
         {rated.length > 0 && (
@@ -90,7 +90,7 @@ export default function Watchlist() {
             <SimpleGrid
               my={{ base: '2rem', md: '3rem' }}
               gap={{ base: 8, md: 10 }}
-              columns={{ base: 3, md: 5, xl: 6 }}
+              gridTemplateColumns={{ base: 'repeat(auto-fill, minmax(45%, 1fr))', md: 'repeat(auto-fill, minmax(12rem, 1fr))' }}
             >
               {rated.map(({ entry, movie }) => (
                 <MovieCard

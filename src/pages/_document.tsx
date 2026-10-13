@@ -13,7 +13,8 @@ export default function Document() {
         `}} />
         <meta name='theme-color' content='#14181c' />
         <meta name='mobile-web-app-capable' content='yes' />
-        <link rel='manifest' href='/manifest.json' />
+        {/* crossorigin=use-credentials so the Vercel-SSO cookie travels on preview deploys (manifest fetches are credential-less CORS otherwise, and the sso-api redirect trips CSP) */}
+        <link rel='manifest' href='/manifest.json' crossOrigin='use-credentials' />
         <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' />
         <link rel='preconnect' href='https://image.tmdb.org' />
         <link rel='dns-prefetch' href='https://api.themoviedb.org' />

@@ -24,5 +24,6 @@ Disallow: /
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /search
 
 Sitemap: https://www.galaxymovies.app/sitemap.xml
