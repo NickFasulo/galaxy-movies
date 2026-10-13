@@ -215,8 +215,11 @@ export const tvGenres: Record<string, GenreDef> = {
   family: { id: 10751, title: 'Family Shows' },
   kids: { id: 10762, title: 'Kids Shows' },
   mystery: { id: 9648, title: 'Mystery Shows' },
+  news: { id: 10763, title: 'News Shows' },
   reality: { id: 10764, title: 'Reality Shows' },
   'sci-fi-fantasy': { id: 10765, title: 'Sci-Fi & Fantasy Shows' },
+  soap: { id: 10766, title: 'Soap Operas' },
+  talk: { id: 10767, title: 'Talk Shows' },
   'war-politics': { id: 10768, title: 'War & Politics Shows' },
   western: { id: 37, title: 'Western Shows' }
 }
