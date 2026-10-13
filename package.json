@@ -4,6 +4,7 @@
   "private": false,
   "scripts": {
     "dev": "npx kill-port 3000 && next dev",
+    "dev:webpack": "npx kill-port 3000 && next dev --webpack",
     "build": "next build",
     "prestart": "npx kill-port 3000",
     "start": "next start",

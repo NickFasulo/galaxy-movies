@@ -8,11 +8,11 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 - `npm test` — Vitest unit tests, colocated as `src/**/*.test.ts`
 - `npm run lint` — ESLint flat config (`eslint.config.mjs`, `next/core-web-vitals` + `next/typescript`)
 - `npm run check` — typecheck + production build
-- `npm run dev` — dev server on :3000
+- `npm run dev` — dev server on :3000 (Turbopack). If a page hydration-crashes with "module factory is not available", use `npm run dev:webpack` — Next 16.4.0 has a Pages Router Turbopack dev bug (vercel/next.js#99789); drop the workaround once the backported fix ships.
 
 ## Deploys
 
-Vercel auto-deploys **previews only** — `vercel.json` sets `git.deploymentEnabled.main: false`, so merging to `main` never ships to production on its own. To release, open the PR's preview deployment in the Vercel dashboard and click **Promote to production** (or `vercel promote <preview-url>`). Crons keep running on the current production deployment. Commits that only touch docs/CI config skip preview builds via `ignoreCommand` in vercel.json. Branch protection on `main` requires a PR with a green `check` job (`ci.yml`: typecheck, lint, test, build).
+Vercel auto-deploys **previews only** — `vercel.json` sets `git.deploymentEnabled.main: false`, so merging to `main` never ships to production on its own. To release, open the PR's preview deployment in the Vercel dashboard and click **Promote to production** (or `vercel promote <preview-url>`). Crons keep running on the current production deployment. Commits that only touch docs/CI config skip preview builds via `ignoreCommand` in vercel.json. `main` is unprotected — direct pushes are fine for solo work; `ci.yml` still runs `check` (typecheck, lint, test, build) on pushes and PRs. Merged PR branches auto-delete.
 - `npm run lhci` — build + Lighthouse CI (`lighthouserc.cjs`)
 
 ## Conventions
