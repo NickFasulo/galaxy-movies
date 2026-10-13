@@ -30,7 +30,9 @@ export default function MovieGrid({ movies, posterFallback, badgeFor, onCardEnte
     <SimpleGrid
       my={{ base: '2rem', md: '3rem' }}
       gap={{ base: 8, md: 10 }}
-      minChildWidth={{ base: '45%', md: '12rem' }}
+      // auto-fill (not auto-fit): empty tracks keep their size so a lone
+      // result stays card-width instead of stretching to the full row.
+      gridTemplateColumns={{ base: 'repeat(auto-fill, minmax(45%, 1fr))', md: 'repeat(auto-fill, minmax(12rem, 1fr))' }}
       {...gridProps}
     >
       {movies.map((movie, index) => (
