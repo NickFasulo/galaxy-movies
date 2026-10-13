@@ -12,7 +12,8 @@ export default function Document() {
           html,body{font-family:'Inter','Inter Fallback',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
         `}} />
         <meta name='theme-color' content='#14181c' />
-        <link rel='manifest' href='/manifest.json' />
+        {/* crossorigin=use-credentials so the Vercel-SSO cookie travels on preview deploys (manifest fetches are credential-less CORS otherwise, and the sso-api redirect trips CSP) */}
+        <link rel='manifest' href='/manifest.json' crossOrigin='use-credentials' />
         <link rel='preconnect' href='https://image.tmdb.org' />
         <link rel='dns-prefetch' href='https://api.themoviedb.org' />
         <link rel='preload' href='/fonts/inter-var-latin.woff2' as='font' type='font/woff2' crossOrigin='anonymous' />

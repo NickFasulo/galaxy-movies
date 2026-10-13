@@ -35,7 +35,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
   company: {
     apiSegment: 'company',
     discoverPath: 'movie',
-    discoverQuery: (id) => `with_companies=${id}&sort_by=popularity.desc&page=1`,
+    discoverQuery: (id) => `with_companies=${id}&sort_by=popularity.desc`,
     normalize: (results) => results as TitleSummary[],
     basePath: '/company',
     crumbRoot: null,
@@ -50,7 +50,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
   network: {
     apiSegment: 'network',
     discoverPath: 'tv',
-    discoverQuery: (id) => `with_networks=${id}&sort_by=vote_count.desc&vote_count.gte=100&page=1`,
+    discoverQuery: (id) => `with_networks=${id}&sort_by=vote_count.desc&vote_count.gte=100`,
     normalize: (results) => (results as TmdbTvShow[]).filter((s) => s.poster_path).map(normalizeTvTitle),
     basePath: '/network',
     crumbRoot: { name: 'TV Shows', path: '/tv' },
