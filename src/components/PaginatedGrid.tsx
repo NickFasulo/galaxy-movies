@@ -2,7 +2,7 @@ import { useMemo, type ComponentProps } from 'react'
 import Link from 'next/link'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Box, Flex, Text } from '@chakra-ui/react'
+import { Box, Flex, Text, VisuallyHidden } from '@chakra-ui/react'
 import MovieGrid from './MovieGrid'
 import CustomSpinner from './CustomSpinner'
 import type { TitleSummary } from '../types/tmdb'
@@ -117,11 +117,13 @@ export function InfiniteTitleGrid({
   return (
     <Box>
       {pagination && pagination.totalPages > 1 && (
-        <Flex justify='center' align='center' gap={4} mb={4} fontSize='sm' color='gray.500'>
+        // sr-only, not display:none — stays in the rendered DOM as the
+        // crawl path into deep pages, and gives AT users a nav landmark.
+        <VisuallyHidden as='nav' aria-label='Pagination'>
           {pagination.page > 1 && <Link href={pagination.hrefFor(pagination.page - 1)}>← Previous</Link>}
           <Text>Page {pagination.page} of {pagination.totalPages}</Text>
           {pagination.page < pagination.totalPages && <Link href={pagination.hrefFor(pagination.page + 1)}>Next →</Link>}
-        </Flex>
+        </VisuallyHidden>
       )}
       {visibleTitles.length === 0 && emptyMessage ? (
         <Text textAlign='center' color='gray.500' py={16}>{emptyMessage}</Text>
