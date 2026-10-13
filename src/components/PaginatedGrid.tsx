@@ -5,6 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Box, Flex, Text, VisuallyHidden } from '@chakra-ui/react'
 import MovieGrid from './MovieGrid'
 import CustomSpinner from './CustomSpinner'
+import ScrollTopButton from './ScrollTopButton'
 import type { TitleSummary } from '../types/tmdb'
 
 export interface FeedPage {
@@ -115,6 +116,8 @@ export function InfiniteTitleGrid({
   }
 
   return (
+    <>
+    <ScrollTopButton />
     <Box>
       {pagination && pagination.totalPages > 1 && (
         // sr-only, not display:none — stays in the rendered DOM as the
@@ -145,6 +148,7 @@ export function InfiniteTitleGrid({
         <Text textAlign='center' color='gray.500' p='1rem' mb='2rem'>You&rsquo;ve reached the end.</Text>
       )}
     </Box>
+    </>
   )
 }
 

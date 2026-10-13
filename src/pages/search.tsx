@@ -6,7 +6,6 @@ import PaginatedGrid from '../components/PaginatedGrid'
 import PageHead from '../components/PageHead'
 import SearchInput from '../components/SearchInput'
 import StickySearchBar from '../components/StickySearchBar'
-import ScrollTopButton from '../components/ScrollTopButton'
 import { fetchTmdb, normalizeTvTitle } from '../utils/tmdb'
 import { setSwrCache } from '../utils/ssr'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../types/tmdb'
@@ -112,7 +111,6 @@ export default function SearchPage({ initialQ, initialTitles, initialTotalPages 
           )}
         </Box>
       </Box>
-      <ScrollTopButton />
     </>
   )
 }

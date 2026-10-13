@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { Badge, Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
-import ScrollTopButton from '../components/ScrollTopButton'
 import { InfiniteTitleGrid, usePaginatedFeed, type FeedPage } from '../components/PaginatedGrid'
 import Wordmark from '../components/Wordmark'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
@@ -411,8 +410,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             minH: '100vh'
           }}
         />
-
-        <ScrollTopButton />
       </Box>
     </>
   );
