@@ -1,6 +1,5 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
-import { Heading, SimpleGrid, Text } from '@chakra-ui/react'
-import LinkTile from './LinkTile'
+import { Text } from '@chakra-ui/react'
 import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
@@ -70,7 +69,7 @@ export function genreServerSideProps(media: MediaType) {
 }
 
 export default function GenrePage({ media, genre, title, titles, totalPages, dataError }: GenrePageProps) {
-  const { basePath, crumbRoot, noun, plural, genres } = CONFIG[media]
+  const { basePath, crumbRoot, noun, plural } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${genre}`
   const description = `Discover ${title.toLowerCase()}, including popular picks and ${plural} worth watching.`
 
@@ -99,18 +98,6 @@ export default function GenrePage({ media, genre, title, titles, totalPages, dat
             fetchUrl={(page) => `/api/discover?type=${media}&genre=${genre}&page=${page}`}
           />
         )}
-        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
-          More {media === 'tv' ? 'show' : 'movie'} genres
-        </Heading>
-        <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
-          {Object.entries(genres)
-            .filter(([key]) => key !== genre)
-            .map(([key, g]) => (
-              <LinkTile key={key} href={`${basePath}/${key}`}>
-                <Text fontWeight='medium' textAlign='center'>{g.title}</Text>
-              </LinkTile>
-            ))}
-        </SimpleGrid>
       </PageShell>
     </>
   );
