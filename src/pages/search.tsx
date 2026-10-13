@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Box, Input, Text } from '@chakra-ui/react'
 import PaginatedGrid from '../components/PaginatedGrid'
 import PageHead from '../components/PageHead'
+import StickySearchBar from '../components/StickySearchBar'
+import ScrollTopButton from '../components/ScrollTopButton'
 import { fetchTmdb, normalizeTvTitle } from '../utils/tmdb'
 import { setSwrCache } from '../utils/ssr'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../types/tmdb'
@@ -79,26 +81,30 @@ export default function SearchPage({ initialQ, initialTitles, initialTotalPages 
         noindex
         hreflang={false}
       />
-      <Box maxW='50rem' w='100%' mx='auto' px={4} pt={8} pb='4rem'>
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder='Search movies & shows…'
-          aria-label='Search movies and shows'
-          enterKeyHint='search'
-          autoFocus
-          bg='surface.raised'
-          color='white'
-          borderColor='border.subtle'
-          _placeholder={{ color: 'gray.400' }}
-          size='lg'
-        />
-        {!active ? (
-          <Text textAlign='center' color='gray.500' mt='5rem'>
-            Search for a movie or TV show.
-          </Text>
-        ) : (
-          <Box mt={8}>
+      {/* Same top clearance as PageShell — the dark-page header is absolute. */}
+      <Box flex='1' pt={{ base: '5rem', md: '6rem' }} pb='4rem'>
+        <StickySearchBar>
+          <Box maxW='40rem' mx='auto' px={4} py={3}>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder='Search movies & shows…'
+              aria-label='Search movies and shows'
+              enterKeyHint='search'
+              autoFocus
+              bg='surface.raised'
+              color='white'
+              borderColor='border.subtle'
+              _placeholder={{ color: 'gray.400' }}
+            />
+          </Box>
+        </StickySearchBar>
+        <Box maxW='70rem' mx='auto' px={6}>
+          {!active ? (
+            <Text textAlign='center' color='gray.500' mt='5rem'>
+              Search for a movie or TV show.
+            </Text>
+          ) : (
             <PaginatedGrid
               key={active}
               initialTitles={active === initialQ ? initialTitles : undefined}
@@ -107,9 +113,10 @@ export default function SearchPage({ initialQ, initialTitles, initialTotalPages 
               fetchUrl={(page) => `/api/allMovies?search=${encodeURIComponent(active)}&media=trending&page=${page}`}
               emptyMessage={`No results for “${active}”.`}
             />
-          </Box>
-        )}
+          )}
+        </Box>
       </Box>
+      <ScrollTopButton />
     </>
   )
 }

@@ -3,10 +3,11 @@ import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { Badge, Box, Button, Flex, Heading, IconButton, SimpleGrid, Text, Icon } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import SearchBar from '../components/SearchBar'
+import MovieGrid from '../components/MovieGrid'
+import ScrollTopButton from '../components/ScrollTopButton'
 import Wordmark from '../components/Wordmark'
-import MovieCard from '../components/MovieCard'
 import CustomSpinner from '../components/CustomSpinner'
 import HoverBackground, { useHoverBackground } from '../components/HoverBackground'
 import HomeHero from '../components/HomeHero'
@@ -25,7 +26,6 @@ import { ratingEntries, setServices } from '../utils/userData'
 import { setSwrCache } from '../utils/ssr'
 import { SITE_URL } from '../utils/site'
 import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
-import { LuArrowUp } from 'react-icons/lu';
 
 interface Props {
   initialMovies: TmdbMovie[]
@@ -132,7 +132,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [showScrollTop, setShowScrollTop] = useState(false)
   const lastFetchTimeRef = useRef(0)
   const isRestoredRef = useRef(false)
   const { hoveredBg, isBgVisible, handleCardMouseEnter, handleCardMouseLeave } = useHoverBackground()
@@ -311,16 +310,6 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }, [moviesList.length])
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const shouldShow = window.scrollY > 160
-      setShowScrollTop((current) => (current === shouldShow ? current : shouldShow))
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
   const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
 
@@ -473,28 +462,16 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
                 </Text>
               }
             >
-              <SimpleGrid
+              <MovieGrid
+                movies={visibleMovies}
+                badgeFor={badgeFor}
+                onCardEnter={handleCardMouseEnter}
+                onCardLeave={handleCardMouseLeave}
                 my={{ base: '3rem', md: '5rem' }}
                 mx={{ base: '1.5rem', md: '3rem', xl: 'auto' }}
                 maxW={{ xl: '80rem' }}
-                gap={{ base: 8, md: 10 }}
-                minChildWidth={{ base: '45%', md: '12rem' }}
                 minH='100vh'
-              >
-                {visibleMovies.map((movie, index) => (
-                  <Box
-                    key={`${movie.mediaType || 'movie'}:${movie.id}`}
-                    onMouseEnter={() => handleCardMouseEnter(movie.backdrop_path)}
-                    onMouseLeave={handleCardMouseLeave}
-                  >
-                    <MovieCard
-                      movie={movie}
-                      priority={index < 5}
-                      badge={badgeFor(movie)}
-                    />
-                  </Box>
-                ))}
-              </SimpleGrid>
+              />
             </InfiniteScroll>
             )}
 
@@ -529,22 +506,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
           </>
         )}
 
-        {showScrollTop && (
-          <IconButton
-            aria-label='Scroll to top'
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            position='fixed'
-            size='lg'
-            right='1.5rem'
-            bottom='9rem'
-            zIndex={10}
-            borderRadius='full'
-            boxShadow='lg'
-            bg='surface.raised'
-            color='white'
-            border='1px solid var(--chakra-colors-border-subtle)'
-            _hover={{ bg: 'surface.overlay' }}><Icon boxSize={6} asChild><LuArrowUp /></Icon></IconButton>
-        )}
+        <ScrollTopButton bottom='9rem' />
       </Box>
     </>
   );
