@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": false,
   "scripts": {
-    "dev": "npx kill-port 3000 && next dev",
-    "dev:webpack": "npx kill-port 3000 && next dev --webpack",
+    "dev": "npx kill-port 3000 && next dev --webpack",
+    "dev:turbo": "npx kill-port 3000 && next dev",
     "build": "next build",
     "prestart": "npx kill-port 3000",
     "start": "next start",

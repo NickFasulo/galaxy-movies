@@ -8,7 +8,7 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 - `npm test` — Vitest unit tests, colocated as `src/**/*.test.ts`
 - `npm run lint` — ESLint flat config (`eslint.config.mjs`, `next/core-web-vitals` + `next/typescript`)
 - `npm run check` — typecheck + production build
-- `npm run dev` — dev server on :3000 (Turbopack). If a page hydration-crashes with "module factory is not available", use `npm run dev:webpack` — Next 16.4.0 has a Pages Router Turbopack dev bug (vercel/next.js#99789); drop the workaround once the backported fix ships.
+- `npm run dev` — dev server on :3000 (webpack). `npm run dev:turbo` runs Turbopack, but Next 16.4.0 has a Pages Router Turbopack dev bug (vercel/next.js#99789) that hydration-crashes pages with "module factory is not available" — keep `dev` on webpack until the backported fix ships, then swap the flags back.
 
 ## Deploys
 
