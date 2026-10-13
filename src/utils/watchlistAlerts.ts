@@ -1,5 +1,6 @@
 import { getRedis } from './redis'
-import { getProviderChanges, PROVIDER_NAME_MATCH, IN_TRACKED_PROVIDERS, type ProviderChanges } from './streamingChanges'
+import { getProviderChanges, IN_TRACKED_PROVIDERS, type ProviderChanges } from './streamingChanges'
+import { PROVIDER_NAME_MATCH } from './tmdb'
 import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY } from './waitlistStore'
 import { sendTelegramAlert } from './telegram'
 import { sendPushAlert, parseStoredSubs } from './webpush'

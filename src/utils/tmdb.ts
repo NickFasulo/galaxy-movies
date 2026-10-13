@@ -300,6 +300,28 @@ export function getProviderIds(providerKey: string, region = 'US'): number[] {
   return Array.isArray(ids) ? ids : [ids]
 }
 
+// Our provider keys → Watchmode source names. Lives here (rather than
+// utils/streamingChanges, which imports @vercel/kv) so page components can
+// reference the tracked set without pulling Redis into the client bundle.
+export const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
+  'netflix': /^netflix/i,
+  'amazon-prime-video': /^(amazon prime|prime video)/i,
+  'hulu': /^hulu/i,
+  'disney-plus': /disney/i,
+  'apple-tv': /apple ?tv\+?/i,
+  'max': /^(max|hbo max)$/i,
+  'peacock': /^peacock/i,
+  'paramount-plus': /^paramount\+|paramount plus/i,
+  'tubi': /^tubi/i,
+  'pluto-tv': /^pluto/i,
+  'roku-channel': /roku channel/i,
+  'starz': /^starz/i,
+  'amc-plus': /^amc\+|amc plus/i,
+  'mgm-plus': /^mgm/i,
+  'crunchyroll': /^crunchyroll/i,
+  'discovery-plus': /^discovery/i
+}
+
 export function getProviderId(providerKey: string, region = 'US'): number | null {
   return getProviderIds(providerKey, region)[0] ?? null
 }
