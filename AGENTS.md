@@ -12,7 +12,7 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 
 ## Deploys
 
-Vercel auto-deploys **previews only** — `vercel.json` sets `git.deploymentEnabled.main: false`, so merging to `main` never ships to production on its own. To release, open the PR's preview deployment in the Vercel dashboard and click **Promote to production** (or `vercel promote <preview-url>`). Crons keep running on the current production deployment. Commits that only touch docs/CI config skip preview builds via `ignoreCommand` in vercel.json. `main` is unprotected — **commit and push directly to `main` by default**; only use a branch for large implementations that warrant a plan/review. `ci.yml` still runs `check` (typecheck, lint, test, build) on pushes and PRs. Merged PR branches auto-delete.
+Vercel deploys **previews only, never from `main`** — `vercel.json` sets `git.deploymentEnabled.main: false`. With direct-to-main pushes there's no PR preview, so release = `vercel deploy` (builds a preview of the working tree), check it, then `vercel promote <preview-url>` (or Promote in the dashboard). `vercel deploy --prod` does both in one step. Crons keep running on the current production deployment. Commits that only touch docs/CI config skip preview builds via `ignoreCommand` in vercel.json. `main` is unprotected — **commit and push directly to `main` by default**; only use a branch for large implementations that warrant a plan/review. `ci.yml` still runs `check` (typecheck, lint, test, build) on pushes and PRs. Merged PR branches auto-delete.
 - `npm run lhci` — build + Lighthouse CI (`lighthouserc.cjs`)
 
 ## Conventions
