@@ -118,7 +118,8 @@ export function InfiniteTitleGrid({
   return (
     <>
     <ScrollTopButton />
-    <Box>
+    {/* pb clears the fixed FooterPill so it can't cover the last row/end text */}
+    <Box pb='3rem'>
       {pagination && pagination.totalPages > 1 && (
         // sr-only, not display:none — stays in the rendered DOM as the
         // crawl path into deep pages, and gives AT users a nav landmark.

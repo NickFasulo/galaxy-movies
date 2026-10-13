@@ -178,6 +178,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           readOnly
           value={calendarUrl}
           size='xs'
+          fontSize={{ base: '16px', md: 'xs' }}
           bg='blackAlpha.400'
           borderColor='border.subtle'
           color='gray.300'
@@ -197,6 +198,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           onChange={(e) => setWebhook(e.target.value)}
           placeholder='https://discord.com/api/webhooks/…'
           size='xs'
+          fontSize={{ base: '16px', md: 'xs' }}
           bg='blackAlpha.400'
           borderColor='border.subtle'
           color='white'
@@ -230,6 +232,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
             readOnly
             value={shareUrl}
             size='xs'
+            fontSize={{ base: '16px', md: 'xs' }}
             bg='blackAlpha.400'
             borderColor='border.subtle'
             color='gray.300'

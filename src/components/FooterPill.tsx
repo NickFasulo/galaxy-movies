@@ -8,7 +8,7 @@ export default function FooterPill() {
     <Box
       as='footer'
       position='fixed'
-      bottom='0.5rem'
+      bottom='calc(0.5rem + env(safe-area-inset-bottom))'
       left='0'
       right='0'
       mx='auto'

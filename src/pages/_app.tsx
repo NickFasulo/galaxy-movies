@@ -24,7 +24,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   // Pages whose main feed is infinite-scroll — an in-flow footer is
   // unreachable below an endless feed, so they get the floating pill instead.
   const hasInfiniteScroll = /^\/($|search$|browse\/.|genre\/.|tv\/(browse|genre|streaming)\/.|streaming\/.|company\/.|network\/.)/.test(router.pathname)
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|genre\/|browse\/|watchlist$|plus$|email-status$|search$|$)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|leaving|genre|browse|watchlist$|plus$|email-status$|search$|$)/.test(router.pathname)
   // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 

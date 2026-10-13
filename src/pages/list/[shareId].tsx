@@ -88,7 +88,7 @@ export default function SharedList({ watchlist, ratings }: Props) {
                 <SimpleGrid
                   my={{ base: '2rem', md: '3rem' }}
                   gap={{ base: 8, md: 10 }}
-                  minChildWidth={{ base: '45%', md: '12rem' }}
+                  gridTemplateColumns={{ base: 'repeat(auto-fill, minmax(45%, 1fr))', md: 'repeat(auto-fill, minmax(12rem, 1fr))' }}
                 >
                   {ratings.map(({ rating, movie }) => (
                     <MovieCard
