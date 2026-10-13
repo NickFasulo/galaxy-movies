@@ -6,7 +6,7 @@ import PaginatedGrid from './PaginatedGrid'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
 import { fetchDiscoverMovies, fetchDiscoverTv, movieCategories, tvCategories, type DiscoverOptions } from '../utils/tmdb'
-import { setSwrCache } from '../utils/ssr'
+import { setSwrCache, getPageParam } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
@@ -48,21 +48,27 @@ export interface CategoryPageProps {
   description: string
   titles: TitleSummary[]
   totalPages: number
+  page: number
   dataError?: boolean
 }
 
 export function categoryServerSideProps(media: MediaType) {
-  const { categories, discover } = CONFIG[media]
+  const { categories, discover, basePath } = CONFIG[media]
 
-  return async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ category: string }>): Promise<GetServerSidePropsResult<CategoryPageProps>> {
+  return async function getServerSideProps({ params, query, res }: GetServerSidePropsContext<{ category: string }>): Promise<GetServerSidePropsResult<CategoryPageProps>> {
     const slug = params?.category ?? ''
     const category = categories[slug]
     if (!category) return { notFound: true }
 
-    const base = { media, category: slug, title: category.title, description: category.description }
+    const { page, requested } = getPageParam(query)
+    if (requested && page === 1) {
+      return { redirect: { destination: `${basePath}/${slug}`, permanent: true } }
+    }
+    const base = { media, category: slug, title: category.title, description: category.description, page }
 
     try {
-      const data = await discover({ category: slug })
+      const data = await discover({ category: slug, page })
+      if (page > 1 && !data.results?.length) return { notFound: true }
       setSwrCache(res)
       return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1 } }
     } catch (error) {
@@ -96,14 +102,14 @@ const FOOTER_LINKS: Record<MediaType, ReactNode> = {
   )
 }
 
-export default function CategoryPage({ media, category, title, description, titles, totalPages, dataError }: CategoryPageProps) {
+export default function CategoryPage({ media, category, title, description, titles, totalPages, page, dataError }: CategoryPageProps) {
   const { basePath, crumbRoot, noun } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${category}`
+  const canonicalUrl = `${SITE_URL}${basePath}/${category}${page > 1 ? `?page=${page}` : ''}`
 
   return (
     <>
       <PageHead
-        title={title}
+        title={page > 1 ? `${title} — Page ${page}` : title}
         description={description}
         canonicalUrl={canonicalUrl}
         posterPath={titles[0]?.poster_path}
@@ -124,8 +130,10 @@ export default function CategoryPage({ media, category, title, description, titl
           <PaginatedGrid
             initialTitles={titles}
             initialTotalPages={totalPages}
-            queryKey={['category', media, category]}
-            fetchUrl={(page) => `/api/discover?type=${media}&category=${category}&page=${page}`}
+            initialPage={page}
+            queryKey={['category', media, category, page]}
+            fetchUrl={(p) => `/api/discover?type=${media}&category=${category}&page=${p}`}
+            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${category}?page=${p}` }}
           />
         )}
       </PageShell>

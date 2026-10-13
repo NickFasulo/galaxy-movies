@@ -18,7 +18,7 @@ import {
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
 import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
 import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, type ProviderGenreTarget } from '../utils/contentOpportunities'
-import { setSwrCache } from '../utils/ssr'
+import { setSwrCache, getPageParam } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
@@ -68,22 +68,27 @@ export type ProviderPageProps = StreamingProvider & {
   changes: ProviderChanges | null
   dataError?: boolean
   region: string
+  page: number
   availableInRegion: boolean
 }
 
 export function providerServerSideProps(media: MediaType) {
-  const { discover } = CONFIG[media]
+  const { discover, basePath } = CONFIG[media]
 
-  return async function getServerSideProps({ params, req, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<ProviderPageProps>> {
+  return async function getServerSideProps({ params, query, req, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<ProviderPageProps>> {
     const slug = params?.provider ?? ''
     const provider = streamingProviders[slug]
     if (!provider) return { notFound: true }
 
+    const { page, requested } = getPageParam(query)
+    if (requested && page === 1) {
+      return { redirect: { destination: `${basePath}/${slug}`, permanent: true } }
+    }
     const region = detectRegion(req)
     const availableInRegion = isProviderAvailableInRegion(slug, region)
     const providerIds = getProviderIds(slug, region)
     const providerId = providerIds.length ? providerIds.join('|') : null
-    const base = { media, provider: slug, ...provider, region, availableInRegion }
+    const base = { media, provider: slug, ...provider, region, availableInRegion, page }
 
     try {
       // Diffs only exist for US (Watchmode) and IN (TMDB snapshots) catalogs;
@@ -92,11 +97,12 @@ export function providerServerSideProps(media: MediaType) {
       // renders cost zero Redis commands.
       const changeKey = region === 'IN' ? `IN:${slug}` : slug
       const [data, changesMap] = await Promise.all([
-        discover({ providerId, region }),
+        discover({ providerId, region, page }),
         media === 'movie' && (region === 'US' || region === 'IN')
           ? getProviderChanges([changeKey]).catch((): Record<string, ProviderChanges> => ({}))
           : Promise.resolve<Record<string, ProviderChanges>>({})
       ])
+      if (page > 1 && !data.results?.length) return { notFound: true }
       setSwrCache(res)
       return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[changeKey] || null } }
     } catch (error) {
@@ -107,11 +113,12 @@ export function providerServerSideProps(media: MediaType) {
   }
 }
 
-export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, availableInRegion, regions }: ProviderPageProps) {
+export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, page, availableInRegion, regions }: ProviderPageProps) {
   const { basePath, otherBasePath, crumbRoot, noun, plural, itemWord, genreSlugs, genreTarget } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${provider}`
+  const canonicalUrl = `${SITE_URL}${basePath}/${provider}${page > 1 ? `?page=${page}` : ''}`
   const providerLabel = title.replace(' Movies', '')
   const pageTitle = media === 'tv' ? `Best Shows on ${providerLabel}` : `Best Movies on ${providerLabel}`
+  const metaTitle = page > 1 ? `${pageTitle} — Page ${page}` : pageTitle
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(regions)
   const description = availableInRegion
@@ -132,7 +139,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
   return (
     <>
       <PageHead
-        title={pageTitle}
+        title={metaTitle}
         description={description}
         canonicalUrl={canonicalUrl}
         posterPath={titles[0]?.poster_path}
@@ -235,8 +242,10 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
           <PaginatedGrid
             initialTitles={titles}
             initialTotalPages={totalPages}
-            queryKey={['provider', media, provider, region]}
-            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${page}`}
+            initialPage={page}
+            queryKey={['provider', media, provider, region, page]}
+            fetchUrl={(p) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${p}`}
+            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${provider}?page=${p}` }}
           />
         )}
       </PageShell>

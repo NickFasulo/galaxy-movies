@@ -8,7 +8,7 @@ import PageHead from './PageHead'
 import DetailErrorView from './DetailErrorView'
 import { normalizeTvTitle } from '../utils/tmdb'
 import { getContentIndexability } from '../utils/contentOpportunities'
-import { setSwrCache } from '../utils/ssr'
+import { setSwrCache, getPageParam } from '../utils/ssr'
 import { tmdbImage, SITE_URL } from '../utils/site'
 import { LuExternalLink } from 'react-icons/lu'
 import type { TmdbCompany, TmdbMovie, TmdbPaged, TmdbTvShow, TitleSummary } from '../types/tmdb'
@@ -66,21 +66,26 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
 
 export type OrgPageProps =
   | { kind: OrgKind; error: string }
-  | { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number }
+  | { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number; page: number }
 
 export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPageProps> {
-  const { apiSegment, discoverPath, discoverQuery, normalize, noun } = CONFIG[kind]
+  const { apiSegment, discoverPath, discoverQuery, normalize, noun, basePath } = CONFIG[kind]
 
   return async (context) => {
     const id = String(context.query[`${kind}Id`] || '')
     if (!/^\d{1,10}$/.test(id)) return { notFound: true }
+
+    const { page, requested } = getPageParam(context.query)
+    if (requested && page === 1) {
+      return { redirect: { destination: `${basePath}/${id}`, permanent: true } }
+    }
 
     const errorProps = (error: string) => ({ props: { kind, error } })
 
     try {
       const [orgRes, titlesRes] = await Promise.all([
         fetch(`https://api.themoviedb.org/3/${apiSegment}/${id}?api_key=${process.env.TMDB_API_KEY}`),
-        fetch(`https://api.themoviedb.org/3/discover/${discoverPath}?api_key=${process.env.TMDB_API_KEY}&${discoverQuery(id)}`)
+        fetch(`https://api.themoviedb.org/3/discover/${discoverPath}?api_key=${process.env.TMDB_API_KEY}&${discoverQuery(id)}&page=${page}`)
       ])
 
       if (!orgRes.ok) {
@@ -92,6 +97,7 @@ export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPagePro
 
       const org: TmdbCompany = await orgRes.json()
       const titlesData: Partial<TmdbPaged<TmdbMovie | TmdbTvShow>> = titlesRes.ok ? await titlesRes.json() : { results: [] }
+      if (page > 1 && !titlesData.results?.length) return { notFound: true }
 
       if (context.res) setSwrCache(context.res)
 
@@ -100,7 +106,8 @@ export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPagePro
           kind,
           org,
           titles: normalize(titlesData.results || []),
-          totalPages: titlesData.total_pages || 1
+          totalPages: titlesData.total_pages || 1,
+          page
         }
       }
     } catch (error) {
@@ -114,14 +121,14 @@ export default function OrgPage(props: OrgPageProps) {
   if ('error' in props) {
     return <DetailErrorView title={`${CONFIG[props.kind].noun} unavailable`} message={props.error} />
   }
-  return <OrgContent kind={props.kind} org={props.org} titles={props.titles} totalPages={props.totalPages} />
+  return <OrgContent kind={props.kind} org={props.org} titles={props.titles} totalPages={props.totalPages} page={props.page} />
 }
 
-function OrgContent({ kind, org, titles, totalPages }: { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number }) {
+function OrgContent({ kind, org, titles, totalPages, page }: { kind: OrgKind; org: TmdbCompany; titles: TitleSummary[]; totalPages: number; page: number }) {
   const { basePath, crumbRoot, accent, titleSuffix, ogLabel, releasesHeading, emptyText, fallbackDescription } = CONFIG[kind]
   const logoUrl = tmdbImage(org.logo_path)
   const [hasLogoError, setHasLogoError] = useState(false)
-  const canonicalUrl = `${SITE_URL}${basePath}/${org.id}`
+  const canonicalUrl = `${SITE_URL}${basePath}/${org.id}${page > 1 ? `?page=${page}` : ''}`
   const description = org.description || fallbackDescription(org.name)
   const ogSubtitle = org.headquarters ? `${org.headquarters} · ${ogLabel}` : `${ogLabel} · Galaxy Movies`
   const pageTitle = `${org.name}${titleSuffix}`
@@ -144,7 +151,7 @@ function OrgContent({ kind, org, titles, totalPages }: { kind: OrgKind; org: Tmd
   return (
     <>
       <PageHead
-        title={pageTitle}
+        title={page > 1 ? `${pageTitle} — Page ${page}` : pageTitle}
         description={description}
         canonicalUrl={canonicalUrl}
         ogSubtitle={ogSubtitle}
@@ -253,8 +260,10 @@ function OrgContent({ kind, org, titles, totalPages }: { kind: OrgKind; org: Tmd
             <PaginatedGrid
               initialTitles={titles}
               initialTotalPages={totalPages}
-              queryKey={['org', kind, org.id]}
-              fetchUrl={(page) => `/api/discover?${kind === 'company' ? 'company' : 'network'}=${org.id}&page=${page}`}
+              initialPage={page}
+              queryKey={['org', kind, org.id, page]}
+              fetchUrl={(p) => `/api/discover?${kind === 'company' ? 'company' : 'network'}=${org.id}&page=${p}`}
+              pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${org.id}?page=${p}` }}
               posterFallback={kind === 'company' ? '/poster_fallback_galaxy.webp' : undefined}
             />
           )}

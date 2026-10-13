@@ -17,7 +17,7 @@ import {
 } from '../utils/tmdb'
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
 import { getContentIndexability, getProviderGenreTarget, getTvProviderGenreTarget, type ProviderGenreTarget } from '../utils/contentOpportunities'
-import { setSwrCache } from '../utils/ssr'
+import { setSwrCache, getPageParam } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
@@ -69,19 +69,24 @@ export interface ProviderGenrePageProps {
   dataError?: boolean
   region: string
   availableInRegion: boolean
+  page: number
   isIndexable: boolean
   indexabilityReason: string | null
 }
 
 export function providerGenreServerSideProps(media: MediaType) {
-  const { discover, genres, genreTarget } = CONFIG[media]
+  const { discover, genres, genreTarget, basePath } = CONFIG[media]
 
-  return async function getServerSideProps({ params, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<ProviderGenrePageProps>> {
+  return async function getServerSideProps({ params, query, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<ProviderGenrePageProps>> {
     const providerSlug = params?.provider ?? ''
     const genreSlug = params?.genre ?? ''
     const target = genreTarget(providerSlug, genreSlug)
     if (!target) return { notFound: true }
 
+    const { page, requested } = getPageParam(query)
+    if (requested && page === 1) {
+      return { redirect: { destination: `${basePath}/${providerSlug}/${genreSlug}`, permanent: true } }
+    }
     const region = detectRegion(req)
     const providerIds = getProviderIds(providerSlug, region)
     const providerId = providerIds.length ? providerIds.join('|') : null
@@ -94,12 +99,14 @@ export function providerGenreServerSideProps(media: MediaType) {
       genre: genreSlug,
       target,
       region,
-      availableInRegion
+      availableInRegion,
+      page
     }
 
     try {
-      const data = await discover({ providerId, genreId, region })
+      const data = await discover({ providerId, genreId, region, page })
       const titles = data.results || []
+      if (page > 1 && !titles.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: titles })
 
       setSwrCache(res)
@@ -141,11 +148,12 @@ export default function ProviderGenrePage({
   dataError,
   region,
   availableInRegion,
+  page,
   isIndexable,
   indexabilityReason
 }: ProviderGenrePageProps) {
   const { basePath, genreBasePath, crumbRoot, noun, plural, itemWord } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${provider}/${genre}`
+  const canonicalUrl = `${SITE_URL}${basePath}/${provider}/${genre}${page > 1 ? `?page=${page}` : ''}`
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(streamingProviders[provider]?.regions)
   const description = availableInRegion
@@ -155,7 +163,7 @@ export default function ProviderGenrePage({
   return (
     <>
       <PageHead
-        title={target.title}
+        title={page > 1 ? `${target.title} — Page ${page}` : target.title}
         description={description}
         canonicalUrl={canonicalUrl}
         noindex={!isIndexable}
@@ -193,8 +201,10 @@ export default function ProviderGenrePage({
           <PaginatedGrid
             initialTitles={titles}
             initialTotalPages={totalPages}
-            queryKey={['providerGenre', media, provider, genre, region]}
-            fetchUrl={(page) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${page}`}
+            initialPage={page}
+            queryKey={['providerGenre', media, provider, genre, region, page]}
+            fetchUrl={(p) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${p}`}
+            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${provider}/${genre}?page=${p}` }}
           />
         )}
       </PageShell>

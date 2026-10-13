@@ -1,4 +1,5 @@
 import { useMemo, type ComponentProps } from 'react'
+import Link from 'next/link'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Box, Flex, Text } from '@chakra-ui/react'
@@ -9,6 +10,7 @@ import type { TitleSummary } from '../types/tmdb'
 export interface FeedPage {
   results?: TitleSummary[]
   total_pages?: number
+  page?: number
 }
 
 interface FeedOptions {
@@ -17,32 +19,37 @@ interface FeedOptions {
   queryFn?: (page: number) => Promise<FeedPage>
   initialTitles?: TitleSummary[]
   initialTotalPages?: number
+  initialPage?: number
 }
 
 // Shared infinite-feed query: dedupes across pages on mediaType:id. Pages
 // that need the titles outside the grid (badges, client filters, scroll
-// restore) use this hook directly with InfiniteTitleGrid.
-export function usePaginatedFeed({ queryKey, fetchUrl, queryFn, initialTitles, initialTotalPages = 1 }: FeedOptions) {
+// restore) use this hook directly with InfiniteTitleGrid. `initialPage`
+// lets SSR seed a deep page (?page=N) — the feed continues from N+1.
+export function usePaginatedFeed({ queryKey, fetchUrl, queryFn, initialTitles, initialTotalPages = 1, initialPage = 1 }: FeedOptions) {
   const query = useInfiniteQuery<FeedPage>({
     queryKey: ['pagedGrid', ...queryKey],
     queryFn: async ({ pageParam }) => {
-      if (queryFn) return queryFn(Number(pageParam))
-      const resp = await fetch(fetchUrl!(Number(pageParam)))
-      if (!resp.ok) throw new Error('Failed to load titles')
-      return resp.json() as Promise<FeedPage>
+      const page = Number(pageParam)
+      const data = queryFn ? await queryFn(page) : await (async () => {
+        const resp = await fetch(fetchUrl!(page))
+        if (!resp.ok) throw new Error('Failed to load titles')
+        return resp.json() as Promise<FeedPage>
+      })()
+      return { ...data, page }
     },
-    initialPageParam: 1,
+    initialPageParam: initialTitles ? initialPage + 1 : 1,
     initialData: initialTitles
-      ? { pages: [{ results: initialTitles, total_pages: initialTotalPages }], pageParams: [1] }
+      ? { pages: [{ results: initialTitles, total_pages: initialTotalPages, page: initialPage }], pageParams: [initialPage] }
       : undefined,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 60,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    getNextPageParam: (lastPage, pages) => {
+    getNextPageParam: (lastPage) => {
       if (!lastPage?.results?.length) return undefined
-      const totalPages = lastPage?.total_pages || 1
-      return pages.length < totalPages ? pages.length + 1 : undefined
+      const page = lastPage.page ?? 0
+      return page < (lastPage.total_pages || 1) ? page + 1 : undefined
     }
   })
 
@@ -78,6 +85,7 @@ interface InfiniteTitleGridProps {
   emptyMessage?: string
   posterFallback?: string
   gridProps?: GridProps
+  pagination?: { page: number; totalPages: number; hrefFor: (page: number) => string }
 }
 
 // Shared infinite-scroll shell: unlimited auto-load (homepage behavior — the
@@ -94,7 +102,8 @@ export function InfiniteTitleGrid({
   filterTitles,
   emptyMessage,
   posterFallback,
-  gridProps
+  gridProps,
+  pagination
 }: InfiniteTitleGridProps) {
   const visibleTitles = useMemo(
     () => (filterTitles ? filterTitles(titles) : titles),
@@ -107,6 +116,13 @@ export function InfiniteTitleGrid({
 
   return (
     <Box>
+      {pagination && pagination.totalPages > 1 && (
+        <Flex justify='center' align='center' gap={4} mb={4} fontSize='sm' color='gray.500'>
+          {pagination.page > 1 && <Link href={pagination.hrefFor(pagination.page - 1)}>← Previous</Link>}
+          <Text>Page {pagination.page} of {pagination.totalPages}</Text>
+          {pagination.page < pagination.totalPages && <Link href={pagination.hrefFor(pagination.page + 1)}>Next →</Link>}
+        </Flex>
+      )}
       {visibleTitles.length === 0 && emptyMessage ? (
         <Text textAlign='center' color='gray.500' py={16}>{emptyMessage}</Text>
       ) : (
