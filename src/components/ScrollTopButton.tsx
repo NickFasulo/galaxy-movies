@@ -3,9 +3,8 @@ import { Icon, IconButton } from '@chakra-ui/react'
 import { LuArrowUp } from 'react-icons/lu'
 
 // Fixed bottom-right scroll-to-top affordance for long scroll pages.
-// `bottom` clears page-level fixed UI (the homepage's floating footer pill
-// needs 9rem; other pages use the default).
-export default function ScrollTopButton({ bottom = '4rem' }: { bottom?: string }) {
+// Default 9rem clears the ChatWidget launcher (fixed bottom:4rem, ~3rem tall).
+export default function ScrollTopButton({ bottom = '9rem' }: { bottom?: string }) {
   const [show, setShow] = useState(false)
 
   useEffect(() => {

@@ -412,7 +412,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
           }}
         />
 
-        <ScrollTopButton bottom='9rem' />
+        <ScrollTopButton />
       </Box>
     </>
   );
