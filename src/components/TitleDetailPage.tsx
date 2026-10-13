@@ -527,9 +527,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <DetailActions videoKey={videoKey} item={listItem} />
 
-            <SimilarMovies movies={similarTitles} listRef={similarListRef} />
-
             <CastSection cast={topCast} />
+
+            <SimilarMovies movies={similarTitles} listRef={similarListRef} />
       </DetailPageShell>
     </>
   );
