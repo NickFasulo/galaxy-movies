@@ -82,6 +82,7 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
         <SearchInput
           value={term}
           onChange={(e) => setTerm(e.target.value)}
+          placeholder='Search...'
           size='sm'
           w='9rem'
         />
