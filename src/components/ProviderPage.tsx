@@ -187,7 +187,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
                       href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
                       data-umami-event='coming-soon-click'
                       style={{ textDecoration: 'none' }}>
-                      <Badge cursor='pointer' px={2.5} py={1} borderRadius='md' bg='whiteAlpha.200' color='white' fontSize='xs' _hover={{ bg: 'whiteAlpha.300' }}>
+                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.200' color='white' fontSize='xs' _hover={{ bg: 'whiteAlpha.300' }}>
                         {item.title}{item.date ? ` · ${item.date}` : ''}
                       </Badge>
                     </Link>
@@ -207,7 +207,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
                       href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
                       data-umami-event='leaving-click'
                       style={{ textDecoration: 'none' }}>
-                      <Badge cursor='pointer' px={2.5} py={1} borderRadius='md' bg='whiteAlpha.100' color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>
+                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.100' color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>
                         {item.title}
                       </Badge>
                     </Link>

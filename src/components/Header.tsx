@@ -50,12 +50,14 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
         type='submit'
         aria-label='Submit search'
         variant='ghost'
+        size='lg'
         color='whiteAlpha.800'
         data-umami-event='header-search'
         _hover={{ bg: 'whiteAlpha.200' }}><LuSearch /></IconButton>
       <IconButton
         aria-label='Close search'
         variant='ghost'
+        size='lg'
         color='whiteAlpha.800'
         onClick={onClose}
         _hover={{ bg: 'whiteAlpha.200' }}><LuX /></IconButton>
@@ -98,7 +100,7 @@ function HeaderSearch({ onMobileSearchOpen }: { onMobileSearchOpen: () => void }
       <IconButton
         aria-label='Search'
         variant='ghost'
-        size='sm'
+        size='lg'
         display={{ base: 'inline-flex', md: 'none' }}
         color='whiteAlpha.800'
         onClick={onMobileSearchOpen}

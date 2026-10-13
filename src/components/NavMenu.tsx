@@ -17,6 +17,7 @@ export default function NavMenu() {
       <Menu.Trigger asChild><IconButton
           aria-label='Open menu'
           variant='ghost'
+          size={{ base: 'lg', md: 'md' }}
           color='white'
           _hover={{ bg: 'whiteAlpha.200' }}
           _active={{ bg: 'whiteAlpha.200' }}><LuMenu /></IconButton></Menu.Trigger>

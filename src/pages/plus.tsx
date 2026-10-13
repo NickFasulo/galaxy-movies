@@ -206,6 +206,7 @@ function RecoverAccess() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder='you@example.com'
             size='sm'
+            fontSize={{ base: '16px', md: 'sm' }}
             bg='blackAlpha.400'
             borderColor='border.subtle'
             color='white'
