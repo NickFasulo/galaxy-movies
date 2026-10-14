@@ -13,7 +13,7 @@ for (const line of fs.readFileSync(path.join(__dirname, '..', '.env.local'), 'ut
   const m = line.match(/^([A-Z0-9_]+)=["']?(.*?)["']?$/)
   if (!m) continue
   const [, key, value] = m
-  if (!value || key.startsWith('NEXT_PUBLIC_')) continue
+  if (!value || key.startsWith('NEXT_PUBLIC_') || key === 'CLOUDFLARE_API_TOKEN') continue
   out[key] = value
 }
 
