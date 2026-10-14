@@ -1,5 +1,5 @@
 import { fetchTmdb } from './tmdb'
-import type { Genre, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../types/tmdb'
+import type { Genre, MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../types/tmdb'
 
 type MultiSearchResult = TitleSummary & {
   media_type: string
@@ -182,4 +182,40 @@ export async function resolveMovieMentions(mentions: MovieMention[]): Promise<Re
   )
 
   return resolved.filter((mention): mention is ResolvedMention => Boolean(mention))
+}
+
+export interface ResolvedTitle {
+  id: number
+  mediaType: MediaType
+  title: string
+  year?: string
+  poster_path: string | null
+}
+
+// Bulk-import resolver: strict title match (like an unquoted mention) with a
+// year preference — imports carry exact names, so fuzzy hits would import the
+// wrong title.
+export async function resolveTitleItem(title: string, year?: string): Promise<ResolvedTitle | null> {
+  try {
+    const results = await searchMultiByQuery(title, 1)
+    const want = normalizeTitle(title)
+    const sameTitle = results.filter((item) =>
+      [item.title, item.name, item.original_title, item.original_name].some(
+        (t) => t !== undefined && normalizeTitle(t) === want
+      )
+    )
+    const best = sameTitle.find((item) => year !== undefined && titleYear(item).startsWith(year)) || sameTitle[0]
+    if (!best) return null
+    const resolvedYear = titleYear(best).slice(0, 4) || undefined
+    return {
+      id: best.id,
+      mediaType: best.media_type as MediaType,
+      title: best.title || best.name || title,
+      year: resolvedYear || year,
+      poster_path: best.poster_path ?? null
+    }
+  } catch (error) {
+    console.error(`Error resolving import title "${title}":`, error)
+    return null
+  }
 }

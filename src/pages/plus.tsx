@@ -12,8 +12,10 @@ import { firstParam } from '../utils/query'
 const FEATURES = [
   'Alerts for new arrivals on your services, matched to what you rate highly',
   'Leaving-soon warnings when something on your list is about to disappear',
-  'Galaxy Bot goes from 10 to 100 messages an hour',
-  'One-click sync to Trakt — list and ratings pushed straight to your profile, shows included',
+  'Next-episode alerts when a show on your list is about to air',
+  'Galaxy Bot goes from 10 to 100 messages an hour — and remembers your taste on any device',
+  'Two-way Trakt sync — push your list out, or pull your existing Trakt history in',
+  'Import a Letterboxd export in seconds — watchlist and ratings carry over',
   'Export as JSON or Letterboxd-ready CSVs anytime',
   'A calendar feed of upcoming releases for your watchlist — plug it into Google or Apple Calendar',
   'Alerts delivered to your Telegram DMs or your own Discord channel instead of email, if you want',

@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { getRedis, TRAKT_KEY } from './waitlistStore'
 import type { MediaType } from '../types/tmdb'
 
 const TRAKT_API = 'https://api.trakt.tv'
@@ -72,6 +73,25 @@ export function refreshTokens(refreshToken: string, redirectUri: string): Promis
   return tokenRequest({ refresh_token: refreshToken, redirect_uri: redirectUri, grant_type: 'refresh_token' })
 }
 
+// Shared by sync and import: a denied refresh means the grant is dead — the
+// stored link is dropped so the client shows "connect" again.
+export async function traktAccessToken(
+  email: string,
+  redirectUri: string
+): Promise<{ token: string } | { error: 'not_connected' | 'unavailable' }> {
+  const kv = getRedis()
+  if (!kv) return { error: 'unavailable' }
+  const link = await kv.hget<{ refreshToken?: string }>(TRAKT_KEY, email)
+  if (!link?.refreshToken) return { error: 'not_connected' }
+  const tokens = await refreshTokens(link.refreshToken, redirectUri)
+  if (!tokens?.access_token || !tokens.refresh_token) {
+    await kv.hdel(TRAKT_KEY, email)
+    return { error: 'not_connected' }
+  }
+  await kv.hset(TRAKT_KEY, { [email]: { refreshToken: tokens.refresh_token } })
+  return { token: tokens.access_token }
+}
+
 interface SyncItem {
   id: number
   mediaType?: MediaType
@@ -114,4 +134,58 @@ export async function syncToTrakt(
     if (!await postSync(accessToken, 'sync/ratings', body)) return false
   }
   return true
+}
+
+interface TraktSyncEntry {
+  rating?: number
+  movie?: { title?: string; year?: number | null; ids?: { tmdb?: number | null } }
+  show?: { title?: string; year?: number | null; ids?: { tmdb?: number | null } }
+}
+
+export interface TraktPullItem {
+  id: number
+  mediaType: MediaType
+  title: string
+  year: string | null
+}
+
+export interface TraktPull {
+  watchlist: TraktPullItem[]
+  ratings: (TraktPullItem & { rating: number })[]
+}
+
+async function getSync(accessToken: string, path: string): Promise<TraktSyncEntry[] | null> {
+  const resp = await fetch(`${TRAKT_API}/${path}`, {
+    headers: {
+      'trakt-api-version': '2',
+      'trakt-api-key': process.env.TRAKT_CLIENT_ID!,
+      Authorization: `Bearer ${accessToken}`
+    }
+  }).catch(() => null)
+  if (!resp?.ok) return null
+  return resp.json().catch(() => null)
+}
+
+const pullItem = (entry: TraktSyncEntry, mediaType: MediaType): TraktPullItem | null => {
+  const t = mediaType === 'tv' ? entry.show : entry.movie
+  if (typeof t?.ids?.tmdb !== 'number' || !t.title) return null
+  return { id: t.ids.tmdb, mediaType, title: t.title, year: t.year != null ? String(t.year) : null }
+}
+
+export async function pullFromTrakt(accessToken: string): Promise<TraktPull | null> {
+  const [wlMovies, wlShows, rMovies, rShows] = await Promise.all([
+    getSync(accessToken, 'sync/watchlist/movies'),
+    getSync(accessToken, 'sync/watchlist/shows'),
+    getSync(accessToken, 'sync/ratings/movies'),
+    getSync(accessToken, 'sync/ratings/shows')
+  ])
+  if (!wlMovies || !wlShows || !rMovies || !rShows) return null
+
+  const watchlist = [...wlMovies.map((e) => pullItem(e, 'movie')), ...wlShows.map((e) => pullItem(e, 'tv'))].filter(
+    (i): i is TraktPullItem => Boolean(i)
+  )
+  const ratings = [...rMovies.map((e) => ({ item: pullItem(e, 'movie'), e })), ...rShows.map((e) => ({ item: pullItem(e, 'tv'), e }))]
+    .filter((r): r is { item: TraktPullItem; e: TraktSyncEntry } => Boolean(r.item) && typeof r.e.rating === 'number')
+    .map((r) => ({ ...r.item, rating: Math.min(10, Math.max(1, Math.round(r.e.rating!))) }))
+  return { watchlist, ratings }
 }

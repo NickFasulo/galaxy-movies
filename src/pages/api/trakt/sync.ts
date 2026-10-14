@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireMethod, rejectBot } from '../../../utils/api'
 import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
 import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing'
-import { getRedis, TRAKT_KEY, ALERTS_PREFS_KEY } from '../../../utils/waitlistStore'
-import { refreshTokens, syncToTrakt, traktConfigured } from '../../../utils/trakt'
+import { getRedis, ALERTS_PREFS_KEY } from '../../../utils/waitlistStore'
+import { syncToTrakt, traktAccessToken, traktConfigured } from '../../../utils/trakt'
 import { traktRedirectUri } from './connect'
 import type { SyncedPrefs } from '../../../utils/userData'
 
@@ -38,25 +38,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const link = await kv.hget<{ refreshToken?: string }>(TRAKT_KEY, email)
-    if (!link?.refreshToken) {
-      return res.status(409).json({ error: 'Trakt is not connected.', code: 'not_connected' })
+    const auth = await traktAccessToken(email, traktRedirectUri)
+    if ('error' in auth) {
+      return auth.error === 'not_connected'
+        ? res.status(409).json({ error: 'Trakt is not connected. Please reconnect.', code: 'not_connected' })
+        : res.status(503).json({ error: 'Trakt sync is temporarily unavailable.' })
     }
-
-    const tokens = await refreshTokens(link.refreshToken, traktRedirectUri)
-    if (!tokens?.access_token || !tokens.refresh_token) {
-      // Trakt denied the refresh — the link is dead, make the user re-connect.
-      await kv.hdel(TRAKT_KEY, email)
-      return res.status(409).json({ error: 'Trakt connection expired. Please reconnect.', code: 'not_connected' })
-    }
-    await kv.hset(TRAKT_KEY, { [email]: { refreshToken: tokens.refresh_token } })
 
     const prefs = await kv.hget<SyncedPrefs>(ALERTS_PREFS_KEY, email)
     if (!prefs?.watchlist?.length && !prefs?.ratings?.length) {
       return res.status(200).json({ ok: true, synced: { watchlist: 0, ratings: 0 } })
     }
 
-    const ok = await syncToTrakt(tokens.access_token, { watchlist: prefs.watchlist, ratings: prefs.ratings })
+    const ok = await syncToTrakt(auth.token, { watchlist: prefs.watchlist, ratings: prefs.ratings })
     if (!ok) {
       return res.status(502).json({ error: 'Trakt rejected the sync. Please try again.' })
     }

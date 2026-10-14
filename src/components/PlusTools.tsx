@@ -1,9 +1,19 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Badge, Box, Button, Flex, Input, Text } from '@chakra-ui/react'
-import { fetchSyncedPrefs, type AlertsCredentials } from '../utils/alertsSync'
+import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../utils/alertsSync'
 import { letterboxdCsvs } from '../utils/exportCsv'
+import { parseLetterboxdCsv, type LetterboxdItem } from '../utils/importLetterboxd'
+import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../utils/userData'
 import type { PlusFeatures } from '../hooks/usePlus'
 import { SITE_URL } from '../utils/site'
+
+interface ResolvedTitle {
+  id: number
+  mediaType: 'movie' | 'tv'
+  title: string
+  year?: string
+  poster_path: string | null
+}
 
 const linkStyle = { textDecoration: 'underline', cursor: 'pointer' } as const
 
@@ -24,6 +34,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
 }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
   const [webhook, setWebhook] = useState(features?.discordWebhook ?? '')
   const [shareUrl, setShareUrl] = useState(
     features?.shareId ? `${SITE_URL}/list/${features.shareId}` : ''
@@ -73,6 +84,73 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       setNote(data?.error || 'Trakt sync failed.')
     }
   })
+
+  // Server merges Trakt items into stored prefs; re-fetch + local merge so
+  // this device picks them up (local entries still win conflicts).
+  const importTrakt = () => run(async () => {
+    const { ok, data } = await post('/api/trakt/import')
+    if (ok) {
+      const prefs = await fetchSyncedPrefs(creds)
+      if (prefs) mergeSyncedPrefs(prefs)
+      setNote(`Imported ${data.imported?.watchlist ?? 0} watchlist + ${data.imported?.ratings ?? 0} ratings from Trakt.`)
+    } else if (data?.code === 'not_connected') {
+      refresh()
+    } else {
+      setNote(data?.error || 'Trakt import failed.')
+    }
+  })
+
+  const importCsvs = (files: FileList | null) => {
+    if (!files?.length) return
+    void run(async () => {
+      const watchlistItems: LetterboxdItem[] = []
+      const ratingItems: LetterboxdItem[] = []
+      for (const file of Array.from(files)) {
+        const items = parseLetterboxdCsv(await file.text())
+        if (file.name.toLowerCase().includes('rating')) ratingItems.push(...items)
+        else watchlistItems.push(...items)
+      }
+      if (!watchlistItems.length && !ratingItems.length) {
+        setNote('No Letterboxd rows found — use watchlist.csv or ratings.csv exports.')
+        return
+      }
+
+      const resolve = async (items: LetterboxdItem[]) => {
+        const resolved: (ResolvedTitle | null)[] = []
+        for (let i = 0; i < items.length; i += 50) {
+          const batch = items.slice(i, i + 50)
+          const { data } = await post('/api/resolve-titles', {
+            items: batch.map(({ title, year }) => ({ title, year }))
+          })
+          const results = Array.isArray(data?.results) ? data.results : []
+          batch.forEach((_, j) => resolved.push(results[j]?.resolved ?? null))
+        }
+        return resolved
+      }
+
+      const [wl, rt] = await Promise.all([resolve(watchlistItems), resolve(ratingItems)])
+      const prefs: SyncedPrefs = {
+        watchlist: wl
+          .map((r, i) => (r ? { id: r.id, mediaType: r.mediaType, title: r.title, poster_path: r.poster_path, year: r.year ?? watchlistItems[i]!.year ?? null } : null))
+          .filter((r): r is NonNullable<typeof r> => Boolean(r)),
+        ratings: rt
+          .map((r, i) =>
+            r && ratingItems[i]!.rating
+              ? { id: r.id, mediaType: r.mediaType, title: r.title, rating: ratingItems[i]!.rating, poster_path: r.poster_path, year: r.year ?? ratingItems[i]!.year ?? null }
+              : null
+          )
+          .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      }
+      const skipped = watchlistItems.length + ratingItems.length - prefs.watchlist!.length - prefs.ratings!.length
+      mergeSyncedPrefs(prefs)
+      scheduleAlertsSync(getUserData())
+      setNote(
+        `Imported ${prefs.watchlist!.length} watchlist + ${prefs.ratings!.length} ratings` +
+          (skipped ? ` — ${skipped} titles couldn't be matched` : '') +
+          '.'
+      )
+    })
+  }
 
   const disconnectTrakt = () => run(async () => {
     if ((await post('/api/trakt/disconnect')).ok) refresh()
@@ -151,11 +229,32 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         <button type='button' disabled={busy} onClick={() => exportLetterboxd('ratings')} style={linkStyle}>Letterboxd ratings CSV</button>
       </Text>
 
+      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Import</Text>
+      <Text color='gray.400' fontSize='sm'>
+        <input
+          ref={fileRef}
+          type='file'
+          accept='.csv,text/csv'
+          multiple
+          hidden
+          onChange={(e) => {
+            importCsvs(e.target.files)
+            e.target.value = ''
+          }}
+        />
+        <button type='button' disabled={busy} onClick={() => fileRef.current?.click()} style={linkStyle}>
+          Letterboxd CSV
+        </button>
+        {' '}— select your watchlist.csv and/or ratings.csv exports; matched titles merge into your list.
+      </Text>
+
       <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Trakt</Text>
       {features?.traktConnected ? (
         <Text color='gray.400' fontSize='sm'>
           Connected.{' '}
           <button type='button' disabled={busy} onClick={syncTrakt} style={linkStyle}>Sync now</button>
+          {' · '}
+          <button type='button' disabled={busy} onClick={importTrakt} style={linkStyle}>Import from Trakt</button>
           {' · '}
           <button type='button' disabled={busy} onClick={disconnectTrakt} style={linkStyle}>Disconnect</button>
         </Text>
