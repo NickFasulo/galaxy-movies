@@ -125,7 +125,7 @@ describe('resolveMovieMentions', () => {
     fetchTmdb.mockResolvedValue(multiPage([tmdbHit()]))
     const resolved = await resolveMovieMentions([mention()])
     expect(fetchTmdb).toHaveBeenCalledWith('/search/multi', expect.objectContaining({ query: 'Heat' }))
-    expect(resolved).toEqual([{ match: '"Heat (1995)"', movieId: 949, mediaType: 'movie' }])
+    expect(resolved).toEqual([{ match: '"Heat (1995)"', movieId: 949, mediaType: 'movie', title: 'Heat', year: '1995' }])
   })
 
   it('prefers the result whose release year matches the mention', async () => {
@@ -142,7 +142,7 @@ describe('resolveMovieMentions', () => {
   it('falls back to the first result for quoted mentions without an exact title match', async () => {
     fetchTmdb.mockResolvedValue(multiPage([tmdbHit({ id: 7, title: 'Heathers', release_date: '1988-01-01' })]))
     const resolved = await resolveMovieMentions([mention()])
-    expect(resolved).toEqual([{ match: '"Heat (1995)"', movieId: 7, mediaType: 'movie' }])
+    expect(resolved).toEqual([{ match: '"Heat (1995)"', movieId: 7, mediaType: 'movie', title: 'Heat', year: '1995' }])
   })
 
   it('refuses to link an unquoted mention with no exact title match', async () => {
@@ -158,7 +158,7 @@ describe('resolveMovieMentions', () => {
     const resolved = await resolveMovieMentions([
       mention({ match: '「千と千尋の神隠し (2001)」', title: '千と千尋の神隠し', year: '2001' })
     ])
-    expect(resolved).toEqual([{ match: '「千と千尋の神隠し (2001)」', movieId: 949, mediaType: 'movie' }])
+    expect(resolved).toEqual([{ match: '「千と千尋の神隠し (2001)」', movieId: 949, mediaType: 'movie', title: '千と千尋の神隠し', year: '2001' }])
   })
 
   it('matches titles via original_title/name too', async () => {

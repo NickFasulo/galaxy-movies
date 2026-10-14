@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent } from 'react'
 import NextLink from 'next/link'
 import {
   Box,
@@ -18,6 +18,12 @@ import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../utils/userData'
 import { getAlertsCredentials } from '../utils/alertsSync'
 import type { ResolvedMention } from '../utils/movieSearch'
+import { getProviderIds } from '../utils/tmdb'
+import { useUserData } from '../hooks/useUserData'
+import { useProviderCatalog } from '../hooks/useProviderCatalog'
+import WatchlistButton from './WatchlistButton'
+import CardProviderIcons from './CardProviderIcons'
+import type { WatchProvider } from '../types/tmdb'
 import { LuMessageCircle, LuX } from 'react-icons/lu';
 
 const INTRO_STORAGE_KEY = 'gm.chat.seen.v1'
@@ -45,21 +51,90 @@ function renderMessageContent(content: string, links: ResolvedMention[] | undefi
     if (!link) return part
 
     return (
-      <Link
-        key={index}
-        color="blue.300"
-        fontWeight="semibold"
-        _hover={{ textDecoration: 'underline' }}
-        asChild><NextLink
-          href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}>
-          {part}
-        </NextLink></Link>
+      <Box as='span' key={index}>
+        <Link
+          color="blue.300"
+          fontWeight="semibold"
+          _hover={{ textDecoration: 'underline' }}
+          asChild><NextLink
+            href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}>
+            {part}
+          </NextLink></Link>
+        <WatchlistButton
+          movie={{ id: link.movieId, mediaType: link.mediaType === 'tv' ? 'tv' : 'movie', title: link.title, release_date: link.year }}
+          size='2xs'
+          ml={1}
+          variant='ghost'
+        />
+      </Box>
     );
   });
 }
 
+// Provider logos for titles linkified in an assistant reply — reuses the
+// watchProviders endpoint's LRU/budgets and the shared catalog for logos.
+function MessageProviders({ links }: { links: ResolvedMention[] }) {
+  const { services } = useUserData()
+  const catalog = useProviderCatalog(services.region)
+  const [providersByKey, setProvidersByKey] = useState<Record<string, number[]>>({})
+  const myProviderIds = useMemo(() => new Set(
+    services.providers.flatMap((key) => getProviderIds(key, services.region))
+  ), [services])
+  const linksKey = links.map((l) => `${l.mediaType}:${l.movieId}`).join(',')
+
+  useEffect(() => {
+    if (myProviderIds.size === 0 || links.length === 0) return
+    let cancelled = false
+    const byType: Record<string, number[]> = {}
+    for (const link of links) {
+      const type = link.mediaType === 'tv' ? 'tv' : 'movie'
+      byType[type] = byType[type] || []
+      byType[type].push(link.movieId)
+    }
+    Promise.all(Object.entries(byType).map(async ([type, ids]) => {
+      const resp = await fetch(`/api/watchProviders?region=${services.region}&ids=${ids.join(',')}&type=${type}`)
+      if (!resp.ok) return
+      const data = await resp.json()
+      if (cancelled) return
+      setProvidersByKey((prev) => {
+        const next = { ...prev }
+        for (const [id, providerIds] of Object.entries(data?.results || {})) {
+          next[`${type}:${id}`] = providerIds as number[]
+        }
+        return next
+      })
+    })).catch(() => {})
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- linksKey is the stable serialization of links
+  }, [linksKey, services.region, myProviderIds.size])
+
+  const rows = links
+    .map((link) => {
+      const ids = providersByKey[`${link.mediaType}:${link.movieId}`] || []
+      const providers = ids
+        .map((id) => catalog?.get(id))
+        .filter((p): p is WatchProvider => Boolean(p))
+      return providers.length ? { link, providers } : null
+    })
+    .filter((row): row is { link: ResolvedMention; providers: WatchProvider[] } => Boolean(row))
+
+  if (rows.length === 0) return null
+
+  return (
+    <HStack gap={2} mt={2} flexWrap='wrap'>
+      {rows.map(({ link, providers }) => (
+        <Flex key={`${link.mediaType}:${link.movieId}`} align='center' gap={1}>
+          <Text fontSize='2xs' color='gray.400' lineClamp={1} maxW='9rem'>{link.title}</Text>
+          <CardProviderIcons providers={providers} myProviderIds={myProviderIds} />
+        </Flex>
+      ))}
+    </HStack>
+  )
+}
+
 export default function ChatWidget() {
   const { open, onOpen, onClose } = useDisclosure()
+  const { services } = useUserData()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageLinks, setMessageLinks] = useState<Record<number, ResolvedMention[]>>({})
   const [inputValue, setInputValue] = useState('')
@@ -193,6 +268,8 @@ export default function ChatWidget() {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           tasteProfile: buildTasteProfile(),
+          serviceKeys: services.providers,
+          region: services.region,
           alerts: getAlertsCredentials()
         }),
         signal: abortController.signal
@@ -308,7 +385,7 @@ export default function ChatWidget() {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [inputValue, messages, isLoading, sessionId, onClose])
+  }, [inputValue, messages, isLoading, sessionId, onClose, services])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -443,6 +520,9 @@ export default function ChatWidget() {
                     <Text fontSize="sm" whiteSpace="pre-wrap">
                       {renderMessageContent(message.content, messageLinks[index])}
                     </Text>
+                    {message.role === 'assistant' && messageLinks[index]?.length ? (
+                      <MessageProviders links={messageLinks[index]} />
+                    ) : null}
                   </Box>
                 ))}
                 {isStreaming && (

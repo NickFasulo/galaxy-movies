@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { BILLING_KEY, SYNCKEY_KEY } from '../../utils/waitlistStore'
+import { BILLING_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -21,7 +21,11 @@ const mocks = vi.hoisted(() => ({
   getRecentReleases: vi.fn(async (): Promise<unknown> => ({ results: [], total_pages: 0, total_results: 0 })),
   getRecentShows: vi.fn(async (): Promise<unknown> => ({ results: [], total_pages: 0, total_results: 0 })),
   formatMovieForChat: vi.fn((m: { id: number; title: string }) => ({ id: m.id, title: m.title, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' })),
-  formatShowForChat: vi.fn((s: { id: number; name: string }) => ({ id: s.id, title: s.name, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
+  formatShowForChat: vi.fn((s: { id: number; name: string }) => ({ id: s.id, title: s.name, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' })),
+  wantsAvailability: vi.fn(() => false),
+  wantsServiceChanges: vi.fn(() => false),
+  fetchAvailabilityContext: vi.fn<() => Promise<unknown>>(async () => null),
+  fetchServiceChangesContext: vi.fn<() => Promise<unknown>>(async () => null)
 }))
 
 vi.mock('../../utils/redis', () => ({ getRedis: mocks.getRedis }))
@@ -33,6 +37,13 @@ vi.mock('../../utils/movieSearch', () => ({
   getRecentShows: mocks.getRecentShows,
   formatMovieForChat: mocks.formatMovieForChat,
   formatShowForChat: mocks.formatShowForChat
+}))
+
+vi.mock('../../utils/chatGrounding', () => ({
+  wantsAvailability: mocks.wantsAvailability,
+  wantsServiceChanges: mocks.wantsServiceChanges,
+  fetchAvailabilityContext: mocks.fetchAvailabilityContext,
+  fetchServiceChangesContext: mocks.fetchServiceChangesContext
 }))
 
 // Everything real except the global budget — per-IP limiting, isBot and
@@ -168,8 +179,15 @@ beforeEach(async () => {
   mocks.getRedis.mockReturnValue(null)
   mocks.getOpenAIClient.mockReturnValue(fakeClient)
   mocks.kvEval.mockResolvedValue(1)
+  // Cache-hit implementations from the cache describe would leak across
+  // tests — implementations survive mockClear, so reset the read every test.
+  mocks.kvGet.mockResolvedValue(null)
   mocks.extractTitleMentions.mockReturnValue([])
   mocks.resolveMovieMentions.mockResolvedValue([])
+  mocks.wantsAvailability.mockReturnValue(false)
+  mocks.wantsServiceChanges.mockReturnValue(false)
+  mocks.fetchAvailabilityContext.mockResolvedValue(null)
+  mocks.fetchServiceChangesContext.mockResolvedValue(null)
   mocks.getRecentReleases.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.getRecentShows.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.formatMovieForChat.mockImplementation((m: { id: number; title: string }) => ({ id: m.id, title: m.title, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
@@ -752,5 +770,149 @@ describe('stream edge cases', () => {
     const frames = sseFrames(res.body)
     expect(frames[0]).toMatchObject({ content: 'legacy cached text' })
     expect(frames.at(-1)?.raw).toBe('[DONE]')
+  })
+})
+
+describe('availability and service-changes grounding', () => {
+  it('injects verified availability in the request region', async () => {
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.fetchAvailabilityContext.mockResolvedValue({ title: 'Heat', mediaType: 'movie', region: 'GB', flatrate: ['Netflix'], rent: [], buy: ['Apple TV'] })
+    await handler(
+      makeReq({ messages: [userMsg('where can I watch Heat')], region: 'GB' }),
+      makeRes()
+    )
+    expect(mocks.fetchAvailabilityContext).toHaveBeenCalledWith('where can I watch Heat', 'GB')
+    expect(sentReferenceData().verified_availability).toMatchObject({ title: 'Heat', flatrate: ['Netflix'], buy: ['Apple TV'] })
+  })
+
+  it('defaults the grounding region to US', async () => {
+    mocks.wantsAvailability.mockReturnValue(true)
+    await handler(makeReq({ messages: [userMsg('where can I watch Heat')], region: 'garbage' }), makeRes())
+    expect(mocks.fetchAvailabilityContext).toHaveBeenCalledWith('where can I watch Heat', 'US')
+  })
+
+  it('grounds new-on-services questions from sanitized service keys', async () => {
+    mocks.wantsServiceChanges.mockReturnValue(true)
+    mocks.fetchServiceChangesContext.mockResolvedValue([{ provider: 'Netflix', added: ['Frankenstein'], coming: [], leaving: [] }])
+    await handler(
+      makeReq({ messages: [userMsg("what's new on netflix")], serviceKeys: ['netflix', 'bogus-key', 'hulu', 'netflix'], region: 'US' }),
+      makeRes()
+    )
+    expect(mocks.fetchServiceChangesContext).toHaveBeenCalledWith(['netflix', 'hulu'], 'US')
+    expect(sentReferenceData().new_on_services).toEqual([{ provider: 'Netflix', added: ['Frankenstein'], coming: [], leaving: [] }])
+  })
+
+  it('skips the diff lookup when availability already resolved a title', async () => {
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.wantsServiceChanges.mockReturnValue(true)
+    mocks.fetchAvailabilityContext.mockResolvedValue({ title: 'Heat', mediaType: 'movie', region: 'US', flatrate: ['Netflix'], rent: [], buy: [] })
+    await handler(
+      makeReq({ messages: [userMsg('is Heat on netflix')], serviceKeys: ['netflix'], region: 'US' }),
+      makeRes()
+    )
+    expect(mocks.fetchServiceChangesContext).not.toHaveBeenCalled()
+  })
+
+  it('skips the diff lookup with no service keys', async () => {
+    mocks.wantsServiceChanges.mockReturnValue(true)
+    await handler(makeReq({ messages: [userMsg("what's new this week")] }), makeRes())
+    expect(mocks.fetchServiceChangesContext).not.toHaveBeenCalled()
+    expect(sentReferenceData().new_on_services).toBeNull()
+  })
+
+  it('still responds when grounding throws', async () => {
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.fetchAvailabilityContext.mockRejectedValue(new Error('lookup exploded'))
+    const res = makeRes()
+    await handler(makeReq({ messages: [userMsg('where can I watch Heat')] }), res)
+    expect(res.body).toContain('data: [DONE]')
+    expect(sentReferenceData().verified_availability).toBeNull()
+  })
+
+  it('serves identical requests with different service keys separately', async () => {
+    const base = { messages: [userMsg('grounded question')] }
+    await handler(makeReq({ ...base, serviceKeys: ['netflix'], region: 'US' }), makeRes())
+    await handler(makeReq({ ...base, serviceKeys: ['hulu'], region: 'US' }), makeRes())
+    await handler(makeReq({ ...base, serviceKeys: ['netflix'], region: 'US' }), makeRes())
+    expect(mocks.create).toHaveBeenCalledTimes(2)
+  })
+})
+
+const PREFS_EMAIL = 'linked@example.com'
+const PREFS_KEY = '11111111-2222-3333-4444-555555555555'
+const syncedPrefs = {
+  watchlist: [{ id: 1, mediaType: 'movie', title: 'Dune: Part Two' }],
+  services: ['netflix'],
+  region: 'IN',
+  ratings: [
+    { id: 2, mediaType: 'movie', title: 'Heat', rating: 9 },
+    { id: 3, mediaType: 'movie', title: 'Cats', rating: 2 }
+  ],
+  updatedAt: 1
+}
+
+describe('linked-subscriber fallbacks', () => {
+  const kvWithPrefs = () => ({ eval: mocks.kvEval, hget: mocks.kvHget, get: mocks.kvGet, set: mocks.kvSet })
+
+  it('rebuilds the taste profile from synced prefs when the client sends none', async () => {
+    mocks.getRedis.mockReturnValue(kvWithPrefs())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PREFS_KEY : key === ALERTS_PREFS_KEY ? syncedPrefs : null)
+    await handler(
+      makeReq({ messages: [userMsg('hi')], alerts: { email: PREFS_EMAIL, key: PREFS_KEY } }),
+      makeRes()
+    )
+    const tp = sentReferenceData().user_taste_profile as { topRated: string[]; disliked: string[]; watchlist: string[]; services: string[] }
+    expect(tp.topRated).toEqual(['Heat (9/10)'])
+    expect(tp.disliked).toEqual(['Cats'])
+    expect(tp.watchlist).toEqual(['Dune: Part Two'])
+    expect(tp.services).toEqual(['Netflix'])
+  })
+
+  it('adopts synced service keys and region when the client sends none', async () => {
+    mocks.getRedis.mockReturnValue(kvWithPrefs())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PREFS_KEY : key === ALERTS_PREFS_KEY ? syncedPrefs : null)
+    mocks.wantsServiceChanges.mockReturnValue(true)
+    await handler(
+      makeReq({ messages: [userMsg("what's new?")], alerts: { email: PREFS_EMAIL, key: PREFS_KEY } }),
+      makeRes()
+    )
+    expect(mocks.fetchServiceChangesContext).toHaveBeenCalledWith(['netflix'], 'IN')
+  })
+
+  it('prefers the client-sent profile over synced prefs', async () => {
+    mocks.getRedis.mockReturnValue(kvWithPrefs())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PREFS_KEY : key === ALERTS_PREFS_KEY ? syncedPrefs : null)
+    await handler(
+      makeReq({
+        messages: [userMsg('hi')],
+        alerts: { email: PREFS_EMAIL, key: PREFS_KEY },
+        tasteProfile: { topRated: ['Local Pick (10/10)'] }
+      }),
+      makeRes()
+    )
+    const tp = sentReferenceData().user_taste_profile as { topRated: string[] }
+    expect(tp.topRated).toEqual(['Local Pick (10/10)'])
+  })
+
+  it('keeps the last 16 turns for a verified plus subscriber', async () => {
+    mocks.getRedis.mockReturnValue(kvWithPrefs())
+    mocks.kvHget.mockImplementation(async (key) =>
+      key === SYNCKEY_KEY ? PREFS_KEY : key === BILLING_KEY ? { status: 'active' } : null)
+    const messages = Array.from({ length: 20 }, (_, i) => ({
+      role: i % 2 ? 'assistant' : 'user',
+      content: `turn-${i}`
+    }))
+    messages[19] = userMsg('final')
+    await handler(
+      makeReq({ messages, alerts: { email: PREFS_EMAIL, key: PREFS_KEY } }),
+      makeRes()
+    )
+    const chatTurns = sentMessages().slice(2)
+    expect(chatTurns).toHaveLength(16)
+    expect(chatTurns[0].content).toBe('turn-4')
+    expect(chatTurns[15].content).toBe('final')
   })
 })

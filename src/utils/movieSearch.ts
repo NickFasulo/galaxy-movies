@@ -18,9 +18,11 @@ export interface ResolvedMention {
   match: string
   movieId: number
   mediaType: string
+  title: string
+  year?: string
 }
 
-async function searchMultiByQuery(query: string, page = 1): Promise<MultiSearchResult[]> {
+export async function searchMultiByQuery(query: string, page = 1): Promise<MultiSearchResult[]> {
   try {
     const data = await fetchTmdb<TmdbPaged<MultiSearchResult>>('/search/multi', {
       query,
@@ -170,7 +172,7 @@ export async function resolveMovieMentions(mentions: MovieMention[]): Promise<Re
             : null)
 
         return bestMatch
-          ? { match: mention.match, movieId: bestMatch.id, mediaType: bestMatch.media_type }
+          ? { match: mention.match, movieId: bestMatch.id, mediaType: bestMatch.media_type, title: mention.title, year: mention.year }
           : null
       } catch (error) {
         console.error(`Error resolving title mention "${mention.title}":`, error)
