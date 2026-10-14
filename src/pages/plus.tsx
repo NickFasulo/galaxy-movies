@@ -10,7 +10,7 @@ import { usePlusStatus } from '../hooks/usePlus'
 import { firstParam } from '../utils/query'
 
 const FEATURES = [
-  'Alerts for new arrivals on your services, matched to what you rate highly — every tracked service in your region, from Peacock and Paramount+ in the US to JioHotstar, ZEE5, SonyLIV, Hoichoi and more in India',
+  'Alerts for new arrivals on your services, matched to what you rate highly',
   'Leaving-soon warnings when something on your list is about to disappear',
   'Galaxy Bot goes from 10 to 100 messages an hour',
   'One-click sync to Trakt — list and ratings pushed straight to your profile, shows included',
