@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis } from '../../../utils/redis'
-import { getProviderChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
-import { ALERTS_PREFS_KEY, CONFIRMED_KEY } from '../../../utils/waitlistStore'
+import { getProviderChanges, getMonthlyChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
+import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY } from '../../../utils/waitlistStore'
 import { parsePrefs } from '../../../utils/watchlistAlerts'
+import { isPlusActive, parseBillingRecord } from '../../../utils/billing'
 import { isCronAuthorized } from '../../../utils/auth'
 import { SITE_URL } from '../../../utils/site'
 
@@ -56,7 +57,7 @@ function itemList(items: DigestItem[], showDate: boolean) {
     .join('')}</ul>`
 }
 
-function buildEmail(items: DigestItems, email: string, token: string) {
+function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = []) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
   const html = `
     <div style="font-family: sans-serif; max-width: 520px; color: #111;">
@@ -64,6 +65,7 @@ function buildEmail(items: DigestItems, email: string, token: string) {
       <p style="color: #666; margin-top: 0;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
       ${items.added.length ? `<h3 style="margin-bottom: 4px;">Just added</h3>${itemList(items.added, false)}` : ''}
       ${items.coming.length ? `<h3 style="margin-bottom: 4px;">Coming soon</h3>${itemList(items.coming, true)}` : ''}
+      ${leaving.length ? `<h3 style="margin-bottom: 4px;">Leaving this month</h3>${itemList(leaving, true)}` : ''}
       <p style="margin-top: 24px;"><a href="${SITE_URL}/new-on-streaming" style="color: #2b6cb0;">See everything new on streaming →</a></p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
       <p style="color: #999; font-size: 12px;">
@@ -100,9 +102,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, reason: 'no changes this week' })
     }
 
-    const [confirmed, prefsHash] = await Promise.all([
+    const [confirmed, prefsHash, billingHash] = await Promise.all([
       kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
-      kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY)
+      kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
+      kv.hgetall<Record<string, unknown>>(BILLING_KEY)
     ])
     const entries = Object.entries(confirmed || {})
     if (!entries.length) {
@@ -112,13 +115,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
     const results = await Promise.allSettled(
-      entries.map(([email, token]) => {
+      entries.map(async ([email, token]) => {
         const prefs = parsePrefs(prefsHash?.[email])
         // IN subscribers get the India digest when it has items; the US list is
         // the fallback so nobody loses the weekly email on a quiet week.
         const inHasItems = inItems.added.length + inItems.coming.length > 0
         const items = prefs?.region === 'IN' && inHasItems ? inItems : usItems
-        const { html, headers } = buildEmail(items, email, token)
+
+        // Plus subscribers also see what departs their services this month —
+        // changes:monthly:* is already accumulated by the streaming-changes cron.
+        const leaving: DigestItem[] = []
+        if (prefs && isPlusActive(parseBillingRecord(billingHash?.[email]))) {
+          const monthly = await getMonthlyChanges(prefs.services)
+          const seen = new Set<string>()
+          for (const [providerKey, m] of Object.entries(monthly)) {
+            for (const t of m.departed || []) {
+              const id = `${t.tmdbType}:${t.tmdbId}`
+              if (!t.tmdbId || seen.has(id)) continue
+              seen.add(id)
+              leaving.push({ ...t, provider: m.source, providerKey })
+            }
+          }
+          leaving.length = Math.min(leaving.length, MAX_ITEMS)
+        }
+
+        const { html, headers } = buildEmail(items, email, token, leaving)
         return fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {

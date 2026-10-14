@@ -289,7 +289,7 @@ async function sendAlertEmail(from: string, items: MatchedItem[], email: string,
   }
 }
 
-function topRatedTitles(prefs: AlertPrefs): { id: number; mediaType: MediaType; title: string }[] {
+export function topRatedTitles(prefs: AlertPrefs): { id: number; mediaType: MediaType; title: string }[] {
   return (prefs.ratings || [])
     .filter((r) => r.rating >= TASTE_MIN_RATING && typeof r.id === 'number')
     .sort((a, b) => b.rating - a.rating)
@@ -301,7 +301,7 @@ const recsCacheKey = (mediaType: MediaType, id: number) => `recs:v1:${mediaType}
 // Every plus subscriber's top-rated titles, deduped. Rec lists live in Redis
 // keyed by source title so they're shared across subscribers — one MGET warms
 // most of the index, and TMDB backfills are capped to bound run cost.
-async function loadRecsIndex(plusPrefs: AlertPrefs[]): Promise<Map<string, number[]>> {
+export async function loadRecsIndex(plusPrefs: AlertPrefs[], maxFetches = MAX_RECS_FETCHES_PER_RUN): Promise<Map<string, number[]>> {
   const kv = getRedis()
   const index = new Map<string, number[]>()
   if (!kv) return index
@@ -326,7 +326,7 @@ async function loadRecsIndex(plusPrefs: AlertPrefs[]): Promise<Map<string, numbe
       index.set(key, val)
       continue
     }
-    if (fetches >= MAX_RECS_FETCHES_PER_RUN) continue
+    if (fetches >= maxFetches) continue
     fetches++
     const { id, mediaType } = wanted.get(key)!
     try {

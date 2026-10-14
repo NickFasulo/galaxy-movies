@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import MovieCard from '../components/MovieCard'
 import ServicesPicker from '../components/ServicesPicker'
@@ -22,6 +22,36 @@ export default function Watchlist() {
   const { loading: plusLoading, creds, plus, features, refresh } = usePlusStatus()
   const { query } = useRouter()
   const traktStatus = firstParam(query.trakt)
+  const [picks, setPicks] = useState<TitleSummary[]>([])
+
+  // "Picked for you" reads the same rec index the taste alerts use; posters
+  // resolve through the existing batch endpoint.
+  useEffect(() => {
+    if (!plus || !creds) return
+    let cancelled = false
+    fetch(`/api/plus-recs?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`)
+      .then((resp) => (resp.ok ? resp.json() : null))
+      .then(async (body) => {
+        const items = (Array.isArray(body?.items) ? body.items : []).slice(0, 20)
+        if (!items.length || cancelled) return
+        const resp = await fetch('/api/poster-paths', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items })
+        })
+        const data = await resp.json().catch(() => null)
+        if (!cancelled && Array.isArray(data?.results)) {
+          setPicks(data.results.map((r: { id: number; title: string; mediaType: string; poster_path: string | null }) => ({
+            id: r.id,
+            title: r.title,
+            mediaType: r.mediaType,
+            poster_path: r.poster_path
+          })))
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [plus, creds])
 
   // Ratings written before poster_path existed render as gray cards — resolve
   // them against TMDB once and merge back; the change re-syncs server-side too.
@@ -105,6 +135,29 @@ export default function Watchlist() {
                 />
               ))}
             </SimpleGrid>
+          </Box>
+        )}
+
+        {picks.length > 0 && (
+          <Box as='section' mt={8}>
+            <Heading as='h2' size='md' mb={1}>Picked for you</Heading>
+            <Text color='gray.400' fontSize='sm' mb={4}>
+              Because of what you rated highly — refreshed daily.
+            </Text>
+            <Flex
+              gap={4}
+              overflowX='auto'
+              pb={2}
+              mx='-1.5rem'
+              px='1.5rem'
+              css={{ scrollSnapType: 'x proximity', scrollbarWidth: 'thin' }}
+            >
+              {picks.map((movie) => (
+                <Box key={`${movie.mediaType || 'movie'}:${movie.id}`} w={{ base: '8.5rem', md: '10.5rem' }} flexShrink={0} scrollSnapAlign='start'>
+                  <MovieCard movie={movie} posterFallback='/poster_fallback_galaxy.webp' />
+                </Box>
+              ))}
+            </Flex>
           </Box>
         )}
 

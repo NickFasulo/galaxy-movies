@@ -35,6 +35,8 @@ export const PUSH_KEY = 'gm:alerts:push'
 export const SHARE_KEY = 'gm:alerts:share'
 // shareId => email — reverse index so a share link resolves without scanning.
 export const SHARE_LOOKUP_KEY = 'gm:share:lookup'
+// email => JSON { messages, links, updatedAt } — Plus chat history, ≤30 turns.
+export const CHAT_HISTORY_KEY = 'gm:alerts:chat'
 
 export async function getOrCreateSyncKey(kv: Redis, email: string): Promise<string> {
   const existing = await kv.hget<string>(SYNCKEY_KEY, email)

@@ -148,6 +148,58 @@ export default function ChatWidget() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const [showIntro, setShowIntro] = useState(false)
   const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const historyLoadedRef = useRef(false)
+  const chatSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const messagesRef = useRef<ChatMessage[]>([])
+  const linksRef = useRef<Record<number, ResolvedMention[]>>({})
+
+  useEffect(() => { messagesRef.current = messages }, [messages])
+  useEffect(() => { linksRef.current = messageLinks }, [messageLinks])
+
+  // Plus-only endpoint — a 403 just means the feature stays local-only.
+  const scheduleHistoryPush = useCallback(() => {
+    const creds = getAlertsCredentials()
+    if (!creds) return
+    if (chatSyncTimerRef.current) clearTimeout(chatSyncTimerRef.current)
+    chatSyncTimerRef.current = setTimeout(async () => {
+      chatSyncTimerRef.current = null
+      try {
+        const resp = await fetch('/api/chat-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: creds.email,
+            key: creds.key,
+            messages: messagesRef.current.slice(-30),
+            links: linksRef.current
+          })
+        })
+        const data = await resp.json().catch(() => null)
+        if (resp.ok && typeof data?.updatedAt === 'number') {
+          try { sessionStorage.setItem('chatHistoryUpdatedAt', String(data.updatedAt)) } catch {}
+        }
+      } catch {}
+    }, 4000)
+  }, [])
+
+  const hydrateHistory = useCallback(async () => {
+    const creds = getAlertsCredentials()
+    if (!creds) return
+    try {
+      const resp = await fetch(
+        `/api/chat-history?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`
+      )
+      if (!resp.ok) return
+      const data = await resp.json().catch(() => null)
+      const history = data?.history
+      if (!history || !Array.isArray(history.messages)) return
+      const localTs = Number(sessionStorage.getItem('chatHistoryUpdatedAt') || 0)
+      if (typeof history.updatedAt === 'number' && history.updatedAt <= localTs) return
+      setMessages(history.messages)
+      if (history.links && typeof history.links === 'object') setMessageLinks(history.links)
+      try { sessionStorage.setItem('chatHistoryUpdatedAt', String(history.updatedAt || Date.now())) } catch {}
+    } catch {}
+  }, [])
 
   const quickActions = [
     { label: 'What should I watch tonight?', query: 'What should I watch tonight?' },
@@ -212,6 +264,10 @@ export default function ChatWidget() {
   // widget don't pay a function invocation + Redis read.
   const handleOpen = async () => {
     dismissIntro()
+    if (!historyLoadedRef.current) {
+      historyLoadedRef.current = true
+      void hydrateHistory()
+    }
     if (aiAvailable === null) {
       try {
         const r = await fetch('/api/aiStatus')
@@ -384,8 +440,9 @@ export default function ChatWidget() {
       setIsLoading(false)
       setIsStreaming(false)
       abortControllerRef.current = null
+      scheduleHistoryPush()
     }
-  }, [inputValue, messages, isLoading, sessionId, onClose, services])
+  }, [inputValue, messages, isLoading, sessionId, onClose, services, scheduleHistoryPush])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -410,6 +467,7 @@ export default function ChatWidget() {
     messageCountRef.current = 0
     sessionStorage.removeItem('chatMessages')
     sessionStorage.removeItem('chatMessageLinks')
+    scheduleHistoryPush()
   }
 
   if (aiAvailable === false) return null
