@@ -36,6 +36,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
   // /api/og reads these from disk (fs) — NFT doesn't always trace public/ files
@@ -45,9 +46,29 @@ const nextConfig: NextConfig = {
       './public/fonts/SpaceRangerLaserItalic-J7an.otf',
       './public/fonts/Inter-Bold.ttf',
       './public/fonts/Inter-Regular.ttf',
-      './public/backdrop_fallback.jpg'
+      './public/backdrop_fallback.jpg',
+      // @vercel/og edge build + resvg wasm — loaded via dynamic import on
+      // workerd (node build can't run there); nothing else traces it.
+      './node_modules/next/dist/compiled/@vercel/og/**'
     ]
   },
+  // Packages whose exports gate ESM builds behind a "workerd" condition must be
+  // listed here so @opennextjs/cloudflare copies them whole — NFT only traces
+  // the CJS variants, which leaves nothing for the worker bundle to resolve.
+  serverExternalPackages: [
+    '@emotion/react',
+    '@emotion/utils',
+    '@emotion/use-insertion-effect-with-fallbacks',
+    '@emotion/cache',
+    '@emotion/serialize',
+    '@emotion/sheet',
+    '@emotion/weak-memoize',
+    '@emotion/hash',
+    '@emotion/memoize',
+    '@emotion/unitless',
+    'hoist-non-react-statics',
+    'uncrypto'
+  ],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

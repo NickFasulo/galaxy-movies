@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { ImageResponse } from 'next/og'
+import type { ImageResponse as ImageResponseType } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
@@ -68,6 +68,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       poster ? toJpegDataUri(poster) : Promise.resolve(null),
     ])
   const backdropDataUri = `data:image/jpeg;base64,${backdropBuf.toString('base64')}`
+
+  // OpenNext forces NEXT_RUNTIME="nodejs" at bundle time, so next/og always picks
+  // the node entry — which readFileSync's Geist and runs WebAssembly.instantiate,
+  // both disallowed on workerd. Import the edge build directly there instead.
+  const { ImageResponse } = (await (globalThis.navigator?.userAgent === 'Cloudflare-Workers'
+    ? import(/* webpackIgnore: true */ 'next/dist/compiled/@vercel/og/index.edge.js')
+    : import('next/og'))) as { ImageResponse: typeof ImageResponseType }
 
   const imageResponse = new ImageResponse(
     (

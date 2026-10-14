@@ -12,7 +12,12 @@
     "lint": "eslint .",
     "lhci": "npm run build && lhci autorun --config=./lighthouserc.cjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "patch-package",
+    "cf:build": "opennextjs-cloudflare build && node scripts/opennext-postbuild.js",
+    "cf:preview": "npm run cf:build && wrangler dev",
+    "cf:deploy": "npm run cf:build && wrangler deploy",
+    "cf:secrets": "node scripts/sync-cf-secrets.js && wrangler secret bulk .secrets.json"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.37.0",
@@ -28,20 +33,25 @@
     "react-icons": "^5.7.0",
     "react-infinite-scroll-component": "^7.2.1",
     "react-player": "^3.4.0",
+    "react-server-dom-webpack": "^19.3.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^16.4.0",
+    "@opennextjs/cloudflare": "^1.20.11",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/web-push": "^3.6.4",
+    "esbuild": "^0.28.1",
     "eslint": "^10.12.0",
     "eslint-config-next": "^16.4.0",
     "kill-port": "^2.0.1",
+    "patch-package": "^8.0.1",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.148.0"
   },
   "overrides": {
     "tar": "^7.4.3",
@@ -57,6 +67,8 @@
     }
   },
   "allowScripts": {
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "workerd@1.20261006.1": true,
+    "esbuild": false
   }
 }

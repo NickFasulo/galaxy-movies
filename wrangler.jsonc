@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/entry.js",
+  "name": "galaxy-movies",
+  "workers_dev": true,
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "galaxy-movies" }],
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "galaxy-movies-inc-cache" }
+  ],
+  "triggers": {
+    "crons": ["0 6 * * *", "30 6 * * *", "0 7 * * *", "0 16 * * 5"]
+  },
+  "observability": { "enabled": true },
+  "find_additional_modules": true,
+  "rules": [
+    {
+      "type": "Data",
+      "globs": ["public/fonts/**", "public/backdrop_fallback.jpg"],
+      "fallthrough": true
+    }
+  ]
+}
