@@ -16,6 +16,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* iOS Safari zooms into any focused input under 16px — Chakra's sm/md input
+   sizes render 12–14px, so every text field would trigger it on mobile. */
+@media (max-width: 47.99em) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 0.5rem;
   height: 0.5rem;
