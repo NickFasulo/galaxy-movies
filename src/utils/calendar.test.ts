@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIcs, comingEvents, toIcsDate } from './calendar'
+import { buildIcs, comingEvents, episodeEvents, premiereEvents, toIcsDate } from './calendar'
 import type { ProviderChanges } from './streamingChanges'
 import type { AlertPrefs } from './watchlistAlerts'
 
@@ -65,6 +65,41 @@ describe('comingEvents', () => {
       netflix: changes({ coming: [{ tmdbId: 1, tmdbType: 'movie', title: 'Film', date: '', season: null }] })
     })
     expect(events).toHaveLength(0)
+  })
+})
+
+describe('episodeEvents', () => {
+  it('emits an air-date event for a watchlisted show', () => {
+    const events = episodeEvents(
+      prefs({ watchlist: [{ id: 1, mediaType: 'tv', title: 'Show' }] }),
+      new Map([[1, { airDate: '2026-03-02', season: 2, episode: 5 }]])
+    )
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ date: '2026-03-02', summary: 'Show S2E5 airs' })
+    expect(events[0]!.url).toContain('/tv/1')
+  })
+
+  it('omits the SxEy tag when numbering is missing and skips movies', () => {
+    const events = episodeEvents(prefs(), new Map([[1, { airDate: '2026-03-02', season: null, episode: null }]]))
+    expect(events).toHaveLength(0)
+    const unnumbered = episodeEvents(
+      prefs({ watchlist: [{ id: 1, mediaType: 'tv', title: 'Show' }] }),
+      new Map([[1, { airDate: '2026-03-02', season: null, episode: null }]])
+    )
+    expect(unnumbered[0]!.summary).toBe('Show airs')
+  })
+})
+
+describe('premiereEvents', () => {
+  it('emits a theater event for a watchlisted movie', () => {
+    const events = premiereEvents(prefs(), new Map([[1, '2026-04-10']]))
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ date: '2026-04-10', summary: 'Film premieres in theaters' })
+  })
+
+  it('skips shows and movies without a premiere date', () => {
+    expect(premiereEvents(prefs({ watchlist: [{ id: 1, mediaType: 'tv', title: 'Show' }] }), new Map([[1, '2026-04-10']]))).toHaveLength(0)
+    expect(premiereEvents(prefs(), new Map())).toHaveLength(0)
   })
 })
 

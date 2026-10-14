@@ -109,6 +109,12 @@ export interface TmdbTvDetails extends TmdbTvShow {
   tagline?: string | null
   status?: string
   last_air_date?: string | null
+  next_episode_to_air?: {
+    air_date?: string
+    season_number?: number
+    episode_number?: number
+    name?: string
+  } | null
   number_of_seasons?: number
   number_of_episodes?: number
   episode_run_time?: number[]

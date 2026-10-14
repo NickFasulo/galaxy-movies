@@ -148,6 +148,36 @@ describe('matchItems', () => {
     })
     expect(plus.map((m) => m.tmdbId).sort()).toEqual([1, 2])
   })
+
+  it('matches watchlisted shows against the episode index with an episode-scoped key', () => {
+    const sub = prefs({ watchlist: [{ id: 7, mediaType: 'tv', title: 'Show' }] })
+    const episodes = new Map([[7, { airDate: '2026-02-01', season: 2, episode: 5 }]])
+    const matches = matchItems(sub, {}, new Set(), { episodes })
+    expect(matches).toHaveLength(1)
+    expect(matches[0]).toMatchObject({
+      kind: 'episode',
+      tmdbId: 7,
+      date: '2026-02-01',
+      season: 2,
+      episode: 5,
+      notifiedKey: 'episode:tv:7@s2e5'
+    })
+  })
+
+  it('episode matches respect the notified set and ignore movies', () => {
+    const sub = prefs({
+      watchlist: [
+        { id: 7, mediaType: 'tv', title: 'Show' },
+        { id: 8, mediaType: 'movie', title: 'Film' }
+      ]
+    })
+    const episodes = new Map([
+      [7, { airDate: '2026-02-01', season: 2, episode: 5 }],
+      [8, { airDate: '2026-02-01', season: null, episode: null }]
+    ])
+    const notified = new Set(['episode:tv:7@s2e5'])
+    expect(matchItems(sub, {}, notified, { episodes })).toHaveLength(0)
+  })
 })
 
 describe('buildDiscordMessage', () => {
@@ -213,5 +243,12 @@ describe('buildEmail', () => {
     const { html } = buildEmail([leaving, taste], 'a@b.com', 'tok')
     expect(html).toContain('Leaving Netflix soon')
     expect(html).toContain('because you rated Inception highly')
+  })
+
+  it('renders episode alerts with numbering and air date', () => {
+    const ep: MatchedItem = { ...item, kind: 'episode', tmdbType: 'tv', provider: '', date: '2026-02-01', season: 2, episode: 5 }
+    const { html } = buildEmail([ep], 'a@b.com', 'tok')
+    expect(html).toContain('New episode S2E5 airs Feb 1')
+    expect(html).toContain('/tv/1')
   })
 })

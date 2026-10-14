@@ -5,9 +5,9 @@ import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISC
 import { sendTelegramAlert } from './telegram'
 import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, parseBillingRecord } from './billing'
-import { fetchRecommendedMovies, fetchRecommendedTv } from './tmdb'
+import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from './tmdb'
 import { SITE_URL } from './site'
-import type { MediaType } from '../types/tmdb'
+import type { MediaType, TmdbTvDetails } from '../types/tmdb'
 
 const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
 // The streaming-changes cron already fetches and caches diffs for every source
@@ -25,6 +25,10 @@ const TASTE_MIN_RATING = 7
 const TASTE_SOURCES_PER_SUB = 5
 const MAX_RECS_FETCHES_PER_RUN = 25
 const RECS_TTL_SECONDS = 60 * 60 * 24 * 30
+// Episode alerts: one free /tv/{id} detail fetch per unique watchlisted show,
+// capped per run like the recs backfill.
+const MAX_EPISODE_FETCHES_PER_RUN = 40
+const EPISODE_WINDOW_DAYS = 14
 
 export interface AlertPrefs {
   watchlist: { id: number; mediaType: MediaType; title: string }[]
@@ -36,7 +40,7 @@ export interface AlertPrefs {
 }
 
 export interface MatchedItem {
-  kind: 'added' | 'coming' | 'leaving' | 'taste'
+  kind: 'added' | 'coming' | 'leaving' | 'taste' | 'episode'
   notifiedKey: string
   tmdbId: number
   tmdbType: MediaType
@@ -44,12 +48,19 @@ export interface MatchedItem {
   provider: string
   date?: string
   season?: number | null
+  episode?: number | null
   // For 'taste' matches: the highly-rated title this recommendation came from.
   via?: string
 }
 
 // @upstash/redis auto-deserializes JSON hash values, so this is already an
 // object (or whatever a hand-edited/corrupt value happens to be) — not a string.
+export interface EpisodeAir {
+  airDate: string
+  season: number | null
+  episode: number | null
+}
+
 export function parsePrefs(raw: unknown): AlertPrefs | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
@@ -62,6 +73,8 @@ export interface MatchOptions {
   leaving?: boolean
   // Plus: 'movie:123' -> the subscriber's rated title that seeded the rec.
   taste?: Map<string, string>
+  // Plus: tmdb tv id -> upcoming episode air info (see loadEpisodeIndex).
+  episodes?: Map<number, EpisodeAir>
   // Restricts which of the subscriber's chosen services get matched — free
   // users stay on the base six even though diffs exist for more.
   providers?: string[]
@@ -133,6 +146,26 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
     }
   }
 
+  if (opts.episodes?.size) {
+    for (const w of prefs.watchlist) {
+      if (w.mediaType !== 'tv') continue
+      const ep = opts.episodes.get(w.id)
+      if (!ep) continue
+      // Episode-scoped key: each new episode re-alerts.
+      push({
+        kind: 'episode',
+        notifiedKey: `episode:tv:${w.id}@s${ep.season ?? 0}e${ep.episode ?? 0}`,
+        tmdbId: w.id,
+        tmdbType: 'tv',
+        title: w.title,
+        provider: '',
+        date: ep.airDate,
+        season: ep.season,
+        episode: ep.episode
+      })
+    }
+  }
+
   return out.slice(0, MAX_MATCHES_PER_EMAIL)
 }
 
@@ -147,12 +180,17 @@ const prettyDate = (stamp: string | null | undefined) => {
 
 const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 
+const episodeLine = (item: MatchedItem) =>
+  `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
+
 function statusLine(item: MatchedItem): string {
   switch (item.kind) {
     case 'coming':
       return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
       return `Leaving ${escapeHtml(item.provider)} soon`
+    case 'episode':
+      return episodeLine(item)
     case 'taste':
       return `Now on ${escapeHtml(item.provider)} — because you rated ${escapeHtml(item.via || '')} highly`
     default:
@@ -191,6 +229,8 @@ function discordStatusLine(item: MatchedItem): string {
       return `Coming to ${item.provider}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
       return `Leaving ${item.provider} soon`
+    case 'episode':
+      return episodeLine(item)
     case 'taste':
       return `Now on ${item.provider} — because you rated ${item.via || ''} highly`
     default:
@@ -304,6 +344,50 @@ async function loadRecsIndex(plusPrefs: AlertPrefs[]): Promise<Map<string, numbe
   return index
 }
 
+export async function fetchNextEpisode(id: number): Promise<EpisodeAir | null> {
+  try {
+    const data = await fetchTmdb<TmdbTvDetails>(`/tv/${id}`)
+    const ep = data?.next_episode_to_air
+    if (!ep?.air_date) return null
+    return { airDate: ep.air_date, season: ep.season_number ?? null, episode: ep.episode_number ?? null }
+  } catch {
+    return null
+  }
+}
+
+const airsWithinDays = (dateStr: string, days: number) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr)
+  if (!m) return false
+  const now = new Date()
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const diff = Math.round((t - today) / 86400000)
+  return diff >= 0 && diff <= days
+}
+
+// Unique watchlisted shows across Plus subscribers share one fetch budget —
+// an episode airing soon matters to everyone tracking that show.
+export async function loadEpisodeIndex(plusPrefs: AlertPrefs[]): Promise<Map<number, EpisodeAir>> {
+  const index = new Map<number, EpisodeAir>()
+  const ids = [
+    ...new Set(
+      plusPrefs.flatMap((p) => p.watchlist.filter((w) => w.mediaType === 'tv' && typeof w.id === 'number').map((w) => w.id))
+    )
+  ].sort((a, b) => a - b)
+  if (!ids.length) return index
+
+  // Deterministic daily rotation: lists longer than the cap roll through the
+  // fetch budget over successive runs instead of pinning the same first 40.
+  const offset = ids.length > MAX_EPISODE_FETCHES_PER_RUN ? Math.floor(Date.now() / 86400000) % ids.length : 0
+  const batch = [...ids.slice(offset), ...ids.slice(0, offset)].slice(0, MAX_EPISODE_FETCHES_PER_RUN)
+  const results = await Promise.all(batch.map((id) => fetchNextEpisode(id)))
+  for (let i = 0; i < batch.length; i++) {
+    const ep = results[i]
+    if (ep && airsWithinDays(ep.airDate, EPISODE_WINDOW_DAYS)) index.set(batch[i]!, ep)
+  }
+  return index
+}
+
 // 'mediaType:recId' -> the title the subscriber rated that produced the rec.
 function tasteIndexFor(prefs: AlertPrefs, recsIndex: Map<string, number[]>): Map<string, string> {
   const taste = new Map<string, string>()
@@ -349,7 +433,10 @@ export async function sendWatchlistAlerts() {
     const prefs = parsePrefs(raw)
     if (prefs) plusByEmail.set(email, prefs)
   }
-  const recsIndex = await loadRecsIndex([...plusByEmail.values()])
+  const [recsIndex, episodeIndex] = await Promise.all([
+    loadRecsIndex([...plusByEmail.values()]),
+    loadEpisodeIndex([...plusByEmail.values()])
+  ])
 
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
@@ -368,6 +455,7 @@ export async function sendWatchlistAlerts() {
     const matches = matchItems(prefs, isIndia ? inChanges : usChanges, notified, {
       leaving: isPlus,
       taste: isPlus ? tasteIndexFor(prefs, recsIndex) : undefined,
+      episodes: isPlus ? episodeIndex : undefined,
       providers: isIndia
         ? (isPlus ? IN_TRACKED_PROVIDERS : IN_BASE_PROVIDERS)
         : (isPlus ? PLUS_TRACKED_PROVIDERS : TRACKED_PROVIDERS)

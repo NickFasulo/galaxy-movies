@@ -85,6 +85,8 @@ function statusLine(item: MatchedItem): string {
       return `Coming to ${item.provider}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
       return `Leaving ${item.provider} soon`
+    case 'episode':
+      return `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
     case 'taste':
       return `Now on ${item.provider} — because you rated ${item.via || ''} highly`
     default:

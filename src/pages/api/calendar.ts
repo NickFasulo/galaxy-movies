@@ -6,7 +6,7 @@ import { getRedis, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
 import { getProviderChanges, IN_TRACKED_PROVIDERS } from '../../utils/streamingChanges'
 import { PROVIDER_NAME_MATCH } from '../../utils/tmdb'
 import { parsePrefs } from '../../utils/watchlistAlerts'
-import { buildIcs, comingEvents } from '../../utils/calendar'
+import { buildIcs, comingEvents, episodeEvents, premiereEvents, loadUpcomingEpisodes, loadUpcomingPremieres } from '../../utils/calendar'
 
 // Calendar clients poll on their own schedule (every few hours); the per-URL
 // CDN cache plus the 10-minute changes memo keep repeat polls off Redis.
@@ -42,7 +42,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const tracked = region === 'IN' ? IN_TRACKED_PROVIDERS : Object.keys(PROVIDER_NAME_MATCH)
     const services = prefs?.services.filter((key) => tracked.includes(key)) || []
     const changes = services.length ? await getProviderChanges(services, { region }) : {}
-    const events = prefs ? comingEvents(prefs, changes) : []
+    const tvIds = (prefs?.watchlist || []).filter((w) => w.mediaType === 'tv').map((w) => w.id)
+    const movieIds = (prefs?.watchlist || []).filter((w) => w.mediaType === 'movie').map((w) => w.id)
+    const [episodes, premieres] = await Promise.all([
+      loadUpcomingEpisodes(tvIds),
+      loadUpcomingPremieres(movieIds, region)
+    ])
+    const events = prefs
+      ? [...comingEvents(prefs, changes), ...episodeEvents(prefs, episodes), ...premiereEvents(prefs, premieres)]
+      : []
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8')
     setApiCache(res, 3600, 86400)
