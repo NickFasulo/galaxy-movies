@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-import { fetchTmdb } from './tmdb'
+import { fetchTmdb, fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, movieGenres, tvGenres, streamingProviders } from './tmdb'
 import { getProviderChanges } from './streamingChanges'
 import { extractTitleMentions, resolveMovieMentions, searchMultiByQuery } from './movieSearch'
 import type { MediaType, WatchProvidersResponse } from '../types/tmdb'
@@ -31,6 +31,141 @@ export function wantsServiceChanges(text: string): boolean {
   return SERVICE_CHANGES_PATTERN.test(text)
 }
 
+// Service-scoped recommendations ("recommend action movies on hulu",
+// "what should i watch on my services"). Provider names people type → our
+// provider keys; unmapped names (mubi, britbox, ...) simply can't be grounded.
+const PROVIDER_KEY_WORDS: [RegExp, string][] = [
+  [/netflix/i, 'netflix'],
+  [/prime( video)?|amazon/i, 'amazon-prime-video'],
+  [/hulu/i, 'hulu'],
+  [/disney\+?/i, 'disney-plus'],
+  [/apple( tv)?\+?/i, 'apple-tv'],
+  [/\b(max|hbo)\b/i, 'max'],
+  [/peacock/i, 'peacock'],
+  [/paramount\+?/i, 'paramount-plus'],
+  [/tubi/i, 'tubi'],
+  [/pluto( tv)?/i, 'pluto-tv'],
+  [/roku/i, 'roku-channel'],
+  [/crunchyroll/i, 'crunchyroll'],
+  [/jio ?hotstar|hotstar/i, 'jiohotstar'],
+  [/zee ?5/i, 'zee5'],
+  [/sony ?liv/i, 'sonyliv']
+]
+
+const MY_SERVICES_PATTERN = /\b(my|your|our) (services|streamers|subscriptions|platforms)\b/i
+
+// Spoken genre words → slug per TMDB's separate movie/tv genre namespaces.
+const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
+  action: { movie: 'action', tv: 'action-adventure' },
+  adventure: { movie: 'adventure', tv: 'action-adventure' },
+  animation: { movie: 'animation', tv: 'animation' },
+  comedy: { movie: 'comedy', tv: 'comedy' },
+  crime: { movie: 'crime', tv: 'crime' },
+  documentary: { movie: 'documentary', tv: 'documentary' },
+  drama: { movie: 'drama', tv: 'drama' },
+  family: { movie: 'family', tv: 'family' },
+  fantasy: { movie: 'fantasy', tv: 'sci-fi-fantasy' },
+  horror: { movie: 'horror' },
+  mystery: { movie: 'mystery', tv: 'mystery' },
+  romance: { movie: 'romance' },
+  'sci-fi': { movie: 'science-fiction', tv: 'sci-fi-fantasy' },
+  thriller: { movie: 'thriller' },
+  western: { tv: 'western' },
+  war: { tv: 'war-politics' },
+  reality: { tv: 'reality' },
+  kids: { tv: 'kids' }
+}
+
+const GENRE_WORD_PATTERN = new RegExp(
+  `\\b(${Object.keys(GENRE_WORDS).join('|')}|animated|comedies|documentaries|dramas|mysteries|romantic|thrillers|westerns|scifi|science fiction)\\b`,
+  'i'
+)
+
+const GENRE_ALIASES: Record<string, string> = {
+  animated: 'animation', comedies: 'comedy', documentaries: 'documentary',
+  dramas: 'drama', mysteries: 'mystery', romantic: 'romance',
+  thrillers: 'thriller', westerns: 'western', scifi: 'sci-fi',
+  'science fiction': 'sci-fi'
+}
+
+const RECOMMEND_PATTERN =
+  /\b(recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|pick|good|great|best|top|something|anything|what('?s| is) on|what should|what to|worth watching|binge)\b/i
+
+export function wantsServiceRecommendation(text: string): boolean {
+  // Catalog-change phrasing ("did anything drop on hulu") wins — its diff
+  // data answers the question more precisely than a popularity list.
+  if (wantsServiceChanges(text)) return false
+  const hasServiceScope =
+    new RegExp(`\\b(${PROVIDER_WORD_PATTERN})\\b`, 'i').test(text) || MY_SERVICES_PATTERN.test(text)
+  return hasServiceScope && (RECOMMEND_PATTERN.test(text) || GENRE_WORD_PATTERN.test(text))
+}
+
+export interface ServicePicksContext {
+  provider: string
+  mediaType: MediaType
+  genre: string | null
+  titles: { id: number; title: string; year: string | null }[]
+}
+
+const MAX_PICK_PROVIDERS = 3
+const TITLES_PER_PROVIDER = 8
+
+// Same catalog data the /streaming/{provider}/{genre} pages serve; 6h like
+// the availability cache since discover results drift slowly.
+const picksCache = new LRUCache<string, { ctx: ServicePicksContext[] | null }>({ max: 500, ttl: 1000 * 60 * 60 * 6 })
+
+const providerLabel = (key: string) => streamingProviders[key]?.title.replace(/\s+Movies$/i, '') || key
+
+function detectPickMediaType(text: string): MediaType {
+  if (/\b(movies?|films?)\b/i.test(text)) return 'movie'
+  if (/\b(shows?|series|tv)\b/i.test(text)) return 'tv'
+  return 'movie'
+}
+
+function detectGenreSlug(text: string, mediaType: MediaType): string | null {
+  const match = text.toLowerCase().match(GENRE_WORD_PATTERN)
+  if (!match) return null
+  const canonical = GENRE_ALIASES[match[1]] || match[1]
+  return GENRE_WORDS[canonical]?.[mediaType] ?? null
+}
+
+export async function fetchServicePicksContext(message: string, serviceKeys: string[], region: string): Promise<ServicePicksContext[] | null> {
+  let keys = PROVIDER_KEY_WORDS.filter(([pattern]) => pattern.test(message)).map(([, key]) => key)
+  if (!keys.length && MY_SERVICES_PATTERN.test(message)) keys = serviceKeys.slice(0, MAX_PICK_PROVIDERS)
+  keys = [...new Set(keys)].slice(0, MAX_PICK_PROVIDERS)
+  if (!keys.length) return null
+
+  const mediaType = detectPickMediaType(message)
+  const genreSlug = detectGenreSlug(message, mediaType)
+  const genreId = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.id ?? null : null
+  const genreLabel = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.title.replace(/\s+(Movies|Shows)$/i, '') ?? null : null
+
+  const cacheKey = `${mediaType}:${region}:${keys.join('+')}:${genreId ?? 'any'}`
+  const cached = picksCache.get(cacheKey)
+  if (cached !== undefined) return cached.ctx
+
+  const out: ServicePicksContext[] = []
+  for (const key of keys) {
+    const providerIds = getProviderIds(key, region)
+    if (!providerIds.length) continue
+    try {
+      const discover = mediaType === 'tv' ? fetchDiscoverTv : fetchDiscoverMovies
+      const data = await discover({ providerId: providerIds.join('|'), genreId, region })
+      const titles = (data.results || []).slice(0, TITLES_PER_PROVIDER).map((t) => ({
+        id: t.id,
+        title: t.title || '',
+        year: (t.release_date || '').slice(0, 4) || null
+      }))
+      if (titles.length) out.push({ provider: providerLabel(key), mediaType, genre: genreLabel, titles })
+    } catch (err) {
+      console.error(`Chat service-picks lookup failed for ${key}:`, err)
+    }
+  }
+  const ctx = out.length ? out : null
+  picksCache.set(cacheKey, { ctx })
+  return ctx
+}
+
 export interface AvailabilityContext {
   title: string
   mediaType: MediaType
@@ -55,9 +190,11 @@ const providerNames = (list?: { provider_name?: string }[]): string[] =>
   (list || []).map((p) => p.provider_name).filter((n): n is string => Boolean(n))
 
 // Words that make a question generic rather than title-seeking — "what's good
-// on Netflix" must not strip to "good" and resolve a random movie.
+// on Netflix" must not strip to "good" and resolve a random movie. Genre words
+// count as filler too ("action movies on hulu" must not resolve a movie called
+// "Action").
 const FILLER_PATTERN =
-  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|similar|tonight|stuff|things|popular|trending)\b/gi
+  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|similar|tonight|stuff|things|popular|trending|action|adventure|animated?|animation|comedy|comedies|crime|documentar(?:y|ies)|dramas?|family|fantasy|horror|myster(?:y|ies)|romance|romantic|thrillers?|westerns?|war|reality|soaps?|kids?|children|sci-?fi|science fiction)\b/gi
 
 // Loose questions like "is Dune still on Netflix?" carry no quoted/year'd
 // mention — strip the question phrasing so a plain search can try the rest.
@@ -65,7 +202,7 @@ function questionRemainder(text: string): string {
   return text
     .replace(new RegExp(`\\b(where|how)\\b[^\\n]{0,60}?\\b(watch|stream|see|find)\\b`, 'ig'), ' ')
     .replace(new RegExp(`\\b(still |currently )?(available |streaming )?on (${PROVIDER_WORD_PATTERN})\\b`, 'ig'), ' ')
-    .replace(/\b(can|could|do|did|i|is|was|it|this|that|the|a|an|to|for|me|my|yet|still|anywhere|online|free|now|right|please|hey|hi|ok|so|what|whats|which|who|when|should|would|will|tell|give|name|about|there|here|got|get|got)\b/gi, ' ')
+    .replace(/\b(can|could|do|did|i|is|was|it|this|that|the|a|an|to|for|me|my|you|your|yours|us|we|our|some|yet|still|anywhere|online|free|now|right|please|hey|hi|ok|so|what|whats|which|who|when|should|would|will|tell|give|name|about|there|here|got|get|watch|watching|stream|streaming|see|find)\b/gi, ' ')
     .replace(FILLER_PATTERN, ' ')
     .replace(/[?!.,;:'"“”]/g, ' ')
     .replace(/\s+/g, ' ')

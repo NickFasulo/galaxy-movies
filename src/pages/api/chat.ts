@@ -12,7 +12,7 @@ import { safeEqual } from '../../utils/auth'
 import { isPlusActive, getBillingRecord } from '../../utils/billing'
 import { streamingProviders } from '../../utils/tmdb'
 import { parsePrefs, type AlertPrefs } from '../../utils/watchlistAlerts'
-import { wantsAvailability, wantsServiceChanges, fetchAvailabilityContext, fetchServiceChangesContext, type AvailabilityContext, type ServiceChangesContext } from '../../utils/chatGrounding'
+import { wantsAvailability, wantsServiceChanges, wantsServiceRecommendation, fetchAvailabilityContext, fetchServiceChangesContext, fetchServicePicksContext, type AvailabilityContext, type ServiceChangesContext, type ServicePicksContext } from '../../utils/chatGrounding'
 
 interface ChatTurn {
   role: 'user' | 'assistant'
@@ -327,11 +327,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // service-changes context since the question was about one title.
     let availabilityContext: AvailabilityContext | null = null
     let serviceChangesContext: ServiceChangesContext[] | null = null
+    let servicePicksContext: ServicePicksContext[] | null = null
     try {
-      if (wantsAvailability(rawLast.content)) {
+      if (wantsServiceRecommendation(rawLast.content)) {
+        servicePicksContext = await fetchServicePicksContext(rawLast.content, serviceKeys, region)
+      }
+      if (!servicePicksContext && wantsAvailability(rawLast.content)) {
         availabilityContext = await fetchAvailabilityContext(rawLast.content, region)
       }
-      if (!availabilityContext && serviceKeys.length > 0 && wantsServiceChanges(rawLast.content)) {
+      if (!availabilityContext && !servicePicksContext && serviceKeys.length > 0 && wantsServiceChanges(rawLast.content)) {
         serviceChangesContext = await fetchServiceChangesContext(serviceKeys, region)
       }
     } catch (error) {
@@ -344,6 +348,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       verified_recent_shows: recentShowsContext ? recentShowsContext.split('\n') : null,
       verified_availability: availabilityContext,
       new_on_services: serviceChangesContext,
+      service_picks: servicePicksContext,
       user_taste_profile: tasteProfile
     }
 
@@ -398,6 +403,7 @@ Assistant: I don't have verified release data right now, so I can't say what's c
 verified_recent_movies lists films actually in theaters or recently released; verified_recent_shows lists series that premiered in the last ~90 days. Use ONLY these for recent/new-release questions of the matching type. If the relevant list is null, say you lack verified release data for it.
 verified_availability names the title resolved from the user's question and the flatrate (subscription), rent, and buy providers where it can be watched in the given region. Only name providers listed there; if it is null, say you can't verify where it's streaming.
 new_on_services lists verified catalog changes on the user's own services: added = arrived recently, coming = announced with dates, leaving = recently departed. Only claim additions or departures from this list; if it is null, say you lack verified catalog-change data.
+service_picks lists verified titles currently streaming on a named service in the user's region, optionally filtered to the requested genre. For "recommend something on <service>" requests, choose recommendations only from service_picks; if it is null, say you can't verify that service's current catalog and recommend without the service claim.
 user_taste_profile fields: topRated = loved, disliked = never recommend, watchlist = saved, services = subscribed streaming services.
 ${JSON.stringify(referenceData)}`
     }

@@ -2,8 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
   wantsAvailability,
   wantsServiceChanges,
+  wantsServiceRecommendation,
   fetchAvailabilityContext,
-  fetchServiceChangesContext
+  fetchServiceChangesContext,
+  fetchServicePicksContext
 } from './chatGrounding'
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   resolve: vi.fn(async () => [] as unknown[]),
   mentions: vi.fn(() => [] as unknown[]),
   fetchTmdb: vi.fn(async () => ({})),
+  discoverMovies: vi.fn(async () => ({ results: [], total_pages: 0, total_results: 0 })),
+  discoverTv: vi.fn(async () => ({ results: [], total_pages: 0, total_results: 0 })),
   changes: vi.fn(async () => ({} as Record<string, unknown>))
 }))
 
@@ -22,7 +26,9 @@ vi.mock('./movieSearch', async (importOriginal) => ({
 }))
 vi.mock('./tmdb', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./tmdb')>()),
-  fetchTmdb: mocks.fetchTmdb
+  fetchTmdb: mocks.fetchTmdb,
+  fetchDiscoverMovies: mocks.discoverMovies,
+  fetchDiscoverTv: mocks.discoverTv
 }))
 vi.mock('./streamingChanges', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./streamingChanges')>()),
@@ -35,6 +41,8 @@ beforeEach(() => {
   mocks.resolve.mockResolvedValue([])
   mocks.search.mockResolvedValue([])
   mocks.fetchTmdb.mockResolvedValue({})
+  mocks.discoverMovies.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
+  mocks.discoverTv.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.changes.mockResolvedValue({})
 })
 
@@ -153,5 +161,84 @@ describe('fetchServiceChangesContext', () => {
     const keys = Array.from({ length: 12 }, (_, i) => `svc${i}`)
     await fetchServiceChangesContext(keys, 'US')
     expect(mocks.changes).toHaveBeenCalledWith(keys.slice(0, 8), { region: 'US' })
+  })
+})
+
+describe('wantsServiceRecommendation', () => {
+  it.each([
+    'recommend me some good action movies on hulu',
+    'what should i watch on netflix',
+    "what's on max tonight",
+    'any good horror shows on prime',
+    'something to binge on my services',
+    'top comedies on peacock'
+  ])('detects %s', (text) => {
+    expect(wantsServiceRecommendation(text)).toBe(true)
+  })
+
+  it.each([
+    'is Heat on netflix',           // availability — specific title
+    'where can i watch Dune',       // no service scope
+    "what's new on netflix",        // catalog-change intent, not recommendation
+    'recommend a good movie',       // no provider or my-services scope
+    'did anything drop on hulu'     // change intent
+  ])('ignores %s', (text) => {
+    expect(wantsServiceRecommendation(text)).toBe(false)
+  })
+})
+
+describe('fetchServicePicksContext', () => {
+  const paged = (results: unknown[]) => ({ results, total_pages: 1, total_results: results.length })
+  const movie = (id: number, title: string) => ({ id, title, release_date: '2024-01-01', poster_path: '/p.jpg' })
+  const show = (id: number, name: string) => ({ id, name, title: name, first_air_date: '2023-01-01', release_date: '2023-01-01', poster_path: '/s.jpg' })
+
+  it('maps the named provider and detected genre into a discover query', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(1, 'Heat'), movie(2, 'Speed')]) as never)
+    const ctx = await fetchServicePicksContext('recommend good action movies on hulu', [], 'US')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith({ providerId: '15', genreId: 28, region: 'US' })
+    expect(ctx).toEqual([{ provider: 'Hulu', mediaType: 'movie', genre: 'Action', titles: [
+      { id: 1, title: 'Heat', year: '2024' },
+      { id: 2, title: 'Speed', year: '2024' }
+    ] }])
+  })
+
+  it('uses tv discover + tv genre ids for show requests', async () => {
+    mocks.discoverTv.mockResolvedValue(paged([show(5, 'The Bear')]) as never)
+    const ctx = await fetchServicePicksContext('any good action shows on netflix', [], 'GB')
+    expect(mocks.discoverTv).toHaveBeenCalledWith({ providerId: '8', genreId: 10759, region: 'GB' })
+    expect(ctx![0]).toMatchObject({ provider: 'Netflix', mediaType: 'tv' })
+  })
+
+  it('falls back to stored service keys for "my services" phrasing', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(9, 'Argo')]) as never)
+    const ctx = await fetchServicePicksContext('what should i watch on my services', ['netflix', 'hulu'], 'IN')
+    expect(mocks.discoverMovies).toHaveBeenCalledTimes(2)
+    const providers = mocks.discoverMovies.mock.calls.map((c) => c[0].providerId)
+    expect(providers).toEqual(['8', '15'])
+    expect(ctx).toHaveLength(2)
+  })
+
+  it('returns null for unmapped or absent providers without calling TMDB', async () => {
+    expect(await fetchServicePicksContext('recommend movies on mubi', [], 'US')).toBeNull()
+    expect(await fetchServicePicksContext('recommend a good movie', ['netflix'], 'US')).toBeNull()
+    expect(mocks.discoverMovies).not.toHaveBeenCalled()
+    expect(mocks.discoverTv).not.toHaveBeenCalled()
+  })
+
+  it('caps provider fan-out at 3 and caches the result', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(1, 'Heat')]) as never)
+    const msg = 'good movies on netflix hulu max peacock'
+    await fetchServicePicksContext(msg, [], 'FR')
+    expect(mocks.discoverMovies).toHaveBeenCalledTimes(3)
+    await fetchServicePicksContext(msg, [], 'FR')
+    expect(mocks.discoverMovies).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('questionRemainder hardening', () => {
+  it('strips recommendation phrasing so availability never resolves a bogus title', async () => {
+    const ctx = await fetchAvailabilityContext('can you recommend me some good action movies on hulu', 'NL')
+    expect(mocks.search).not.toHaveBeenCalled()
+    expect(ctx).toBeNull()
   })
 })

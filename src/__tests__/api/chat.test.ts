@@ -24,8 +24,10 @@ const mocks = vi.hoisted(() => ({
   formatShowForChat: vi.fn((s: { id: number; name: string }) => ({ id: s.id, title: s.name, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' })),
   wantsAvailability: vi.fn(() => false),
   wantsServiceChanges: vi.fn(() => false),
+  wantsServiceRecommendation: vi.fn(() => false),
   fetchAvailabilityContext: vi.fn<() => Promise<unknown>>(async () => null),
-  fetchServiceChangesContext: vi.fn<() => Promise<unknown>>(async () => null)
+  fetchServiceChangesContext: vi.fn<() => Promise<unknown>>(async () => null),
+  fetchServicePicksContext: vi.fn<() => Promise<unknown>>(async () => null)
 }))
 
 vi.mock('../../utils/redis', () => ({ getRedis: mocks.getRedis }))
@@ -42,8 +44,10 @@ vi.mock('../../utils/movieSearch', () => ({
 vi.mock('../../utils/chatGrounding', () => ({
   wantsAvailability: mocks.wantsAvailability,
   wantsServiceChanges: mocks.wantsServiceChanges,
+  wantsServiceRecommendation: mocks.wantsServiceRecommendation,
   fetchAvailabilityContext: mocks.fetchAvailabilityContext,
-  fetchServiceChangesContext: mocks.fetchServiceChangesContext
+  fetchServiceChangesContext: mocks.fetchServiceChangesContext,
+  fetchServicePicksContext: mocks.fetchServicePicksContext
 }))
 
 // Everything real except the global budget — per-IP limiting, isBot and
@@ -186,8 +190,10 @@ beforeEach(async () => {
   mocks.resolveMovieMentions.mockResolvedValue([])
   mocks.wantsAvailability.mockReturnValue(false)
   mocks.wantsServiceChanges.mockReturnValue(false)
+  mocks.wantsServiceRecommendation.mockReturnValue(false)
   mocks.fetchAvailabilityContext.mockResolvedValue(null)
   mocks.fetchServiceChangesContext.mockResolvedValue(null)
+  mocks.fetchServicePicksContext.mockResolvedValue(null)
   mocks.getRecentReleases.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.getRecentShows.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.formatMovieForChat.mockImplementation((m: { id: number; title: string }) => ({ id: m.id, title: m.title, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
@@ -800,6 +806,33 @@ describe('availability and service-changes grounding', () => {
     )
     expect(mocks.fetchServiceChangesContext).toHaveBeenCalledWith(['netflix', 'hulu'], 'US')
     expect(sentReferenceData().new_on_services).toEqual([{ provider: 'Netflix', added: ['Frankenstein'], coming: [], leaving: [] }])
+  })
+
+  it('injects service_picks and suppresses availability lookup for recommendation intents', async () => {
+    mocks.wantsServiceRecommendation.mockReturnValue(true)
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.fetchServicePicksContext.mockResolvedValue([
+      { provider: 'Hulu', mediaType: 'movie', genre: 'Action', titles: [{ id: 1, title: 'Heat', year: '1995' }] }
+    ])
+    await handler(
+      makeReq({ messages: [userMsg('recommend good action movies on hulu')], serviceKeys: ['hulu'], region: 'US' }),
+      makeRes()
+    )
+    expect(mocks.fetchServicePicksContext).toHaveBeenCalledWith('recommend good action movies on hulu', ['hulu'], 'US')
+    expect(mocks.fetchAvailabilityContext).not.toHaveBeenCalled()
+    expect(sentReferenceData().service_picks).toEqual([
+      { provider: 'Hulu', mediaType: 'movie', genre: 'Action', titles: [{ id: 1, title: 'Heat', year: '1995' }] }
+    ])
+  })
+
+  it('falls through to availability when service-pick grounding finds nothing', async () => {
+    mocks.wantsServiceRecommendation.mockReturnValue(true)
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.fetchServicePicksContext.mockResolvedValue(null)
+    mocks.fetchAvailabilityContext.mockResolvedValue({ title: 'Heat', mediaType: 'movie', region: 'US', flatrate: ['Netflix'], rent: [], buy: [] })
+    await handler(makeReq({ messages: [userMsg('can i watch Heat on netflix')] }), makeRes())
+    expect(mocks.fetchAvailabilityContext).toHaveBeenCalled()
+    expect(sentReferenceData().service_picks).toBeNull()
   })
 
   it('skips the diff lookup when availability already resolved a title', async () => {
