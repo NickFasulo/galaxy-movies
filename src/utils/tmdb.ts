@@ -34,6 +34,7 @@ export interface DiscoverOptions {
   providerId?: number | string | null
   region?: string
   page?: number
+  releasedAfter?: string
 }
 
 export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promise<T> {
@@ -335,7 +336,7 @@ export function isProviderAvailableInRegion(providerKey: string, region = 'US'):
   return !provider.regions || provider.regions.includes(region)
 }
 
-export async function fetchDiscoverMovies({ category, genreId, providerId, region, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
+export async function fetchDiscoverMovies({ category, genreId, providerId, region, releasedAfter, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
@@ -355,6 +356,11 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params['primary_release_date.lte'] = today
   } else if (category === 'upcoming') {
     params['primary_release_date.gte'] = today
+  }
+
+  if (releasedAfter) {
+    params['primary_release_date.gte'] = releasedAfter
+    params.sort_by = 'primary_release_date.desc'
   }
 
   const categoryLanguage = category && movieCategories[category]?.language
@@ -380,7 +386,7 @@ async function fetchList(path: '/discover/movie' | '/discover/tv', discoverParam
   })
 }
 
-export async function fetchDiscoverTv({ category, genreId, providerId, region, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
+export async function fetchDiscoverTv({ category, genreId, providerId, region, releasedAfter, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const daysAgo = (n: number) => {
@@ -418,6 +424,11 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, p
   const categoryLanguage = category && tvCategories[category]?.language
   if (categoryLanguage) {
     params.with_original_language = categoryLanguage
+  }
+
+  if (releasedAfter) {
+    params['first_air_date.gte'] = releasedAfter
+    params.sort_by = 'first_air_date.desc'
   }
 
   withCatalogFilters(params, { genreId, providerId, region })

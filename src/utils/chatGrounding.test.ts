@@ -13,8 +13,8 @@ const mocks = vi.hoisted(() => ({
   resolve: vi.fn(async () => [] as unknown[]),
   mentions: vi.fn(() => [] as unknown[]),
   fetchTmdb: vi.fn(async () => ({})),
-  discoverMovies: vi.fn(async () => ({ results: [], total_pages: 0, total_results: 0 })),
-  discoverTv: vi.fn(async () => ({ results: [], total_pages: 0, total_results: 0 })),
+  discoverMovies: vi.fn<(opts?: { providerId?: string | number | null; genreId?: number | string | null; region?: string; releasedAfter?: string }) => Promise<{ results: unknown[]; total_pages: number; total_results: number }>>(async () => ({ results: [], total_pages: 0, total_results: 0 })),
+  discoverTv: vi.fn<(opts?: { providerId?: string | number | null; genreId?: number | string | null; region?: string; releasedAfter?: string }) => Promise<{ results: unknown[]; total_pages: number; total_results: number }>>(async () => ({ results: [], total_pages: 0, total_results: 0 })),
   changes: vi.fn(async () => ({} as Record<string, unknown>))
 }))
 
@@ -171,7 +171,9 @@ describe('wantsServiceRecommendation', () => {
     "what's on max tonight",
     'any good horror shows on prime',
     'something to binge on my services',
-    'top comedies on peacock'
+    'top comedies on peacock',
+    'suggest some recent mystery movies on peacock',
+    'recommend new movies on hulu'
   ])('detects %s', (text) => {
     expect(wantsServiceRecommendation(text)).toBe(true)
   })
@@ -213,7 +215,7 @@ describe('fetchServicePicksContext', () => {
     mocks.discoverMovies.mockResolvedValue(paged([movie(9, 'Argo')]) as never)
     const ctx = await fetchServicePicksContext('what should i watch on my services', ['netflix', 'hulu'], 'IN')
     expect(mocks.discoverMovies).toHaveBeenCalledTimes(2)
-    const providers = mocks.discoverMovies.mock.calls.map((c) => c[0].providerId)
+    const providers = mocks.discoverMovies.mock.calls.map((c) => c[0]?.providerId)
     expect(providers).toEqual(['8', '15'])
     expect(ctx).toHaveLength(2)
   })
@@ -233,6 +235,28 @@ describe('fetchServicePicksContext', () => {
     await fetchServicePicksContext(msg, [], 'FR')
     expect(mocks.discoverMovies).toHaveBeenCalledTimes(3)
   })
+
+  it('date-filters and marks picks when the question asks for recent titles', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(3, 'Longlegs')]) as never)
+    const ctx = await fetchServicePicksContext('suggest some recent mystery movies on peacock', [], 'CA')
+    const opts = mocks.discoverMovies.mock.calls.at(-1)![0]
+    expect(opts).toMatchObject({ providerId: '386', genreId: 9648, region: 'CA' })
+    const cutoff = opts?.releasedAfter as string
+    expect(cutoff).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const daysBack = (Date.now() - new Date(cutoff).getTime()) / 86400000
+    expect(daysBack).toBeGreaterThan(360)
+    expect(daysBack).toBeLessThan(370)
+    expect(ctx![0].releasedAfter).toBe(cutoff)
+  })
+
+  it.each(['mystery movies on peacock', 'good dramas on hulu'])(
+    'leaves releasedAfter unset without recency phrasing: %s',
+    async (msg) => {
+      mocks.discoverMovies.mockResolvedValue(paged([movie(4, 'Gone Girl')]) as never)
+      await fetchServicePicksContext(msg, [], msg.includes('peacock') ? 'AU' : 'DE')
+      expect(mocks.discoverMovies.mock.calls.at(-1)![0]?.releasedAfter).toBeUndefined()
+    }
+  )
 })
 
 describe('questionRemainder hardening', () => {

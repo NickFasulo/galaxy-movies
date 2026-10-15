@@ -91,6 +91,12 @@ const GENRE_ALIASES: Record<string, string> = {
 const RECOMMEND_PATTERN =
   /\b(recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|pick|good|great|best|top|something|anything|what('?s| is) on|what should|what to|worth watching|binge)\b/i
 
+// Recency asks — "recent mystery movies", "new films from this year", "2024
+// horror". Bare "new on" belongs to the catalog-change intent and never
+// reaches here (wantsServiceChanges wins inside wantsServiceRecommendation).
+const RECENT_PATTERN = /\b(recent(?:ly)?|latest|newest|new|this (year|month)|last (year|month)|20\d\d)\b/i
+const RECENT_WINDOW_DAYS = 365
+
 export function wantsServiceRecommendation(text: string): boolean {
   // Catalog-change phrasing ("did anything drop on hulu") wins — its diff
   // data answers the question more precisely than a popularity list.
@@ -104,6 +110,7 @@ export interface ServicePicksContext {
   provider: string
   mediaType: MediaType
   genre: string | null
+  releasedAfter?: string
   titles: { id: number; title: string; year: string | null }[]
 }
 
@@ -139,8 +146,11 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
   const genreSlug = detectGenreSlug(message, mediaType)
   const genreId = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.id ?? null : null
   const genreLabel = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.title.replace(/\s+(Movies|Shows)$/i, '') ?? null : null
+  const releasedAfter = RECENT_PATTERN.test(message)
+    ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
+    : undefined
 
-  const cacheKey = `${mediaType}:${region}:${keys.join('+')}:${genreId ?? 'any'}`
+  const cacheKey = `${mediaType}:${region}:${keys.join('+')}:${genreId ?? 'any'}:${releasedAfter ?? 'all'}`
   const cached = picksCache.get(cacheKey)
   if (cached !== undefined) return cached.ctx
 
@@ -150,13 +160,13 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
     if (!providerIds.length) continue
     try {
       const discover = mediaType === 'tv' ? fetchDiscoverTv : fetchDiscoverMovies
-      const data = await discover({ providerId: providerIds.join('|'), genreId, region })
+      const data = await discover({ providerId: providerIds.join('|'), genreId, region, releasedAfter })
       const titles = (data.results || []).slice(0, TITLES_PER_PROVIDER).map((t) => ({
         id: t.id,
         title: t.title || '',
         year: (t.release_date || '').slice(0, 4) || null
       }))
-      if (titles.length) out.push({ provider: providerLabel(key), mediaType, genre: genreLabel, titles })
+      if (titles.length) out.push({ provider: providerLabel(key), mediaType, genre: genreLabel, releasedAfter, titles })
     } catch (err) {
       console.error(`Chat service-picks lookup failed for ${key}:`, err)
     }
