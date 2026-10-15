@@ -19,6 +19,8 @@ interface ChatLink {
   mediaType: string
   title: string
   year?: string
+  poster_path?: string | null
+  releaseDate?: string
 }
 
 function parseMessages(input: unknown): ChatMessage[] | null {
@@ -44,13 +46,16 @@ function parseLinks(input: unknown): Record<string, ChatLink[]> | null {
     const links: ChatLink[] = []
     for (const raw of arr) {
       if (!raw || typeof raw !== 'object') return null
-      const { match, movieId, mediaType, title, year } = raw as Record<string, unknown>
+      const { match, movieId, mediaType, title, year, poster_path, releaseDate } = raw as Record<string, unknown>
       if (typeof match !== 'string' || match.length > 100) return null
       if (typeof movieId !== 'number' || !Number.isFinite(movieId)) return null
       if (mediaType !== 'movie' && mediaType !== 'tv') return null
       if (typeof title !== 'string' || title.length > 100) return null
       const link: ChatLink = { match, movieId, mediaType, title }
       if (typeof year === 'string' && /^\d{4}$/.test(year)) link.year = year
+      if (typeof poster_path === 'string' && poster_path.length <= 200) link.poster_path = poster_path
+      else if (poster_path === null) link.poster_path = null
+      if (typeof releaseDate === 'string' && releaseDate.length <= 10) link.releaseDate = releaseDate
       links.push(link)
     }
     out[key] = links

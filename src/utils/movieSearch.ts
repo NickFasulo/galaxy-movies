@@ -20,6 +20,8 @@ export interface ResolvedMention {
   mediaType: string
   title: string
   year?: string
+  poster_path?: string | null
+  releaseDate?: string
 }
 
 export async function searchMultiByQuery(query: string, page = 1): Promise<MultiSearchResult[]> {
@@ -172,7 +174,15 @@ export async function resolveMovieMentions(mentions: MovieMention[]): Promise<Re
             : null)
 
         return bestMatch
-          ? { match: mention.match, movieId: bestMatch.id, mediaType: bestMatch.media_type, title: mention.title, year: mention.year }
+          ? {
+              match: mention.match,
+              movieId: bestMatch.id,
+              mediaType: bestMatch.media_type,
+              title: mention.title,
+              year: mention.year ?? (titleYear(bestMatch).slice(0, 4) || undefined),
+              poster_path: bestMatch.poster_path ?? null,
+              releaseDate: titleYear(bestMatch) || undefined
+            }
           : null
       } catch (error) {
         console.error(`Error resolving title mention "${mention.title}":`, error)

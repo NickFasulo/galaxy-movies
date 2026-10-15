@@ -61,7 +61,7 @@ function renderMessageContent(content: string, links: ResolvedMention[] | undefi
             {part}
           </NextLink></Link>
         <WatchlistButton
-          movie={{ id: link.movieId, mediaType: link.mediaType === 'tv' ? 'tv' : 'movie', title: link.title, release_date: link.year }}
+          movie={{ id: link.movieId, mediaType: link.mediaType === 'tv' ? 'tv' : 'movie', title: link.title, release_date: link.releaseDate || link.year, poster_path: link.poster_path }}
           size='2xs'
           ml={1}
           variant='ghost'

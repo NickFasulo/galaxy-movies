@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Badge, Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
@@ -12,9 +12,9 @@ import PlusTools from '../components/PlusTools'
 import PushAlerts from '../components/PushAlerts'
 import { useUserData } from '../hooks/useUserData'
 import { usePlusStatus } from '../hooks/usePlus'
-import { backfillRatingMeta, ratingEntries } from '../utils/userData'
+import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../utils/userData'
 import { firstParam } from '../utils/query'
-import type { TitleSummary } from '../types/tmdb'
+import type { MediaType, TitleSummary } from '../types/tmdb'
 
 export default function Watchlist() {
   const data = useUserData()
@@ -53,11 +53,17 @@ export default function Watchlist() {
     return () => { cancelled = true }
   }, [plus, creds])
 
-  // Ratings written before poster_path existed render as gray cards — resolve
-  // them against TMDB once and merge back; the change re-syncs server-side too.
-  useEffect(() => {
-    const missing = ratingEntries(data.ratings).filter((e) => !e.poster_path).slice(0, 50)
+  // Entries missing posters render as gray cards — resolve them once against
+  // TMDB and merge back. The attempted-set prevents refetch loops on titles
+  // that genuinely have no poster (e.g. unreleased films).
+  const posterAttempts = useRef(new Set<string>())
+  const backfillMissingPosters = useCallback((
+    ids: { id: number; mediaType?: MediaType }[],
+    patch: (results: RatingMetaPatch[]) => void
+  ) => {
+    const missing = ids.filter((e) => !posterAttempts.current.has(`${e.mediaType || 'movie'}:${e.id}`)).slice(0, 50)
     if (!missing.length) return
+    missing.forEach((e) => posterAttempts.current.add(`${e.mediaType || 'movie'}:${e.id}`))
     fetch('/api/poster-paths', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,10 +71,24 @@ export default function Watchlist() {
     })
       .then((resp) => (resp.ok ? resp.json() : null))
       .then((body) => {
-        if (Array.isArray(body?.results)) backfillRatingMeta(body.results)
+        if (Array.isArray(body?.results)) patch(body.results)
       })
-      .catch(() => {})
-  }, [data.ratings])
+      .catch(() => missing.forEach((e) => posterAttempts.current.delete(`${e.mediaType || 'movie'}:${e.id}`)))
+  }, [])
+
+  useEffect(() => {
+    backfillMissingPosters(
+      watchlist.filter((e) => !e.poster_path),
+      backfillWatchlistMeta
+    )
+  }, [watchlist, backfillMissingPosters])
+
+  useEffect(() => {
+    backfillMissingPosters(
+      ratingEntries(data.ratings).filter((e) => !e.poster_path),
+      backfillRatingMeta
+    )
+  }, [data.ratings, backfillMissingPosters])
 
   const rated = useMemo(() =>
     ratingEntries(data.ratings)

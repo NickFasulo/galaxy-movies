@@ -307,3 +307,28 @@ export function backfillRatingMeta(items: RatingMetaPatch[]): void {
   if (!items.length) return
   update((data) => mergeRatingMetaIntoData(data, items))
 }
+
+// Same patch-only-missing semantics for watchlist entries — chat adds and old
+// snapshots can lack poster_path/year.
+export function mergeWatchlistMetaIntoData(data: UserData, items: RatingMetaPatch[]): UserData {
+  let changed = false
+  const watchlist = data.watchlist.map((entry) => {
+    const item = items.find((i) => Number.isInteger(i?.id) && i.id === entry.id && (i.mediaType === 'tv' ? 'tv' : 'movie') === (entry.mediaType || 'movie'))
+    if (!item) return entry
+    const needsPatch = (item.poster_path && !entry.poster_path) || (item.year && !entry.year) || (item.title && !entry.title)
+    if (!needsPatch) return entry
+    changed = true
+    return {
+      ...entry,
+      poster_path: entry.poster_path ?? item.poster_path ?? null,
+      year: entry.year ?? item.year ?? null,
+      title: entry.title || item.title || ''
+    }
+  })
+  return changed ? { ...data, watchlist } : data
+}
+
+export function backfillWatchlistMeta(items: RatingMetaPatch[]): void {
+  if (!items.length) return
+  update((data) => mergeWatchlistMetaIntoData(data, items))
+}
