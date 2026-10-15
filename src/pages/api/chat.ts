@@ -328,9 +328,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let availabilityContext: AvailabilityContext | null = null
     let serviceChangesContext: ServiceChangesContext[] | null = null
     let servicePicksContext: ServicePicksContext[] | null = null
+    const priorUserText = messages
+      .slice(0, -1)
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content)
+      .slice(-4)
+      .join('\n')
     try {
-      if (wantsServiceRecommendation(rawLast.content)) {
-        servicePicksContext = await fetchServicePicksContext(rawLast.content, serviceKeys, region)
+      if (wantsServiceRecommendation(rawLast.content, priorUserText)) {
+        servicePicksContext = await fetchServicePicksContext(rawLast.content, serviceKeys, region, priorUserText)
       }
       if (!servicePicksContext && wantsAvailability(rawLast.content)) {
         availabilityContext = await fetchAvailabilityContext(rawLast.content, region)

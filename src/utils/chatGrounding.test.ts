@@ -187,6 +187,20 @@ describe('wantsServiceRecommendation', () => {
   ])('ignores %s', (text) => {
     expect(wantsServiceRecommendation(text)).toBe(false)
   })
+
+  it('treats continuation phrasing as inheriting scope from prior turns', () => {
+    const ctx = 'can you recommend some horror on peacock'
+    expect(wantsServiceRecommendation('more recent releases', ctx)).toBe(true)
+    expect(wantsServiceRecommendation('what about comedies?', ctx)).toBe(true)
+    expect(wantsServiceRecommendation('more', ctx)).toBe(true)
+    // Same phrasing without conversation context stays unscoped.
+    expect(wantsServiceRecommendation('more recent releases')).toBe(false)
+    expect(wantsServiceRecommendation('more')).toBe(false)
+    // Unrelated short turns don't inherit stale scope.
+    expect(wantsServiceRecommendation('ok thanks', ctx)).toBe(false)
+    // Change intent still wins even mid-conversation.
+    expect(wantsServiceRecommendation('anything new drop?', ctx)).toBe(false)
+  })
 })
 
 describe('fetchServicePicksContext', () => {
@@ -257,6 +271,27 @@ describe('fetchServicePicksContext', () => {
       expect(mocks.discoverMovies.mock.calls.at(-1)![0]?.releasedAfter).toBeUndefined()
     }
   )
+
+  it('inherits provider, genre, and media type from prior-turn context on follow-ups', async () => {
+    mocks.discoverTv.mockResolvedValue(paged([show(7, 'From')]) as never)
+    const ctx = await fetchServicePicksContext('more recent releases', [], 'JP', 'recommend some horror shows on peacock')
+    expect(mocks.discoverTv).toHaveBeenCalledWith({
+      providerId: '386',
+      genreId: null, // tvGenres has no horror slug — no genre filter
+      region: 'JP',
+      releasedAfter: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    })
+    expect(ctx![0].mediaType).toBe('tv')
+    expect(ctx![0].releasedAfter).toBeTruthy()
+  })
+
+  it('prefers the most recently mentioned provider in context', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(6, 'Old Title')]) as never)
+    await fetchServicePicksContext('more like that', [], 'MX', 'movies on hulu and then netflix')
+    const providers = mocks.discoverMovies.mock.calls.map((c) => c[0]?.providerId)
+    expect(providers[0]).toBe('8') // netflix mentioned last → first
+    expect(providers).toContain('15')
+  })
 })
 
 describe('questionRemainder hardening', () => {

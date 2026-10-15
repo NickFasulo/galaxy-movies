@@ -818,7 +818,7 @@ describe('availability and service-changes grounding', () => {
       makeReq({ messages: [userMsg('recommend good action movies on hulu')], serviceKeys: ['hulu'], region: 'US' }),
       makeRes()
     )
-    expect(mocks.fetchServicePicksContext).toHaveBeenCalledWith('recommend good action movies on hulu', ['hulu'], 'US')
+    expect(mocks.fetchServicePicksContext).toHaveBeenCalledWith('recommend good action movies on hulu', ['hulu'], 'US', '')
     expect(mocks.fetchAvailabilityContext).not.toHaveBeenCalled()
     expect(sentReferenceData().service_picks).toEqual([
       { provider: 'Hulu', mediaType: 'movie', genre: 'Action', titles: [{ id: 1, title: 'Heat', year: '1995' }] }

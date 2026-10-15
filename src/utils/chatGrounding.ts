@@ -97,13 +97,33 @@ const RECOMMEND_PATTERN =
 const RECENT_PATTERN = /\b(recent(?:ly)?|latest|newest|new|this (year|month)|last (year|month)|20\d\d)\b/i
 const RECENT_WINDOW_DAYS = 365
 
-export function wantsServiceRecommendation(text: string): boolean {
+// "more recent releases", "what about comedies?" — continuation phrasing that
+// carries no scope of its own and inherits it from the conversation.
+const FOLLOWUP_PATTERN = /\b(more|another|others?|else|similar|like (that|those|it)|instead|what about|how about|different|newer|older|recent|latest)\b/i
+
+// Ordered by last mention position — for follow-up turns the freshest provider
+// in the conversation wins over stale ones.
+const providerKeysIn = (text: string): string[] =>
+  PROVIDER_KEY_WORDS
+    .map(([pattern, key]) => {
+      const matches = [...text.matchAll(new RegExp(pattern.source, 'gi'))]
+      return { key, lastIndex: matches.length ? matches[matches.length - 1].index ?? 0 : -1 }
+    })
+    .filter((m) => m.lastIndex >= 0)
+    .sort((a, b) => b.lastIndex - a.lastIndex)
+    .map((m) => m.key)
+
+export function wantsServiceRecommendation(text: string, contextText = ''): boolean {
   // Catalog-change phrasing ("did anything drop on hulu") wins — its diff
   // data answers the question more precisely than a popularity list.
   if (wantsServiceChanges(text)) return false
+  const isFollowup = contextText.length > 0 && FOLLOWUP_PATTERN.test(text)
+  const subject = isFollowup ? `${text} ${contextText}` : text
   const hasServiceScope =
-    new RegExp(`\\b(${PROVIDER_WORD_PATTERN})\\b`, 'i').test(text) || MY_SERVICES_PATTERN.test(text)
-  return hasServiceScope && (RECOMMEND_PATTERN.test(text) || GENRE_WORD_PATTERN.test(text))
+    providerKeysIn(subject).length > 0 ||
+    new RegExp(`\\b(${PROVIDER_WORD_PATTERN})\\b`, 'i').test(subject) ||
+    MY_SERVICES_PATTERN.test(subject)
+  return hasServiceScope && (RECOMMEND_PATTERN.test(subject) || GENRE_WORD_PATTERN.test(subject) || RECENT_PATTERN.test(subject))
 }
 
 export interface ServicePicksContext {
@@ -123,10 +143,10 @@ const picksCache = new LRUCache<string, { ctx: ServicePicksContext[] | null }>({
 
 const providerLabel = (key: string) => streamingProviders[key]?.title.replace(/\s+Movies$/i, '') || key
 
-function detectPickMediaType(text: string): MediaType {
+function detectPickMediaType(text: string): MediaType | null {
   if (/\b(movies?|films?)\b/i.test(text)) return 'movie'
   if (/\b(shows?|series|tv)\b/i.test(text)) return 'tv'
-  return 'movie'
+  return null
 }
 
 function detectGenreSlug(text: string, mediaType: MediaType): string | null {
@@ -136,17 +156,19 @@ function detectGenreSlug(text: string, mediaType: MediaType): string | null {
   return GENRE_WORDS[canonical]?.[mediaType] ?? null
 }
 
-export async function fetchServicePicksContext(message: string, serviceKeys: string[], region: string): Promise<ServicePicksContext[] | null> {
-  let keys = PROVIDER_KEY_WORDS.filter(([pattern]) => pattern.test(message)).map(([, key]) => key)
+export async function fetchServicePicksContext(message: string, serviceKeys: string[], region: string, contextText = ''): Promise<ServicePicksContext[] | null> {
+  let keys = providerKeysIn(message)
+  if (!keys.length && contextText) keys = providerKeysIn(contextText)
   if (!keys.length && MY_SERVICES_PATTERN.test(message)) keys = serviceKeys.slice(0, MAX_PICK_PROVIDERS)
   keys = [...new Set(keys)].slice(0, MAX_PICK_PROVIDERS)
   if (!keys.length) return null
 
-  const mediaType = detectPickMediaType(message)
-  const genreSlug = detectGenreSlug(message, mediaType)
+  const mediaType = detectPickMediaType(message) ?? (contextText ? detectPickMediaType(contextText) : null) ?? 'movie'
+  const genreSlug = detectGenreSlug(message, mediaType) ?? (contextText ? detectGenreSlug(contextText, mediaType) : null)
   const genreId = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.id ?? null : null
   const genreLabel = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.title.replace(/\s+(Movies|Shows)$/i, '') ?? null : null
-  const releasedAfter = RECENT_PATTERN.test(message)
+  const recent = RECENT_PATTERN.test(message) || (contextText.length > 0 && RECENT_PATTERN.test(contextText))
+  const releasedAfter = recent
     ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
     : undefined
 
