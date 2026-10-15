@@ -1,6 +1,7 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
-import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../utils/tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../utils/tmdb'
+import { DEFAULT_REGION } from '../utils/region'
 import { curatedLists } from '../utils/curatedLists'
 import { getGeneratedLists } from '../utils/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/contentOpportunities'
@@ -89,9 +90,15 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     ...Object.keys(streamingProviders).map(provider =>
       urlEntry(`${siteUrl}/streaming/${provider}`)
     ),
-    ...getProviderGenreTargets().map(({ providerKey, genreKey }) =>
-      urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`)
-    ),
+    // Googlebot sends no geo headers, so it always crawls the DEFAULT_REGION
+    // view — provider×genre combos for region-locked services render thin and
+    // emit noindex there. Advertising them wastes crawl on URLs that can never
+    // index; the pages still exist for users in-region.
+    ...getProviderGenreTargets()
+      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION))
+      .map(({ providerKey, genreKey }) =>
+        urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`)
+      ),
     ...Object.keys(tvCategories).map(category =>
       urlEntry(`${siteUrl}/tv/browse/${category}`)
     ),
@@ -101,9 +108,11 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     ...Object.keys(streamingProviders).map(provider =>
       urlEntry(`${siteUrl}/tv/streaming/${provider}`)
     ),
-    ...getTvProviderGenreTargets().map(({ providerKey, genreKey }) =>
-      urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`)
-    ),
+    ...getTvProviderGenreTargets()
+      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION))
+      .map(({ providerKey, genreKey }) =>
+        urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`)
+      ),
     ...Object.keys(curatedLists).map(slug =>
       urlEntry(`${siteUrl}/lists/${slug}`)
     ),
@@ -156,7 +165,9 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     ]
 
     for (const movie of allMovies) {
-      if (!movie?.id) continue
+      // Detail pages noindex titles without an overview — keep them out of
+      // the sitemap (the discover payload already carries the field).
+      if (!movie?.id || !movie.overview) continue
       if (!movieEntries.has(movie.id)) {
         const lastmod = formatDate(movie.release_date) || today
         movieEntries.set(movie.id, lastmod)
@@ -164,7 +175,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     }
 
     for (const show of allShows) {
-      if (!show?.id) continue
+      if (!show?.id || !show.overview) continue
       if (!showEntries.has(show.id)) {
         const lastmod = formatDate(show.first_air_date || show.release_date) || today
         showEntries.set(show.id, lastmod)
