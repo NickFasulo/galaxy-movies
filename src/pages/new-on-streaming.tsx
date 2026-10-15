@@ -1,7 +1,6 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
-import { Fragment } from 'react'
-import { Box, Flex, Heading, Text } from '@chakra-ui/react'
+import { Box, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../components/MovieGrid'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
@@ -95,18 +94,28 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
   return (
     <Box mb={3}>
       <Text fontSize='sm' color='gray.400' mb={1}>{label}</Text>
-      <Flex wrap='wrap' columnGap={2} rowGap={1} fontSize='sm' color='whiteAlpha.900'>
+      <Box fontSize='sm' color='whiteAlpha.900'>
         {items.map((t, i) => (
-          <Fragment key={`${t.tmdbType}-${t.tmdbId}-${t.date || t.title}`}>
-            {i > 0 && <Text as='span' color='gray.600'>·</Text>}
+          <Box
+            key={`${t.tmdbType}-${t.tmdbId}-${t.date || t.title}`}
+            display={{ base: 'list-item', md: 'inline' }}
+            ml={{ base: 4, md: 0 }}
+            py={{ base: 0.5, md: 0 }}
+            css={{ '::marker': { color: 'var(--chakra-colors-gray-600)' } }}
+          >
+            {i > 0 && (
+              <Text as='span' color='gray.600' display={{ base: 'none', md: 'inline' }}>
+                {'\u00A0· '}
+              </Text>
+            )}
             <Link href={`/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`} passHref>
               <Text as='span' _hover={{ textDecoration: 'underline' }} cursor='pointer'>
                 {t.title}{t.year ? ` (${t.year})` : ''}{showDate && t.date ? ` — ${formatChangeDate(t.date)}` : ''}{t.season ? ` (season ${t.season})` : ''}
               </Text>
             </Link>
-          </Fragment>
+          </Box>
         ))}
-      </Flex>
+      </Box>
     </Box>
   )
 }
