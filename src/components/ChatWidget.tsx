@@ -428,7 +428,10 @@ export default function ChatWidget() {
       if (error.name === 'AbortError') {
         console.log('Request was aborted')
       } else {
-        console.error('Error sending message:', error)
+        // An Error object in console.error surfaces in the Next.js dev error
+        // overlay even though we recover — expected HTTP errors log as warn.
+        if (error.status) console.warn(`Chat request failed (${error.status}): ${error.message}`)
+        else console.error('Error sending message:', error)
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: error.status === 429
