@@ -174,7 +174,8 @@ describe('wantsServiceRecommendation', () => {
     'top comedies on peacock',
     'suggest some recent mystery movies on peacock',
     'recommend new movies on hulu',
-    'any on netflix?'
+    'any on netflix?',
+    'any new comedy horrors on paramount'
   ])('detects %s', (text) => {
     expect(wantsServiceRecommendation(text)).toBe(true)
   })
@@ -284,6 +285,17 @@ describe('fetchServicePicksContext', () => {
       releasedAfter: undefined
     })
     expect(ctx![0].genre).toBe('Comedy + Horror')
+  })
+
+  it('normalizes genre plurals and colloquial words', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(8, 'Shaun of the Dead')]) as never)
+    await fetchServicePicksContext('any comedy horrors on paramount?', [], 'SE')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: '2303|2616', genreId: '35,27' })
+    )
+    mocks.discoverMovies.mockClear()
+    await fetchServicePicksContext('scary movies on tubi', [], 'NO')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith(expect.objectContaining({ providerId: '73', genreId: 27 }))
   })
 
   it('inherits provider, genre, and media type from prior-turn context on follow-ups', async () => {

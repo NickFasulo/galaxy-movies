@@ -76,16 +76,27 @@ const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
   kids: { tv: 'kids' }
 }
 
+// Keys get an optional plural `s?`; irregular plurals and colloquial genre
+// words ("scary", "funny", "romcom") live in the alternation + alias table.
 const GENRE_WORD_PATTERN = new RegExp(
-  `\\b(${Object.keys(GENRE_WORDS).join('|')}|animated|comedies|documentaries|dramas|mysteries|romantic|thrillers|westerns|scifi|science fiction)\\b`,
+  `\\b(${Object.keys(GENRE_WORDS).map((k) => `${k}s?`).join('|')}|animated|comedies|documentaries|mysteries|romantic|scifi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?)\\b`,
   'i'
 )
 
 const GENRE_ALIASES: Record<string, string> = {
   animated: 'animation', comedies: 'comedy', documentaries: 'documentary',
-  dramas: 'drama', mysteries: 'mystery', romantic: 'romance',
-  thrillers: 'thriller', westerns: 'western', scifi: 'sci-fi',
-  'science fiction': 'sci-fi'
+  mysteries: 'mystery', romantic: 'romance', scifi: 'sci-fi',
+  'science fiction': 'sci-fi', scary: 'horror', spooky: 'horror',
+  creepy: 'horror', terrifying: 'horror', funny: 'comedy', hilarious: 'comedy',
+  'rom-com': 'romance', romcom: 'romance', 'rom-coms': 'romance', romcoms: 'romance'
+}
+
+const canonicalGenre = (word: string): string => {
+  const w = word.toLowerCase()
+  if (GENRE_ALIASES[w]) return GENRE_ALIASES[w]
+  if (GENRE_WORDS[w]) return w
+  const singular = w.replace(/s$/, '')
+  return GENRE_ALIASES[singular] ?? (GENRE_WORDS[singular] ? singular : w)
 }
 
 const RECOMMEND_PATTERN =
@@ -157,8 +168,7 @@ const GENRE_WORD_GLOBAL = new RegExp(GENRE_WORD_PATTERN.source, 'gi')
 function detectGenreSlugs(text: string, mediaType: MediaType): string[] {
   const slugs: string[] = []
   for (const m of text.toLowerCase().matchAll(GENRE_WORD_GLOBAL)) {
-    const canonical = GENRE_ALIASES[m[1]] || m[1]
-    const slug = GENRE_WORDS[canonical]?.[mediaType]
+    const slug = GENRE_WORDS[canonicalGenre(m[1])]?.[mediaType]
     if (slug && !slugs.includes(slug)) slugs.push(slug)
   }
   return slugs
@@ -240,7 +250,7 @@ const providerNames = (list?: { provider_name?: string }[]): string[] =>
 // count as filler too ("action movies on hulu" must not resolve a movie called
 // "Action").
 const FILLER_PATTERN =
-  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|similar|tonight|stuff|things|popular|trending|action|adventure|animated?|animation|comedy|comedies|crime|documentar(?:y|ies)|dramas?|family|fantasy|horror|myster(?:y|ies)|romance|romantic|thrillers?|westerns?|war|reality|soaps?|kids?|children|sci-?fi|science fiction)\b/gi
+  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|similar|tonight|stuff|things|popular|trending|actions?|adventures?|animated?|animation|comed(?:y|ies)|crimes?|documentar(?:y|ies)|dramas?|family|fantas(?:y|ies)|horrors?|myster(?:y|ies)|romances?|romantic|thrillers?|westerns?|war|reality|soaps?|kids?|children|sci-?fi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?)\b/gi
 
 // Loose questions like "is Dune still on Netflix?" carry no quoted/year'd
 // mention — strip the question phrasing so a plain search can try the rest.
