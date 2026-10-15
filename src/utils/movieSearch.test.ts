@@ -25,6 +25,7 @@ const multiPage = (results: unknown[]) => ({ results, total_pages: 1, total_resu
 
 let extractTitleMentions: typeof import('./movieSearch').extractTitleMentions
 let resolveMovieMentions: typeof import('./movieSearch').resolveMovieMentions
+let resolveTitleItem: typeof import('./movieSearch').resolveTitleItem
 let getRecentReleases: typeof import('./movieSearch').getRecentReleases
 let getRecentShows: typeof import('./movieSearch').getRecentShows
 let formatMovieForChat: typeof import('./movieSearch').formatMovieForChat
@@ -37,6 +38,7 @@ beforeEach(async () => {
   const mod = await import('./movieSearch')
   extractTitleMentions = mod.extractTitleMentions
   resolveMovieMentions = mod.resolveMovieMentions
+  resolveTitleItem = mod.resolveTitleItem
   getRecentReleases = mod.getRecentReleases
   getRecentShows = mod.getRecentShows
   formatMovieForChat = mod.formatMovieForChat
@@ -254,5 +256,38 @@ describe('chat formatters', () => {
     const overview = 'a'.repeat(250)
     expect(formatMovieForChat({ id: 4, overview } as never).overview).toBe('a'.repeat(200) + '...')
     expect(formatMovieForChat({ id: 4, overview: 'b'.repeat(200) } as never).overview).toHaveLength(200)
+  })
+})
+
+describe('resolveTitleItem', () => {
+  it('resolves an exact title match with year preference', async () => {
+    fetchTmdb.mockResolvedValue(multiPage([
+      { ...tmdbHit({ id: 7, title: 'Heat', release_date: '2020-06-01' }) },
+      tmdbHit()
+    ]))
+    const resolved = await resolveTitleItem('Heat', '1995')
+    expect(resolved).toMatchObject({ id: 949, mediaType: 'movie', title: 'Heat', year: '1995', poster_path: '/p.jpg' })
+  })
+
+  it('accepts original_title matches and tv results', async () => {
+    fetchTmdb.mockResolvedValue(multiPage([
+      { id: 42, media_type: 'tv', name: 'El Marginal', original_name: 'El Marginal', title: undefined, first_air_date: '2016-06-02', poster_path: '/s.jpg' }
+    ]))
+    const resolved = await resolveTitleItem('el marginal')
+    expect(resolved).toMatchObject({ id: 42, mediaType: 'tv', title: 'El Marginal', year: '2016' })
+  })
+
+  it('returns null when nothing matches the exact title — no fuzzy imports', async () => {
+    fetchTmdb.mockResolvedValue(multiPage([
+      { id: 5, media_type: 'movie', title: 'Heated Rivalry', release_date: '2025-01-01', poster_path: '/x.jpg' }
+    ]))
+    expect(await resolveTitleItem('Heat')).toBeNull()
+  })
+
+  it('returns null when the search throws or returns nothing', async () => {
+    fetchTmdb.mockRejectedValue(new Error('tmdb down'))
+    expect(await resolveTitleItem('Heat')).toBeNull()
+    fetchTmdb.mockResolvedValue(multiPage([]))
+    expect(await resolveTitleItem('Heat')).toBeNull()
   })
 })

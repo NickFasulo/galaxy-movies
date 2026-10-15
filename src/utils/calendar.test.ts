@@ -1,5 +1,17 @@
-import { describe, expect, it } from 'vitest'
-import { buildIcs, comingEvents, episodeEvents, premiereEvents, toIcsDate } from './calendar'
+import { describe, expect, it, vi } from 'vitest'
+import { buildIcs, comingEvents, episodeEvents, loadUpcomingEpisodes, loadUpcomingPremieres, premiereEvents, toIcsDate } from './calendar'
+
+const nextEp = vi.hoisted(() => vi.fn())
+vi.mock('./watchlistAlerts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./watchlistAlerts')>()),
+  fetchNextEpisode: nextEp
+}))
+
+const fetchTmdb = vi.hoisted(() => vi.fn())
+vi.mock('./tmdb', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./tmdb')>()),
+  fetchTmdb
+}))
 import type { ProviderChanges } from './streamingChanges'
 import type { AlertPrefs } from './watchlistAlerts'
 
@@ -118,5 +130,85 @@ describe('buildIcs', () => {
     expect(ics).toContain('DTEND;VALUE=DATE:20260202')
     expect(ics).toContain('SUMMARY:Film\\, "One" comes to Netflix')
     expect(ics).toMatch(/END:VCALENDAR\r\n$/)
+  })
+})
+
+const futureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
+
+describe('loadUpcomingEpisodes', () => {
+  it('fetches only cache misses and returns non-null episodes', async () => {
+    nextEp.mockReset()
+    nextEp.mockImplementation(async (id: number) =>
+      id === 101 ? { airDate: futureDate(5), season: 1, episode: 2 } : null
+    )
+    const first = await loadUpcomingEpisodes([101, 102, 103])
+    expect(first.get(101)).toMatchObject({ season: 1, episode: 2 })
+    expect(first.has(102)).toBe(false)
+    expect(nextEp).toHaveBeenCalledTimes(3)
+
+    const second = await loadUpcomingEpisodes([101, 102, 103])
+    expect(nextEp).toHaveBeenCalledTimes(3)
+    expect(second.get(101)).toMatchObject({ episode: 2 })
+  })
+
+  it('caps detail fetches at 25', async () => {
+    nextEp.mockReset()
+    nextEp.mockResolvedValue(null)
+    const ids = Array.from({ length: 40 }, (_, i) => 300 + i)
+    await loadUpcomingEpisodes(ids)
+    expect(nextEp).toHaveBeenCalledTimes(25)
+  })
+})
+
+const releaseDates = (region: string, dates: { type?: number; release_date: string }[]) => ({
+  results: [{ iso_3166_1: region, release_dates: dates }]
+})
+
+describe('loadUpcomingPremieres', () => {
+  it('prefers the theatrical (type 3) date even when another type is sooner', async () => {
+    fetchTmdb.mockReset()
+    fetchTmdb.mockResolvedValue(releaseDates('US', [
+      { type: 4, release_date: `${futureDate(5)}T00:00:00.000Z` },
+      { type: 3, release_date: `${futureDate(30)}T00:00:00.000Z` }
+    ]))
+    const index = await loadUpcomingPremieres([401], 'US')
+    expect(index.get(401)).toBe(futureDate(30))
+  })
+
+  it('falls back to the earliest future release when no theatrical type exists', async () => {
+    fetchTmdb.mockReset()
+    fetchTmdb.mockResolvedValue(releaseDates('US', [
+      { type: 4, release_date: `${futureDate(20)}T00:00:00.000Z` },
+      { type: 6, release_date: `${futureDate(9)}T00:00:00.000Z` }
+    ]))
+    const index = await loadUpcomingPremieres([402], 'US')
+    expect(index.get(402)).toBe(futureDate(9))
+  })
+
+  it('uses the subscriber region, then US, then whatever region exists', async () => {
+    fetchTmdb.mockReset()
+    fetchTmdb.mockImplementation(async () => ({
+      results: [
+        { iso_3166_1: 'US', release_dates: [{ type: 3, release_date: `${futureDate(50)}T00:00:00.000Z` }] },
+        { iso_3166_1: 'IN', release_dates: [{ type: 3, release_date: `${futureDate(10)}T00:00:00.000Z` }] }
+      ]
+    }))
+    expect((await loadUpcomingPremieres([403], 'IN')).get(403)).toBe(futureDate(10))
+
+    fetchTmdb.mockImplementation(async () => ({
+      results: [{ iso_3166_1: 'GB', release_dates: [{ type: 3, release_date: `${futureDate(7)}T00:00:00.000Z` }] }]
+    }))
+    expect((await loadUpcomingPremieres([404], 'IN')).get(404)).toBe(futureDate(7))
+  })
+
+  it('returns nothing for movies with only past releases or upstream errors', async () => {
+    fetchTmdb.mockReset()
+    fetchTmdb.mockResolvedValue(releaseDates('US', [
+      { type: 3, release_date: '2020-01-01T00:00:00.000Z' }
+    ]))
+    expect((await loadUpcomingPremieres([405], 'US')).has(405)).toBe(false)
+
+    fetchTmdb.mockRejectedValue(new Error('tmdb down'))
+    expect((await loadUpcomingPremieres([406], 'US')).has(406)).toBe(false)
   })
 })

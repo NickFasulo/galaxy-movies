@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { buildDiscordMessage, buildEmail, matchItems, parsePrefs, type AlertPrefs, type MatchedItem } from './watchlistAlerts'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { buildDiscordMessage, buildEmail, loadEpisodeIndex, matchItems, parsePrefs, type AlertPrefs, type MatchedItem } from './watchlistAlerts'
 import type { CatalogTitle, ProviderChanges } from './streamingChanges'
+
+const fetchTmdb = vi.hoisted(() => vi.fn())
+vi.mock('./tmdb', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./tmdb')>()),
+  fetchTmdb
+}))
 
 const catalogTitle = (tmdbId: number | null, tmdbType: 'movie' | 'tv' = 'movie'): CatalogTitle => ({
   tmdbId,
@@ -250,5 +256,67 @@ describe('buildEmail', () => {
     const { html } = buildEmail([ep], 'a@b.com', 'tok')
     expect(html).toContain('New episode S2E5 airs Feb 1')
     expect(html).toContain('/tv/1')
+  })
+})
+
+const daysFromNow = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
+
+describe('loadEpisodeIndex', () => {
+  beforeEach(() => {
+    fetchTmdb.mockReset()
+    fetchTmdb.mockImplementation(async (path: string) => {
+      const id = Number(path.split('/')[2])
+      return { next_episode_to_air: { air_date: daysFromNow(3), season_number: 1, episode_number: id % 10 || 1, name: 'Ep' } }
+    })
+  })
+
+  const tvPrefs = (ids: number[]): AlertPrefs =>
+    prefs({ watchlist: ids.map((id) => ({ id, mediaType: 'tv' as const, title: `Show ${id}` })) })
+
+  it('dedupes shows across subscribers — one fetch per unique id', async () => {
+    const index = await loadEpisodeIndex([tvPrefs([1, 2]), tvPrefs([2, 3])])
+    expect(fetchTmdb).toHaveBeenCalledTimes(3)
+    expect([...index.keys()].sort()).toEqual([1, 2, 3])
+  })
+
+  it('drops episodes airing in the past or beyond the window', async () => {
+    fetchTmdb.mockImplementation(async (path: string) => {
+      const id = Number(path.split('/')[2])
+      const air = { 1: daysFromNow(-1), 2: daysFromNow(0), 3: daysFromNow(14), 4: daysFromNow(15) }[id]
+      return { next_episode_to_air: { air_date: air, season_number: 1, episode_number: 1 } }
+    })
+    const index = await loadEpisodeIndex([tvPrefs([1, 2, 3, 4])])
+    expect([...index.keys()].sort()).toEqual([2, 3])
+  })
+
+  it('skips ended shows and malformed air dates silently', async () => {
+    fetchTmdb.mockImplementation(async (path: string) => {
+      const id = Number(path.split('/')[2])
+      if (id === 1) return { next_episode_to_air: null }
+      if (id === 2) return {}
+      return { next_episode_to_air: { air_date: 'soon', season_number: 1, episode_number: 1 } }
+    })
+    const index = await loadEpisodeIndex([tvPrefs([1, 2, 3])])
+    expect(index.size).toBe(0)
+    expect(fetchTmdb).toHaveBeenCalledTimes(3)
+  })
+
+  it('caps fetches at 40 and only calls in-set ids when the show list is larger', async () => {
+    const ids = Array.from({ length: 60 }, (_, i) => i + 1)
+    const index = await loadEpisodeIndex([tvPrefs(ids)])
+    expect(fetchTmdb).toHaveBeenCalledTimes(40)
+    const fetched = fetchTmdb.mock.calls.map((c) => Number(c[0].split('/')[2]))
+    for (const id of fetched) expect(ids).toContain(id)
+    expect(index.size).toBe(40)
+  })
+
+  it('survives individual fetch failures', async () => {
+    fetchTmdb.mockImplementation(async (path: string) => {
+      const id = Number(path.split('/')[2])
+      if (id === 2) throw new Error('tmdb 500')
+      return { next_episode_to_air: { air_date: daysFromNow(2), season_number: 1, episode_number: 1 } }
+    })
+    const index = await loadEpisodeIndex([tvPrefs([1, 2, 3])])
+    expect([...index.keys()].sort()).toEqual([1, 3])
   })
 })

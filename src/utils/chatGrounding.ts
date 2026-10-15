@@ -25,7 +25,7 @@ export function wantsAvailability(text: string): boolean {
 }
 
 const SERVICE_CHANGES_PATTERN =
-  /(new on|what'?s new|whats new|just added|added to|coming (soon )?to|leaving|leaves|left|new this (week|month|weekend)|dropped|dropping)/i
+  /(new on|what'?s new|whats new|just added|added to|coming (soon )?to|leaving|leaves|left|new this (week|month|weekend)|\bdrop(ped|ping)?\b)/i
 
 export function wantsServiceChanges(text: string): boolean {
   return SERVICE_CHANGES_PATTERN.test(text)
