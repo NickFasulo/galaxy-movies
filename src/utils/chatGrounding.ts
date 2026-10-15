@@ -89,7 +89,7 @@ const GENRE_ALIASES: Record<string, string> = {
 }
 
 const RECOMMEND_PATTERN =
-  /\b(recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|pick|good|great|best|top|something|anything|what('?s| is) on|what should|what to|worth watching|binge)\b/i
+  /\b(recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|pick|good|great|best|top|some(thing)?|any(thing)?|what('?s| is) on|what should|what to|worth watching|binge)\b/i
 
 // Recency asks — "recent mystery movies", "new films from this year", "2024
 // horror". Bare "new on" belongs to the catalog-change intent and never
@@ -99,7 +99,7 @@ const RECENT_WINDOW_DAYS = 365
 
 // "more recent releases", "what about comedies?" — continuation phrasing that
 // carries no scope of its own and inherits it from the conversation.
-const FOLLOWUP_PATTERN = /\b(more|another|others?|else|similar|like (that|those|it)|instead|what about|how about|different|newer|older|recent|latest)\b/i
+const FOLLOWUP_PATTERN = /\b(more|another|others?|else|similar|like (that|those|it)|instead|what about|how about|different|newer|older|recent|latest|any|of (those|them|these))\b/i
 
 // Ordered by last mention position — for follow-up turns the freshest provider
 // in the conversation wins over stale ones.
@@ -149,11 +149,19 @@ function detectPickMediaType(text: string): MediaType | null {
   return null
 }
 
-function detectGenreSlug(text: string, mediaType: MediaType): string | null {
-  const match = text.toLowerCase().match(GENRE_WORD_PATTERN)
-  if (!match) return null
-  const canonical = GENRE_ALIASES[match[1]] || match[1]
-  return GENRE_WORDS[canonical]?.[mediaType] ?? null
+// Compound asks ("comedy horror", "action thriller") become a comma-joined
+// genre id list — TMDB treats comma as AND, which is exactly what the phrase
+// means.
+const GENRE_WORD_GLOBAL = new RegExp(GENRE_WORD_PATTERN.source, 'gi')
+
+function detectGenreSlugs(text: string, mediaType: MediaType): string[] {
+  const slugs: string[] = []
+  for (const m of text.toLowerCase().matchAll(GENRE_WORD_GLOBAL)) {
+    const canonical = GENRE_ALIASES[m[1]] || m[1]
+    const slug = GENRE_WORDS[canonical]?.[mediaType]
+    if (slug && !slugs.includes(slug)) slugs.push(slug)
+  }
+  return slugs
 }
 
 export async function fetchServicePicksContext(message: string, serviceKeys: string[], region: string, contextText = ''): Promise<ServicePicksContext[] | null> {
@@ -164,9 +172,15 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
   if (!keys.length) return null
 
   const mediaType = detectPickMediaType(message) ?? (contextText ? detectPickMediaType(contextText) : null) ?? 'movie'
-  const genreSlug = detectGenreSlug(message, mediaType) ?? (contextText ? detectGenreSlug(contextText, mediaType) : null)
-  const genreId = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.id ?? null : null
-  const genreLabel = genreSlug ? (mediaType === 'tv' ? tvGenres : movieGenres)[genreSlug]?.title.replace(/\s+(Movies|Shows)$/i, '') ?? null : null
+  const genreMap = mediaType === 'tv' ? tvGenres : movieGenres
+  let genreSlugs = detectGenreSlugs(message, mediaType)
+  if (!genreSlugs.length && contextText) genreSlugs = detectGenreSlugs(contextText, mediaType)
+  const genreIds = genreSlugs.map((slug) => genreMap[slug]?.id).filter((id): id is number => typeof id === 'number')
+  const genreId = genreIds.length > 1 ? genreIds.join(',') : genreIds[0] ?? null
+  const genreLabel = genreSlugs
+    .map((slug) => genreMap[slug]?.title.replace(/\s+(Movies|Shows)$/i, ''))
+    .filter(Boolean)
+    .join(' + ') || null
   const recent = RECENT_PATTERN.test(message) || (contextText.length > 0 && RECENT_PATTERN.test(contextText))
   const releasedAfter = recent
     ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)

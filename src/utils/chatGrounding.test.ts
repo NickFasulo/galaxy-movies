@@ -173,7 +173,8 @@ describe('wantsServiceRecommendation', () => {
     'something to binge on my services',
     'top comedies on peacock',
     'suggest some recent mystery movies on peacock',
-    'recommend new movies on hulu'
+    'recommend new movies on hulu',
+    'any on netflix?'
   ])('detects %s', (text) => {
     expect(wantsServiceRecommendation(text)).toBe(true)
   })
@@ -192,6 +193,7 @@ describe('wantsServiceRecommendation', () => {
     const ctx = 'can you recommend some horror on peacock'
     expect(wantsServiceRecommendation('more recent releases', ctx)).toBe(true)
     expect(wantsServiceRecommendation('what about comedies?', ctx)).toBe(true)
+    expect(wantsServiceRecommendation('any of those on netflix?', ctx)).toBe(true)
     expect(wantsServiceRecommendation('more', ctx)).toBe(true)
     // Same phrasing without conversation context stays unscoped.
     expect(wantsServiceRecommendation('more recent releases')).toBe(false)
@@ -271,6 +273,18 @@ describe('fetchServicePicksContext', () => {
       expect(mocks.discoverMovies.mock.calls.at(-1)![0]?.releasedAfter).toBeUndefined()
     }
   )
+
+  it('combines compound genre asks into a TMDB AND filter', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(8, 'Shaun of the Dead')]) as never)
+    const ctx = await fetchServicePicksContext('recommend some comedy horror on netflix', [], 'BR')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith({
+      providerId: '8',
+      genreId: '35,27',
+      region: 'BR',
+      releasedAfter: undefined
+    })
+    expect(ctx![0].genre).toBe('Comedy + Horror')
+  })
 
   it('inherits provider, genre, and media type from prior-turn context on follow-ups', async () => {
     mocks.discoverTv.mockResolvedValue(paged([show(7, 'From')]) as never)
