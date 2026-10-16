@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { getClientIP, isBot, isSearchEngine } from './rateLimiter'
 
 describe('isBot', () => {
@@ -52,5 +52,41 @@ describe('getClientIP', () => {
   it('falls back to the socket address, then unknown', () => {
     expect(getClientIP({ headers: {}, socket: { remoteAddress: '9.9.9.9' } })).toBe('9.9.9.9')
     expect(getClientIP({ headers: {} })).toBe('unknown')
+  })
+
+  describe('on workerd', () => {
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+
+    afterEach(() => {
+      if (navigatorDescriptor) {
+        Object.defineProperty(globalThis, 'navigator', navigatorDescriptor)
+      } else {
+        delete (globalThis as Record<string, unknown>).navigator
+      }
+    })
+
+    function stubWorkerd() {
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        writable: true,
+        value: { userAgent: 'Cloudflare-Workers' }
+      })
+    }
+
+    it('trusts cf-connecting-ip over a client-injected x-vercel-forwarded-for', () => {
+      stubWorkerd()
+      expect(
+        getClientIP({
+          headers: { 'cf-connecting-ip': '8.8.8.8', 'x-vercel-forwarded-for': '1.2.3.4' }
+        })
+      ).toBe('8.8.8.8')
+    })
+
+    it('ignores x-vercel-forwarded-for entirely', () => {
+      stubWorkerd()
+      expect(
+        getClientIP({ headers: { 'x-vercel-forwarded-for': '1.2.3.4', 'x-forwarded-for': '9.9.9.9' } })
+      ).toBe('9.9.9.9')
+    })
   })
 })

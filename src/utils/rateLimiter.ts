@@ -82,11 +82,18 @@ function readHeader(req: RateLimitRequest, name: string): string | undefined {
   return (Array.isArray(value) ? value[0] : value) ?? undefined
 }
 
-// Clients can inject their own leading x-forwarded-for entries, so only the
-// last entry (added by the edge) is trusted; x-vercel-* headers can't be spoofed.
+// The trusted edge IP header is platform-specific: Cloudflare always sets and
+// overwrites cf-connecting-ip, while x-vercel-forwarded-for is only genuine
+// when Vercel's edge wrote it — on workerd it's just another client header and
+// would let callers mint a fresh rate-limit bucket per request, so it must not
+// be consulted there. x-forwarded-for clients can inject their own leading
+// entries, so only the last entry (appended by the edge) is trusted.
 export function getClientIP(req: RateLimitRequest): string {
-  const vercelForwarded = readHeader(req, 'x-vercel-forwarded-for')?.split(',')[0].trim()
-  if (vercelForwarded) return vercelForwarded
+  const onWorkerd = globalThis.navigator?.userAgent === 'Cloudflare-Workers'
+  const edgeIp = onWorkerd
+    ? readHeader(req, 'cf-connecting-ip')
+    : readHeader(req, 'x-vercel-forwarded-for')?.split(',')[0].trim()
+  if (edgeIp) return edgeIp
 
   const forwardedFor = readHeader(req, 'x-forwarded-for')
   if (forwardedFor) {
