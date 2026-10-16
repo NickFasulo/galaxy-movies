@@ -34,3 +34,17 @@ index bff72bd..c6758d6 100644
          windowsPathsNoEscape: true,
          nodir: true,
      });
+diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js b/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
+index aaaaaaa..bbbbbbb 100644
+--- a/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
++++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
+@@ -67,7 +67,7 @@ export async function copyWorkerdPackages(options, nodePackages) {
+         try {
+             const pkgJson = JSON.parse(await fs.readFile(path.join(src, "package.json"), "utf8"));
+             const { transformed, hasBuildCondition } = transformPackageJson(pkgJson);
+             const match = src.match(isNodeModuleRegex);
+-            if (match?.groups?.pkg && externalPackages.includes(match.groups.pkg) && hasBuildCondition) {
++            if (match?.groups?.pkg && externalPackages.includes(match.groups.pkg.replaceAll("\\", "/")) && hasBuildCondition) {
+                 logger.debug(`Copying package using a workerd condition: ${path.relative(options.appPath, src)} -> ${path.relative(options.appPath, dst)}`);
+                 await fs.cp(src, dst, { recursive: true, force: true });
+                 // Overwrite with  the transformed package.json
