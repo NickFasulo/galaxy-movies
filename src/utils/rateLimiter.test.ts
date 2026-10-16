@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { getClientIP, isBot, isSearchEngine } from './rateLimiter'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { checkDistributedRateLimit, checkGlobalBudget, getClientIP, isBot, isSearchEngine } from './rateLimiter'
+import { getRedis } from './redis'
+
+vi.mock('./redis', () => ({ getRedis: vi.fn(() => null) }))
+const mockGetRedis = vi.mocked(getRedis)
 
 describe('isBot', () => {
   it('treats a missing user agent as a bot', () => {
@@ -88,5 +92,44 @@ describe('getClientIP', () => {
         getClientIP({ headers: { 'x-vercel-forwarded-for': '1.2.3.4', 'x-forwarded-for': '9.9.9.9' } })
       ).toBe('9.9.9.9')
     })
+  })
+})
+
+describe('checkDistributedRateLimit', () => {
+  afterEach(() => {
+    mockGetRedis.mockReturnValue(null)
+  })
+
+  it('buckets IPv6 clients into their /64 prefix', async () => {
+    const opts = { keyPrefix: 'v6_rl', maxRequests: 2, windowSeconds: 60 }
+    await expect(checkDistributedRateLimit('2a13:f47:fb13:dacb:aaaa', opts)).resolves.toBe(true)
+    await expect(checkDistributedRateLimit('2a13:f47:fb13:dacb:bbbb', opts)).resolves.toBe(true)
+    // Third distinct address in the same /64 shares their bucket
+    await expect(checkDistributedRateLimit('2a13:f47:fb13:dacb:cccc', opts)).resolves.toBe(false)
+    // A neighboring /64 gets its own
+    await expect(checkDistributedRateLimit('2a13:f47:fb13:dacc:dddd', opts)).resolves.toBe(true)
+  })
+
+  it('leaves IPv4 and non-IP client ids alone', async () => {
+    const opts = { keyPrefix: 'v4_rl', maxRequests: 1, windowSeconds: 60 }
+    await expect(checkDistributedRateLimit('1.2.3.4', opts)).resolves.toBe(true)
+    await expect(checkDistributedRateLimit('1.2.3.5', opts)).resolves.toBe(true)
+  })
+})
+
+describe('checkGlobalBudget', () => {
+  afterEach(() => {
+    mockGetRedis.mockReturnValue(null)
+  })
+
+  it('stops re-checking Redis once a budget trips', async () => {
+    const evalMock = vi.fn(async () => 99)
+    mockGetRedis.mockReturnValue({ eval: evalMock } as unknown as ReturnType<typeof getRedis>)
+
+    const opts = { maxRequests: 5, windowSeconds: 3600 }
+    await expect(checkGlobalBudget('flood_test', opts)).resolves.toBe(false)
+    await expect(checkGlobalBudget('flood_test', opts)).resolves.toBe(false)
+    await expect(checkGlobalBudget('flood_test', opts)).resolves.toBe(false)
+    expect(evalMock).toHaveBeenCalledTimes(1)
   })
 })

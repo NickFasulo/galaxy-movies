@@ -116,7 +116,7 @@ describe('GET /api/usage', () => {
 
   it('returns panels with unconfigured sources marked and Redis counters populated', async () => {
     mocks.kv.mget.mockImplementation(async (...keys: unknown[]) =>
-      keys.map((k) => (k === 'global_rl:chat' ? 123 : k === 'global_rl:watchmode' ? 45 : null))
+      keys.map((k) => (k === 'global_rl:chat:all' ? 123 : k === 'global_rl:watchmode:all' ? 45 : null))
     )
     mocks.kv.hlen.mockImplementation(async (key: unknown) => (key === 'gm:waitlist:confirmed' ? 7 : 0))
     mocks.kv.hgetall.mockImplementation(async (key: unknown) =>

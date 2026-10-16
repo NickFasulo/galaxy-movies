@@ -3,7 +3,7 @@ import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../utils/redis'
 import { getPriceOffers, type PricePayload } from '../../utils/prices'
 import { firstParam } from '../../utils/query'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/rateLimiter'
 import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
@@ -39,6 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(hit)
   }
 
+  // Distributed floods rotate through fresh IPs under the per-IP cap, so
+  // uncached lookups are capped globally too. Once tripped, deny before the
+  // shared-cache read — at flood volume every Redis op is a billed command.
+  if (isGlobalBudgetTripped('price')) {
+    return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
+  }
+
   const kv = getRedis()
   if (kv) {
     try {
@@ -51,12 +58,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const clientId = getClientIP(req)
-  const allowed = await checkDistributedRateLimit(clientId, {
-    keyPrefix: 'price_rl',
-    maxRequests: 120,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
+  const [allowed, withinGlobal] = await Promise.all([
+    checkDistributedRateLimit(clientId, {
+      keyPrefix: 'price_rl',
+      maxRequests: 120,
+      windowSeconds: 60 * 60
+    }),
+    checkGlobalBudget('price', { maxRequests: 500, windowSeconds: 60 * 60 })
+  ])
+  if (!allowed || !withinGlobal) {
     return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
   }
 

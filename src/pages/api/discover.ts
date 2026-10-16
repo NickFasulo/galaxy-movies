@@ -13,7 +13,7 @@ import {
 } from '../../utils/tmdb'
 import type { TmdbMovie, TmdbPaged, TmdbTvShow, TitleSummary } from '../../types/tmdb'
 import { firstParam } from '../../utils/query'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/rateLimiter'
 import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
 
 const ID_RE = /^\d{1,10}$/
@@ -29,12 +29,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (rejectBot(req, res)) return
 
   const ip = getClientIP(req)
-  const allowed = await checkDistributedRateLimit(ip, {
-    keyPrefix: 'discover_rl',
-    maxRequests: 60,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
+
+  // Distributed floods rotate through fresh IPs under the per-IP cap, so
+  // total calls are capped globally too. Once it trips, deny without any
+  // Redis ops — at flood volume the checks themselves are the billed cost.
+  if (isGlobalBudgetTripped('discover')) {
+    res.setHeader('Retry-After', String(60 * 60))
+    return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
+  }
+  const [allowed, withinGlobal] = await Promise.all([
+    checkDistributedRateLimit(ip, {
+      keyPrefix: 'discover_rl',
+      maxRequests: 60,
+      windowSeconds: 60 * 60
+    }),
+    checkGlobalBudget('discover', { maxRequests: 2000, windowSeconds: 60 * 60 })
+  ])
+  if (!allowed || !withinGlobal) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
   }

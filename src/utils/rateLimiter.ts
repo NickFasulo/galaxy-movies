@@ -130,11 +130,21 @@ end
 return count
 `
 
+// IPv6 clients rotate addresses inside their delegated prefix — privacy
+// extensions do it per-user, and scrapers do it across whole allocations —
+// so buckets key on the /64 a customer is normally assigned, not the
+// individual address. Anything wider evades per-IP caps entirely.
+function rateLimitSubject(clientId: string): string {
+  const hextets = clientId.split(':')
+  if (hextets.length < 4) return clientId
+  return `${hextets.slice(0, 4).join(':')}:`
+}
+
 export async function checkDistributedRateLimit(
   clientId: string,
   { keyPrefix, maxRequests, windowSeconds, cost = 1 }: RateLimitOptions & { keyPrefix: string }
 ): Promise<boolean> {
-  const key = `${keyPrefix}:${clientId}`
+  const key = `${keyPrefix}:${rateLimitSubject(clientId)}`
   const kv = getRedis()
 
   if (kv) {
@@ -149,6 +159,23 @@ export async function checkDistributedRateLimit(
   return checkMemoryRateLimit(key, { maxRequests, windowSeconds }, cost)
 }
 
-export function checkGlobalBudget(name: string, { maxRequests, windowSeconds, cost }: RateLimitOptions): Promise<boolean> {
-  return checkDistributedRateLimit('all', { keyPrefix: `global_rl:${name}`, maxRequests, windowSeconds, cost })
+// A tripped global budget can't untrip until its window resets, but every
+// re-check is a billed Redis command — under a distributed flood, the
+// re-checks themselves are the billed traffic. Remember trips per isolate
+// and re-verify at most once a minute. isGlobalBudgetTripped lets callers
+// short-circuit before spending any Redis commands on a doomed request.
+const trippedGlobalBudgets = new Map<string, number>()
+const GLOBAL_TRIP_RECHECK_MS = 60_000
+
+export function isGlobalBudgetTripped(name: string): boolean {
+  const recheckAt = trippedGlobalBudgets.get(name)
+  return Boolean(recheckAt && recheckAt > Date.now())
+}
+
+export async function checkGlobalBudget(name: string, options: RateLimitOptions): Promise<boolean> {
+  if (isGlobalBudgetTripped(name)) return false
+  const allowed = await checkDistributedRateLimit('all', { keyPrefix: `global_rl:${name}`, ...options })
+  if (allowed) trippedGlobalBudgets.delete(name)
+  else trippedGlobalBudgets.set(name, Date.now() + GLOBAL_TRIP_RECHECK_MS)
+  return allowed
 }

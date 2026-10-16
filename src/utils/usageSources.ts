@@ -306,7 +306,9 @@ const BUDGET_WINDOWS = [
   { key: 'ai_review', label: 'AI reviews', cap: 20, per: 'min' },
   { key: 'ai_similar', label: 'AI similar-titles', cap: 20, per: 'min' },
   { key: 'ai_list_intro', label: 'AI list intros', cap: 10, per: 'min' },
-  { key: 'wp_lookup', label: 'Uncached provider lookups', cap: 20000, per: 'hour' }
+  { key: 'wp_lookup', label: 'Uncached provider lookups', cap: 20000, per: 'hour' },
+  { key: 'discover', label: 'Discover calls', cap: 2000, per: 'hour' },
+  { key: 'price', label: 'Uncached price lookups', cap: 500, per: 'hour' }
 ]
 
 async function internalPanel(): Promise<UsagePanel> {
@@ -315,7 +317,7 @@ async function internalPanel(): Promise<UsagePanel> {
 
   const [counts, confirmed, prefs, push, trakt, telegram, discord, share, chatHistory, billing, dbsize, stats, costs] =
     await Promise.all([
-      kv.mget<(number | null)[]>(...BUDGET_WINDOWS.map((b) => `global_rl:${b.key}`)),
+      kv.mget<(number | null)[]>(...BUDGET_WINDOWS.map((b) => `global_rl:${b.key}:all`)),
       kv.hlen(CONFIRMED_KEY),
       kv.hlen(ALERTS_PREFS_KEY),
       kv.hlen(PUSH_KEY),
