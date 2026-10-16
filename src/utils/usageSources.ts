@@ -340,7 +340,10 @@ async function internalPanel(): Promise<UsagePanel> {
   const costBreakdown = Object.entries(costs.breakdown || {})
     .sort((a, b) => parseFloat(b[1].slice(1)) - parseFloat(a[1].slice(1)))
     .slice(0, 3)
-    .map(([key, detail]) => ({ label: `AI ${key}`, value: detail }))
+    .map(([key, detail]) => {
+      const m = detail.match(/^(\S+)\s+\((.*)\)$/)
+      return { label: `AI ${key}`, value: m?.[1] ?? detail, hint: m?.[2] }
+    })
 
   return {
     name: 'Internal',
