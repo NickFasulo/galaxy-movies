@@ -18,7 +18,7 @@ import {
 } from '../utils/tmdb'
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
 import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
-import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, type ProviderGenreTarget } from '../utils/contentOpportunities'
+import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, getContentIndexability, type ProviderGenreTarget } from '../utils/contentOpportunities'
 import { setSwrCache, getPageParam } from '../utils/ssr'
 import { titleListSchema } from '../utils/schema'
 import { SITE_URL } from '../utils/site'
@@ -71,6 +71,8 @@ export type ProviderPageProps = StreamingProvider & {
   region: string
   page: number
   availableInRegion: boolean
+  isIndexable: boolean
+  indexabilityReason: string | null
 }
 
 export function providerServerSideProps(media: MediaType) {
@@ -104,17 +106,19 @@ export function providerServerSideProps(media: MediaType) {
           : Promise.resolve<Record<string, ProviderChanges>>({})
       ])
       if (page > 1 && !data.results?.length) return { notFound: true }
+      const indexability = getContentIndexability({ movies: data.results })
       setSwrCache(res)
-      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[changeKey] || null } }
+      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[changeKey] || null, isIndexable: indexability.isIndexable, indexabilityReason: indexability.reason } }
     } catch (error) {
       console.error(error)
+      const indexability = getContentIndexability({ dataError: true })
       res.statusCode = 502
-      return { props: { ...base, titles: [], totalPages: 1, changes: null, dataError: true } }
+      return { props: { ...base, titles: [], totalPages: 1, changes: null, dataError: true, isIndexable: indexability.isIndexable, indexabilityReason: indexability.reason } }
     }
   }
 }
 
-export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, page, availableInRegion, regions }: ProviderPageProps) {
+export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, page, availableInRegion, regions, isIndexable, indexabilityReason }: ProviderPageProps) {
   const { basePath, otherBasePath, crumbRoot, noun, plural, itemWord, genreSlugs, genreTarget } = CONFIG[media]
   const canonicalUrl = `${SITE_URL}${basePath}/${provider}${page > 1 ? `?page=${page}` : ''}`
   const providerLabel = title.replace(' Movies', '')
@@ -143,6 +147,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         title={metaTitle}
         description={description}
         canonicalUrl={canonicalUrl}
+        noindex={!isIndexable}
         posterPath={titles[0]?.poster_path}
         structuredData={titleListSchema({ name: pageTitle, description, url: canonicalUrl, titles, media })}
         breadcrumbItems={[
@@ -235,6 +240,11 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
             <Text fontWeight='medium' textAlign='center'>All services →</Text>
           </LinkTile>
         </SimpleGrid>
+        {!isIndexable && indexabilityReason && (
+          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+            This page is available for browsing but held out of search indexing for now: {indexabilityReason}
+          </Text>
+        )}
         <Text textAlign={{ base: 'center', md: 'left' }} mt={8} color='gray.500' fontSize='sm'>
           Availability changes by region and over time. Check the {itemWord} page for current provider information.
         </Text>
