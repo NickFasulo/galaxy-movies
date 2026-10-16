@@ -14,7 +14,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package",
-    "cf:build": "opennextjs-cloudflare build && node scripts/opennext-postbuild.js",
+    "cf:build": "next build --webpack && opennextjs-cloudflare build --skipNextBuild && node scripts/opennext-postbuild.js",
     "cf:preview": "npm run cf:build && wrangler dev",
     "cf:deploy": "npm run cf:build && wrangler deploy",
     "cf:secrets": "node scripts/sync-cf-secrets.js && wrangler secret bulk .secrets.json"
