@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const [allowed, withinGlobal] = await Promise.all([
     checkDistributedRateLimit(clientId, {
       keyPrefix: 'price_rl',
-      maxRequests: 120,
+      maxRequests: 60,
       windowSeconds: 60 * 60
     }),
     checkGlobalBudget('price', { maxRequests: 500, windowSeconds: 60 * 60 })

@@ -11,7 +11,7 @@ const providerCache = new LRUCache<string, number[]>({ max: 5000, ttl: 1000 * 60
 
 const MAX_IDS = 50
 const MAX_UNCACHED_LOOKUPS_PER_HOUR = 1500
-const GLOBAL_UNCACHED_LOOKUPS_PER_HOUR = 20000
+const GLOBAL_UNCACHED_LOOKUPS_PER_HOUR = 5000
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return
