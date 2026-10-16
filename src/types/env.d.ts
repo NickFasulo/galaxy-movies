@@ -25,5 +25,12 @@ declare namespace NodeJS {
   WEBPUSH_SUBJECT?: string
     NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
     NEXT_PUBLIC_UMAMI_SRC?: string
+    USAGE_DASH_TOKEN?: string
+    CF_ACCOUNT_ID?: string
+    CF_ANALYTICS_API_TOKEN?: string
+    UPSTASH_EMAIL?: string
+    UPSTASH_API_KEY?: string
+    UPSTASH_DATABASE_ID?: string
+    OPENAI_ADMIN_KEY?: string
   }
 }
