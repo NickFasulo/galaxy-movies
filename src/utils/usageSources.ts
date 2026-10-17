@@ -197,16 +197,9 @@ async function openaiFetchAll<T>(
   return out
 }
 
-async function openaiCostTotal(startTimeSec: number): Promise<number> {
-  const buckets = await openaiFetchAll<{ amount?: { value?: number | string } }>(process.env.OPENAI_ADMIN_KEY!, '/costs', {
-    start_time: startTimeSec,
-    bucket_width: '1d',
-    limit: 31
-  })
-  return buckets.reduce((t, b) => t + (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0), 0)
-}
+type CostBucket = OpenAiBucket<{ amount?: { value?: number | string } }>
 
-async function openaiPanel(): Promise<UsagePanel> {
+async function openaiPanel(costsPromise: Promise<CostBucket[] | null>): Promise<UsagePanel> {
   const adminKey = process.env.OPENAI_ADMIN_KEY
   const link = 'https://platform.openai.com/usage'
   if (!adminKey) return unconfigured('OpenAI', ['OPENAI_ADMIN_KEY'], link)
@@ -215,12 +208,7 @@ async function openaiPanel(): Promise<UsagePanel> {
   const todayStart = Math.floor(new Date().setUTCHours(0, 0, 0, 0) / 1000)
 
   const [costBuckets, usageBuckets] = await Promise.all([
-    openaiFetchAll<{ amount?: { value?: number | string } }>(adminKey, '/costs', {
-      start_time: startTime,
-      bucket_width: '1d',
-      group_by: 'line_item',
-      limit: 180
-    }),
+    costsPromise.then((b) => b ?? []),
     openaiFetchAll<{ model?: string; num_model_requests?: number; input_tokens?: number; output_tokens?: number }>(adminKey, '/usage/completions', {
       start_time: startTime,
       bucket_width: '1d',
@@ -323,7 +311,7 @@ async function polarPanel(): Promise<UsagePanel> {
   }
 }
 
-async function financePanel(): Promise<UsagePanel> {
+async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise<UsagePanel> {
   const link = 'https://polar.sh/dashboard'
   const hasPolar = Boolean(process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN)
   const hasOpenAi = Boolean(process.env.OPENAI_ADMIN_KEY)
@@ -334,11 +322,15 @@ async function financePanel(): Promise<UsagePanel> {
 
   const now = new Date()
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-  const [polar, aiSpend, upstash] = await Promise.all([
+  const monthStartSec = Math.floor(monthStart.getTime() / 1000)
+  const [polar, costBuckets, upstash] = await Promise.all([
     hasPolar ? fetchPolarSubs() : null,
-    hasOpenAi ? openaiCostTotal(Math.floor(monthStart.getTime() / 1000)) : null,
+    hasOpenAi ? costsPromise : null,
     hasUpstash ? fetchUpstashStats() : null
   ])
+  const aiSpend = costBuckets
+    ?.filter((b) => b.start_time >= monthStartSec)
+    .reduce((t, b) => t + (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0), 0)
 
   const metrics: UsageMetric[] = []
   let income: number | null = null
@@ -506,12 +498,24 @@ async function guarded(name: string, fn: () => Promise<UsagePanel>): Promise<Usa
 }
 
 export async function aggregateUsage(): Promise<UsagePanel[]> {
+  const adminKey = process.env.OPENAI_ADMIN_KEY
+  // One /costs fetch feeds both the OpenAI and Finance panels — the org API's
+  // rate limit 429s when the two panels race their own copies.
+  const costBucketsPromise = adminKey
+    ? openaiFetchAll<{ amount?: { value?: number | string } }>(adminKey, '/costs', {
+        start_time: Math.floor(Date.now() / 1000) - 30 * 86400,
+        bucket_width: '1d',
+        group_by: 'line_item',
+        limit: 180
+      })
+    : Promise.resolve(null)
+
   const panels = await Promise.all([
     guarded('Cloudflare Workers', cloudflarePanel),
     guarded('Upstash Redis', upstashPanel),
-    guarded('OpenAI', openaiPanel),
+    guarded('OpenAI', () => openaiPanel(costBucketsPromise)),
     guarded('Polar', polarPanel),
-    guarded('Finance', financePanel),
+    guarded('Finance', () => financePanel(costBucketsPromise)),
     guarded('Rate limits', rateLimitsPanel),
     guarded('Subscribers', subscribersPanel),
     guarded('AI usage', aiUsagePanel)
