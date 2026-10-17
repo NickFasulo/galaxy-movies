@@ -62,6 +62,10 @@ export default function LeavingIndex() {
         <Text textAlign='center' mt={10} color='gray.400'>
           US catalogs, updated daily. Departure dates mark when a title was detected leaving the service.
         </Text>
+        <Text textAlign='center' mt={4} color='gray.500' fontSize='sm'>
+          Write about streaming?{' '}
+          <Link href='/widgets' style={{ textDecoration: 'underline' }}>Embed these lists on your site — free</Link>.
+        </Text>
       </PageShell>
     </>
   );

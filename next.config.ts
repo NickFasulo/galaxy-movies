@@ -17,7 +17,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' https://api.web3forms.com${isDev ? ' ws:' : ''}`,
-  "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+  // 'self' is here for the /widgets live preview, which iframes our own /embed pages.
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
   "media-src 'self' https:",
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -33,6 +34,17 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()' }
+]
+
+// /embed/* pages are meant to be iframed on third-party sites: no X-Frame-Options,
+// frame-ancestors opened to *, and noindex so the widgets themselves never rank.
+const embedHeaders = [
+  { key: 'Content-Security-Policy', value: contentSecurityPolicy.replace("frame-ancestors 'none'", 'frame-ancestors *') },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()' },
+  { key: 'X-Robots-Tag', value: 'noindex' }
 ]
 
 const nextConfig: NextConfig = {
@@ -70,7 +82,10 @@ const nextConfig: NextConfig = {
     'uncrypto'
   ],
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/((?!embed/).*)', headers: securityHeaders },
+      { source: '/embed/:path*', headers: embedHeaders }
+    ]
   },
   // Breadcrumb targets Googlebot already found: keep the guessed parent paths
   // (and any stale links) from hard-404ing. /browse and /genre are real pages.

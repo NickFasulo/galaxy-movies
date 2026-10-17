@@ -16,6 +16,24 @@ import TopBackdrop from '../components/TopBackdrop'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: DehydratedState }>) {
+  const router = useRouter()
+  // Embed pages are iframed on third-party sites: no app chrome, no react-query,
+  // and none of the localStorage-touching hooks (those can throw in blocked
+  // third-party contexts) — just the Chakra provider so theming still works.
+  if (router.pathname.startsWith('/embed/')) {
+    return (
+      <Provider forcedTheme='dark'>
+        <Head>
+          <meta name='viewport' content='width=device-width, initial-scale=1' />
+        </Head>
+        <Component {...pageProps} />
+      </Provider>
+    )
+  }
+  return <MainApp Component={Component} pageProps={pageProps} />
+}
+
+function MainApp({ Component, pageProps }: Pick<AppProps<{ dehydratedState?: DehydratedState }>, 'Component' | 'pageProps'>) {
   const queryClient = useMemo(() => new QueryClient(), [])
   const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID ?? '2c6d34d1-558e-45d3-bdb3-dc1b4f66c6a4'
   const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC ?? '/assets/starfield.js'
@@ -24,7 +42,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   // Pages whose main feed is infinite-scroll — an in-flow footer is
   // unreachable below an endless feed, so they get the floating pill instead.
   const hasInfiniteScroll = /^\/($|search$|browse\/.|genre\/.|tv\/(browse|genre|streaming)\/.|streaming\/.|company\/.|network\/.)/.test(router.pathname)
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|leaving|genre|browse|watchlist$|plus$|email-status$|search$|$)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|leaving|genre|browse|watchlist$|plus$|email-status$|widgets$|search$|$)/.test(router.pathname)
   // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 

@@ -72,6 +72,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/justwatch-alternative`),
     urlEntry(`${siteUrl}/new-on-streaming`),
     urlEntry(`${siteUrl}/leaving`),
+    urlEntry(`${siteUrl}/widgets`),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`)),
     urlEntry(`${siteUrl}/free`),
     urlEntry(`${siteUrl}/collections`),
