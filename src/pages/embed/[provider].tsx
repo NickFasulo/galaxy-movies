@@ -60,16 +60,15 @@ const PALETTES = {
   dark: { bg: '#14181c', text: 'whiteAlpha.900', sub: 'gray.400', divider: 'gray.600' },
   light: { bg: 'white', text: 'gray.800', sub: 'gray.600', divider: 'gray.300' }
 }
+type Palette = (typeof PALETTES)[keyof typeof PALETTES]
 
-export default function EmbedWidget({ provider, label, palette, coming, added, left }: Props) {
-  const c = PALETTES[palette]
-  const fullListUrl = `${SITE_URL}/leaving/${provider}`
-  const linkProps = { target: '_blank', rel: 'noopener noreferrer' } as const
+const LINK_PROPS = { target: '_blank', rel: 'noopener noreferrer' } as const
 
-  const Item = ({ item }: { item: WidgetItem }) => (
+function Item({ item, c, fallbackUrl }: { item: WidgetItem; c: Palette; fallbackUrl: string }) {
+  return (
     <Link
-      href={item.tmdbId ? `${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}` : fullListUrl}
-      {...linkProps}
+      href={item.tmdbId ? `${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}` : fallbackUrl}
+      {...LINK_PROPS}
       display='block'
       py={1}
       color={c.text}
@@ -80,15 +79,21 @@ export default function EmbedWidget({ provider, label, palette, coming, added, l
       {item.title}{item.year ? ` (${item.year})` : ''}{item.date ? ` — ${dayLabel(item.date)}` : ''}{item.season ? ` (season ${item.season})` : ''}
     </Link>
   )
+}
 
-  const Section = ({ heading, items }: { heading: string; items: WidgetItem[] }) =>
-    items.length ? (
-      <Box mb={3}>
-        <Text fontSize='xs' fontWeight='semibold' letterSpacing='wide' textTransform='uppercase' color={c.sub} mb={1}>{heading}</Text>
-        {items.map((item) => <Item key={`${item.tmdbType}-${item.tmdbId}-${item.date || item.title}`} item={item} />)}
-      </Box>
-    ) : null
+function Section({ heading, items, c, fallbackUrl }: { heading: string; items: WidgetItem[]; c: Palette; fallbackUrl: string }) {
+  if (!items.length) return null
+  return (
+    <Box mb={3}>
+      <Text fontSize='xs' fontWeight='semibold' letterSpacing='wide' textTransform='uppercase' color={c.sub} mb={1}>{heading}</Text>
+      {items.map((item) => <Item key={`${item.tmdbType}-${item.tmdbId}-${item.date || item.title}`} item={item} c={c} fallbackUrl={fallbackUrl} />)}
+    </Box>
+  )
+}
 
+export default function EmbedWidget({ provider, label, palette, coming, added, left }: Props) {
+  const c = PALETTES[palette]
+  const fullListUrl = `${SITE_URL}/leaving/${provider}`
   const empty = !coming.length && !added.length && !left.length
 
   return (
@@ -98,7 +103,7 @@ export default function EmbedWidget({ provider, label, palette, coming, added, l
       </Head>
       <Link
         href={fullListUrl}
-        {...linkProps}
+        {...LINK_PROPS}
         display='block'
         color={c.text}
         fontWeight='bold'
@@ -112,16 +117,16 @@ export default function EmbedWidget({ provider, label, palette, coming, added, l
       {empty ? (
         <Text fontSize='sm' color={c.sub}>
           No catalog changes tracked this week.{' '}
-          <Link href={`${SITE_URL}/streaming/${provider}`} {...linkProps} color={c.text} textDecoration='underline'>
+          <Link href={`${SITE_URL}/streaming/${provider}`} {...LINK_PROPS} color={c.text} textDecoration='underline'>
             Browse everything on {label}
           </Link>
         </Text>
       ) : (
         <>
-          <Section heading='Coming soon' items={coming} />
-          <Section heading='Just added' items={added} />
-          <Section heading='Left recently' items={left} />
-          <Link href={fullListUrl} {...linkProps} display='block' fontSize='sm' color={c.sub} textDecoration='underline' mb={2}>
+          <Section heading='Coming soon' items={coming} c={c} fallbackUrl={fullListUrl} />
+          <Section heading='Just added' items={added} c={c} fallbackUrl={fullListUrl} />
+          <Section heading='Left recently' items={left} c={c} fallbackUrl={fullListUrl} />
+          <Link href={fullListUrl} {...LINK_PROPS} display='block' fontSize='sm' color={c.sub} textDecoration='underline' mb={2}>
             See the full list
           </Link>
         </>
@@ -129,7 +134,7 @@ export default function EmbedWidget({ provider, label, palette, coming, added, l
 
       <Text fontSize='xs' color={c.sub} borderTop='1px solid' borderColor={c.divider} pt={2} mt={3}>
         Data by{' '}
-        <Link href={SITE_URL} {...linkProps} color={c.text} fontWeight='semibold' _hover={{ textDecoration: 'underline' }}>
+        <Link href={SITE_URL} {...LINK_PROPS} color={c.text} fontWeight='semibold' _hover={{ textDecoration: 'underline' }}>
           Galaxy Movies
         </Link>
         {' '}· updated daily
