@@ -1,6 +1,8 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from './redis'
 import { fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, isProviderAvailableInRegion, streamingProviders, PROVIDER_NAME_MATCH } from './tmdb'
+import { pingIndexNow } from './indexnow'
+import { SITE_URL } from './site'
 import type { MediaType, TitleSummary } from '../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
@@ -207,6 +209,16 @@ export async function updateStreamingChanges() {
 
   const summary: Record<string, { added: number; left: number; coming: number; catalog: number } | string> = {}
 
+  // Every diff item is a detail page whose "where to watch" answer just
+  // changed — collect their URLs and ping IndexNow once at the end so Bing
+  // recrawls them before the search-demand spike, not weeks after.
+  const indexNowUrls = new Set<string>()
+  const pushTitleUrls = (items: { tmdbId: number | null; tmdbType: MediaType }[]) => {
+    for (const t of items) {
+      if (t.tmdbId) indexNowUrls.add(`${SITE_URL}/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`)
+    }
+  }
+
   const sourceMap = await getSourceIdMap()
   if (Object.keys(sourceMap).length === 0) {
     summary.error = 'No Watchmode sources resolved'
@@ -289,6 +301,11 @@ export async function updateStreamingChanges() {
       await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now() })
       await kv.set(changesKey(key), payload)
       await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
+      pushTitleUrls([...payload.added, ...payload.coming, ...payload.left])
+      if (payload.added.length || payload.left.length || payload.coming.length) {
+        indexNowUrls.add(`${SITE_URL}/streaming/${key}`)
+        indexNowUrls.add(`${SITE_URL}/leaving/${key}`)
+      }
       summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
     }
   }
@@ -317,10 +334,16 @@ export async function updateStreamingChanges() {
 
       await kv.set(catalogKey(key, 'IN'), { titles: catalog, updatedAt: Date.now() })
       await kv.set(changesKey(key, 'IN'), payload)
+      pushTitleUrls([...payload.added, ...payload.left])
       summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: catalog.length }
     } catch (error) {
       console.error(`in catalog update failed for ${key}:`, error)
     }
+  }
+
+  if (indexNowUrls.size) {
+    indexNowUrls.add(`${SITE_URL}/new-on-streaming`)
+    await pingIndexNow([...indexNowUrls])
   }
 
   return summary
