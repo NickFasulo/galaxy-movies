@@ -311,29 +311,69 @@ async function polarPanel(): Promise<UsagePanel> {
   }
 }
 
+const parseFixedMonthly = (raw?: string): [string, number][] | null => {
+  if (!raw) return []
+  try {
+    return Object.entries(JSON.parse(raw) as Record<string, number>)
+      .filter((e): e is [string, number] => typeof e[1] === 'number')
+      .sort((a, b) => b[1] - a[1])
+  } catch {
+    return null
+  }
+}
+
+async function fetchTakeadsRevenue(monthStart: Date): Promise<{ revenue: number; actions: number; currency: string } | null> {
+  const key = process.env.TAKEADS_STATS_KEY
+  if (!key) return null
+  const resp = await fetch(
+    `https://api.takeads.com/v3/api/stats/action?createdAtFrom=${encodeURIComponent(monthStart.toISOString())}`,
+    { headers: { Authorization: `Bearer ${key}` } }
+  )
+  if (!resp.ok) throw new Error(`takeads actions → HTTP ${resp.status}`)
+  const body = (await resp.json()) as {
+    data?: { status?: string; publisherRevenue?: number; currencyCode?: string }[]
+  }
+  const items = (body.data || []).filter((a) => a.status !== 'CANCELED')
+  return {
+    revenue: items.reduce((s, a) => s + (a.publisherRevenue || 0), 0),
+    actions: items.length,
+    currency: items.find((a) => a.currencyCode)?.currencyCode || 'USD'
+  }
+}
+
 async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise<UsagePanel> {
   const link = 'https://polar.sh/dashboard'
   const hasPolar = Boolean(process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN)
   const hasOpenAi = Boolean(process.env.OPENAI_ADMIN_KEY)
   const hasUpstash = Boolean(process.env.UPSTASH_EMAIL && process.env.UPSTASH_API_KEY)
-  if (!hasPolar && !hasOpenAi && !hasUpstash) {
+  const hasTakeads = Boolean(process.env.TAKEADS_STATS_KEY)
+  const fixedIncome = parseFixedMonthly(process.env.FINANCE_FIXED_INCOME)
+  const fixedExpenses = parseFixedMonthly(process.env.FINANCE_FIXED_EXPENSES)
+  if (!hasPolar && !hasOpenAi && !hasUpstash && !hasTakeads && !fixedIncome?.length && !fixedExpenses?.length) {
     return unconfigured('Finance', ['POLAR_USAGE_TOKEN', 'OPENAI_ADMIN_KEY', 'UPSTASH_EMAIL', 'UPSTASH_API_KEY'], link)
   }
 
   const now = new Date()
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const monthStartSec = Math.floor(monthStart.getTime() / 1000)
-  const [polar, costBuckets, upstash] = await Promise.all([
+  const [polar, costBuckets, upstash, takeads] = await Promise.all([
     hasPolar ? fetchPolarSubs() : null,
     hasOpenAi ? costsPromise : null,
-    hasUpstash ? fetchUpstashStats() : null
+    hasUpstash ? fetchUpstashStats() : null,
+    hasTakeads ? fetchTakeadsRevenue(monthStart) : null
   ])
   const aiSpend = costBuckets
     ?.filter((b) => b.start_time >= monthStartSec)
     .reduce((t, b) => t + (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0), 0)
 
-  const metrics: UsageMetric[] = []
-  let income: number | null = null
+  const money = (v: number, cur = 'USD') => (cur === 'USD' ? `$${v.toFixed(2)}` : `${cur} ${v.toFixed(2)}`)
+  const detail: UsageMetric[] = []
+  const incomeParts: string[] = []
+  const expenseParts: string[] = []
+  let income = 0
+  let expenses = 0
+  let hasIncome = false
+
   if (polar) {
     const yearlyId = process.env.POLAR_PRODUCT_YEARLY
     const active = polar.subs.filter((s) => s.status === 'active' || s.status === 'trialing')
@@ -345,33 +385,60 @@ async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise
     const billed = polar.subs.filter(
       (s) => (s.status === 'active' || s.status === 'canceled') && s.current_period_start && new Date(s.current_period_start) >= monthStart
     )
-    income = billed.reduce((sum, s) => sum + (s.amount ?? 0), 0) / 100
-    metrics.push({
-      label: 'Income (this month)',
-      value: `$${income.toFixed(2)}`,
-      hint: `${fmt(billed.length)} subs billed this month · $${mrr.toFixed(2)} MRR`
+    const billedTotal = billed.reduce((sum, s) => sum + (s.amount ?? 0), 0) / 100
+    income += billedTotal
+    hasIncome = true
+    incomeParts.push(`Polar $${billedTotal.toFixed(2)}`)
+    detail.push({
+      label: 'Polar billed',
+      value: `$${billedTotal.toFixed(2)}`,
+      hint: `${fmt(billed.length)} subs billed · $${mrr.toFixed(2)} MRR`
     })
   }
+  if (takeads) {
+    income += takeads.revenue
+    hasIncome = true
+    incomeParts.push(`TakeAds ${money(takeads.revenue, takeads.currency)}`)
+    detail.push({ label: 'TakeAds revenue', value: money(takeads.revenue, takeads.currency), hint: `${fmt(takeads.actions)} actions` })
+  }
+  for (const [name, v] of fixedIncome || []) {
+    income += v
+    hasIncome = true
+    detail.push({ label: name, value: `$${v.toFixed(2)}`, hint: 'fixed income' })
+  }
+  if (fixedIncome?.length) incomeParts.push(`fixed $${fixedIncome.reduce((s, [, v]) => s + v, 0).toFixed(2)}`)
+  if (fixedIncome === null || fixedExpenses === null) {
+    detail.push({ label: 'Fixed entries', value: '—', hint: 'invalid FINANCE_FIXED_* JSON — use {"Name": amount}' })
+  }
 
-  let expenses = 0
-  const tracked: string[] = []
   if (aiSpend != null) {
     expenses += aiSpend
-    tracked.push('OpenAI')
-    metrics.push({ label: 'OpenAI (this month)', value: `$${aiSpend.toFixed(2)}` })
+    expenseParts.push(`OpenAI $${aiSpend.toFixed(2)}`)
+    detail.push({ label: 'OpenAI', value: `$${aiSpend.toFixed(2)}` })
   }
   if (upstash) {
     const billed = Number(upstash.total_monthly_billing ?? 0)
     expenses += billed
-    tracked.push('Upstash')
-    metrics.push({ label: 'Upstash (this month)', value: `$${billed.toFixed(2)}` })
+    expenseParts.push(`Upstash $${billed.toFixed(2)}`)
+    detail.push({ label: 'Upstash', value: `$${billed.toFixed(2)}` })
+  }
+  for (const [name, v] of fixedExpenses || []) {
+    expenses += v
+    detail.push({ label: name, value: `$${v.toFixed(2)}`, hint: 'fixed monthly' })
+  }
+  if (fixedExpenses?.length) expenseParts.push(`fixed $${fixedExpenses.reduce((s, [, v]) => s + v, 0).toFixed(2)}`)
+
+  const metrics: UsageMetric[] = []
+  if (hasIncome) {
+    metrics.push({ label: 'Income (this month)', value: `$${income.toFixed(2)}`, hint: incomeParts.join(' · ') })
   }
   metrics.push({
     label: 'Expenses (this month)',
     value: `$${expenses.toFixed(2)}`,
-    hint: `${tracked.join(' + ') || 'none'} tracked — Cloudflare, Resend, Watchmode excluded`
+    hint: `${expenseParts.join(' · ') || 'none'}${fixedExpenses?.length ? '' : ' — Cloudflare, Resend, Watchmode untracked'}`
   })
-  if (income != null) metrics.push({ label: 'Net (this month)', value: `$${(income - expenses).toFixed(2)}` })
+  if (hasIncome) metrics.push({ label: 'Net (this month)', value: `$${(income - expenses).toFixed(2)}` })
+  metrics.push(...detail)
 
   return { name: 'Finance', status: 'ok', link, metrics }
 }
