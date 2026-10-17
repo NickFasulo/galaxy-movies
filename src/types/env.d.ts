@@ -11,6 +11,7 @@ declare namespace NodeJS {
     CRON_SECRET?: string
     TAKEADS_PUBLIC_KEY?: string
     POLAR_ACCESS_TOKEN?: string
+    POLAR_USAGE_TOKEN?: string
     POLAR_API_BASE?: string
     POLAR_WEBHOOK_SECRET?: string
     POLAR_PRODUCT_MONTHLY?: string

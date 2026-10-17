@@ -256,9 +256,9 @@ interface PolarSub {
 }
 
 async function polarPanel(): Promise<UsagePanel> {
-  const token = process.env.POLAR_ACCESS_TOKEN
+  const token = process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN
   const link = 'https://polar.sh/dashboard'
-  if (!token) return unconfigured('Polar', ['POLAR_ACCESS_TOKEN'], link)
+  if (!token) return unconfigured('Polar', ['POLAR_USAGE_TOKEN'], link)
 
   const apiBase = (process.env.POLAR_API_BASE || 'https://api.polar.sh').replace(/\/$/, '')
   const resp = await fetch(`${apiBase}/v1/subscriptions/?limit=100`, {

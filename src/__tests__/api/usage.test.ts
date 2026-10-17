@@ -81,6 +81,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.USAGE_DASH_TOKEN
   delete process.env.POLAR_ACCESS_TOKEN
+  delete process.env.POLAR_USAGE_TOKEN
   delete process.env.POLAR_API_BASE
   delete process.env.POLAR_PRODUCT_YEARLY
   delete process.env.CF_ACCOUNT_ID
@@ -169,6 +170,21 @@ describe('GET /api/usage', () => {
     expect(polar?.status).toBe('ok')
     expect(polar?.metrics.find((m) => m.label === 'Active / trialing')?.value).toBe('2')
     expect(polar?.metrics.find((m) => m.label === 'Est. MRR')?.value).toBe('$9.07')
+  })
+
+  it('prefers POLAR_USAGE_TOKEN for the panel when both tokens exist', async () => {
+    process.env.POLAR_ACCESS_TOKEN = 'billing-tok'
+    process.env.POLAR_USAGE_TOKEN = 'usage-tok'
+    let auth = ''
+    mocks.fetch.mockImplementation(async (_input, init) => {
+      auth = String((init?.headers as Record<string, string> | undefined)?.Authorization || '')
+      return { ok: true, json: async () => ({ items: [], pagination: {} }) } as Response
+    })
+
+    const res = makeRes()
+    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    expect(panel(res, 'Polar')?.status).toBe('ok')
+    expect(auth).toBe('Bearer usage-tok')
   })
 
   it('marks a panel error instead of failing when a vendor API rejects', async () => {
