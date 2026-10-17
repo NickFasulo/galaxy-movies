@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Badge, Box, Button, Flex, Input, Link, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
 import { LuExternalLink, LuRefreshCw } from 'react-icons/lu'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
@@ -16,7 +16,16 @@ const STATUS_BADGE: Record<UsagePanel['status'], { colorPalette: string; text: s
 function PanelCard({ panel }: { panel: UsagePanel }) {
   const badge = STATUS_BADGE[panel.status]
   return (
-    <Box bg='surface.raised' border='1px solid' borderColor='border.subtle' rounded='lg' p={4} minW={0}>
+    <Box
+      bg='surface.raised'
+      border='1px solid'
+      borderColor='border.subtle'
+      rounded='lg'
+      p={4}
+      minW={0}
+      mb={4}
+      css={{ breakInside: 'avoid' }}
+    >
       <Flex justify='space-between' align='center' gap={2} mb={2}>
         <Text fontWeight='bold' truncate>{panel.name}</Text>
         <Flex align='center' gap={2} flexShrink={0}>
@@ -174,9 +183,9 @@ export default function Usage() {
                 </Text>
               )}
             </Flex>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4} alignItems='start'>
+            <Box css={{ columnCount: { base: 1, md: 2, lg: 3 }, columnGap: '1rem' }}>
               {panels?.map((p) => <PanelCard key={p.name} panel={p} />)}
-            </SimpleGrid>
+            </Box>
           </>
         )}
       </PageShell>
