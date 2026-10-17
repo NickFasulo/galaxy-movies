@@ -38,7 +38,7 @@ diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
 index aaaaaaa..bbbbbbb 100644
 --- a/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
 +++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/utils/workerd.js
-@@ -67,7 +67,7 @@ export async function copyWorkerdPackages(options, nodePackages) {
+@@ -67,8 +67,8 @@ export async function copyWorkerdPackages(options, nodePackages) {
          try {
              const pkgJson = JSON.parse(await fs.readFile(path.join(src, "package.json"), "utf8"));
              const { transformed, hasBuildCondition } = transformPackageJson(pkgJson);
