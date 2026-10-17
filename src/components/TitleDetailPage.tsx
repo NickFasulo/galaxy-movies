@@ -390,9 +390,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <GenreBadges genres={title.genres} mediaType={media} />
 
-            {/* Bounded+scrollable only where the sidebar is sticky (desktop);
-                mobile flows full-height so there's no inner scroll */}
-            <Box w='20rem' maxW='100%' maxH={{ base: 'none', md: '300px' }} overflowY='auto'>
+            <Box w='20rem' maxW='100%'>
               <WatchProviders
                 watchProviders={watchProviders}
                 allWatchProviders={watchProvidersByRegion}
