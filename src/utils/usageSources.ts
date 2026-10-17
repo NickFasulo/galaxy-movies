@@ -121,13 +121,8 @@ interface UpstashStats {
   keyspace?: { x: string; y: number }[]
 }
 
-async function upstashPanel(): Promise<UsagePanel> {
-  const email = process.env.UPSTASH_EMAIL
-  const apiKey = process.env.UPSTASH_API_KEY
-  const link = 'https://console.upstash.com'
-  if (!email || !apiKey) return unconfigured('Upstash Redis', ['UPSTASH_EMAIL', 'UPSTASH_API_KEY'], link)
-
-  const auth = `Basic ${btoa(`${email}:${apiKey}`)}`
+async function fetchUpstashStats(): Promise<UpstashStats> {
+  const auth = `Basic ${btoa(`${process.env.UPSTASH_EMAIL}:${process.env.UPSTASH_API_KEY}`)}`
   const headers = { Authorization: auth }
 
   let dbId = process.env.UPSTASH_DATABASE_ID
@@ -142,7 +137,15 @@ async function upstashPanel(): Promise<UsagePanel> {
 
   const resp = await fetch(`https://api.upstash.com/v2/redis/stats/${dbId}`, { headers })
   if (!resp.ok) throw new Error(`stats → HTTP ${resp.status}`)
-  const stats = (await resp.json()) as UpstashStats
+  return (await resp.json()) as UpstashStats
+}
+
+async function upstashPanel(): Promise<UsagePanel> {
+  const link = 'https://console.upstash.com'
+  if (!process.env.UPSTASH_EMAIL || !process.env.UPSTASH_API_KEY)
+    return unconfigured('Upstash Redis', ['UPSTASH_EMAIL', 'UPSTASH_API_KEY'], link)
+
+  const stats = await fetchUpstashStats()
 
   const keyspace = stats.keyspace?.length ? stats.keyspace[stats.keyspace.length - 1].y : null
   const monthlyBilling = Number(stats.total_monthly_billing ?? 0)
@@ -169,39 +172,53 @@ interface OpenAiBucket<T> {
   results?: T[]
 }
 
+const OPENAI_BASE = 'https://api.openai.com/v1/organization'
+
+async function openaiFetchAll<T>(
+  adminKey: string,
+  path: string,
+  params: Record<string, string | number>
+): Promise<OpenAiBucket<T>[]> {
+  const out: OpenAiBucket<T>[] = []
+  let page: string | null = null
+  do {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(params)) qs.set(k, String(v))
+    if (page) qs.set('page', page)
+    const resp: Response = await fetch(`${OPENAI_BASE}${path}?${qs}`, { headers: { Authorization: `Bearer ${adminKey}` } })
+    if (!resp.ok) throw new Error(`${path} → HTTP ${resp.status}`)
+    const body = (await resp.json()) as { data?: OpenAiBucket<T>[]; next_page?: string | null }
+    out.push(...(body.data || []))
+    page = body.next_page || null
+  } while (page)
+  return out
+}
+
+async function openaiCostTotal(startTimeSec: number): Promise<number> {
+  const buckets = await openaiFetchAll<{ amount?: { value?: number | string } }>(process.env.OPENAI_ADMIN_KEY!, '/costs', {
+    start_time: startTimeSec,
+    bucket_width: '1d',
+    limit: 31
+  })
+  return buckets.reduce((t, b) => t + (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0), 0)
+}
+
 async function openaiPanel(): Promise<UsagePanel> {
   const adminKey = process.env.OPENAI_ADMIN_KEY
   const link = 'https://platform.openai.com/usage'
   if (!adminKey) return unconfigured('OpenAI', ['OPENAI_ADMIN_KEY'], link)
 
-  const base = 'https://api.openai.com/v1/organization'
-  const fetchAll = async <T>(path: string, params: Record<string, string | number>): Promise<OpenAiBucket<T>[]> => {
-    const out: OpenAiBucket<T>[] = []
-    let page: string | null = null
-    do {
-      const qs = new URLSearchParams()
-      for (const [k, v] of Object.entries(params)) qs.set(k, String(v))
-      if (page) qs.set('page', page)
-      const resp: Response = await fetch(`${base}${path}?${qs}`, { headers: { Authorization: `Bearer ${adminKey}` } })
-      if (!resp.ok) throw new Error(`${path} → HTTP ${resp.status}`)
-      const body = (await resp.json()) as { data?: OpenAiBucket<T>[]; next_page?: string | null }
-      out.push(...(body.data || []))
-      page = body.next_page || null
-    } while (page)
-    return out
-  }
-
   const startTime = Math.floor(Date.now() / 1000) - 30 * 86400
   const todayStart = Math.floor(new Date().setUTCHours(0, 0, 0, 0) / 1000)
 
   const [costBuckets, usageBuckets] = await Promise.all([
-    fetchAll<{ amount?: { value?: number | string } }>('/costs', {
+    openaiFetchAll<{ amount?: { value?: number | string } }>(adminKey, '/costs', {
       start_time: startTime,
       bucket_width: '1d',
       group_by: 'line_item',
       limit: 180
     }),
-    fetchAll<{ model?: string; num_model_requests?: number; input_tokens?: number; output_tokens?: number }>('/usage/completions', {
+    openaiFetchAll<{ model?: string; num_model_requests?: number; input_tokens?: number; output_tokens?: number }>(adminKey, '/usage/completions', {
       start_time: startTime,
       bucket_width: '1d',
       group_by: 'model',
@@ -253,20 +270,27 @@ interface PolarSub {
   amount?: number
   recurring_interval?: string
   product_id?: string
+  current_period_start?: string
 }
 
-async function polarPanel(): Promise<UsagePanel> {
-  const token = process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN
-  const link = 'https://polar.sh/dashboard'
-  if (!token) return unconfigured('Polar', ['POLAR_USAGE_TOKEN'], link)
+const polarApiBase = () => (process.env.POLAR_API_BASE || 'https://api.polar.sh').replace(/\/$/, '')
 
-  const apiBase = (process.env.POLAR_API_BASE || 'https://api.polar.sh').replace(/\/$/, '')
-  const resp = await fetch(`${apiBase}/v1/subscriptions/?limit=100`, {
+async function fetchPolarSubs(): Promise<{ subs: PolarSub[]; total: number }> {
+  const token = process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN
+  const resp = await fetch(`${polarApiBase()}/v1/subscriptions/?limit=100`, {
     headers: { Authorization: `Bearer ${token}` }
   })
   if (!resp.ok) throw new Error(`subscriptions → HTTP ${resp.status}`)
   const body = (await resp.json()) as { items?: PolarSub[]; pagination?: { total_count?: number } }
-  const subs = body.items || []
+  return { subs: body.items || [], total: body.pagination?.total_count ?? (body.items || []).length }
+}
+
+async function polarPanel(): Promise<UsagePanel> {
+  const link = 'https://polar.sh/dashboard'
+  if (!(process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN))
+    return unconfigured('Polar', ['POLAR_USAGE_TOKEN'], link)
+
+  const { subs, total } = await fetchPolarSubs()
 
   const active = subs.filter((s) => s.status === 'active' || s.status === 'trialing')
   const yearlyId = process.env.POLAR_PRODUCT_YEARLY
@@ -289,11 +313,72 @@ async function polarPanel(): Promise<UsagePanel> {
     status: 'ok',
     link,
     metrics: [
-      { label: 'Subscriptions', value: fmt(body.pagination?.total_count ?? subs.length), hint: statusLine || undefined },
+      { label: 'Subscriptions', value: fmt(total), hint: statusLine || undefined },
       { label: 'Active / trialing', value: fmt(active.length) },
       { label: 'Est. MRR', value: `$${(mrrCents / 100).toFixed(2)}` }
     ]
   }
+}
+
+async function financePanel(): Promise<UsagePanel> {
+  const link = 'https://polar.sh/dashboard'
+  const hasPolar = Boolean(process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN)
+  const hasOpenAi = Boolean(process.env.OPENAI_ADMIN_KEY)
+  const hasUpstash = Boolean(process.env.UPSTASH_EMAIL && process.env.UPSTASH_API_KEY)
+  if (!hasPolar && !hasOpenAi && !hasUpstash) {
+    return unconfigured('Finance', ['POLAR_USAGE_TOKEN', 'OPENAI_ADMIN_KEY', 'UPSTASH_EMAIL', 'UPSTASH_API_KEY'], link)
+  }
+
+  const now = new Date()
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const [polar, aiSpend, upstash] = await Promise.all([
+    hasPolar ? fetchPolarSubs() : null,
+    hasOpenAi ? openaiCostTotal(Math.floor(monthStart.getTime() / 1000)) : null,
+    hasUpstash ? fetchUpstashStats() : null
+  ])
+
+  const metrics: UsageMetric[] = []
+  let income: number | null = null
+  if (polar) {
+    const yearlyId = process.env.POLAR_PRODUCT_YEARLY
+    const active = polar.subs.filter((s) => s.status === 'active' || s.status === 'trialing')
+    const mrr =
+      active.reduce(
+        (sum, s) => sum + (s.amount ?? 0) / (s.recurring_interval === 'year' || (yearlyId && s.product_id === yearlyId) ? 12 : 1),
+        0
+      ) / 100
+    const billed = polar.subs.filter(
+      (s) => (s.status === 'active' || s.status === 'canceled') && s.current_period_start && new Date(s.current_period_start) >= monthStart
+    )
+    income = billed.reduce((sum, s) => sum + (s.amount ?? 0), 0) / 100
+    metrics.push({
+      label: 'Income (this month)',
+      value: `$${income.toFixed(2)}`,
+      hint: `${fmt(billed.length)} subs billed this month · $${mrr.toFixed(2)} MRR`
+    })
+  }
+
+  let expenses = 0
+  const tracked: string[] = []
+  if (aiSpend != null) {
+    expenses += aiSpend
+    tracked.push('OpenAI')
+    metrics.push({ label: 'OpenAI (this month)', value: `$${aiSpend.toFixed(2)}` })
+  }
+  if (upstash) {
+    const billed = Number(upstash.total_monthly_billing ?? 0)
+    expenses += billed
+    tracked.push('Upstash')
+    metrics.push({ label: 'Upstash (this month)', value: `$${billed.toFixed(2)}` })
+  }
+  metrics.push({
+    label: 'Expenses (this month)',
+    value: `$${expenses.toFixed(2)}`,
+    hint: `${tracked.join(' + ') || 'none'} tracked — Cloudflare, Resend, Watchmode excluded`
+  })
+  if (income != null) metrics.push({ label: 'Net (this month)', value: `$${(income - expenses).toFixed(2)}` })
+
+  return { name: 'Finance', status: 'ok', link, metrics }
 }
 
 // Per-bucket caps mirror the checkGlobalBudget call sites — duplicated here
@@ -402,6 +487,7 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     guarded('Upstash Redis', upstashPanel),
     guarded('OpenAI', openaiPanel),
     guarded('Polar', polarPanel),
+    guarded('Finance', financePanel),
     guarded('Internal', internalPanel)
   ])
   return [...panels, linksPanel()]

@@ -133,6 +133,7 @@ describe('GET /api/usage', () => {
     expect(panel(res, 'Upstash Redis')?.status).toBe('unconfigured')
     expect(panel(res, 'OpenAI')?.status).toBe('unconfigured')
     expect(panel(res, 'Polar')?.status).toBe('unconfigured')
+    expect(panel(res, 'Finance')?.status).toBe('unconfigured')
 
     const internal = panel(res, 'Internal')
     expect(internal?.status).toBe('ok')
@@ -170,6 +171,11 @@ describe('GET /api/usage', () => {
     expect(polar?.status).toBe('ok')
     expect(polar?.metrics.find((m) => m.label === 'Active / trialing')?.value).toBe('2')
     expect(polar?.metrics.find((m) => m.label === 'Est. MRR')?.value).toBe('$9.07')
+
+    const finance = panel(res, 'Finance')
+    expect(finance?.status).toBe('ok')
+    expect(finance?.metrics.find((m) => m.label === 'Income (this month)')?.value).toBe('$0.00')
+    expect(finance?.metrics.find((m) => m.label === 'Net (this month)')?.value).toBe('$0.00')
   })
 
   it('prefers POLAR_USAGE_TOKEN for the panel when both tokens exist', async () => {
