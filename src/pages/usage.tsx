@@ -17,66 +17,67 @@ const STATUS_BADGE: Record<UsagePanel['status'], { colorPalette: string; text: s
 function PanelCard({ panel }: { panel: UsagePanel }) {
   const badge = STATUS_BADGE[panel.status]
   return (
-    <Box
-      bg='surface.raised'
-      border='1px solid'
-      borderColor='border.subtle'
-      rounded='lg'
-      p={4}
-      minW={0}
-      mb={4}
-    >
-      <Flex justify='space-between' align='center' gap={2} mb={2}>
-        <Text fontWeight='bold' truncate>{panel.name}</Text>
-        <Flex align='center' gap={2} flexShrink={0}>
-          {panel.link && (
-            <Link href={panel.link} target='_blank' rel='noopener noreferrer' color='gray.500' fontSize='xs' _hover={{ color: 'white' }}>
-              open <LuExternalLink style={{ display: 'inline', verticalAlign: '-2px' }} />
-            </Link>
-          )}
-          <Badge colorPalette={badge.colorPalette}>{badge.text}</Badge>
+    <Box mb={4}>
+      <Box
+        bg='surface.raised'
+        border='1px solid'
+        borderColor='border.subtle'
+        rounded='lg'
+        p={4}
+        minW={0}
+      >
+        <Flex justify='space-between' align='center' gap={2} mb={2}>
+          <Text fontWeight='bold' truncate>{panel.name}</Text>
+          <Flex align='center' gap={2} flexShrink={0}>
+            {panel.link && (
+              <Link href={panel.link} target='_blank' rel='noopener noreferrer' color='gray.500' fontSize='xs' _hover={{ color: 'white' }}>
+                open <LuExternalLink style={{ display: 'inline', verticalAlign: '-2px' }} />
+              </Link>
+            )}
+            <Badge colorPalette={badge.colorPalette}>{badge.text}</Badge>
+          </Flex>
         </Flex>
-      </Flex>
 
-      {panel.status === 'error' && <Text fontSize='sm' color='red.300'>{panel.error || 'request failed'}</Text>}
-      {panel.status === 'unconfigured' && (
-        <Text fontSize='sm' color='gray.400'>
-          Add <Text as='span' fontFamily='mono' fontSize='xs'>{panel.needsEnv?.join(', ')}</Text> to .env.local, then run cf:secrets.
-        </Text>
-      )}
+        {panel.status === 'error' && <Text fontSize='sm' color='red.300'>{panel.error || 'request failed'}</Text>}
+        {panel.status === 'unconfigured' && (
+          <Text fontSize='sm' color='gray.400'>
+            Add <Text as='span' fontFamily='mono' fontSize='xs'>{panel.needsEnv?.join(', ')}</Text> to .env.local, then run cf:secrets.
+          </Text>
+        )}
 
-      {panel.metrics.map((m) => (
-        <Flex key={m.label} justify='space-between' align='baseline' gap={3} py={1}>
-          <Box minW={0}>
-            <Text fontSize='sm' color='gray.400'>{m.label}</Text>
-            {m.hint && <Text fontSize='xs' color='gray.500'>{m.hint}</Text>}
-          </Box>
-          <Text fontSize='sm' color='white' fontFamily='mono' flexShrink={0}>{m.value}</Text>
-        </Flex>
-      ))}
+        {panel.metrics.map((m) => (
+          <Flex key={m.label} justify='space-between' align='baseline' gap={3} py={1}>
+            <Box minW={0}>
+              <Text fontSize='sm' color='gray.400'>{m.label}</Text>
+              {m.hint && <Text fontSize='xs' color='gray.500'>{m.hint}</Text>}
+            </Box>
+            <Text fontSize='sm' color='white' fontFamily='mono' flexShrink={0}>{m.value}</Text>
+          </Flex>
+        ))}
 
-      {panel.links && (
-        <Flex wrap='wrap' gap={2} mt={1}>
-          {panel.links.map((l) => (
-            <Link
-              key={l.url}
-              href={l.url}
-              target='_blank'
-              rel='noopener noreferrer'
-              fontSize='xs'
-              color='gray.400'
-              px={2}
-              py={1}
-              border='1px solid'
-              borderColor='border.subtle'
-              rounded='md'
-              _hover={{ color: 'white', bg: 'surface.overlay' }}
-            >
-              {l.label} <LuExternalLink style={{ display: 'inline', verticalAlign: '-2px' }} />
-            </Link>
-          ))}
-        </Flex>
-      )}
+        {panel.links && (
+          <Flex wrap='wrap' gap={2} mt={1}>
+            {panel.links.map((l) => (
+              <Link
+                key={l.url}
+                href={l.url}
+                target='_blank'
+                rel='noopener noreferrer'
+                fontSize='xs'
+                color='gray.400'
+                px={2}
+                py={1}
+                border='1px solid'
+                borderColor='border.subtle'
+                rounded='md'
+                _hover={{ color: 'white', bg: 'surface.overlay' }}
+              >
+                {l.label} <LuExternalLink style={{ display: 'inline', verticalAlign: '-2px' }} />
+              </Link>
+            ))}
+          </Flex>
+        )}
+      </Box>
     </Box>
   )
 }
@@ -138,7 +139,10 @@ export default function Usage() {
       for (const el of Array.from(grid.children) as HTMLElement[]) {
         el.style.gridRowEnd = 'auto'
         const gap = parseFloat(getComputedStyle(el).marginBottom) || 0
-        el.style.gridRowEnd = `span ${Math.ceil(el.getBoundingClientRect().height + gap)}`
+        // The grid item itself is stretched to the 1px implicit row, so the
+        // natural height comes from its inner card wrapper.
+        const inner = (el.firstElementChild as HTMLElement | null) ?? el
+        el.style.gridRowEnd = `span ${Math.ceil(inner.getBoundingClientRect().height + gap)}`
       }
     }
     layout()

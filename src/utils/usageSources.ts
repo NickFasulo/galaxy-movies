@@ -38,6 +38,9 @@ const unconfigured = (name: string, needsEnv: string[], link: string): UsagePane
   link
 })
 
+const REDIS_ENV = ['UPSTASH_REDIS_KV_REST_API_URL', 'UPSTASH_REDIS_KV_REST_API_TOKEN']
+const UPSTASH_LINK = 'https://console.upstash.com'
+
 const CF_QUERY = `query ($accountTag: string!, $script: string!, $start: string!, $end: string!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
@@ -141,7 +144,7 @@ async function fetchUpstashStats(): Promise<UpstashStats> {
 }
 
 async function upstashPanel(): Promise<UsagePanel> {
-  const link = 'https://console.upstash.com'
+  const link = UPSTASH_LINK
   if (!process.env.UPSTASH_EMAIL || !process.env.UPSTASH_API_KEY)
     return unconfigured('Upstash Redis', ['UPSTASH_EMAIL', 'UPSTASH_API_KEY'], link)
 
@@ -396,13 +399,28 @@ const BUDGET_WINDOWS = [
   { key: 'price', label: 'Uncached price lookups', cap: 500, per: 'hour' }
 ]
 
-async function internalPanel(): Promise<UsagePanel> {
+async function rateLimitsPanel(): Promise<UsagePanel> {
   const kv = getRedis()
-  if (!kv) return unconfigured('Internal', ['UPSTASH_REDIS_KV_REST_API_URL', 'UPSTASH_REDIS_KV_REST_API_TOKEN'], 'https://console.upstash.com')
+  if (!kv) return unconfigured('Rate limits', REDIS_ENV, UPSTASH_LINK)
 
-  const [counts, confirmed, prefs, push, trakt, telegram, discord, share, chatHistory, billing, dbsize, stats, costs] =
+  const counts = await kv.mget<(number | null)[]>(...BUDGET_WINDOWS.map((b) => `global_rl:${b.key}:all`))
+  return {
+    name: 'Rate limits',
+    status: 'ok',
+    metrics: BUDGET_WINDOWS.map((b, i) => ({
+      label: b.label,
+      value: fmt(counts[i]),
+      hint: `cap ${fmt(b.cap)} / ${b.per}`
+    }))
+  }
+}
+
+async function subscribersPanel(): Promise<UsagePanel> {
+  const kv = getRedis()
+  if (!kv) return unconfigured('Subscribers', REDIS_ENV, UPSTASH_LINK)
+
+  const [confirmed, prefs, push, trakt, telegram, discord, share, chatHistory, billing, dbsize] =
     await Promise.all([
-      kv.mget<(number | null)[]>(...BUDGET_WINDOWS.map((b) => `global_rl:${b.key}:all`)),
       kv.hlen(CONFIRMED_KEY),
       kv.hlen(ALERTS_PREFS_KEY),
       kv.hlen(PUSH_KEY),
@@ -412,9 +430,7 @@ async function internalPanel(): Promise<UsagePanel> {
       kv.hlen(SHARE_KEY),
       kv.hlen(CHAT_HISTORY_KEY),
       kv.hgetall<Record<string, unknown>>(BILLING_KEY),
-      kv.dbsize(),
-      getUsageStats(),
-      getCostEstimate()
+      kv.dbsize()
     ])
 
   const billingRecords = Object.values(billing || {})
@@ -422,24 +438,10 @@ async function internalPanel(): Promise<UsagePanel> {
     .filter((r): r is NonNullable<typeof r> => Boolean(r))
   const plusCount = billingRecords.filter((r) => isPlusActive(r)).length
 
-  const costBreakdown = Object.entries(costs.breakdown || {})
-    .sort((a, b) => parseFloat(b[1].slice(1)) - parseFloat(a[1].slice(1)))
-    .slice(0, 3)
-    .map(([key, detail]) => {
-      const m = detail.match(/^(\S+)\s+\((.*)\)$/)
-      return { label: `AI ${key}`, value: m?.[1] ?? detail, hint: m?.[2] }
-    })
-
   return {
-    name: 'Internal',
+    name: 'Subscribers',
     status: 'ok',
     metrics: [
-      ...BUDGET_WINDOWS.map((b, i) => ({
-        label: b.label,
-        value: fmt(counts[i]),
-        hint: `cap ${fmt(b.cap)} / ${b.per}`
-      })),
-      { label: 'Chat sessions', value: fmt(stats.totalSessions), hint: `${fmt(stats.totalMessages)} messages${stats.avgRating ? `, ${stats.avgRating}★ avg` : ''}` },
       { label: 'Confirmed subscribers', value: fmt(confirmed) },
       { label: 'Plus (entitled)', value: fmt(plusCount), hint: `${fmt(billingRecords.length)} billing records` },
       { label: 'Synced alert profiles', value: fmt(prefs) },
@@ -449,7 +451,29 @@ async function internalPanel(): Promise<UsagePanel> {
         hint: `${fmt(discord)} discord · ${fmt(trakt)} trakt · ${fmt(share)} shared lists`
       },
       { label: 'Chat histories stored', value: fmt(chatHistory) },
-      { label: 'DB keys', value: fmt(dbsize) },
+      { label: 'DB keys', value: fmt(dbsize) }
+    ]
+  }
+}
+
+async function aiUsagePanel(): Promise<UsagePanel> {
+  const kv = getRedis()
+  if (!kv) return unconfigured('AI usage', REDIS_ENV, UPSTASH_LINK)
+
+  const [stats, costs] = await Promise.all([getUsageStats(), getCostEstimate()])
+  const costBreakdown = Object.entries(costs.breakdown || {})
+    .sort((a, b) => parseFloat(b[1].slice(1)) - parseFloat(a[1].slice(1)))
+    .slice(0, 3)
+    .map(([key, detail]) => {
+      const m = detail.match(/^(\S+)\s+\((.*)\)$/)
+      return { label: `AI ${key}`, value: m?.[1] ?? detail, hint: m?.[2] }
+    })
+
+  return {
+    name: 'AI usage',
+    status: 'ok',
+    metrics: [
+      { label: 'Chat sessions', value: fmt(stats.totalSessions), hint: `${fmt(stats.totalMessages)} messages${stats.avgRating ? `, ${stats.avgRating}★ avg` : ''}` },
       { label: 'Est. AI spend', value: `$${costs.estimatedCost}`, hint: costs.source === 'actual_usage' ? 'from recorded tokens' : 'rough estimate' },
       ...costBreakdown
     ]
@@ -488,7 +512,9 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     guarded('OpenAI', openaiPanel),
     guarded('Polar', polarPanel),
     guarded('Finance', financePanel),
-    guarded('Internal', internalPanel)
+    guarded('Rate limits', rateLimitsPanel),
+    guarded('Subscribers', subscribersPanel),
+    guarded('AI usage', aiUsagePanel)
   ])
   return [...panels, linksPanel()]
 }

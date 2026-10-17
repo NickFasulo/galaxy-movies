@@ -135,14 +135,20 @@ describe('GET /api/usage', () => {
     expect(panel(res, 'Polar')?.status).toBe('unconfigured')
     expect(panel(res, 'Finance')?.status).toBe('unconfigured')
 
-    const internal = panel(res, 'Internal')
-    expect(internal?.status).toBe('ok')
-    const metric = (label: string) => internal?.metrics.find((m) => m.label === label)?.value
-    expect(metric('Chat calls')).toBe('123')
-    expect(metric('Watchmode lookups')).toBe('45')
-    expect(metric('Confirmed subscribers')).toBe('7')
-    expect(metric('Plus (entitled)')).toBe('1')
-    expect(metric('DB keys')).toBe('999')
+    const rateLimits = panel(res, 'Rate limits')
+    const subscribers = panel(res, 'Subscribers')
+    const aiUsage = panel(res, 'AI usage')
+    expect(rateLimits?.status).toBe('ok')
+    expect(subscribers?.status).toBe('ok')
+    expect(aiUsage?.status).toBe('ok')
+    const metric = (p: { metrics: { label: string; value: string }[] } | undefined, label: string) =>
+      p?.metrics.find((m) => m.label === label)?.value
+    expect(metric(rateLimits, 'Chat calls')).toBe('123')
+    expect(metric(rateLimits, 'Watchmode lookups')).toBe('45')
+    expect(metric(subscribers, 'Confirmed subscribers')).toBe('7')
+    expect(metric(subscribers, 'Plus (entitled)')).toBe('1')
+    expect(metric(subscribers, 'DB keys')).toBe('999')
+    expect(metric(aiUsage, 'Chat sessions')).toBe('5')
 
     expect(panel(res, 'Dashboards')?.links?.length).toBeGreaterThan(0)
   })
@@ -201,6 +207,8 @@ describe('GET /api/usage', () => {
     await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
     expect(res.statusCode).toBe(200)
     expect(panel(res, 'Polar')?.status).toBe('error')
-    expect(panel(res, 'Internal')?.status).toBe('ok')
+    expect(panel(res, 'Rate limits')?.status).toBe('ok')
+    expect(panel(res, 'Subscribers')?.status).toBe('ok')
+    expect(panel(res, 'AI usage')?.status).toBe('ok')
   })
 })
