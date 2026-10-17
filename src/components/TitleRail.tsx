@@ -27,9 +27,13 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
       <Flex
         gap={4}
         overflowX='auto'
-        pb={2}
-        mx={{ base: '-1.5rem', md: '-3rem', xl: 0 }}
-        px={{ base: '1.5rem', md: '3rem', xl: 0 }}
+        // Scroll containers clip at the padding box — the card shadow needs
+        // ~20px below and the hover scale a few px all around, so pad the
+        // scrollport and pull it back with negative margins to keep the
+        // cards' visual position unchanged.
+        mt={-2} mb={-4} pt={2} pb={6}
+        mx={{ base: '-1.5rem', md: '-3rem', xl: '-0.5rem' }}
+        px={{ base: '1.5rem', md: '3rem', xl: '0.5rem' }}
         css={{
           scrollSnapType: 'x proximity',
           scrollbarWidth: 'thin',
