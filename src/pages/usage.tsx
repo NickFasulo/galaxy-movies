@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Badge, Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
 import { LuExternalLink, LuRefreshCw } from 'react-icons/lu'
 import PageHead from '../components/PageHead'
@@ -6,6 +6,7 @@ import PageShell from '../components/PageShell'
 import type { UsagePanel } from '../utils/usageSources'
 
 const TOKEN_KEY = 'gm.usage.token'
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 const STATUS_BADGE: Record<UsagePanel['status'], { colorPalette: string; text: string }> = {
   ok: { colorPalette: 'green', text: 'live' },
@@ -24,7 +25,6 @@ function PanelCard({ panel }: { panel: UsagePanel }) {
       p={4}
       minW={0}
       mb={4}
-      css={{ breakInside: 'avoid' }}
     >
       <Flex justify='space-between' align='center' gap={2} mb={2}>
         <Text fontWeight='bold' truncate>{panel.name}</Text>
@@ -128,6 +128,26 @@ export default function Usage() {
     return () => clearTimeout(id)
   }, [load])
 
+  // 1px implicit rows + measured per-card row spans pack panels into a dense
+  // masonry; ResizeObserver re-runs when metric content or column width shifts.
+  const gridRef = useRef<HTMLDivElement>(null)
+  useIsoLayoutEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    const layout = () => {
+      for (const el of Array.from(grid.children) as HTMLElement[]) {
+        el.style.gridRowEnd = 'auto'
+        const gap = parseFloat(getComputedStyle(el).marginBottom) || 0
+        el.style.gridRowEnd = `span ${Math.ceil(el.getBoundingClientRect().height + gap)}`
+      }
+    }
+    layout()
+    const ro = new ResizeObserver(layout)
+    ro.observe(grid)
+    for (const el of Array.from(grid.children)) ro.observe(el)
+    return () => ro.disconnect()
+  }, [panels])
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     const t = draft.trim()
@@ -183,7 +203,16 @@ export default function Usage() {
                 </Text>
               )}
             </Flex>
-            <Box css={{ columnCount: { base: 1, md: 2, lg: 3 }, columnGap: '1rem' }}>
+            <Box
+              ref={gridRef}
+              css={{
+                display: 'grid',
+                gridTemplateColumns: { base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+                columnGap: '1rem',
+                gridAutoRows: '1px',
+                gridAutoFlow: 'row dense'
+              }}
+            >
               {panels?.map((p) => <PanelCard key={p.name} panel={p} />)}
             </Box>
           </>
