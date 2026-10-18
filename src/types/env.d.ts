@@ -25,6 +25,23 @@ declare namespace NodeJS {
     TELEGRAM_WEBHOOK_SECRET?: string
     BSKY_HANDLE?: string
     BSKY_APP_PASSWORD?: string
+    SOCIAL_DISCORD_WEBHOOK?: string
+    TELEGRAM_CHANNEL?: string
+    MASTODON_INSTANCE?: string
+    MASTODON_TOKEN?: string
+    X_API_KEY?: string
+    X_API_SECRET?: string
+    X_ACCESS_TOKEN?: string
+    X_ACCESS_TOKEN_SECRET?: string
+    REDDIT_CLIENT_ID?: string
+    REDDIT_CLIENT_SECRET?: string
+    REDDIT_USERNAME?: string
+    REDDIT_PASSWORD?: string
+    REDDIT_SUBREDDIT?: string
+    TUMBLR_BLOG?: string
+    TUMBLR_ACCESS_TOKEN?: string
+    PINTEREST_BOARD?: string
+    PINTEREST_ACCESS_TOKEN?: string
     NEXT_PUBLIC_SITE_URL?: string
   NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
   WEBPUSH_PRIVATE_KEY?: string

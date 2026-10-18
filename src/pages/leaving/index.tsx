@@ -46,7 +46,9 @@ export default function LeavingIndex() {
           { name: 'Home', url: SITE_URL },
           { name: 'Added & Leaving', url: canonicalUrl }
         ]}
-      />
+      >
+        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+      </PageHead>
       <PageShell title={title} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
           Also see <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link> or{' '}
@@ -66,6 +68,7 @@ export default function LeavingIndex() {
         <Text textAlign='center' mt={4} color='gray.500' fontSize='sm'>
           Write about streaming?{' '}
           <Link href='/widgets' style={{ textDecoration: 'underline' }}>Embed these lists on your site — free</Link>.
+          {' '}Or subscribe to the <Link href='/leaving.xml' style={{ textDecoration: 'underline' }}>RSS feed</Link>.
         </Text>
       </PageShell>
     </>

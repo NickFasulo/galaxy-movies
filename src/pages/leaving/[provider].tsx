@@ -194,7 +194,9 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
           { name: 'Added & Leaving', url: `${SITE_URL}/leaving` },
           { name: providerLabel, url: canonicalUrl }
         ]}
-      />
+      >
+        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+      </PageHead>
       <PageShell title={title} description={description} withBackButton>
         {updatedLabel && (
           <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} US catalog.</Text>

@@ -145,7 +145,9 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
           { name: 'Home', url: SITE_URL },
           { name: 'New on Streaming', url: canonicalUrl }
         ]}
-      />
+      >
+        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+      </PageHead>
       <PageShell title={title} description={description} withBackButton>
           {dataError ? (
             <Text mt={10} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
