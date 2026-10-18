@@ -18,7 +18,7 @@ jobs:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
