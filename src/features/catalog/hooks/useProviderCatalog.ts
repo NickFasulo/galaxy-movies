@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { WatchProvider } from '../../types/tmdb'
+import type { WatchProvider } from '../../../types/tmdb'
 
 // Logo/name lookup for TMDB watch providers in a region, keyed by provider_id.
 // Callers needing a stable reference should memoize off the returned Map.

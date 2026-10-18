@@ -4,8 +4,8 @@ import { Box, Flex, Text, Link, NativeSelect, Image as ChakraImage } from '@chak
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink } from '../../monetize/affiliates'
 import { sameStore, type PriceOffer } from '../prices'
-import { usePrices } from '../usePrices'
-import { useUserData } from '../../alerts/useUserData'
+import { usePrices } from '../hooks/usePrices'
+import { useUserData } from '../../alerts/hooks/useUserData'
 import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../../monetize/affiliates'
 import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../../monetize/affiliates'
 import { LuArrowUpRight } from 'react-icons/lu'

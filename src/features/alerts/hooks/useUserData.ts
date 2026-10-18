@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { EMPTY_USER_DATA, getUserData, getUserDataRaw, subscribeUserData } from '../../lib/userData'
+import { EMPTY_USER_DATA, getUserData, getUserDataRaw, subscribeUserData } from '../../../lib/userData'
 
 // Server snapshot is null → renders as EMPTY_USER_DATA during hydration, then
 // re-reads localStorage after mount. Keeps SSR markup matching on first paint.

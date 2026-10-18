@@ -6,7 +6,7 @@ import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
-import { usePlusStatus } from '../features/billing/usePlus'
+import { usePlusStatus } from '../features/billing/hooks/usePlus'
 import { firstParam } from '../lib/http'
 
 const FEATURES = [

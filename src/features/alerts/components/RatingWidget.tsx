@@ -1,7 +1,7 @@
 import { Box, Flex, Popover, Portal, useDisclosure, Icon } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useState } from 'react'
-import { useUserData } from '../useUserData'
+import { useUserData } from '../hooks/useUserData'
 import { getRating, setRating } from '../../../lib/userData'
 import { trackEvent } from '../../../lib/umami'
 import type { TitleSummary } from '../../../types/tmdb'

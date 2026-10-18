@@ -1,5 +1,5 @@
 import { Box, Button, Checkbox, Flex, SimpleGrid, Text } from '@chakra-ui/react'
-import { useUserData } from '../useUserData'
+import { useUserData } from '../hooks/useUserData'
 import { setServices } from '../../../lib/userData'
 import { streamingProviders, isProviderAvailableInRegion } from '../../catalog/tmdb'
 

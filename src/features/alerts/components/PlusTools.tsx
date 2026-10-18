@@ -4,7 +4,7 @@ import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '..
 import { letterboxdCsvs } from '../../../lib/format/exportCsv'
 import { parseLetterboxdCsv, type LetterboxdItem } from '../../../lib/format/importLetterboxd'
 import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../../../lib/userData'
-import type { PlusFeatures } from '../../billing/usePlus'
+import type { PlusFeatures } from '../../billing/hooks/usePlus'
 import { SITE_URL } from '../../../lib/site'
 
 interface ResolvedTitle {

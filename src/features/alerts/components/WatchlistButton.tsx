@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react'
 import { Button, IconButton, type ButtonProps } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs'
-import { useUserData } from '../useUserData'
+import { useUserData } from '../hooks/useUserData'
 import { isWatchlisted, toggleWatchlist, type WatchlistableTitle } from '../../../lib/userData'
 import { trackEvent } from '../../../lib/umami'
 
