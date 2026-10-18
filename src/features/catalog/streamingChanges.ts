@@ -480,6 +480,26 @@ export async function getProviderChanges(
   return changes
 }
 
+const CATALOG_MEMO_MS = 10 * 60 * 1000
+const catalogMemo = new LRUCache<string, CatalogTitle[]>({ max: 64, ttl: CATALOG_MEMO_MS })
+
+export async function getProviderCatalog(providerKey: string, region = 'US'): Promise<CatalogTitle[]> {
+  const memoKey = `${region}:${providerKey}`
+  const memoized = catalogMemo.get(memoKey)
+  if (memoized) return memoized
+
+  const kv = getRedis()
+  let titles: CatalogTitle[] = []
+  if (kv) {
+    try {
+      const snap = await kv.get<CatalogSnapshot>(catalogKey(providerKey, region))
+      titles = snap?.titles || []
+    } catch {}
+  }
+  catalogMemo.set(memoKey, titles)
+  return titles
+}
+
 const monthlyMemo = new LRUCache<string, Record<string, MonthlyChanges>>({ max: 64, ttl: CHANGES_MEMO_MS })
 
 export async function getMonthlyChanges(providerKeys: string[] = []): Promise<Record<string, MonthlyChanges>> {
