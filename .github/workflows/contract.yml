@@ -1,0 +1,30 @@
+name: contract
+
+# Weekly live-API contract checks for the cron dependencies (TMDB, Watchmode).
+# Per-push CI stays keyless; this runs on main with secrets and is the early
+# warning when an upstream response shape or provider name drifts.
+on:
+  schedule:
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      WATCHMODE_API_KEY: ${{ secrets.WATCHMODE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # A missing secret would silently skip every contract test — fail loudly.
+      - name: Require upstream secrets
+        run: test -n "$TMDB_API_KEY" && test -n "$WATCHMODE_API_KEY"
+      - run: npx vitest run src/__tests__/contract

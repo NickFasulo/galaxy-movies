@@ -3,6 +3,8 @@
   "main": ".open-next/entry.js",
   "name": "galaxy-movies",
   "workers_dev": true,
+  // PR previews (preview.yml) rely on versions-upload URLs being reachable.
+  "preview_urls": true,
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {

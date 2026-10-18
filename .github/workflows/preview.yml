@@ -1,0 +1,47 @@
+name: preview
+
+# Uploads a Worker preview version for same-repo PRs and comments the URL.
+# Same-repo only: preview versions share the production worker's bindings
+# (R2 cache, Redis secrets), so untrusted fork code must never reach them.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Detect Cloudflare secrets
+        id: cf
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "absent=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID not set — preview skipped"
+          fi
+      - if: steps.cf.outputs.absent != 'true'
+        run: npm run cf:build
+      - name: Upload preview version and comment URL
+        if: steps.cf.outputs.absent != 'true'
+        run: |
+          npx wrangler versions upload \
+            --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
+            2>&1 | tee version-out.txt
+          url=$(grep -oE 'https://[a-z0-9.-]*workers\.dev[^ ]*' version-out.txt | head -1 || true)
+          gh pr comment "$PR_URL" --body "Worker preview: ${url:-uploaded (no preview URL printed — enable preview_urls in wrangler config)}"

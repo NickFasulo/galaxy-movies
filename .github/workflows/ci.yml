@@ -18,10 +18,19 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
-      - run: npm run build
+      # test:coverage runs the full suite plus the coverage floor (vitest.config.ts)
+      - run: npm run test:coverage
+      # cf:build, not `next build`: it compiles with webpack (prod parity — plain
+      # `next build` defaults to Turbopack) and exercises the opennext adapter,
+      # postbuild script, and package patches that only ship to Workers.
+      - run: npm run cf:build
         env:
           # Build works without this (SSG pages degrade to empty), but real data
           # keeps the build representative. Never add the rest of .env.local —
           # keyless CI guarantees zero Redis/Watchmode/OpenAI spend.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      # Boots the just-built bundle in actual workerd (miniflare) and runs the
+      # core smoke set — the end-to-end catch for runtime APIs node doesn't flag.
+      - run: npm run smoke:workerd
+        env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
