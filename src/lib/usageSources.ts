@@ -57,6 +57,13 @@ interface CfRow {
   quantiles?: { cpuTimeP50?: number; cpuTimeP99?: number }
 }
 
+// Workers Paid allotments — the GraphQL API can't tell free/paid apart, so
+// these are env-overridable rather than detected.
+const CF_INCLUDED_REQUESTS = Number(process.env.CF_INCLUDED_REQUESTS) || 10_000_000
+const CF_INCLUDED_CPU_MS = Number(process.env.CF_INCLUDED_CPU_MS) || 30_000_000
+
+const fmtM = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : fmt(n))
+
 async function cloudflarePanel(): Promise<UsagePanel> {
   const accountId = process.env.CF_ACCOUNT_ID
   const token = process.env.CF_ANALYTICS_API_TOKEN
@@ -65,7 +72,8 @@ async function cloudflarePanel(): Promise<UsagePanel> {
 
   const now = new Date()
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const monthStart = new Date(now.getTime() - 30 * 86400_000)
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const daysInMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate()
 
   const totalsFor = async (start: Date) => {
     const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
@@ -87,30 +95,55 @@ async function cloudflarePanel(): Promise<UsagePanel> {
 
     const rows = (body?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive ?? []) as CfRow[]
     return rows.reduce(
-      (acc, r) => ({
-        requests: acc.requests + (r.sum?.requests ?? 0),
-        errors: acc.errors + (r.sum?.errors ?? 0),
-        subrequests: acc.subrequests + (r.sum?.subrequests ?? 0),
-        p50: Math.max(acc.p50, r.quantiles?.cpuTimeP50 ?? 0),
-        p99: Math.max(acc.p99, r.quantiles?.cpuTimeP99 ?? 0)
-      }),
-      { requests: 0, errors: 0, subrequests: 0, p50: 0, p99: 0 }
+      (acc, r) => {
+        const requests = r.sum?.requests ?? 0
+        return {
+          requests: acc.requests + requests,
+          errors: acc.errors + (r.sum?.errors ?? 0),
+          subrequests: acc.subrequests + (r.sum?.subrequests ?? 0),
+          // No CPU sum in the dataset — requests×p50 is a floor estimate only.
+          estCpuMs: acc.estCpuMs + (requests * (r.quantiles?.cpuTimeP50 ?? 0)) / 1000,
+          p50: Math.max(acc.p50, r.quantiles?.cpuTimeP50 ?? 0),
+          p99: Math.max(acc.p99, r.quantiles?.cpuTimeP99 ?? 0)
+        }
+      },
+      { requests: 0, errors: 0, subrequests: 0, estCpuMs: 0, p50: 0, p99: 0 }
     )
   }
 
   const [today, month] = await Promise.all([totalsFor(todayStart), totalsFor(monthStart)])
-  const pctOfFree = (today.requests / 100_000) * 100
   const ms = (us: number) => `${(us / 1000).toFixed(2)}ms`
+  const paceRequests = (month.requests / now.getUTCDate()) * daysInMonth
+  const overRequests = month.requests - CF_INCLUDED_REQUESTS
+  const overCpu = month.estCpuMs - CF_INCLUDED_CPU_MS
 
   return {
     name: 'Cloudflare Workers',
     status: 'ok',
     link,
     metrics: [
-      { label: 'Requests today', value: fmt(today.requests), hint: `${pctOfFree.toFixed(1)}% of the 100k/day free tier` },
-      { label: 'Errors today', value: fmt(today.errors) },
-      { label: 'Requests (30d)', value: fmt(month.requests), hint: `${fmt(month.errors)} errors, ${fmt(month.subrequests)} subrequests` },
-      { label: 'CPU time today', value: `${ms(today.p50)} p50`, hint: `${ms(today.p99)} p99` }
+      {
+        label: 'Requests today',
+        value: fmt(today.requests),
+        hint: `${fmt(today.errors)} errors · ${fmt(today.subrequests)} subrequests`
+      },
+      {
+        label: 'Requests (billing month)',
+        value: `${fmt(month.requests)} / ${fmtM(CF_INCLUDED_REQUESTS)}`,
+        hint:
+          overRequests > 0
+            ? `~$${((overRequests / 1e6) * 0.3).toFixed(2)} over included · pace ~${fmtM(paceRequests)}`
+            : `on pace ~${fmtM(paceRequests)} · ${fmt(month.errors)} errors`
+      },
+      {
+        label: 'Est. CPU (billing month)',
+        value: `≥${fmtM(month.estCpuMs)} ms`,
+        hint:
+          overCpu > 0
+            ? `~$${((overCpu / 1e6) * 0.02).toFixed(2)}+ over ${fmtM(CF_INCLUDED_CPU_MS)} ms — p50 floor, Billing has exact`
+            : `of ${fmtM(CF_INCLUDED_CPU_MS)} ms included · p50 floor — Billing has exact`
+      },
+      { label: 'CPU per request', value: `${ms(today.p50)} p50`, hint: `${ms(today.p99)} p99` }
     ]
   }
 }
@@ -206,15 +239,33 @@ async function openaiPanel(costsPromise: Promise<CostBucket[] | null>): Promise<
 
   const startTime = Math.floor(Date.now() / 1000) - 30 * 86400
   const todayStart = Math.floor(new Date().setUTCHours(0, 0, 0, 0) / 1000)
+  // No balance endpoint exists for API keys (credit_grants is browser-session
+  // only) — track burn-down from a manually-set baseline instead.
+  const creditsBaseline = Number(process.env.OPENAI_CREDITS_BASELINE)
+  const creditsAsOf = process.env.OPENAI_CREDITS_BASELINE_DATE
+  const creditsSinceSec = creditsBaseline > 0 && creditsAsOf ? Math.floor(new Date(`${creditsAsOf}T00:00:00Z`).getTime() / 1000) : null
 
-  const [costBuckets, usageBuckets] = await Promise.all([
+  const sumCostBuckets = (buckets: CostBucket[]) =>
+    buckets.reduce(
+      (t, b) => t + (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0),
+      0
+    )
+
+  const [costBuckets, usageBuckets, creditsCostBuckets] = await Promise.all([
     costsPromise.then((b) => b ?? []),
     openaiFetchAll<{ model?: string; num_model_requests?: number; input_tokens?: number; output_tokens?: number }>(adminKey, '/usage/completions', {
       start_time: startTime,
       bucket_width: '1d',
       group_by: 'model',
       limit: 31
-    })
+    }),
+    creditsSinceSec
+      ? openaiFetchAll<{ amount?: { value?: number | string } }>(adminKey, '/costs', {
+          start_time: creditsSinceSec,
+          bucket_width: '1d',
+          limit: 180
+        })
+      : Promise.resolve(null)
   ])
 
   let total = 0
@@ -240,11 +291,26 @@ async function openaiPanel(costsPromise: Promise<CostBucket[] | null>): Promise<
   const totalRequests = [...byModel.values()].reduce((s, m) => s + m.requests, 0)
   const topModels = [...byModel.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 3)
 
+  const creditsMetric: UsageMetric =
+    creditsCostBuckets != null && creditsAsOf
+      ? (() => {
+          const spent = sumCostBuckets(creditsCostBuckets)
+          return {
+            label: 'Credits remaining',
+            value: `≈$${(creditsBaseline - spent).toFixed(2)}`,
+            hint: `$${creditsBaseline} on ${creditsAsOf} − $${spent.toFixed(2)} spent since`
+          }
+        })()
+      : creditsBaseline > 0
+        ? { label: 'Credits remaining', value: `$${creditsBaseline.toFixed(2)}`, hint: 'snapshot — set OPENAI_CREDITS_BASELINE_DATE to track burn-down' }
+        : { label: 'Credits remaining', value: '—', hint: 'no balance API — set OPENAI_CREDITS_BASELINE (+_DATE)' }
+
   return {
     name: 'OpenAI',
     status: 'ok',
     link,
     metrics: [
+      creditsMetric,
       { label: 'Spend (30d)', value: `$${total.toFixed(2)}`, hint: `$${today.toFixed(4)} today` },
       { label: 'Requests (30d)', value: fmt(totalRequests) },
       ...topModels.map(([model, m]) => ({

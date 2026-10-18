@@ -43,7 +43,7 @@ interface MockRes extends NextApiResponse {
     panels?: {
       name: string
       status: string
-      metrics: { label: string; value: string }[]
+      metrics: { label: string; value: string; hint?: string }[]
       links?: { label: string; url: string }[]
       error?: string
     }[]
@@ -90,6 +90,10 @@ afterEach(() => {
   delete process.env.UPSTASH_API_KEY
   delete process.env.UPSTASH_DATABASE_ID
   delete process.env.OPENAI_ADMIN_KEY
+  delete process.env.OPENAI_CREDITS_BASELINE
+  delete process.env.OPENAI_CREDITS_BASELINE_DATE
+  delete process.env.CF_INCLUDED_REQUESTS
+  delete process.env.CF_INCLUDED_CPU_MS
 })
 
 describe('GET /api/usage', () => {
@@ -197,6 +201,65 @@ describe('GET /api/usage', () => {
     await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
     expect(panel(res, 'Polar')?.status).toBe('ok')
     expect(auth).toBe('Bearer usage-tok')
+  })
+
+  it('shows Workers paid-plan quota usage and overage', async () => {
+    process.env.CF_ACCOUNT_ID = 'acct'
+    process.env.CF_ANALYTICS_API_TOKEN = 'cf-tok'
+    mocks.fetch.mockImplementation(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({
+            data: {
+              viewer: {
+                accounts: [
+                  {
+                    workersInvocationsAdaptive: [
+                      { sum: { requests: 5_000_000, errors: 3, subrequests: 9 }, quantiles: { cpuTimeP50: 1000, cpuTimeP99: 5000 } },
+                      { sum: { requests: 6_000_000, errors: 0, subrequests: 0 }, quantiles: { cpuTimeP50: 2000, cpuTimeP99: 9000 } }
+                    ]
+                  }
+                ]
+              }
+            }
+          })
+        }) as Response
+    )
+
+    const res = makeRes()
+    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    const cf = panel(res, 'Cloudflare Workers')
+    expect(cf?.status).toBe('ok')
+    const metric = (label: string) => cf?.metrics.find((m) => m.label === label)
+    expect(metric('Requests (billing month)')?.value).toBe('11,000,000 / 10.0M')
+    expect(metric('Requests (billing month)')?.hint).toContain('over included')
+    expect(metric('Est. CPU (billing month)')?.value).toBe('≥17.0M ms')
+    expect(metric('Est. CPU (billing month)')?.hint).toContain('30.0M ms included')
+  })
+
+  it('shows OpenAI credit burn-down from the baseline env vars', async () => {
+    process.env.OPENAI_ADMIN_KEY = 'admin-tok'
+    process.env.OPENAI_CREDITS_BASELINE = '100'
+    process.env.OPENAI_CREDITS_BASELINE_DATE = '2026-10-01'
+    mocks.fetch.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/costs')) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: [{ results: [{ amount: { value: 12.5 } }, { amount: { value: 7.5 } }] }]
+          })
+        } as Response
+      }
+      return { ok: true, json: async () => ({ data: [] }) } as Response
+    })
+
+    const res = makeRes()
+    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    const openai = panel(res, 'OpenAI')
+    expect(openai?.status).toBe('ok')
+    expect(openai?.metrics.find((m) => m.label === 'Credits remaining')?.value).toBe('≈$80.00')
   })
 
   it('marks a panel error instead of failing when a vendor API rejects', async () => {
