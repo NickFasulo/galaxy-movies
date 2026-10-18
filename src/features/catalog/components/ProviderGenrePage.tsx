@@ -17,7 +17,7 @@ import {
 } from '../tmdb'
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../../../lib/region'
 import { getContentIndexability, getProviderGenreTarget, getTvProviderGenreTarget, type ProviderGenreTarget } from '../contentOpportunities'
-import { setSwrCache, getPageParam } from '../../../lib/ssr'
+import { setSwrCache, getPageParam } from '../../../lib/http'
 import { titleListSchema } from '../schema'
 import { SITE_URL } from '../../../lib/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../../../types/tmdb'

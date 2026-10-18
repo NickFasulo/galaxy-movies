@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
 import Head from 'next/head'
-import BreadcrumbSchema, { type BreadcrumbItem } from './BreadcrumbSchema'
-import HreflangTags from './HreflangTags'
 import { buildOgImageUrl } from '../features/catalog/schema'
 import { SITE_URL } from '../lib/site'
 
@@ -14,6 +12,49 @@ export function JsonLd({ data }: { data: Record<string, unknown> }) {
       }}
     />
   );
+}
+
+export interface BreadcrumbItem {
+  name: string
+  url: string
+}
+
+function BreadcrumbSchema({ items }: { items?: BreadcrumbItem[] }) {
+  if (!items || items.length === 0) return null
+
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url
+    }))
+  }
+
+  return (
+    <script
+      type='application/ld+json'
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(breadcrumbData).replace(/</g, '\\u003c')
+      }}
+    />
+  );
+}
+
+// All hreflang entries point to the same URL intentionally — regional
+// differences are rendered server-side, not via separate locale URLs.
+function HreflangTags({ canonicalUrl }: { canonicalUrl?: string | null }) {
+  if (!canonicalUrl) return null
+
+  return (
+    <>
+      <link rel='alternate' hrefLang='en-US' href={canonicalUrl} />
+      <link rel='alternate' hrefLang='en-IN' href={canonicalUrl} />
+      <link rel='alternate' hrefLang='x-default' href={canonicalUrl} />
+    </>
+  )
 }
 
 type StructuredData = Record<string, unknown> | null | undefined

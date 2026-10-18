@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, SYNCKEY_KEY, PUSH_KEY } from '../../features/alerts/waitlistStore'
 import { safeEqual } from '../../lib/auth'
 import { parsePushSubscription, parseStoredSubs, mergePushSub, isPushEndpoint } from '../../features/alerts/webpush'

@@ -1,7 +1,7 @@
 import type { GetServerSidePropsContext } from 'next'
 import { getProviderChanges } from '../features/catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../features/catalog/tmdb'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 import { SITE_URL } from '../lib/site'
 
 const escapeXml = (value: string) =>

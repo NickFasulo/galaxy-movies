@@ -9,7 +9,7 @@ import { fetchListMovies, fetchListTv, fetchRecommendedMovies, fetchRecommendedT
 import { getCuratedList, type EditorialSection } from '../../features/catalog/curatedLists'
 import { getGeneratedList } from '../../features/catalog/generatedLists'
 import { getOrGenerateListIntro } from '../../features/ai/listIntro'
-import { setSwrCache } from '../../lib/ssr'
+import { setSwrCache } from '../../lib/http'
 import { itemListSchema, titleListSchema } from '../../features/catalog/schema'
 import { SITE_URL } from '../../lib/site'
 import type { TitleSummary } from '../../types/tmdb'

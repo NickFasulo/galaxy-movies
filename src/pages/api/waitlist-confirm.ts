@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../features/alerts/waitlistStore'
 import { safeEqual } from '../../lib/auth'
-import { requireMethod } from '../../lib/api'
+import { requireMethod } from '../../lib/http'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
 

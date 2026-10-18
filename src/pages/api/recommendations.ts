@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchRecommendedMovies, fetchRecommendedTv } from '../../features/catalog/tmdb'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../lib/api'
-import { firstParam } from '../../lib/query'
+import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
+import { firstParam } from '../../lib/http'
 
 const MAX_RESULTS = 12
 

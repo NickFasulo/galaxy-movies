@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
 import { resolveTitleItem } from '../../features/ai/movieSearch'
 

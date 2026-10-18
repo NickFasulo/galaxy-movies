@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Box, Flex } from '@chakra-ui/react';
-import TopBackdrop from '../../../components/TopBackdrop'
+import { TopBackdrop } from '../../../components/Backdrop'
 import Backdrop, { BACKDROP_OVERLAYS } from '../../../components/Backdrop'
 
 export default function DetailPageShell({

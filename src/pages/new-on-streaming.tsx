@@ -8,7 +8,7 @@ import { streamingProviders, getProviderIds, isProviderAvailableInRegion, fetchL
 import { detectRegion } from '../lib/region'
 import { withTimeout } from '../lib/withTimeout'
 import { getProviderChanges, type ProviderChanges } from '../features/catalog/streamingChanges'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 import { itemListSchema, titleItem } from '../features/catalog/schema'
 import { SITE_URL } from '../lib/site'
 import type { MediaType, TmdbMovie } from '../types/tmdb'

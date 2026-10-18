@@ -124,3 +124,16 @@ export default function Backdrop({
   )
 }
 
+export function TopBackdrop(props: BoxProps) {
+  return (
+    <Backdrop
+      path={null}
+      overlays={BACKDROP_OVERLAYS.topBand}
+      priority
+      bottom='auto'
+      h={{ base: '14rem', md: '22rem' }}
+      {...props}
+    />
+  )
+}
+

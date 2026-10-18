@@ -5,7 +5,7 @@ import { Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import { embeddableProviders, providerLabel } from '../features/catalog/embed'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 import { SITE_URL } from '../lib/site'
 
 const PROVIDERS = embeddableProviders()

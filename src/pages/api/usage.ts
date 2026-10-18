@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { safeEqual } from '../../lib/auth'
 import { aggregateUsage, type UsagePanel } from '../../lib/usageSources'
 

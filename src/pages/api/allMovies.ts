@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { normalizeTvTitle, getProviderIds } from '../../features/catalog/tmdb'
-import { firstParam } from '../../lib/query'
+import { firstParam } from '../../lib/http'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const GENRE_MAP: Record<string, number> = {
@@ -25,7 +25,7 @@ const GENRE_MAP: Record<string, number> = {
 }
 
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../lib/api'
+import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
 
 type RawResult = TitleSummary & TmdbTvShow
 

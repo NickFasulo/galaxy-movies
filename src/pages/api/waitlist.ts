@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../features/alerts/waitlistStore'
 import { SITE_URL } from '../../lib/site'
 import { randomUUID, createHash } from 'crypto'

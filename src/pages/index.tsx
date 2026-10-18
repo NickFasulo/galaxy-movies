@@ -18,7 +18,7 @@ import { fetchDiscoverMovies, fetchListMovies, fetchTmdb, getProviderIds, isProv
 import { getProviderCatalog } from '../features/catalog/providerCatalog'
 import { detectRegion } from '../lib/region'
 import { ratingEntries, setServices } from '../lib/userData'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 import { SITE_URL } from '../lib/site'
 import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
 

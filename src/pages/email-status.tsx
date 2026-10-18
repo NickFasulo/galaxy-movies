@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import { firstParam } from '../lib/query'
+import { firstParam } from '../lib/http'
 import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../features/alerts/alertsSync'
 import { getUserData, mergeSyncedPrefs } from '../lib/userData'
 

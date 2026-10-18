@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { randomUUID } from 'crypto'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
 import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../features/billing/billing'
 import { getRedis, SHARE_KEY, SHARE_LOOKUP_KEY } from '../../features/alerts/waitlistStore'

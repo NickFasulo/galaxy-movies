@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis, WATCH_KEY, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
 import { mergeWatchTitles, parseWatchEntry, type WatchTitle } from '../../features/alerts/titleAlerts'
 import { safeEqual } from '../../lib/auth'
-import { requireMethod } from '../../lib/api'
+import { requireMethod } from '../../lib/http'
 import { randomUUID } from 'crypto'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i

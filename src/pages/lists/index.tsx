@@ -2,7 +2,7 @@ import type { GetServerSidePropsContext, InferGetServerSidePropsType } from 'nex
 import { Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import { curatedLists } from '../../features/catalog/curatedLists'
 import { getGeneratedLists } from '../../features/catalog/generatedLists'
-import { setSwrCache } from '../../lib/ssr'
+import { setSwrCache } from '../../lib/http'
 import { itemListSchema } from '../../features/catalog/schema'
 import { SITE_URL } from '../../lib/site'
 import PageHead from '../../components/PageHead'

@@ -11,8 +11,8 @@ import { useAlertsSync } from '../features/alerts/useAlertsSync'
 import ChatWidget from '../features/ai/components/ChatWidget'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import FooterPill from '../components/FooterPill'
-import TopBackdrop from '../components/TopBackdrop'
+import { FooterPill } from '../components/Footer'
+import { TopBackdrop } from '../components/Backdrop'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: DehydratedState }>) {

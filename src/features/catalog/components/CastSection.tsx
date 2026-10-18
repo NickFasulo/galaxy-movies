@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Box, Flex, Text, Wrap, WrapItem } from '@chakra-ui/react'
-import ActorAvatar from './ActorAvatar'
+import { ActorAvatar } from './LogoLinks'
 import type { CastMember } from '../../../types/tmdb'
 
 type CastEntry = Pick<CastMember, 'id' | 'name' | 'profile_path'>

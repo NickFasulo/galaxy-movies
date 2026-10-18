@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod } from '../../../lib/api'
+import { requireMethod } from '../../../lib/http'
 import { getRedis, SYNCKEY_KEY, TRAKT_KEY } from '../../../features/alerts/waitlistStore'
 import { safeEqual } from '../../../lib/auth'
 import { exchangeCode, traktConfigured, verifyState } from '../../../features/billing/trakt'
 import { traktRedirectUri } from './connect'
-import { firstParam } from '../../../lib/query'
+import { firstParam } from '../../../lib/http'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return

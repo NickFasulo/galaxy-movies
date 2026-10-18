@@ -7,7 +7,7 @@ import { getGeneratedLists } from '../features/catalog/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets } from '../features/catalog/contentOpportunities'
 import { franchiseCollectionIds } from '../features/catalog/franchises'
 import { SITE_URL as siteUrl } from '../lib/site'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 
 const escapeXml = (value: string) =>
   value

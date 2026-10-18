@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { isAiAvailable } from '../../features/ai/openai'
-import { requireMethod, setApiCache } from '../../lib/api'
+import { requireMethod, setApiCache } from '../../lib/http'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import dateFormatter from './dateFormatter'
-import timeFormatter from './timeFormatter'
-import removeUnderscores from './removeUnderscores'
+import { dateFormatter } from './formatters'
+import { timeFormatter } from './formatters'
+import { removeUnderscores } from './formatters'
 
 describe('dateFormatter', () => {
   it('formats a date as "Mon d, yyyy"', () => {

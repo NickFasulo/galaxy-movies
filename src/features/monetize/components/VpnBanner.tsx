@@ -1,5 +1,5 @@
 import { Flex, Text, Link, Image } from '@chakra-ui/react'
-import { VPN_DEAL_LINK, VPN_DEAL_PIXEL, VPN_CTA_TEXT } from '../vpnAffiliate'
+import { VPN_DEAL_LINK, VPN_DEAL_PIXEL, VPN_CTA_TEXT } from '../affiliates'
 
 export default function VpnBanner({ message }: { message: string }) {
   return (

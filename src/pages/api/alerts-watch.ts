@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
 import { mergeWatchTitles, type WatchTitle } from '../../features/alerts/titleAlerts'
 import { SITE_URL } from '../../lib/site'

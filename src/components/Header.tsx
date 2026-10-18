@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Box, Flex, IconButton, Link, Menu, Portal } from '@chakra-ui/react';
 import NavMenu, { menuItemProps } from './NavMenu'
-import SearchInput from './SearchInput'
+import { SearchInput } from './SearchBar'
 import Wordmark from './Wordmark'
 import { LuChevronDown, LuSearch, LuX } from 'react-icons/lu';
 

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../lib/api'
+import { requireMethod, rejectBot } from '../../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../../lib/rateLimiter'
 import { getBillingRecord, getLinkedEmail, isPlusActive } from '../../../features/billing/billing'
 import { getRedis, TRAKT_KEY, SHARE_KEY, DISCORD_KEY, TELEGRAM_KEY } from '../../../features/alerts/waitlistStore'

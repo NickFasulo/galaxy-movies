@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { rejectBot } from '../../../lib/api'
+import { rejectBot } from '../../../lib/http'
 import { getRedis } from '../../../lib/redis'
 import { TELEGRAM_KEY } from '../../../features/alerts/waitlistStore'
 import { getClientIP, checkDistributedRateLimit } from '../../../lib/rateLimiter'

@@ -12,9 +12,9 @@ import {
   normalizeTvTitle
 } from '../../features/catalog/tmdb'
 import type { TmdbMovie, TmdbPaged, TmdbTvShow, TitleSummary } from '../../types/tmdb'
-import { firstParam } from '../../lib/query'
+import { firstParam } from '../../lib/http'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../lib/api'
+import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
 
 const ID_RE = /^\d{1,10}$/
 const REGION_RE = /^[A-Z]{2}$/

@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { Box, Text } from '@chakra-ui/react'
 import PaginatedGrid from '../features/catalog/components/PaginatedGrid'
 import PageHead from '../components/PageHead'
-import SearchInput from '../components/SearchInput'
-import StickySearchBar from '../components/StickySearchBar'
+import { SearchInput } from '../components/SearchBar'
+import { StickySearchBar } from '../components/SearchBar'
 import { fetchTmdb, normalizeTvTitle } from '../features/catalog/tmdb'
-import { setSwrCache } from '../lib/ssr'
+import { setSwrCache } from '../lib/http'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../types/tmdb'
 
 interface Props {

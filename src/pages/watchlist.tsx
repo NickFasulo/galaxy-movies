@@ -13,7 +13,7 @@ import PushAlerts from '../features/alerts/components/PushAlerts'
 import { useUserData } from '../features/alerts/useUserData'
 import { usePlusStatus } from '../features/billing/usePlus'
 import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../lib/userData'
-import { firstParam } from '../lib/query'
+import { firstParam } from '../lib/http'
 import type { MediaType, TitleSummary } from '../types/tmdb'
 
 export default function Watchlist() {

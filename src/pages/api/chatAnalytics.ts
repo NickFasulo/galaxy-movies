@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis } from '../../lib/redis'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot } from '../../lib/api'
+import { requireMethod, rejectBot } from '../../lib/http'
 import { isCronAuthorized } from '../../lib/auth'
-import { firstParam } from '../../lib/query'
+import { firstParam } from '../../lib/http'
 import { bumpCounter, getCostEstimate, getUsageStats, localAnalytics } from '../../features/ai/aiUsage'
 
 export const config = {

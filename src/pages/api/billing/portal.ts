@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../lib/api'
+import { requireMethod, rejectBot } from '../../../lib/http'
 import { getBillingRecord, getLinkedEmail } from '../../../features/billing/billing'
 import { polarConfigured, polarPost } from '../../../features/billing/polar'
 

@@ -19,7 +19,7 @@ import {
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../../../lib/region'
 import { getProviderChanges, type ProviderChanges } from '../streamingChanges'
 import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, getContentIndexability, type ProviderGenreTarget } from '../contentOpportunities'
-import { setSwrCache, getPageParam } from '../../../lib/ssr'
+import { setSwrCache, getPageParam } from '../../../lib/http'
 import { titleListSchema } from '../schema'
 import { SITE_URL } from '../../../lib/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../../../types/tmdb'
