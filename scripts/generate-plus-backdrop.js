@@ -8,7 +8,7 @@ const { mulberry32, makeNoiseLayer, fbm } = require('./generate-backdrop-fallbac
 
 const OUT_DIR = path.join(__dirname, '..', 'public')
 
-function buildPlusFrame({ width: W, height: H, seed }) {
+function buildPlusFrame({ width: W, height: H, seed, compose = {} }) {
   const rand = mulberry32(seed)
   const aspect = W / H
   const gs = (s) => Math.max(1, Math.round(s * aspect * 1.125))
@@ -34,13 +34,13 @@ function buildPlusFrame({ width: W, height: H, seed }) {
   const PINK = [1.0, 0.42, 0.60]
   const DISC = [0.55, 0.62, 0.85]
 
-  const CX = W * 0.60
-  const CY = H * 0.40
-  const R = H * 0.46
+  const CX = W * (compose.cx ?? 0.60)
+  const CY = H * (compose.cy ?? 0.40)
+  const R = H * (compose.r ?? 0.46)
   const RC = R * 0.085
   const RD = R * 0.40
-  const TILT = -0.42
-  const COSI = 0.58
+  const TILT = compose.tilt ?? -0.42
+  const COSI = compose.cosi ?? 0.58
   const K = 1 / Math.tan(0.33)
   const R0 = R * 0.14
   const ARM_RAMP = R * 0.07
@@ -215,6 +215,8 @@ async function main() {
     console.log(`${t.file}: ${info.width}x${info.height}`)
   }
 }
+
+module.exports.buildPlusFrame = buildPlusFrame
 
 if (require.main === module) {
   main().catch((err) => {
