@@ -1,9 +1,9 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../lib/redis'
-import { fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, isProviderAvailableInRegion, streamingProviders, PROVIDER_NAME_MATCH } from './tmdb'
+import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders, PROVIDER_NAME_MATCH } from './tmdb'
 import { pingIndexNow } from '../../lib/indexnow'
 import { SITE_URL } from '../../lib/site'
-import type { MediaType, TitleSummary } from '../../types/tmdb'
+import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const SOURCES_TTL_SECONDS = 60 * 60 * 24 * 30
@@ -133,6 +133,18 @@ export async function getTitleChanges(tmdbType: MediaType, tmdbId: number, regio
 
   titleIndexMemo.set(memoKey, { v: entry })
   return entry
+}
+
+// Whole-hash read for jobs that need every title's events at once (sitemap
+// lastmod) — one HGETALL beats per-title HGETs over ~600 entries.
+export async function getTitleChangeIndex(region = 'US'): Promise<Record<string, TitleChangeEvents> | null> {
+  const kv = getRedis()
+  if (!kv) return null
+  try {
+    return (await kv.hgetall<Record<string, TitleChangeEvents>>(titleIndexKey(region))) ?? null
+  } catch {
+    return null
+  }
 }
 
 // US keys keep their original unprefixed shape; other regions are namespaced.
@@ -415,6 +427,15 @@ export async function updateStreamingChanges() {
       console.error(`in catalog update failed for ${key}:`, error)
     }
   }
+
+  // Trending-week titles ride the "where to watch X" search spikes — ping them
+  // daily so Bing indexes the hot set even on days with no provider diff hits.
+  const [trendingMovies, trendingTv] = await Promise.all([
+    fetchTmdb<TmdbPaged<TmdbMovie>>('/trending/movie/week', { page: 1 }).catch((): null => null),
+    fetchTmdb<TmdbPaged<TmdbTvShow>>('/trending/tv/week', { page: 1 }).catch((): null => null)
+  ])
+  for (const t of trendingMovies?.results || []) if (t?.id) indexNowUrls.add(`${SITE_URL}/movies/${t.id}`)
+  for (const t of trendingTv?.results || []) if (t?.id) indexNowUrls.add(`${SITE_URL}/tv/${t.id}`)
 
   if (indexNowUrls.size) {
     indexNowUrls.add(`${SITE_URL}/new-on-streaming`)

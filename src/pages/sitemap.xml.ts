@@ -1,6 +1,7 @@
 import type { GetServerSidePropsContext } from 'next'
-import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
+import type { TmdbMovieDetails, TmdbTvDetails, TmdbMovie, TmdbTvShow, TmdbPaged, Credits, AggregateCredits } from '../types/tmdb'
 import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../features/catalog/tmdb'
+import { getTitleChangeIndex } from '../features/catalog/streamingChanges'
 import { DEFAULT_REGION } from '../lib/region'
 import { curatedLists } from '../features/catalog/curatedLists'
 import { getGeneratedLists } from '../features/catalog/generatedLists'
@@ -54,7 +55,21 @@ async function runBatched<R>(tasks: (() => Promise<R>)[], size = 10): Promise<R[
 
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
-  const generatedLists = await getGeneratedLists()
+  const [generatedLists, titleChangeIndex] = await Promise.all([getGeneratedLists(), getTitleChangeIndex()])
+
+  // Provider-diff events are real page-content changes ("leaves Netflix Oct 20")
+  // and often postdate release_date — the newest wins as lastmod.
+  const latestChangeDate = (tmdbType: 'movie' | 'tv', id: number): string | null => {
+    const entry = titleChangeIndex?.[`${tmdbType}:${id}`]
+    if (!entry) return null
+    let latest: string | null = null
+    for (const e of [...(entry.coming || []), ...(entry.added || []), ...(entry.left || [])]) {
+      const d = formatDate(e.date)
+      if (d && d > (latest || '')) latest = d
+    }
+    return latest
+  }
+  const newest = (...dates: (string | null)[]) => dates.filter(Boolean).sort().pop() || null
 
   // lastmod is only emitted where a real change date exists — emitting
   // "today" everywhere taught Google the field was meaningless.
@@ -157,14 +172,23 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       )
     )
 
+    // Discover samples can miss spiking titles — merge the trending-week set so
+    // the highest-demand pages always carry a sitemap entry.
+    const [trendingMovies, trendingTv] = await Promise.all([
+      fetchTmdb<TmdbPaged<TmdbMovie>>('/trending/movie/week', { page: 1 }).catch((): null => null),
+      fetchTmdb<TmdbPaged<TmdbTvShow>>('/trending/tv/week', { page: 1 }).catch((): null => null)
+    ])
+
     const allMovies = [
       ...categoryResults.flatMap(d => d?.results || []),
       ...genreResults.flatMap(d => d?.results || []),
+      ...(trendingMovies?.results || []),
     ]
 
     const allShows = [
       ...tvCategoryResults.flatMap(d => d?.results || []),
       ...tvGenreResults.flatMap(d => d?.results || []),
+      ...(trendingTv?.results || []).map(s => ({ ...s, title: s.name, release_date: s.first_air_date, mediaType: 'tv' as const })),
     ]
 
     for (const movie of allMovies) {
@@ -172,7 +196,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       // the sitemap (the discover payload already carries the field).
       if (!movie?.id || !movie.overview) continue
       if (!movieEntries.has(movie.id)) {
-        const lastmod = formatDate(movie.release_date) || today
+        const lastmod = newest(formatDate(movie.release_date), latestChangeDate('movie', movie.id)) || today
         movieEntries.set(movie.id, lastmod)
       }
     }
@@ -180,7 +204,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     for (const show of allShows) {
       if (!show?.id || !show.overview) continue
       if (!showEntries.has(show.id)) {
-        const lastmod = formatDate(show.first_air_date || show.release_date) || today
+        const lastmod = newest(formatDate(show.first_air_date || show.release_date), latestChangeDate('tv', show.id)) || today
         showEntries.set(show.id, lastmod)
       }
     }
