@@ -13,6 +13,7 @@ import VoteScore from './VoteScore'
 import { DetailCreditLine, DetailCreditLink } from './DetailCredit'
 import RatingWidget from './RatingWidget'
 import WatchProviders from './WatchProviders'
+import TitleAvailability from './TitleAvailability'
 import SimilarMovies from './SimilarMovies'
 import GalaxyBotTake from './GalaxyBotTake'
 import CastSection from './CastSection'
@@ -28,6 +29,7 @@ import { findSimilarListRef, type SimilarListRef } from '../utils/generatedLists
 import { getRedis } from '../utils/redis'
 import { isBot, isSearchEngine } from '../utils/rateLimiter'
 import { getProviderAffiliateLinks } from '../utils/takeads'
+import { getTitleChanges, type TitleChangeEvents } from '../utils/streamingChanges'
 import { withTimeout } from '../utils/withTimeout'
 import { setSwrCache } from '../utils/ssr'
 import { absoluteImageUrl, aggregateRatingSchema, personSchema } from '../utils/schema'
@@ -66,6 +68,7 @@ interface CommonProps {
   similarTitles: SimilarTitle[]
   similarListRef: SimilarListRef | null
   providerAffiliateLinks: Record<string, string | null>
+  titleChanges: TitleChangeEvents | null
 }
 
 export type TitleDetailProps =
@@ -110,7 +113,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           aiSynopsis: null,
           similarTitles: [],
           similarListRef: null,
-          providerAffiliateLinks: {}
+          providerAffiliateLinks: {},
+          titleChanges: null
         }
         return media === 'movie'
           ? { props: { ...thin, media, title, director: null, topCast: [] } }
@@ -196,7 +200,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         }
       }
 
-      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef] = await Promise.all([
+      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef, titleChanges] = await Promise.all([
         withTimeout(getFirstPlayableKey(title.videos?.results), 3000, null),
         title.overview
           ? withTimeout(getOrGenerateMovieReview({
@@ -222,7 +226,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
             }), 4500, [])
           : [],
         getProviderAffiliateLinks(providerNames),
-        withTimeout(findSimilarListRef(media, title.id), 2000, null)
+        withTimeout(findSimilarListRef(media, title.id), 2000, null),
+        withTimeout(getTitleChanges(media, Number(id)), 2000, null)
       ])
 
       // Bot renders skip AI generation, so a page whose generated slots came
@@ -247,7 +252,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         aiSynopsis: aiSynopsis || null,
         similarTitles: similarTitles || [],
         similarListRef,
-        providerAffiliateLinks
+        providerAffiliateLinks,
+        titleChanges
       }
 
       return media === 'movie'
@@ -270,7 +276,7 @@ export default function TitleDetailPage(props: TitleDetailProps) {
 function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>) {
   const { media, title } = props
   const isTv = media === 'tv'
-  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, topCast } = props
+  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
   const releaseDate = isTv ? (title as TmdbTvDetails).first_air_date : (title as TmdbMovieDetails).release_date
@@ -401,6 +407,15 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                 tmdbId={title.id}
                 mediaType={media}
                 releaseYear={releaseYear}
+              />
+            </Box>
+
+            <Box w='20rem' maxW='100%'>
+              <TitleAvailability
+                events={titleChanges}
+                tmdbId={title.id}
+                tmdbType={media}
+                title={displayTitle || ''}
               />
             </Box>
           </>

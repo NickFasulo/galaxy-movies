@@ -1,4 +1,5 @@
 import { getRedis } from './redis'
+import { sendTitleWatchAlerts } from './titleAlerts'
 import { getProviderChanges, IN_TRACKED_PROVIDERS, type ProviderChanges } from './streamingChanges'
 import { PROVIDER_NAME_MATCH } from './tmdb'
 import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY } from './waitlistStore'
@@ -183,7 +184,7 @@ const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'mo
 const episodeLine = (item: MatchedItem) =>
   `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
 
-function statusLine(item: MatchedItem): string {
+export function statusLine(item: MatchedItem): string {
   switch (item.kind) {
     case 'coming':
       return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
@@ -424,8 +425,13 @@ export async function sendWatchlistAlerts() {
     kv.hgetall<Record<string, unknown>>(PUSH_KEY)
   ])
 
+  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
+  // Single-title subscribers are a separate audience — they still get matched
+  // even when nobody has synced watchlist prefs.
+  const watchResult = await sendTitleWatchAlerts(usChanges, notifiedHash, from)
+
   const entries = Object.entries(prefsHash || {})
-  if (!entries.length) return { sent: 0, reason: 'no subscribers' }
+  if (!entries.length) return { sent: 0, reason: 'no subscribers', watch: watchResult }
 
   const plusByEmail = new Map<string, AlertPrefs>()
   for (const [email, raw] of entries) {
@@ -437,8 +443,6 @@ export async function sendWatchlistAlerts() {
     loadRecsIndex([...plusByEmail.values()]),
     loadEpisodeIndex([...plusByEmail.values()])
   ])
-
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
 
   let sent = 0
   let failed = 0
@@ -499,5 +503,5 @@ export async function sendWatchlistAlerts() {
     }
   }
 
-  return { sent, failed, total: entries.length }
+  return { sent, failed, total: entries.length, watch: watchResult }
 }

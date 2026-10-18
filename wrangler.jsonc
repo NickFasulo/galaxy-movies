@@ -16,7 +16,7 @@
     { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "galaxy-movies-inc-cache" }
   ],
   "triggers": {
-    "crons": ["0 6 * * *", "30 6 * * *", "0 7 * * *", "0 16 * * 5"]
+    "crons": ["0 6 * * *", "30 6 * * *", "0 7 * * *", "0 16 * * 5", "30 15 * * 1"]
   },
   "observability": { "enabled": true },
   "find_additional_modules": true,

@@ -37,6 +37,12 @@ export const SHARE_KEY = 'gm:alerts:share'
 export const SHARE_LOOKUP_KEY = 'gm:share:lookup'
 // email => JSON { messages, links, updatedAt } — Plus chat history, ≤30 turns.
 export const CHAT_HISTORY_KEY = 'gm:alerts:chat'
+// email => JSON { unsub, titles: [{tmdbId, tmdbType, title}] } — confirmed
+// single-title tracking. Separate from CONFIRMED_KEY on purpose: these
+// subscribers asked for title alerts only, not the weekly digest.
+export const WATCH_KEY = 'gm:alerts:watch'
+// email => JSON { token, titles: [...] } — pending confirmation.
+export const WATCH_PENDING_KEY = 'gm:alerts:watch-pending'
 
 export async function getOrCreateSyncKey(kv: Redis, email: string): Promise<string> {
   const existing = await kv.hget<string>(SYNCKEY_KEY, email)

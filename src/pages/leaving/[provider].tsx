@@ -229,7 +229,8 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
           detected out of the tracked catalog — official removal dates aren&apos;t published by all services. List covers the US catalog and updates daily.
         </Text>
         <Text mt={4} color='gray.500' fontSize='sm'>
-          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily.
+          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily. Or{' '}
+          <Link href={`/this-month/${provider}`} style={{ textDecoration: 'underline' }}>is {providerLabel} worth it this month?</Link>
         </Text>
       </PageShell>
     </>

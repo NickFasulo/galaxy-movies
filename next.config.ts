@@ -62,6 +62,13 @@ const nextConfig: NextConfig = {
       // @vercel/og edge build + resvg wasm — loaded via dynamic import on
       // workerd (node build can't run there); nothing else traces it.
       './node_modules/next/dist/compiled/@vercel/og/**'
+    ],
+    '/api/og-leaving': [
+      './public/fonts/SpaceRangerLaserItalic-J7an.otf',
+      './public/fonts/Inter-Bold.ttf',
+      './public/fonts/Inter-Regular.ttf',
+      './public/backdrop_fallback.jpg',
+      './node_modules/next/dist/compiled/@vercel/og/**'
     ]
   },
   // Packages whose exports gate ESM builds behind a "workerd" condition must be

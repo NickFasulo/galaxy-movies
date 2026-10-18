@@ -10,6 +10,10 @@ const STATUSES: Record<string, { title: string; body: string }> = {
     title: "You're confirmed",
     body: "Thanks — we'll email you when something on your list lands on your streaming services."
   },
+  'watch-confirmed': {
+    title: 'Title alert confirmed',
+    body: "Done — we'll email you when that title lands on or leaves a tracked streaming service. Want alerts for everything you care about? Save titles to your list and turn on full alerts."
+  },
   unsubscribed: {
     title: 'Unsubscribed',
     body: "You've been removed from the alerts list. You won't hear from us again."

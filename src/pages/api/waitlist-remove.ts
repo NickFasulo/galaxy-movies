@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, TRAKT_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY, SHARE_KEY, SHARE_LOOKUP_KEY, CHAT_HISTORY_KEY } from '../../utils/waitlistStore'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, TRAKT_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY, SHARE_KEY, SHARE_LOOKUP_KEY, CHAT_HISTORY_KEY, WATCH_KEY, WATCH_PENDING_KEY } from '../../utils/waitlistStore'
 import { safeEqual } from '../../utils/auth'
 import { requireMethod } from '../../utils/api'
 
@@ -19,7 +19,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const stored = await kv.hget<string>(CONFIRMED_KEY, email)
-    if (!stored || !safeEqual(stored, token)) return redirect('error')
+    if (!stored || !safeEqual(stored, token)) {
+      // Title-watch subscribers carry their own unsub token — they may never
+      // have been waitlist-confirmed, so the same link shape still ends here.
+      const watch = await kv.hget<{ unsub?: string }>(WATCH_KEY, email)
+      if (!watch?.unsub || !safeEqual(watch.unsub, token)) return redirect('error')
+      await kv.hdel(WATCH_KEY, email)
+      await kv.hdel(WATCH_PENDING_KEY, email)
+      return redirect('unsubscribed')
+    }
 
     await kv.hdel(CONFIRMED_KEY, email)
     await kv.hdel(PENDING_KEY, email)
@@ -31,6 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await kv.hdel(TELEGRAM_KEY, email)
     await kv.hdel(PUSH_KEY, email)
     await kv.hdel(CHAT_HISTORY_KEY, email)
+    await kv.hdel(WATCH_KEY, email)
+    await kv.hdel(WATCH_PENDING_KEY, email)
     const shareId = await kv.hget<string>(SHARE_KEY, email)
     if (shareId) {
       await kv.hdel(SHARE_KEY, email)

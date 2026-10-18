@@ -76,6 +76,65 @@ interface CatalogSnapshot {
   updatedAt?: number
 }
 
+// Per-title view of the monthly diffs: powers "arrives on X / left Y" notices
+// on detail pages and the single-title alert match. Built once a day in the
+// cron; read as one hash field per pageview.
+export interface TitleChangeEvent {
+  p: string
+  date?: string
+}
+
+export interface TitleChangeEvents {
+  coming?: TitleChangeEvent[]
+  added?: TitleChangeEvent[]
+  left?: TitleChangeEvent[]
+}
+
+export function buildTitleIndex(entries: [string, MonthlyChanges][]): Record<string, TitleChangeEvents> {
+  const index: Record<string, TitleChangeEvents> = {}
+  const push = (kind: 'added' | 'left' | 'coming', tmdbType: MediaType, tmdbId: number, p: string, date?: string) => {
+    const field = `${tmdbType}:${tmdbId}`
+    const entry = (index[field] ||= {})
+    ;(entry[kind] ||= []).push(date ? { p, date } : { p })
+  }
+  for (const [p, m] of entries) {
+    for (const t of m.arrived) push('added', t.tmdbType, t.tmdbId, p, t.date)
+    for (const t of m.departed) if (t.tmdbId) push('left', t.tmdbType, t.tmdbId, p, t.date)
+    for (const t of m.coming) push('coming', t.tmdbType, t.tmdbId, p, t.date)
+  }
+  return index
+}
+
+const titleIndexKey = (region: string) => `changes:index:${region}`
+const TITLE_INDEX_TTL_SECONDS = 60 * 60 * 24 * 4
+
+const titleIndexMemo = new LRUCache<string, { v: TitleChangeEvents | null }>({ max: 2000, ttl: 10 * 60 * 1000 })
+
+export async function getTitleChanges(tmdbType: MediaType, tmdbId: number, region = 'US'): Promise<TitleChangeEvents | null> {
+  const memoKey = `${region}:${tmdbType}:${tmdbId}`
+  const memoized = titleIndexMemo.get(memoKey)
+  if (memoized !== undefined) return memoized.v
+
+  const kv = getRedis()
+  let entry: TitleChangeEvents | null = null
+  if (kv) {
+    try {
+      entry = (await kv.hget(titleIndexKey(region), `${tmdbType}:${tmdbId}`)) as TitleChangeEvents | null
+    } catch {}
+  }
+
+  // A "coming" date in the past is stale until the next cron run re-indexes.
+  const today = new Date().toISOString().split('T')[0]
+  if (entry?.coming) {
+    const upcoming = entry.coming.filter((e) => !e.date || e.date >= today)
+    entry = { ...entry, coming: upcoming.length ? upcoming : undefined }
+    if (!entry.coming && !entry.added && !entry.left) entry = null
+  }
+
+  titleIndexMemo.set(memoKey, { v: entry })
+  return entry
+}
+
 // US keys keep their original unprefixed shape; other regions are namespaced.
 const catalogKey = (providerKey: string, region = 'US') =>
   region === 'US' ? `changes:catalog:${providerKey}` : `changes:catalog:${region}:${providerKey}`
@@ -223,6 +282,8 @@ export async function updateStreamingChanges() {
   if (Object.keys(sourceMap).length === 0) {
     summary.error = 'No Watchmode sources resolved'
   }
+  const monthliesForIndex: [string, MonthlyChanges][] = []
+
   if (Object.keys(sourceMap).length > 0) {
     const upcoming = await fetchUpcoming(new Set(Object.values(sourceMap).map((s) => s.id)))
 
@@ -243,6 +304,10 @@ export async function updateStreamingChanges() {
       // rather than overwriting the baseline and reporting every title as left.
       if (!catalog.length) {
         summary[key] = 'skipped: empty catalog'
+        // Keep the skipped provider's last monthly in the title index so its
+        // entries don't vanish until it fetches successfully again.
+        const stored = await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
+        if (stored) monthliesForIndex.push([key, stored])
         continue
       }
       const previous = await kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null)
@@ -301,12 +366,22 @@ export async function updateStreamingChanges() {
       await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now() })
       await kv.set(changesKey(key), payload)
       await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
+      monthliesForIndex.push([key, monthly])
       pushTitleUrls([...payload.added, ...payload.coming, ...payload.left])
       if (payload.added.length || payload.left.length || payload.coming.length) {
         indexNowUrls.add(`${SITE_URL}/streaming/${key}`)
         indexNowUrls.add(`${SITE_URL}/leaving/${key}`)
       }
       summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
+    }
+  }
+
+  if (monthliesForIndex.length) {
+    try {
+      await kv.hset(titleIndexKey('US'), buildTitleIndex(monthliesForIndex))
+      await kv.expire(titleIndexKey('US'), TITLE_INDEX_TTL_SECONDS)
+    } catch (error) {
+      console.error('title index write failed:', error)
     }
   }
 

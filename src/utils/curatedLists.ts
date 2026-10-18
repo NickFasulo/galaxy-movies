@@ -456,6 +456,132 @@ export const curatedLists: Record<string, ListDef> = {
         ]
       }
     ]
+  },
+  'awards-on-streaming': {
+    type: 'editorial',
+    title: 'Best Picture Winners Streaming Now',
+    tagline: 'Every Academy Award Best Picture winner you can stream tonight, and where to find it.',
+    group: 'guides',
+    relatedParams: {
+      'vote_average.gte': 7.5,
+      'vote_count.gte': 1000,
+      'primary_release_date.gte': '2020-01-01',
+      sort_by: 'popularity.desc'
+    },
+    relatedHeading: 'More recent acclaimed movies',
+    sections: [
+      {
+        paragraphs: [
+          'Awards season is the easiest time to catch up on the canon — Best Picture winners bounce between services constantly, so each entry links to a live "where to watch" page instead of a provider name that might be stale next month. Availability tracked daily across the major US services.'
+        ]
+      },
+      {
+        heading: 'The winners, most recent first',
+        items: [
+          {
+            name: 'Anora (2024)',
+            path: '/movies/1064213',
+            pathLabel: 'Where to stream',
+            description: 'Sean Baker\'s screwball-tragedy about a Brooklyn dancer who marries into Russian money — a rare indie sweep that took Picture, Director, Actress, Editing and Screenplay.'
+          },
+          {
+            name: 'Oppenheimer (2023)',
+            path: '/movies/872585',
+            pathLabel: 'Where to stream',
+            description: 'Christopher Nolan\'s three-hour biopic that somehow played like a blockbuster — seven Oscars including Picture and Director.'
+          },
+          {
+            name: 'Everything Everywhere All at Once (2022)',
+            path: '/movies/545611',
+            pathLabel: 'Where to stream',
+            description: 'The multiverse laundromat epic that won seven awards and made A24 the first studio to sweep every above-the-line category in one night.'
+          },
+          {
+            name: 'CODA (2021)',
+            path: '/movies/776503',
+            pathLabel: 'Where to stream',
+            description: 'The Sundance drama about a hearing child of deaf parents — the first streaming-first film to take the top prize.'
+          },
+          {
+            name: 'Nomadland (2020)',
+            path: '/movies/581734',
+            pathLabel: 'Where to stream',
+            description: 'Chloé Zhao\'s van-dwelling portrait of gig-economy America, shot with real nomads alongside Frances McDormand.'
+          },
+          {
+            name: 'Parasite (2019)',
+            path: '/movies/496243',
+            pathLabel: 'Where to stream',
+            description: 'Bong Joon-ho\'s class-war thriller — the first non-English-language film ever to win Best Picture, and still the reference point for the category.'
+          },
+          {
+            name: 'Green Book (2018)',
+            path: '/movies/490132',
+            pathLabel: 'Where to stream',
+            description: 'The crowd-pleasing road movie about Dr. Don Shirley\'s tour through the Jim Crow South — divisive win, undeniable watchability.'
+          },
+          {
+            name: 'The Shape of Water (2017)',
+            path: '/movies/399055',
+            pathLabel: 'Where to stream',
+            description: 'Guillermo del Toro\'s Cold War fairy tale — the first creature romance to take Best Picture, and the most del Toro film possible.'
+          },
+          {
+            name: 'Moonlight (2016)',
+            path: '/movies/376867',
+            pathLabel: 'Where to stream',
+            description: 'Barry Jenkins\' three-act portrait of a life — the envelope mix-up made history, the film deserved it on merit alone.'
+          },
+          {
+            name: 'Spotlight (2015)',
+            path: '/movies/314365',
+            pathLabel: 'Where to stream',
+            description: 'The Boston Globe\'s church-abuse investigation rendered as a procedural — the rare journalism movie with zero wasted scenes.'
+          },
+          {
+            name: 'Birdman (2014)',
+            path: '/movies/194662',
+            pathLabel: 'Where to stream',
+            description: 'Iñárritu\'s single-take showbiz panic attack — Michael Keaton\'s comeback role about a superhero actor chasing legitimacy.'
+          },
+          {
+            name: '12 Years a Slave (2013)',
+            path: '/movies/76203',
+            pathLabel: 'Where to stream',
+            description: 'Steve McQueen\'s unflinching Solomon Northup adaptation — the first film by a Black director to win Best Picture.'
+          },
+          {
+            name: 'The Hurt Locker (2009)',
+            path: '/movies/12162',
+            pathLabel: 'Where to stream',
+            description: 'Kathryn Bigelow\'s bomb-squad procedural — beat Avatar for the top prize and made her the first woman to win Best Director.'
+          },
+          {
+            name: 'Slumdog Millionaire (2008)',
+            path: '/movies/12405',
+            pathLabel: 'Where to stream',
+            description: 'Danny Boyle\'s Mumbai quiz-show fairy tale — eight Oscars and the feel-good winner that still holds up.'
+          },
+          {
+            name: 'No Country for Old Men (2007)',
+            path: '/movies/6977',
+            pathLabel: 'Where to stream',
+            description: 'The Coens\' Cormac McCarthy adaptation — four awards, one cattle gun, and the most controlled thriller of the century.'
+          },
+          {
+            name: 'The Departed (2006)',
+            path: '/movies/1422',
+            pathLabel: 'Where to stream',
+            description: 'Scorsese\'s Boston moles-vs-moles remake — the win that finally got him the Picture and Director statues.'
+          }
+        ]
+      },
+      {
+        paragraphs: [
+          'Winners rotate between services monthly — if a favorite left your subscription, it will surface elsewhere. We track daily catalog changes across the major US services, so each detail page shows the current answer.'
+        ]
+      }
+    ]
   }
 }
 

@@ -49,7 +49,8 @@ export default function LeavingIndex() {
       />
       <PageShell title={title} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
-          Also see <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link>.
+          Also see <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link> or{' '}
+          <Link href='/this-month' style={{ textDecoration: 'underline' }}>which service is worth it this month</Link>.
         </Text>
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Pick a service</Heading>
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>

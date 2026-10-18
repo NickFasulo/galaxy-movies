@@ -23,6 +23,8 @@ declare namespace NodeJS {
     TRAKT_CLIENT_SECRET?: string
     TELEGRAM_BOT_TOKEN?: string
     TELEGRAM_WEBHOOK_SECRET?: string
+    BSKY_HANDLE?: string
+    BSKY_APP_PASSWORD?: string
     NEXT_PUBLIC_SITE_URL?: string
   NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
   WEBPUSH_PRIVATE_KEY?: string
