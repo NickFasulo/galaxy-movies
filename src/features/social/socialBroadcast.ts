@@ -6,7 +6,7 @@ import { SITE_URL } from '../../lib/site'
 
 // Highlights for the weekly social post: the biggest-name services, in the
 // order readers care about them.
-const BROADCAST_PROVIDERS = ['netflix', 'hulu', 'max', 'disney-plus', 'amazon-prime-video', 'apple-tv'].filter(
+export const BROADCAST_PROVIDERS = ['netflix', 'hulu', 'max', 'disney-plus', 'amazon-prime-video', 'apple-tv'].filter(
   (key) => PROVIDER_NAME_MATCH[key]
 )
 

@@ -48,5 +48,9 @@ next-env.d.ts
 /.open-next/
 /.wrangler/
 .dev.vars
-.secrets.json
+.secrets*.json
 social/
+
+# devvit subproject
+/devvit/node_modules/
+/devvit/dist/

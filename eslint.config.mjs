@@ -2,7 +2,7 @@ import coreWebVitals from 'eslint-config-next/core-web-vitals'
 import typescript from 'eslint-config-next/typescript'
 
 const eslintConfig = [
-  { ignores: ['.next/**', '.vercel/**', 'node_modules/**', 'next-env.d.ts', 'scripts/**', 'public/**', '.devin/**', 'lighthouserc.cjs', '.open-next/**', '.wrangler/**', 'open-next.config.ts', 'wrangler.jsonc'] },
+  { ignores: ['.next/**', '.vercel/**', 'node_modules/**', 'next-env.d.ts', 'scripts/**', 'public/**', '.devin/**', 'lighthouserc.cjs', '.open-next/**', '.wrangler/**', 'open-next.config.ts', 'wrangler.jsonc', 'devvit/**'] },
   ...coreWebVitals,
   ...typescript,
   {
