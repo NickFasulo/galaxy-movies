@@ -1,7 +1,7 @@
 import { Box, Button, Checkbox, Flex, SimpleGrid, Text } from '@chakra-ui/react'
 import { useUserData } from '../hooks/useUserData'
-import { setServices } from '../utils/userData'
-import { streamingProviders, isProviderAvailableInRegion } from '../utils/tmdb'
+import { setServices } from '../utils/core/userData'
+import { streamingProviders, isProviderAvailableInRegion } from '../utils/catalog/tmdb'
 
 // Only regions the site's provider data actually models (see tmdb.js ids).
 const REGIONS = [

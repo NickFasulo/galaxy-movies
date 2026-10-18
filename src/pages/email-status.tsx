@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
-import { firstParam } from '../utils/query'
-import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../utils/alertsSync'
-import { getUserData, mergeSyncedPrefs } from '../utils/userData'
+import { firstParam } from '../utils/core/query'
+import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../utils/alerts/alertsSync'
+import { getUserData, mergeSyncedPrefs } from '../utils/core/userData'
 
 const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {

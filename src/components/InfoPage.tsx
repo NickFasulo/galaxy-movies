@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { Heading, Text } from '@chakra-ui/react'
 import PageHead from './PageHead'
 import PageShell from './PageShell'
-import { SITE_URL } from '../utils/site'
+import { SITE_URL } from '../utils/core/site'
 
 export default function InfoPage({ title, description, noindex, withBackButton, children }: { title: string; description: string; noindex?: boolean; withBackButton?: boolean; children?: ReactNode }) {
   const { asPath } = useRouter()

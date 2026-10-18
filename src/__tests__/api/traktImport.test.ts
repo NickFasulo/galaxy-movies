@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/trakt/import'
-import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
+import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
@@ -12,11 +12,11 @@ const mocks = vi.hoisted(() => ({
   pull: vi.fn(async () => ({ watchlist: [], ratings: [] }) as unknown)
 }))
 
-vi.mock('../../utils/redis', () => ({
+vi.mock('../../utils/core/redis', () => ({
   getRedis: () => ({ hget: mocks.kvHget, hset: mocks.kvHset, hdel: mocks.kvHdel, eval: mocks.kvEval })
 }))
-vi.mock('../../utils/trakt', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../utils/trakt')>()),
+vi.mock('../../utils/billing/trakt', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../utils/billing/trakt')>()),
   traktConfigured: () => true,
   traktAccessToken: mocks.accessToken,
   pullFromTrakt: mocks.pull

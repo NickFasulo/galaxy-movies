@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import { Badge, Box, Button, Flex, Input, Text } from '@chakra-ui/react'
-import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../utils/alertsSync'
-import { letterboxdCsvs } from '../utils/exportCsv'
-import { parseLetterboxdCsv, type LetterboxdItem } from '../utils/importLetterboxd'
-import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../utils/userData'
+import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../utils/alerts/alertsSync'
+import { letterboxdCsvs } from '../utils/format/exportCsv'
+import { parseLetterboxdCsv, type LetterboxdItem } from '../utils/format/importLetterboxd'
+import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../utils/core/userData'
 import type { PlusFeatures } from '../hooks/usePlus'
-import { SITE_URL } from '../utils/site'
+import { SITE_URL } from '../utils/core/site'
 
 interface ResolvedTitle {
   id: number

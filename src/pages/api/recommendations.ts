@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { fetchRecommendedMovies, fetchRecommendedTv } from '../../utils/tmdb'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
-import { firstParam } from '../../utils/query'
+import { fetchRecommendedMovies, fetchRecommendedTv } from '../../utils/catalog/tmdb'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
+import { firstParam } from '../../utils/core/query'
 
 const MAX_RESULTS = 12
 

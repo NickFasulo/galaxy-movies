@@ -2,13 +2,13 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { createHmac } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler, { verifySignature } from '../../pages/api/webhooks/polar'
-import { BILLING_KEY } from '../../utils/waitlistStore'
+import { BILLING_KEY } from '../../utils/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHset: vi.fn<(key: string, fields: Record<string, unknown>) => Promise<number>>(async () => 1)
 }))
 
-vi.mock('../../utils/redis', () => ({
+vi.mock('../../utils/core/redis', () => ({
   getRedis: () => ({ hset: mocks.kvHset })
 }))
 
@@ -194,7 +194,7 @@ describe('POST /api/webhooks/polar', () => {
 // the contract that decides whether a paying customer actually gets Plus.
 describe('webhook → isPlusActive chain', () => {
   it('grants access on active, past_due, and canceled-until-period-end; revokes it on terminal states', async () => {
-    const { isPlusActive } = await import('../../utils/billing')
+    const { isPlusActive } = await import('../../utils/billing/billing')
     const futureEnd = new Date(Date.now() + 30 * 86400_000).toISOString()
 
     const cases: Array<{ status: string; periodEnd?: string; entitled: boolean }> = [

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Box, Flex, Text, Wrap, WrapItem } from '@chakra-ui/react'
-import type { SimilarTitle } from '../utils/similarMovies'
+import type { SimilarTitle } from '../utils/catalog/similarMovies'
 
 export interface SimilarListRef {
   slug: string

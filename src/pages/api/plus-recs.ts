@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing'
-import { getRedis, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
-import { loadRecsIndex, parsePrefs, topRatedTitles } from '../../utils/watchlistAlerts'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing/billing'
+import { getRedis, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
+import { loadRecsIndex, parsePrefs, topRatedTitles } from '../../utils/alerts/watchlistAlerts'
 import type { MediaType } from '../../types/tmdb'
 
 // Reads the same recs:v1:* index the alerts cron warms — most request-time

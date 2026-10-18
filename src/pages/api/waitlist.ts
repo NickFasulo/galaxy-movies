@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../utils/waitlistStore'
-import { SITE_URL } from '../../utils/site'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../utils/alerts/waitlistStore'
+import { SITE_URL } from '../../utils/core/site'
 import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/

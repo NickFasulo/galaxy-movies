@@ -6,12 +6,12 @@ import { Flex, Box, Heading, Text, SimpleGrid, Icon } from '@chakra-ui/react';
 import BackButton from '../../components/BackButton'
 import DetailErrorView from '../../components/DetailErrorView'
 import PageHead from '../../components/PageHead'
-import dateFormatter from '../../utils/dateFormatter'
-import { normalizeTvTitle } from '../../utils/tmdb'
-import { MIN_INDEXABLE_MOVIES } from '../../utils/contentOpportunities'
-import { setSwrCache } from '../../utils/ssr'
-import { absoluteImageUrl } from '../../utils/schema'
-import { tmdbImage, SITE_URL } from '../../utils/site'
+import dateFormatter from '../../utils/format/dateFormatter'
+import { normalizeTvTitle } from '../../utils/catalog/tmdb'
+import { MIN_INDEXABLE_MOVIES } from '../../utils/catalog/contentOpportunities'
+import { setSwrCache } from '../../utils/core/ssr'
+import { absoluteImageUrl } from '../../utils/catalog/schema'
+import { tmdbImage, SITE_URL } from '../../utils/core/site'
 import type { MovieCredit, NormalizedTvShow, TmdbPerson } from '../../types/tmdb'
 import { LuStar } from 'react-icons/lu';
 

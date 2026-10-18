@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis } from '../../../utils/redis'
-import { getProviderChanges, getMonthlyChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/streamingChanges'
-import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY } from '../../../utils/waitlistStore'
-import { parsePrefs } from '../../../utils/watchlistAlerts'
-import { isPlusActive, parseBillingRecord } from '../../../utils/billing'
-import { isCronAuthorized } from '../../../utils/auth'
-import { SITE_URL } from '../../../utils/site'
+import { getRedis } from '../../../utils/core/redis'
+import { getProviderChanges, getMonthlyChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../utils/catalog/streamingChanges'
+import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY } from '../../../utils/alerts/waitlistStore'
+import { parsePrefs } from '../../../utils/alerts/watchlistAlerts'
+import { isPlusActive, parseBillingRecord } from '../../../utils/billing/billing'
+import { isCronAuthorized } from '../../../utils/core/auth'
+import { SITE_URL } from '../../../utils/core/site'
 
 export const config = { maxDuration: 60 }
 

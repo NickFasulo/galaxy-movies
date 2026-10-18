@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { MediaType } from '../types/tmdb'
-import type { PricePayload } from '../utils/prices'
+import type { PricePayload } from '../utils/catalog/prices'
 
 export function usePrices({ tmdbId, mediaType = 'movie', title, year, region = 'US' }: {
   tmdbId: number | string | null | undefined

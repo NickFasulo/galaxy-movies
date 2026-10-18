@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 const kv = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(async () => 'OK') }))
 const getRedis = vi.hoisted(() => vi.fn((): unknown => null))
 
-vi.mock('../../utils/redis', () => ({ getRedis }))
+vi.mock('../../utils/core/redis', () => ({ getRedis }))
 
 type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 let handler: Handler

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
-import { getBillingRecord, getLinkedEmail, isPlusActive } from '../../../utils/billing'
-import { getRedis, TRAKT_KEY, SHARE_KEY, DISCORD_KEY, TELEGRAM_KEY } from '../../../utils/waitlistStore'
+import { requireMethod, rejectBot } from '../../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
+import { getBillingRecord, getLinkedEmail, isPlusActive } from '../../../utils/billing/billing'
+import { getRedis, TRAKT_KEY, SHARE_KEY, DISCORD_KEY, TELEGRAM_KEY } from '../../../utils/alerts/waitlistStore'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return

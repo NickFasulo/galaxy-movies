@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
-import { firstParam } from '../../utils/query'
-import { getProviderCatalog } from '../../utils/providerCatalog'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
+import { firstParam } from '../../utils/core/query'
+import { getProviderCatalog } from '../../utils/catalog/providerCatalog'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return

@@ -10,11 +10,11 @@ import {
   tvGenres,
   streamingProviders,
   normalizeTvTitle
-} from '../../utils/tmdb'
+} from '../../utils/catalog/tmdb'
 import type { TmdbMovie, TmdbPaged, TmdbTvShow, TitleSummary } from '../../types/tmdb'
-import { firstParam } from '../../utils/query'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
+import { firstParam } from '../../utils/core/query'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
 
 const ID_RE = /^\d{1,10}$/
 const REGION_RE = /^[A-Z]{2}$/

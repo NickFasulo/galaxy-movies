@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/billing/checkout'
-import { SYNCKEY_KEY } from '../../utils/waitlistStore'
+import { SYNCKEY_KEY } from '../../utils/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   )
 }))
 
-vi.mock('../../utils/redis', () => ({
+vi.mock('../../utils/core/redis', () => ({
   getRedis: () => ({ hget: mocks.kvHget, eval: mocks.kvEval })
 }))
 vi.stubGlobal('fetch', mocks.fetch)

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis } from '../../../utils/redis'
-import { TELEGRAM_KEY } from '../../../utils/waitlistStore'
-import { sendTelegramMessage } from '../../../utils/telegram'
-import { safeEqual } from '../../../utils/auth'
+import { getRedis } from '../../../utils/core/redis'
+import { TELEGRAM_KEY } from '../../../utils/alerts/waitlistStore'
+import { sendTelegramMessage } from '../../../utils/alerts/telegram'
+import { safeEqual } from '../../../utils/core/auth'
 
 interface TelegramUpdate {
   message?: {

@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { randomUUID } from 'crypto'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing'
-import { getRedis, SHARE_KEY, SHARE_LOOKUP_KEY } from '../../utils/waitlistStore'
-import { SITE_URL } from '../../utils/site'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing/billing'
+import { getRedis, SHARE_KEY, SHARE_LOOKUP_KEY } from '../../utils/alerts/waitlistStore'
+import { SITE_URL } from '../../utils/core/site'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, ['POST', 'DELETE'])) return

@@ -6,8 +6,8 @@ import PaginatedGrid from '../components/PaginatedGrid'
 import PageHead from '../components/PageHead'
 import SearchInput from '../components/SearchInput'
 import StickySearchBar from '../components/StickySearchBar'
-import { fetchTmdb, normalizeTvTitle } from '../utils/tmdb'
-import { setSwrCache } from '../utils/ssr'
+import { fetchTmdb, normalizeTvTitle } from '../utils/catalog/tmdb'
+import { setSwrCache } from '../utils/core/ssr'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../types/tmdb'
 
 interface Props {

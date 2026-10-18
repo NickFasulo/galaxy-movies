@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
-import { getRedis } from '../../utils/redis'
-import { getPriceOffers, type PricePayload } from '../../utils/prices'
-import { firstParam } from '../../utils/query'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/api'
+import { getRedis } from '../../utils/core/redis'
+import { getPriceOffers, type PricePayload } from '../../utils/catalog/prices'
+import { firstParam } from '../../utils/core/query'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
 // client and caches hard, since free-tier Watchmode quota is monthly.

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { fetchTmdb } from '../../utils/tmdb'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/api'
+import { fetchTmdb } from '../../utils/catalog/tmdb'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/core/api'
 
 const MAX_ITEMS = 50
 

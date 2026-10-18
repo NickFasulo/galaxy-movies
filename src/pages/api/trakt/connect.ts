@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
-import { getLinkedEmail } from '../../../utils/billing'
-import { authorizeUrl, signState, traktConfigured } from '../../../utils/trakt'
-import { SITE_URL } from '../../../utils/site'
+import { requireMethod, rejectBot } from '../../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
+import { getLinkedEmail } from '../../../utils/billing/billing'
+import { authorizeUrl, signState, traktConfigured } from '../../../utils/billing/trakt'
+import { SITE_URL } from '../../../utils/core/site'
 
 export const traktRedirectUri = `${SITE_URL}/api/trakt/callback`
 

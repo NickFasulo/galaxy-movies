@@ -11,7 +11,7 @@ const kv = vi.hoisted(() => ({
 }))
 const getRedis = vi.hoisted(() => vi.fn((): unknown => null))
 
-vi.mock('../../utils/redis', () => ({ getRedis }))
+vi.mock('../../utils/core/redis', () => ({ getRedis }))
 
 type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>
 let handler: Handler

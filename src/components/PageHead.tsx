@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import Head from 'next/head'
 import BreadcrumbSchema, { type BreadcrumbItem } from './BreadcrumbSchema'
 import HreflangTags from './HreflangTags'
-import { buildOgImageUrl } from '../utils/schema'
-import { SITE_URL } from '../utils/site'
+import { buildOgImageUrl } from '../utils/catalog/schema'
+import { SITE_URL } from '../utils/core/site'
 
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getAlertsCredentials, type AlertsCredentials } from '../utils/alertsSync'
+import { getAlertsCredentials, type AlertsCredentials } from '../utils/alerts/alertsSync'
 
 export interface PlusFeatures {
   traktConnected: boolean

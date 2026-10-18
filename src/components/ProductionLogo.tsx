@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Box } from '@chakra-ui/react'
-import { tmdbImage } from '../utils/site'
+import { tmdbImage } from '../utils/core/site'
 import type { ProductionCompany } from '../types/tmdb'
 
 export default function ProductionLogo({ company }: { company: Pick<ProductionCompany, 'name' | 'logo_path'> }) {

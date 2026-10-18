@@ -15,13 +15,13 @@ import {
   PROVIDER_NAME_MATCH,
   type DiscoverOptions,
   type StreamingProvider
-} from '../utils/tmdb'
-import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/region'
-import { getProviderChanges, type ProviderChanges } from '../utils/streamingChanges'
-import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, getContentIndexability, type ProviderGenreTarget } from '../utils/contentOpportunities'
-import { setSwrCache, getPageParam } from '../utils/ssr'
-import { titleListSchema } from '../utils/schema'
-import { SITE_URL } from '../utils/site'
+} from '../utils/catalog/tmdb'
+import { detectRegion, regionDisplayName, regionListDisplayNames } from '../utils/core/region'
+import { getProviderChanges, type ProviderChanges } from '../utils/catalog/streamingChanges'
+import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, getContentIndexability, type ProviderGenreTarget } from '../utils/catalog/contentOpportunities'
+import { setSwrCache, getPageParam } from '../utils/core/ssr'
+import { titleListSchema } from '../utils/catalog/schema'
+import { SITE_URL } from '../utils/core/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
 
 interface MediaConfig {

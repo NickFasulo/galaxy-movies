@@ -6,11 +6,11 @@ import {
   Text,
   Table
 } from '@chakra-ui/react'
-import { fetchDiscoverMovies } from '../utils/tmdb'
+import { fetchDiscoverMovies } from '../utils/catalog/tmdb'
 import MovieGrid from '../components/MovieGrid'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import { SITE_URL } from '../utils/site'
+import { SITE_URL } from '../utils/core/site'
 import type { TmdbMovie } from '../types/tmdb'
 
 export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; dataError?: boolean }; revalidate: number }> {

@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing'
-import { getRedis, ALERTS_PREFS_KEY } from '../../../utils/waitlistStore'
-import { pullFromTrakt, traktAccessToken, traktConfigured } from '../../../utils/trakt'
+import { requireMethod, rejectBot } from '../../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing/billing'
+import { getRedis, ALERTS_PREFS_KEY } from '../../../utils/alerts/waitlistStore'
+import { pullFromTrakt, traktAccessToken, traktConfigured } from '../../../utils/billing/trakt'
 import { traktRedirectUri } from './connect'
-import type { SyncedPrefs } from '../../../utils/userData'
+import type { SyncedPrefs } from '../../../utils/core/userData'
 
 // Pull direction of /api/trakt/sync — merges Trakt's watchlist/ratings into
 // the stored prefs snapshot. Stored entries always win conflicts; only

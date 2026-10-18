@@ -7,7 +7,7 @@ import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
 import WaitlistForm from '../components/WaitlistForm'
 import { usePlusStatus } from '../hooks/usePlus'
-import { firstParam } from '../utils/query'
+import { firstParam } from '../utils/core/query'
 
 const FEATURES = [
   'Alerts for new arrivals on your services, matched to what you rate highly',

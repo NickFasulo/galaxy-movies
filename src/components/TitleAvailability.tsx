@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
-import { streamingProviders } from '../utils/tmdb'
+import { streamingProviders } from '../utils/catalog/tmdb'
 import type { MediaType } from '../types/tmdb'
-import type { TitleChangeEvents } from '../utils/streamingChanges'
+import type { TitleChangeEvents } from '../utils/catalog/streamingChanges'
 
 const providerLabel = (key: string) => streamingProviders[key]?.title?.replace(/ Movies$/, '') || key
 

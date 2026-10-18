@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { updateStreamingChanges } from '../../../utils/streamingChanges'
-import { isCronAuthorized } from '../../../utils/auth'
+import { updateStreamingChanges } from '../../../utils/catalog/streamingChanges'
+import { isCronAuthorized } from '../../../utils/core/auth'
 
 export const config = { maxDuration: 60 }
 

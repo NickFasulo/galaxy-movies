@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/plus-recs'
-import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
+import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
@@ -12,11 +12,11 @@ const mocks = vi.hoisted(() => ({
   recTv: vi.fn(async (): Promise<{ results: { id: number }[] }> => ({ results: [] }))
 }))
 
-vi.mock('../../utils/redis', () => ({
+vi.mock('../../utils/core/redis', () => ({
   getRedis: () => ({ hget: mocks.kvHget, mget: mocks.kvMget, set: mocks.kvSet, eval: mocks.kvEval })
 }))
-vi.mock('../../utils/tmdb', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../utils/tmdb')>()),
+vi.mock('../../utils/catalog/tmdb', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../utils/catalog/tmdb')>()),
   fetchRecommendedMovies: mocks.recMovies,
   fetchRecommendedTv: mocks.recTv
 }))

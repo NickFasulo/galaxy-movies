@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, WATCH_KEY, WATCH_PENDING_KEY } from '../../utils/waitlistStore'
-import { mergeWatchTitles, parseWatchEntry, type WatchTitle } from '../../utils/titleAlerts'
-import { safeEqual } from '../../utils/auth'
-import { requireMethod } from '../../utils/api'
+import { getRedis, WATCH_KEY, WATCH_PENDING_KEY } from '../../utils/alerts/waitlistStore'
+import { mergeWatchTitles, parseWatchEntry, type WatchTitle } from '../../utils/alerts/titleAlerts'
+import { safeEqual } from '../../utils/core/auth'
+import { requireMethod } from '../../utils/core/api'
 import { randomUUID } from 'crypto'
 
 const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i

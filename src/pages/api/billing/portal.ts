@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/api'
-import { getBillingRecord, getLinkedEmail } from '../../../utils/billing'
-import { polarConfigured, polarPost } from '../../../utils/polar'
+import { requireMethod, rejectBot } from '../../../utils/core/api'
+import { getBillingRecord, getLinkedEmail } from '../../../utils/billing/billing'
+import { polarConfigured, polarPost } from '../../../utils/billing/polar'
 
 // The sync key is the auth — a valid one only ever comes through email, so a
 // leaked portal URL can't be minted without access to the inbox.

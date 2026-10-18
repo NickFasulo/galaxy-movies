@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Avatar } from '@chakra-ui/react'
-import { tmdbImage } from '../utils/site'
+import { tmdbImage } from '../utils/core/site'
 
 export default function ActorAvatar({ profilePath, name }: { profilePath?: string | null; name?: string }) {
   const [hasError, setHasError] = useState(false)

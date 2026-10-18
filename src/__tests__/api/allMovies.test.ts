@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 const getRedis = vi.hoisted(() => vi.fn((): unknown => null))
-vi.mock('../../utils/redis', () => ({ getRedis }))
+vi.mock('../../utils/core/redis', () => ({ getRedis }))
 
 const fetchMock = vi.hoisted(() => vi.fn())
 vi.stubGlobal('fetch', fetchMock)

@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { rejectBot } from '../../../utils/api'
-import { getRedis } from '../../../utils/redis'
-import { TELEGRAM_KEY } from '../../../utils/waitlistStore'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/rateLimiter'
+import { rejectBot } from '../../../utils/core/api'
+import { getRedis } from '../../../utils/core/redis'
+import { TELEGRAM_KEY } from '../../../utils/alerts/waitlistStore'
+import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
 import { randomUUID } from 'crypto'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing'
-import { getBotUsername } from '../../../utils/telegram'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing/billing'
+import { getBotUsername } from '../../../utils/alerts/telegram'
 
 // The deep-link token can't embed the creds (Telegram caps ?start= at 64
 // chars), so the token is a random key into a 1h record the webhook resolves.

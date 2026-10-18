@@ -7,8 +7,8 @@ const mocks = vi.hoisted(() => ({
   kvEval: vi.fn(async () => 1)
 }))
 
-vi.mock('../../utils/tmdb', () => ({ fetchTmdb: mocks.fetchTmdb }))
-vi.mock('../../utils/redis', () => ({
+vi.mock('../../utils/catalog/tmdb', () => ({ fetchTmdb: mocks.fetchTmdb }))
+vi.mock('../../utils/core/redis', () => ({
   getRedis: () => ({ eval: mocks.kvEval })
 }))
 

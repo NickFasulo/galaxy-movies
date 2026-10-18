@@ -2,9 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type { ImageResponse as ImageResponseType } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { getMonthlyChanges } from '../../utils/streamingChanges'
-import { PROVIDER_NAME_MATCH, streamingProviders } from '../../utils/tmdb'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { getMonthlyChanges } from '../../utils/catalog/streamingChanges'
+import { PROVIDER_NAME_MATCH, streamingProviders } from '../../utils/catalog/tmdb'
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const dayLabel = (date: string) => {

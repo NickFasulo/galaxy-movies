@@ -12,8 +12,8 @@ import PlusTools from '../components/PlusTools'
 import PushAlerts from '../components/PushAlerts'
 import { useUserData } from '../hooks/useUserData'
 import { usePlusStatus } from '../hooks/usePlus'
-import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../utils/userData'
-import { firstParam } from '../utils/query'
+import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../utils/core/userData'
+import { firstParam } from '../utils/core/query'
 import type { MediaType, TitleSummary } from '../types/tmdb'
 
 export default function Watchlist() {

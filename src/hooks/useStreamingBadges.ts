@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { useUserData } from './useUserData'
-import { getProviderIds } from '../utils/tmdb'
+import { getProviderIds } from '../utils/catalog/tmdb'
 import type { MediaType, TitleSummary } from '../types/tmdb'
 
 type BadgeTitle = Pick<TitleSummary, 'id' | 'mediaType'>

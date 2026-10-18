@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, setApiCache } from '../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing'
-import { getRedis, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
-import { getProviderChanges, IN_TRACKED_PROVIDERS } from '../../utils/streamingChanges'
-import { PROVIDER_NAME_MATCH } from '../../utils/tmdb'
-import { parsePrefs } from '../../utils/watchlistAlerts'
-import { buildIcs, comingEvents, episodeEvents, premiereEvents, loadUpcomingEpisodes, loadUpcomingPremieres } from '../../utils/calendar'
+import { requireMethod, setApiCache } from '../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing/billing'
+import { getRedis, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
+import { getProviderChanges, IN_TRACKED_PROVIDERS } from '../../utils/catalog/streamingChanges'
+import { PROVIDER_NAME_MATCH } from '../../utils/catalog/tmdb'
+import { parsePrefs } from '../../utils/alerts/watchlistAlerts'
+import { buildIcs, comingEvents, episodeEvents, premiereEvents, loadUpcomingEpisodes, loadUpcomingPremieres } from '../../utils/alerts/calendar'
 
 // Calendar clients poll on their own schedule (every few hours); the per-URL
 // CDN cache plus the 10-minute changes memo keep repeat polls off Redis.

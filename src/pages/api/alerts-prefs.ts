@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getRedis, SYNCKEY_KEY, ALERTS_PREFS_KEY, DISCORD_KEY } from '../../utils/waitlistStore'
-import { safeEqual } from '../../utils/auth'
-import { getBillingRecord, isPlusActive } from '../../utils/billing'
-import { streamingProviders } from '../../utils/tmdb'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getRedis, SYNCKEY_KEY, ALERTS_PREFS_KEY, DISCORD_KEY } from '../../utils/alerts/waitlistStore'
+import { safeEqual } from '../../utils/core/auth'
+import { getBillingRecord, isPlusActive } from '../../utils/billing/billing'
+import { streamingProviders } from '../../utils/catalog/tmdb'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i

@@ -2,7 +2,7 @@ import { Flex } from '@chakra-ui/react';
 import VideoModal from './VideoModal'
 import WatchlistButton from './WatchlistButton'
 import BackButton from './BackButton'
-import type { WatchlistableTitle } from '../utils/userData'
+import type { WatchlistableTitle } from '../utils/core/userData'
 
 export default function DetailActions({ videoKey, item }: { videoKey: string | null; item: WatchlistableTitle }) {
   return (

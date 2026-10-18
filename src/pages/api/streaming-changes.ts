@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getProviderChanges, type ProviderChanges } from '../../utils/streamingChanges'
-import { embeddableProviders, isEmbeddableProvider, providerLabel } from '../../utils/embed'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, setApiCache } from '../../utils/api'
-import { SITE_URL } from '../../utils/site'
+import { getProviderChanges, type ProviderChanges } from '../../utils/catalog/streamingChanges'
+import { embeddableProviders, isEmbeddableProvider, providerLabel } from '../../utils/catalog/embed'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, setApiCache } from '../../utils/core/api'
+import { SITE_URL } from '../../utils/core/site'
 
 function serialize(provider: string, change: ProviderChanges) {
   return {

@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getRedis, SYNCKEY_KEY, PUSH_KEY } from '../../utils/waitlistStore'
-import { safeEqual } from '../../utils/auth'
-import { parsePushSubscription, parseStoredSubs, mergePushSub, isPushEndpoint } from '../../utils/webpush'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getRedis, SYNCKEY_KEY, PUSH_KEY } from '../../utils/alerts/waitlistStore'
+import { safeEqual } from '../../utils/core/auth'
+import { parsePushSubscription, parseStoredSubs, mergePushSub, isPushEndpoint } from '../../utils/alerts/webpush'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i

@@ -1,6 +1,6 @@
 import NextLink from 'next/link'
 import { Wrap, WrapItem, Badge, Link } from '@chakra-ui/react';
-import { movieGenres, tvGenres } from '../utils/tmdb'
+import { movieGenres, tvGenres } from '../utils/catalog/tmdb'
 import type { MediaType } from '../types/tmdb'
 
 // TMDB genre id → site slug, built once from the registries. Ids with no

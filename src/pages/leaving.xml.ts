@@ -1,8 +1,8 @@
 import type { GetServerSidePropsContext } from 'next'
-import { getProviderChanges } from '../utils/streamingChanges'
-import { PROVIDER_NAME_MATCH, streamingProviders } from '../utils/tmdb'
-import { setSwrCache } from '../utils/ssr'
-import { SITE_URL } from '../utils/site'
+import { getProviderChanges } from '../utils/catalog/streamingChanges'
+import { PROVIDER_NAME_MATCH, streamingProviders } from '../utils/catalog/tmdb'
+import { setSwrCache } from '../utils/core/ssr'
+import { SITE_URL } from '../utils/core/site'
 
 const escapeXml = (value: string) =>
   value

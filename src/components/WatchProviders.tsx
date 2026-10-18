@@ -2,12 +2,12 @@ import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Link, NativeSelect, Image as ChakraImage } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/amazonAffiliate'
-import { sameStore, type PriceOffer } from '../utils/prices'
+import { isAmazonProvider, buildAmazonAffiliateLink } from '../utils/monetize/amazonAffiliate'
+import { sameStore, type PriceOffer } from '../utils/catalog/prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../hooks/useUserData'
-import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../utils/vpnAffiliate'
-import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../utils/gruvAffiliate'
+import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../utils/monetize/vpnAffiliate'
+import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../utils/monetize/gruvAffiliate'
 import { LuArrowUpRight } from 'react-icons/lu'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../types/tmdb'
 

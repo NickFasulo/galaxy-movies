@@ -7,11 +7,11 @@ const mocks = vi.hoisted(() => ({
   kvEval: vi.fn(async () => 1)
 }))
 
-vi.mock('../../utils/movieSearch', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../utils/movieSearch')>()),
+vi.mock('../../utils/ai/movieSearch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../utils/ai/movieSearch')>()),
   resolveTitleItem: mocks.resolve
 }))
-vi.mock('../../utils/redis', () => ({ getRedis: () => ({ eval: mocks.kvEval }) }))
+vi.mock('../../utils/core/redis', () => ({ getRedis: () => ({ eval: mocks.kvEval }) }))
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import OpenAI from 'openai'
 import { createHash } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { BILLING_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/waitlistStore'
+import { BILLING_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -32,9 +32,9 @@ const mocks = vi.hoisted(() => ({
   fetchGenrePicksContext: vi.fn<() => Promise<unknown>>(async () => null)
 }))
 
-vi.mock('../../utils/redis', () => ({ getRedis: mocks.getRedis }))
+vi.mock('../../utils/core/redis', () => ({ getRedis: mocks.getRedis }))
 
-vi.mock('../../utils/movieSearch', () => ({
+vi.mock('../../utils/ai/movieSearch', () => ({
   extractTitleMentions: mocks.extractTitleMentions,
   resolveMovieMentions: mocks.resolveMovieMentions,
   getRecentReleases: mocks.getRecentReleases,
@@ -43,7 +43,7 @@ vi.mock('../../utils/movieSearch', () => ({
   formatShowForChat: mocks.formatShowForChat
 }))
 
-vi.mock('../../utils/chatGrounding', () => ({
+vi.mock('../../utils/ai/chatGrounding', () => ({
   wantsAvailability: mocks.wantsAvailability,
   wantsServiceChanges: mocks.wantsServiceChanges,
   wantsServiceRecommendation: mocks.wantsServiceRecommendation,
@@ -56,13 +56,13 @@ vi.mock('../../utils/chatGrounding', () => ({
 
 // Everything real except the global budget — per-IP limiting, isBot and
 // getClientIP stay genuine so those paths are exercised for real.
-vi.mock('../../utils/rateLimiter', async (importActual) => {
-  const actual = await importActual<typeof import('../../utils/rateLimiter')>()
+vi.mock('../../utils/core/rateLimiter', async (importActual) => {
+  const actual = await importActual<typeof import('../../utils/core/rateLimiter')>()
   return { ...actual, checkGlobalBudget: mocks.checkGlobalBudget }
 })
 
-vi.mock('../../utils/openai', async (importActual) => {
-  const actual = await importActual<typeof import('../../utils/openai')>()
+vi.mock('../../utils/ai/openai', async (importActual) => {
+  const actual = await importActual<typeof import('../../utils/ai/openai')>()
   return {
     ...actual,
     getOpenAIClient: mocks.getOpenAIClient,

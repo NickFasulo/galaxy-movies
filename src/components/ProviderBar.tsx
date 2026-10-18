@@ -3,8 +3,8 @@ import NextLink from 'next/link'
 import { Box, Flex, Link, Text } from '@chakra-ui/react'
 import { Tooltip } from './ui/tooltip'
 import { useUserData } from '../hooks/useUserData'
-import { setServices } from '../utils/userData'
-import { streamingProviders, getProviderId, isProviderAvailableInRegion } from '../utils/tmdb'
+import { setServices } from '../utils/core/userData'
+import { streamingProviders, getProviderId, isProviderAvailableInRegion } from '../utils/catalog/tmdb'
 import type { WatchProvider } from '../types/tmdb'
 
 // Selecting a logo marks it as one of the user's subscriptions (persisted via

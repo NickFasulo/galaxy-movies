@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis } from '../../utils/redis'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { isCronAuthorized } from '../../utils/auth'
-import { firstParam } from '../../utils/query'
-import { bumpCounter, getCostEstimate, getUsageStats, localAnalytics } from '../../utils/aiUsage'
+import { getRedis } from '../../utils/core/redis'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { isCronAuthorized } from '../../utils/core/auth'
+import { firstParam } from '../../utils/core/query'
+import { bumpCounter, getCostEstimate, getUsageStats, localAnalytics } from '../../utils/ai/aiUsage'
 
 export const config = {
   api: {

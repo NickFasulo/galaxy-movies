@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../utils/api'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/rateLimiter'
-import { resolveTitleItem } from '../../utils/movieSearch'
+import { requireMethod, rejectBot } from '../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { resolveTitleItem } from '../../utils/ai/movieSearch'
 
 // Batch title resolution for imports (Letterboxd CSV rows arrive as bare
 // title+year). Free TMDB searches, bounded by the per-IP bucket and the

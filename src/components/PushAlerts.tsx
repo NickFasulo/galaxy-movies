@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Text } from '@chakra-ui/react'
-import type { AlertsCredentials } from '../utils/alertsSync'
-import { getPushSubscription, pushSupport, subscribePush, unsubscribePush, type PushSupport } from '../utils/push'
+import type { AlertsCredentials } from '../utils/alerts/alertsSync'
+import { getPushSubscription, pushSupport, subscribePush, unsubscribePush, type PushSupport } from '../utils/alerts/push'
 
 const linkStyle = { textDecoration: 'underline', cursor: 'pointer' } as const
 
