@@ -91,6 +91,15 @@ const nextConfig: NextConfig = {
   // (and any stale links) from hard-404ing. /browse and /genre are real pages.
   async redirects() {
     return [
+      // The worker serves both apex and www custom domains; without this the
+      // apex would serve duplicate content and rely on canonicals to dedupe.
+      // First in the list so every apex path collapses in a single hop.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'galaxymovies.app' }],
+        destination: 'https://www.galaxymovies.app/:path*',
+        permanent: true
+      },
       { source: '/movies', destination: '/', permanent: true },
       { source: '/person', destination: '/', permanent: true },
       { source: '/company', destination: '/', permanent: true },
