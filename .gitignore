@@ -50,7 +50,3 @@ next-env.d.ts
 .dev.vars
 .secrets*.json
 social/
-
-# devvit subproject
-/devvit/node_modules/
-/devvit/dist/
