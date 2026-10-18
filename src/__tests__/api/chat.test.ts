@@ -25,9 +25,11 @@ const mocks = vi.hoisted(() => ({
   wantsAvailability: vi.fn(() => false),
   wantsServiceChanges: vi.fn(() => false),
   wantsServiceRecommendation: vi.fn(() => false),
+  wantsGenrePicks: vi.fn(() => false),
   fetchAvailabilityContext: vi.fn<() => Promise<unknown>>(async () => null),
   fetchServiceChangesContext: vi.fn<() => Promise<unknown>>(async () => null),
-  fetchServicePicksContext: vi.fn<() => Promise<unknown>>(async () => null)
+  fetchServicePicksContext: vi.fn<() => Promise<unknown>>(async () => null),
+  fetchGenrePicksContext: vi.fn<() => Promise<unknown>>(async () => null)
 }))
 
 vi.mock('../../utils/redis', () => ({ getRedis: mocks.getRedis }))
@@ -45,9 +47,11 @@ vi.mock('../../utils/chatGrounding', () => ({
   wantsAvailability: mocks.wantsAvailability,
   wantsServiceChanges: mocks.wantsServiceChanges,
   wantsServiceRecommendation: mocks.wantsServiceRecommendation,
+  wantsGenrePicks: mocks.wantsGenrePicks,
   fetchAvailabilityContext: mocks.fetchAvailabilityContext,
   fetchServiceChangesContext: mocks.fetchServiceChangesContext,
-  fetchServicePicksContext: mocks.fetchServicePicksContext
+  fetchServicePicksContext: mocks.fetchServicePicksContext,
+  fetchGenrePicksContext: mocks.fetchGenrePicksContext
 }))
 
 // Everything real except the global budget — per-IP limiting, isBot and
@@ -191,9 +195,11 @@ beforeEach(async () => {
   mocks.wantsAvailability.mockReturnValue(false)
   mocks.wantsServiceChanges.mockReturnValue(false)
   mocks.wantsServiceRecommendation.mockReturnValue(false)
+  mocks.wantsGenrePicks.mockReturnValue(false)
   mocks.fetchAvailabilityContext.mockResolvedValue(null)
   mocks.fetchServiceChangesContext.mockResolvedValue(null)
   mocks.fetchServicePicksContext.mockResolvedValue(null)
+  mocks.fetchGenrePicksContext.mockResolvedValue(null)
   mocks.getRecentReleases.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.getRecentShows.mockResolvedValue({ results: [], total_pages: 0, total_results: 0 })
   mocks.formatMovieForChat.mockImplementation((m: { id: number; title: string }) => ({ id: m.id, title: m.title, year: 2024, rating: '8.0', overview: 'ov', genres: 'Drama' }))
@@ -833,6 +839,47 @@ describe('availability and service-changes grounding', () => {
     await handler(makeReq({ messages: [userMsg('can i watch Heat on netflix')] }), makeRes())
     expect(mocks.fetchAvailabilityContext).toHaveBeenCalled()
     expect(sentReferenceData().service_picks).toBeNull()
+  })
+
+  it('injects genre_picks for a genre question with no named service', async () => {
+    mocks.wantsGenrePicks.mockReturnValue(true)
+    mocks.fetchGenrePicksContext.mockResolvedValue({
+      mediaType: 'movie',
+      genre: 'Music + Documentary',
+      releasedAfter: '2025-10-18',
+      titles: [{ id: 9, title: 'Doc A', year: '2026', flatrate: ['Netflix'], rent: [], buy: [] }]
+    })
+    await handler(
+      makeReq({ messages: [userMsg('what are some good recent music docs and what services can i find them on')], region: 'GB' }),
+      makeRes()
+    )
+    expect(mocks.fetchGenrePicksContext).toHaveBeenCalledWith('what are some good recent music docs and what services can i find them on', 'GB', '')
+    expect(sentReferenceData().genre_picks).toMatchObject({ genre: 'Music + Documentary' })
+  })
+
+  it('skips genre picks when a resolved availability or service-pick answer exists', async () => {
+    mocks.wantsAvailability.mockReturnValue(true)
+    mocks.wantsGenrePicks.mockReturnValue(true)
+    mocks.fetchAvailabilityContext.mockResolvedValue({ title: 'Heat', mediaType: 'movie', region: 'US', flatrate: ['Netflix'], rent: [], buy: [] })
+    await handler(makeReq({ messages: [userMsg('where can i watch that crime documentary')], region: 'US' }), makeRes())
+    expect(mocks.fetchGenrePicksContext).not.toHaveBeenCalled()
+
+    mocks.fetchAvailabilityContext.mockResolvedValue(null)
+    mocks.wantsServiceRecommendation.mockReturnValue(true)
+    mocks.fetchServicePicksContext.mockResolvedValue([{ provider: 'Hulu', mediaType: 'movie', genre: 'Documentary', titles: [{ id: 1, title: 'D', year: '2024' }] }])
+    await handler(makeReq({ messages: [userMsg('recent docs on my services')], serviceKeys: ['hulu'] }), makeRes())
+    expect(mocks.fetchGenrePicksContext).not.toHaveBeenCalled()
+  })
+
+  it('skips the diff lookup when genre picks resolved the question', async () => {
+    mocks.wantsGenrePicks.mockReturnValue(true)
+    mocks.wantsServiceChanges.mockReturnValue(true)
+    mocks.fetchGenrePicksContext.mockResolvedValue({ mediaType: 'movie', genre: 'Documentary', titles: [] })
+    await handler(
+      makeReq({ messages: [userMsg('new docs on my services')], serviceKeys: ['netflix'], region: 'US' }),
+      makeRes()
+    )
+    expect(mocks.fetchServiceChangesContext).not.toHaveBeenCalled()
   })
 
   it('skips the diff lookup when availability already resolved a title', async () => {

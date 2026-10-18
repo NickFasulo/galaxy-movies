@@ -3,9 +3,11 @@ import {
   wantsAvailability,
   wantsServiceChanges,
   wantsServiceRecommendation,
+  wantsGenrePicks,
   fetchAvailabilityContext,
   fetchServiceChangesContext,
-  fetchServicePicksContext
+  fetchServicePicksContext,
+  fetchGenrePicksContext
 } from './chatGrounding'
 
 const mocks = vi.hoisted(() => ({
@@ -175,7 +177,8 @@ describe('wantsServiceRecommendation', () => {
     'suggest some recent mystery movies on peacock',
     'recommend new movies on hulu',
     'any on netflix?',
-    'any new comedy horrors on paramount'
+    'any new comedy horrors on paramount',
+    'what are some good recent music docs and what services can i find them on'
   ])('detects %s', (text) => {
     expect(wantsServiceRecommendation(text)).toBe(true)
   })
@@ -226,6 +229,32 @@ describe('fetchServicePicksContext', () => {
     const ctx = await fetchServicePicksContext('any good action shows on netflix', [], 'GB')
     expect(mocks.discoverTv).toHaveBeenCalledWith({ providerId: '8', genreId: 10759, region: 'GB' })
     expect(ctx![0]).toMatchObject({ provider: 'Netflix', mediaType: 'tv' })
+  })
+
+  it('falls back to stored service keys for generic "what services" phrasing', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(9, 'Argo')]) as never)
+    const ctx = await fetchServicePicksContext('what are some good recent music docs and what services can i find them on', ['netflix'], 'US')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith({
+      providerId: '8',
+      genreId: '10402,99',
+      region: 'US',
+      releasedAfter: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    })
+    expect(ctx![0]).toMatchObject({ provider: 'Netflix', genre: 'Music + Documentary' })
+  })
+
+  it('returns null for generic services phrasing when no service keys exist', async () => {
+    expect(await fetchServicePicksContext('what are some good recent docs and which services have them', [], 'US')).toBeNull()
+    expect(mocks.discoverMovies).not.toHaveBeenCalled()
+  })
+
+  it('maps chat-only genre words like music to TMDB ids', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(11, 'Moonage Daydream')]) as never)
+    const ctx = await fetchServicePicksContext('good music movies on hulu', [], 'IT')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: '15', genreId: 10402 })
+    )
+    expect(ctx![0].genre).toBe('Music')
   })
 
   it('falls back to stored service keys for "my services" phrasing', async () => {
@@ -325,5 +354,91 @@ describe('questionRemainder hardening', () => {
     const ctx = await fetchAvailabilityContext('can you recommend me some good action movies on hulu', 'NL')
     expect(mocks.search).not.toHaveBeenCalled()
     expect(ctx).toBeNull()
+  })
+})
+
+describe('wantsGenrePicks', () => {
+  it.each([
+    'what are some good recent music docs and what services can i find them on',
+    'any recent documentaries worth watching',
+    'what are some good horror movies from this year',
+    'which services have good thrillers',
+    'where can i watch good comedies'
+  ])('detects %s', (text) => {
+    expect(wantsGenrePicks(text)).toBe(true)
+  })
+
+  it.each([
+    'recommend a good comedy',      // plain genre rec stays parametric
+    "what's new on netflix",        // catalog-change intent wins
+    'is Dune on netflix',           // no genre word
+    'what are some good movies',    // no genre word
+    'more please'                   // no genre word
+  ])('ignores %s', (text) => {
+    expect(wantsGenrePicks(text)).toBe(false)
+  })
+})
+
+describe('fetchGenrePicksContext', () => {
+  const paged = (results: unknown[]) => ({ results, total_pages: 1, total_results: results.length })
+  const movie = (id: number, title: string) => ({ id, title, release_date: '2025-06-01', poster_path: '/p.jpg' })
+  const show = (id: number, name: string) => ({ id, name, title: name, first_air_date: '2025-06-01', release_date: '2025-06-01', poster_path: '/s.jpg' })
+  const offer = (name: string) => ({ results: { US: { flatrate: [{ provider_name: name }], rent: [], buy: [] } } })
+
+  it('answers "recent music docs on what services" with dated picks and per-title providers', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(101, 'Doc A'), movie(102, 'Doc B')]) as never)
+    mocks.fetchTmdb.mockResolvedValue(offer('Hulu')).mockResolvedValueOnce(offer('Netflix'))
+    const ctx = await fetchGenrePicksContext('what are some good recent music docs and what services can i find them on', 'US')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith({
+      genreId: '10402,99',
+      releasedAfter: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    })
+    expect(mocks.fetchTmdb).toHaveBeenCalledWith('/movie/101/watch/providers')
+    expect(ctx).toMatchObject({ mediaType: 'movie', genre: 'Music + Documentary' })
+    expect(ctx!.titles).toEqual([
+      { id: 101, title: 'Doc A', year: '2025', flatrate: ['Netflix'], rent: [], buy: [] },
+      { id: 102, title: 'Doc B', year: '2025', flatrate: ['Hulu'], rent: [], buy: [] }
+    ])
+    expect(ctx!.releasedAfter).toBeTruthy()
+  })
+
+  it('caches the pick list and per-title offers', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(201, 'Doc C')]) as never)
+    mocks.fetchTmdb.mockResolvedValue(offer('Max'))
+    const msg = 'recent documentaries on what services'
+    await fetchGenrePicksContext(msg, 'PT')
+    await fetchGenrePicksContext(msg, 'PT')
+    expect(mocks.discoverMovies).toHaveBeenCalledTimes(1)
+    expect(mocks.fetchTmdb).toHaveBeenCalledTimes(1)
+  })
+
+  it('detects docuseries as tv with the documentary genre', async () => {
+    mocks.discoverTv.mockResolvedValue(paged([show(301, 'Series Doc')]) as never)
+    mocks.fetchTmdb.mockResolvedValue(offer('Netflix'))
+    const ctx = await fetchGenrePicksContext('any new docuseries out', 'IE')
+    expect(mocks.discoverTv).toHaveBeenCalledWith({ genreId: 99, releasedAfter: expect.any(String) })
+    expect(mocks.discoverMovies).not.toHaveBeenCalled()
+    expect(ctx!.mediaType).toBe('tv')
+  })
+
+  it('returns null without a resolvable genre and without calling TMDB', async () => {
+    expect(await fetchGenrePicksContext('what are some recent titles on any services', 'ZA')).toBeNull()
+    expect(mocks.discoverMovies).not.toHaveBeenCalled()
+    expect(mocks.discoverTv).not.toHaveBeenCalled()
+  })
+
+  it('returns null when the question names a specific title', async () => {
+    mocks.mentions.mockReturnValue([{ match: '"Amy (2015)"', title: 'Amy', year: '2015', quoted: true }])
+    expect(await fetchGenrePicksContext('is "Amy (2015)" a recent doc', 'DK')).toBeNull()
+    expect(mocks.discoverMovies).not.toHaveBeenCalled()
+  })
+
+  it('inherits genre scope from prior-turn context on follow-ups', async () => {
+    mocks.discoverMovies.mockResolvedValue(paged([movie(401, 'Doc D')]) as never)
+    mocks.fetchTmdb.mockResolvedValue(offer('Tubi'))
+    await fetchGenrePicksContext('any recent ones?', 'PL', 'i like documentaries')
+    expect(mocks.discoverMovies).toHaveBeenCalledWith(
+      expect.objectContaining({ genreId: 99, releasedAfter: expect.any(String) })
+    )
   })
 })

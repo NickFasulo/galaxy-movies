@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-import { fetchTmdb, fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, movieGenres, tvGenres, streamingProviders } from './tmdb'
+import { fetchTmdb, fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, movieGenres, tvGenres, streamingProviders, type GenreDef } from './tmdb'
 import { getProviderChanges } from './streamingChanges'
 import { extractTitleMentions, resolveMovieMentions, searchMultiByQuery } from './movieSearch'
 import type { MediaType, WatchProvidersResponse } from '../types/tmdb'
@@ -54,6 +54,10 @@ const PROVIDER_KEY_WORDS: [RegExp, string][] = [
 
 const MY_SERVICES_PATTERN = /\b(my|your|our) (services|streamers|subscriptions|platforms)\b/i
 
+// "what/which services ..." with no named provider — resolves to the user's
+// stored services when present, else falls through to genre_picks.
+const GENERIC_SERVICES_PATTERN = /\b(what|which|any)\b[^\n?]{0,40}?\b(services?|streamers?|platforms?)\b/i
+
 // Spoken genre words → slug per TMDB's separate movie/tv genre namespaces.
 const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
   action: { movie: 'action', tv: 'action-adventure' },
@@ -67,6 +71,7 @@ const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
   fantasy: { movie: 'fantasy', tv: 'sci-fi-fantasy' },
   horror: { movie: 'horror' },
   mystery: { movie: 'mystery', tv: 'mystery' },
+  music: { movie: 'music' },
   romance: { movie: 'romance' },
   'sci-fi': { movie: 'science-fiction', tv: 'sci-fi-fantasy' },
   thriller: { movie: 'thriller' },
@@ -79,17 +84,27 @@ const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
 // Keys get an optional plural `s?`; irregular plurals and colloquial genre
 // words ("scary", "funny", "romcom") live in the alternation + alias table.
 const GENRE_WORD_PATTERN = new RegExp(
-  `\\b(${Object.keys(GENRE_WORDS).map((k) => `${k}s?`).join('|')}|animated|comedies|documentaries|mysteries|romantic|scifi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?)\\b`,
+  `\\b(${Object.keys(GENRE_WORDS).map((k) => `${k}s?`).join('|')}|animated|comedies|documentaries|mysteries|romantic|scifi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?|docs?|docu-?series)\\b`,
   'i'
 )
 
 const GENRE_ALIASES: Record<string, string> = {
   animated: 'animation', comedies: 'comedy', documentaries: 'documentary',
+  doc: 'documentary', docuseries: 'documentary', 'docu-series': 'documentary',
   mysteries: 'mystery', romantic: 'romance', scifi: 'sci-fi',
   'science fiction': 'sci-fi', scary: 'horror', spooky: 'horror',
   creepy: 'horror', terrifying: 'horror', funny: 'comedy', hilarious: 'comedy',
   'rom-com': 'romance', romcom: 'romance', 'rom-coms': 'romance', romcoms: 'romance'
 }
+
+// TMDB genres without a site landing page (no slug in movieGenres) still work
+// as chat filters — Music (10402) is what makes "music docs" answerable.
+const CHAT_ONLY_MOVIE_GENRES: Record<string, GenreDef> = {
+  music: { id: 10402, title: 'Music' }
+}
+
+const genreMapFor = (mediaType: MediaType): Record<string, GenreDef> =>
+  mediaType === 'tv' ? tvGenres : { ...movieGenres, ...CHAT_ONLY_MOVIE_GENRES }
 
 const canonicalGenre = (word: string): string => {
   const w = word.toLowerCase()
@@ -133,7 +148,8 @@ export function wantsServiceRecommendation(text: string, contextText = ''): bool
   const hasServiceScope =
     providerKeysIn(subject).length > 0 ||
     new RegExp(`\\b(${PROVIDER_WORD_PATTERN})\\b`, 'i').test(subject) ||
-    MY_SERVICES_PATTERN.test(subject)
+    MY_SERVICES_PATTERN.test(subject) ||
+    GENERIC_SERVICES_PATTERN.test(subject)
   return hasServiceScope && (RECOMMEND_PATTERN.test(subject) || GENRE_WORD_PATTERN.test(subject) || RECENT_PATTERN.test(subject))
 }
 
@@ -156,7 +172,7 @@ const providerLabel = (key: string) => streamingProviders[key]?.title.replace(/\
 
 function detectPickMediaType(text: string): MediaType | null {
   if (/\b(movies?|films?)\b/i.test(text)) return 'movie'
-  if (/\b(shows?|series|tv)\b/i.test(text)) return 'tv'
+  if (/\b(shows?|series|tv|docu-?series)\b/i.test(text)) return 'tv'
   return null
 }
 
@@ -177,12 +193,12 @@ function detectGenreSlugs(text: string, mediaType: MediaType): string[] {
 export async function fetchServicePicksContext(message: string, serviceKeys: string[], region: string, contextText = ''): Promise<ServicePicksContext[] | null> {
   let keys = providerKeysIn(message)
   if (!keys.length && contextText) keys = providerKeysIn(contextText)
-  if (!keys.length && MY_SERVICES_PATTERN.test(message)) keys = serviceKeys.slice(0, MAX_PICK_PROVIDERS)
+  if (!keys.length && (MY_SERVICES_PATTERN.test(message) || GENERIC_SERVICES_PATTERN.test(message))) keys = serviceKeys.slice(0, MAX_PICK_PROVIDERS)
   keys = [...new Set(keys)].slice(0, MAX_PICK_PROVIDERS)
   if (!keys.length) return null
 
   const mediaType = detectPickMediaType(message) ?? (contextText ? detectPickMediaType(contextText) : null) ?? 'movie'
-  const genreMap = mediaType === 'tv' ? tvGenres : movieGenres
+  const genreMap = genreMapFor(mediaType)
   let genreSlugs = detectGenreSlugs(message, mediaType)
   if (!genreSlugs.length && contextText) genreSlugs = detectGenreSlugs(contextText, mediaType)
   const genreIds = genreSlugs.map((slug) => genreMap[slug]?.id).filter((id): id is number => typeof id === 'number')
@@ -222,6 +238,78 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
   return ctx
 }
 
+export interface GenrePicksContext {
+  mediaType: MediaType
+  genre: string | null
+  releasedAfter?: string
+  titles: { id: number; title: string; year: string | null; flatrate: string[]; rent: string[]; buy: string[] }[]
+}
+
+// Genre/topic asks with recency or a service question but no named provider —
+// "recent music docs and what services are they on". Plain genre recs without
+// those markers stay parametric (no verified claim is being made).
+export function wantsGenrePicks(text: string): boolean {
+  if (wantsServiceChanges(text) || !GENRE_WORD_PATTERN.test(text)) return false
+  return RECENT_PATTERN.test(text) || GENERIC_SERVICES_PATTERN.test(text) || wantsAvailability(text)
+}
+
+const GENRE_PICK_TITLES = 6
+
+const genrePicksCache = new LRUCache<string, { ctx: GenrePicksContext | null }>({ max: 500, ttl: 1000 * 60 * 60 * 6 })
+
+export async function fetchGenrePicksContext(message: string, region: string, contextText = ''): Promise<GenrePicksContext | null> {
+  // A title-shaped question is availability's job — a genre list would only
+  // muddy it (e.g. "is 'Amy (2015)' a recent doc").
+  if (extractTitleMentions(message).length) return null
+
+  const mediaType = detectPickMediaType(message) ?? (contextText ? detectPickMediaType(contextText) : null) ?? 'movie'
+  const genreMap = genreMapFor(mediaType)
+  let genreSlugs = detectGenreSlugs(message, mediaType)
+  if (!genreSlugs.length && contextText) genreSlugs = detectGenreSlugs(contextText, mediaType)
+  const genreIds = genreSlugs.map((slug) => genreMap[slug]?.id).filter((id): id is number => typeof id === 'number')
+  if (!genreIds.length) return null
+  const genreId = genreIds.length > 1 ? genreIds.join(',') : genreIds[0]
+  const genreLabel = genreSlugs
+    .map((slug) => genreMap[slug]?.title.replace(/\s+(Movies|Shows)$/i, ''))
+    .filter(Boolean)
+    .join(' + ') || null
+  const recent = RECENT_PATTERN.test(message) || (contextText.length > 0 && RECENT_PATTERN.test(contextText))
+  const releasedAfter = recent
+    ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
+    : undefined
+
+  const cacheKey = `genre:${mediaType}:${region}:${genreId}:${releasedAfter ?? 'all'}`
+  const cached = genrePicksCache.get(cacheKey)
+  if (cached !== undefined) return cached.ctx
+
+  let ctx: GenrePicksContext | null = null
+  try {
+    const discover = mediaType === 'tv' ? fetchDiscoverTv : fetchDiscoverMovies
+    const data = await discover({ genreId, releasedAfter })
+    const titles = (data.results || []).slice(0, GENRE_PICK_TITLES)
+    if (titles.length) {
+      const rows = await Promise.all(
+        titles.map(async (t) => {
+          const offers = await getTitleOffers(t.id, mediaType, region)
+          return {
+            id: t.id,
+            title: t.title || '',
+            year: (t.release_date || '').slice(0, 4) || null,
+            flatrate: offers?.flatrate ?? [],
+            rent: offers?.rent ?? [],
+            buy: offers?.buy ?? []
+          }
+        })
+      )
+      ctx = { mediaType, genre: genreLabel, releasedAfter, titles: rows }
+    }
+  } catch (err) {
+    console.error('Chat genre-picks lookup failed:', err)
+  }
+  genrePicksCache.set(cacheKey, { ctx })
+  return ctx
+}
+
 export interface AvailabilityContext {
   title: string
   mediaType: MediaType
@@ -238,19 +326,47 @@ export interface ServiceChangesContext {
   leaving: string[]
 }
 
+interface TitleOffers {
+  flatrate: string[]
+  rent: string[]
+  buy: string[]
+}
+
 // Watch-provider data drifts slowly; 6h mirrors api/watchProviders. The
 // wrapper object is because lru-cache can't store a null hit.
-const availabilityCache = new LRUCache<string, { ctx: AvailabilityContext | null }>({ max: 2000, ttl: 1000 * 60 * 60 * 6 })
+const availabilityCache = new LRUCache<string, { offers: TitleOffers | null }>({ max: 2000, ttl: 1000 * 60 * 60 * 6 })
 
 const providerNames = (list?: { provider_name?: string }[]): string[] =>
   (list || []).map((p) => p.provider_name).filter((n): n is string => Boolean(n))
+
+// Cached per title+region — shared by the availability answer and genre_picks,
+// which needs offers for every candidate title.
+async function getTitleOffers(id: number, mediaType: MediaType, region: string): Promise<TitleOffers | null> {
+  const cacheKey = `${mediaType}:${region}:${id}`
+  const cached = availabilityCache.get(cacheKey)
+  if (cached !== undefined) return cached.offers
+
+  let offers: TitleOffers | null = null
+  try {
+    const data = await fetchTmdb<WatchProvidersResponse>(`/${mediaType}/${id}/watch/providers`)
+    const entry = data.results?.[region] || {}
+    const flatrate = providerNames(entry.flatrate)
+    const rent = providerNames(entry.rent)
+    const buy = providerNames(entry.buy)
+    if (flatrate.length || rent.length || buy.length) offers = { flatrate, rent, buy }
+  } catch (err) {
+    console.error('Chat availability lookup failed:', err)
+  }
+  availabilityCache.set(cacheKey, { offers })
+  return offers
+}
 
 // Words that make a question generic rather than title-seeking — "what's good
 // on Netflix" must not strip to "good" and resolve a random movie. Genre words
 // count as filler too ("action movies on hulu" must not resolve a movie called
 // "Action").
 const FILLER_PATTERN =
-  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|similar|tonight|stuff|things|popular|trending|actions?|adventures?|animated?|animation|comed(?:y|ies)|crimes?|documentar(?:y|ies)|dramas?|family|fantas(?:y|ies)|horrors?|myster(?:y|ies)|romances?|romantic|thrillers?|westerns?|war|reality|soaps?|kids?|children|sci-?fi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?)\b/gi
+  /\b(movies?|shows?|series|tv|film|films|something|anything|good|great|best|top|new|recommend(?:ations?|ed)?|suggest(?:ions?|ed)?|similar|tonight|stuff|things|popular|trending|actions?|adventures?|animated?|animation|comed(?:y|ies)|crimes?|documentar(?:y|ies)|docs?|docu-?series|dramas?|family|fantas(?:y|ies)|horrors?|myster(?:y|ies)|romances?|romantic|thrillers?|westerns?|war|reality|soaps?|kids?|children|sci-?fi|science fiction|scary|spooky|creepy|terrifying|funny|hilarious|rom-?coms?)\b/gi
 
 // Loose questions like "is Dune still on Netflix?" carry no quoted/year'd
 // mention — strip the question phrasing so a plain search can try the rest.
@@ -290,25 +406,8 @@ export async function fetchAvailabilityContext(message: string, region: string):
     title = top.title || top.name || query
   }
 
-  const cacheKey = `${mediaType}:${region}:${id}`
-  const cached = availabilityCache.get(cacheKey)
-  if (cached !== undefined) return cached.ctx
-
-  let context: AvailabilityContext | null = null
-  try {
-    const data = await fetchTmdb<WatchProvidersResponse>(`/${mediaType}/${id}/watch/providers`)
-    const offers = data.results?.[region] || {}
-    const flatrate = providerNames(offers.flatrate)
-    const rent = providerNames(offers.rent)
-    const buy = providerNames(offers.buy)
-    if (flatrate.length || rent.length || buy.length) {
-      context = { title, mediaType, region, flatrate, rent, buy }
-    }
-  } catch (err) {
-    console.error('Chat availability lookup failed:', err)
-  }
-  availabilityCache.set(cacheKey, { ctx: context })
-  return context
+  const offers = await getTitleOffers(id, mediaType, region)
+  return offers ? { title, mediaType, region, ...offers } : null
 }
 
 const MAX_CONTEXT_SERVICES = 8
