@@ -1,11 +1,11 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Head from 'next/head'
 import { Box, Link, Text } from '@chakra-ui/react'
-import { getProviderChanges, type ProviderChanges } from '../../utils/catalog/streamingChanges'
-import { isEmbeddableProvider, providerLabel } from '../../utils/catalog/embed'
-import { setSwrCache } from '../../utils/core/ssr'
-import { withTimeout } from '../../utils/core/withTimeout'
-import { SITE_URL } from '../../utils/core/site'
+import { getProviderChanges, type ProviderChanges } from '../../features/catalog/streamingChanges'
+import { isEmbeddableProvider, providerLabel } from '../../features/catalog/embed'
+import { setSwrCache } from '../../lib/ssr'
+import { withTimeout } from '../../lib/withTimeout'
+import { SITE_URL } from '../../lib/site'
 import type { MediaType } from '../../types/tmdb'
 
 interface WidgetItem {

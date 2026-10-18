@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/core/api'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../utils/billing/billing'
-import { getRedis, ALERTS_PREFS_KEY } from '../../../utils/alerts/waitlistStore'
-import { syncToTrakt, traktAccessToken, traktConfigured } from '../../../utils/billing/trakt'
+import { requireMethod, rejectBot } from '../../../lib/api'
+import { getClientIP, checkDistributedRateLimit } from '../../../lib/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../../features/billing/billing'
+import { getRedis, ALERTS_PREFS_KEY } from '../../../features/alerts/waitlistStore'
+import { syncToTrakt, traktAccessToken, traktConfigured } from '../../../features/billing/trakt'
 import { traktRedirectUri } from './connect'
-import type { SyncedPrefs } from '../../../utils/core/userData'
+import type { SyncedPrefs } from '../../../lib/userData'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'POST')) return

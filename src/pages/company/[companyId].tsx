@@ -1,4 +1,4 @@
-import OrgPage, { orgServerSideProps } from '../../components/OrgPage'
+import OrgPage, { orgServerSideProps } from '../../features/catalog/components/OrgPage'
 
 export const getServerSideProps = orgServerSideProps('company')
 

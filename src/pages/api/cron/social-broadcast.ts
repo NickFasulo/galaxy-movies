@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { broadcastWeeklyDigest } from '../../../utils/social/socialBroadcast'
-import { isCronAuthorized } from '../../../utils/core/auth'
+import { broadcastWeeklyDigest } from '../../../features/social/socialBroadcast'
+import { isCronAuthorized } from '../../../lib/auth'
 
 export const config = { maxDuration: 60 }
 

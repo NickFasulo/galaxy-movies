@@ -4,9 +4,9 @@ import Image from 'next/image'
 import { Box, Flex, SimpleGrid, Text } from '@chakra-ui/react'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { fetchCollection } from '../../utils/catalog/tmdb'
-import { franchiseCollectionIds } from '../../utils/catalog/franchises'
-import { tmdbImage, SITE_URL } from '../../utils/core/site'
+import { fetchCollection } from '../../features/catalog/tmdb'
+import { franchiseCollectionIds } from '../../features/catalog/franchises'
+import { tmdbImage, SITE_URL } from '../../lib/site'
 import type { TmdbCollection } from '../../types/tmdb'
 
 export async function getStaticProps() {

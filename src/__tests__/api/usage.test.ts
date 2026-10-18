@@ -15,8 +15,8 @@ const mocks = vi.hoisted(() => ({
   )
 }))
 
-vi.mock('../../utils/core/redis', () => ({ getRedis: () => mocks.kv }))
-vi.mock('../../utils/ai/aiUsage', () => ({
+vi.mock('../../lib/redis', () => ({ getRedis: () => mocks.kv }))
+vi.mock('../../features/ai/aiUsage', () => ({
   getUsageStats: vi.fn(async () => ({ totalSessions: 5, totalMessages: 42, avgRating: '4.0', timeframe: '24h', timestamp: 0 })),
   getCostEstimate: vi.fn(async () => ({ estimatedCost: '1.2345', source: 'actual_usage', breakdown: {} }))
 }))

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { LRUCache } from 'lru-cache'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/core/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
-import { firstParam } from '../../utils/core/query'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../lib/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../lib/api'
+import { firstParam } from '../../lib/query'
 import type { WatchProvidersResponse } from '../../types/tmdb'
 
 // Server-side proxy for TMDB watch/providers — keeps TMDB_API_KEY off the client.

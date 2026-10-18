@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHash } from 'crypto'
-import { requireMethod, rejectBot } from '../../../utils/core/api'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../../utils/core/rateLimiter'
-import { getRedis, getOrCreateSyncKey } from '../../../utils/alerts/waitlistStore'
-import { getBillingRecord } from '../../../utils/billing/billing'
-import { SITE_URL } from '../../../utils/core/site'
+import { requireMethod, rejectBot } from '../../../lib/api'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../../lib/rateLimiter'
+import { getRedis, getOrCreateSyncKey } from '../../../features/alerts/waitlistStore'
+import { getBillingRecord } from '../../../features/billing/billing'
+import { SITE_URL } from '../../../lib/site'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 

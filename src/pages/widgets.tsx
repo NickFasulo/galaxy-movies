@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import { embeddableProviders, providerLabel } from '../utils/catalog/embed'
-import { setSwrCache } from '../utils/core/ssr'
-import { SITE_URL } from '../utils/core/site'
+import { embeddableProviders, providerLabel } from '../features/catalog/embed'
+import { setSwrCache } from '../lib/ssr'
+import { SITE_URL } from '../lib/site'
 
 const PROVIDERS = embeddableProviders()
 

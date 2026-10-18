@@ -1,12 +1,12 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
+import MovieGrid from '../../features/catalog/components/MovieGrid'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { fetchCollection } from '../../utils/catalog/tmdb'
-import { setSwrCache } from '../../utils/core/ssr'
-import { titleListSchema } from '../../utils/catalog/schema'
-import { SITE_URL } from '../../utils/core/site'
+import { fetchCollection } from '../../features/catalog/tmdb'
+import { setSwrCache } from '../../lib/ssr'
+import { titleListSchema } from '../../features/catalog/schema'
+import { SITE_URL } from '../../lib/site'
 import type { TmdbMovie } from '../../types/tmdb'
 
 interface Props {

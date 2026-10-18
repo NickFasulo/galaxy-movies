@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { normalizeTvTitle, getProviderIds } from '../../utils/catalog/tmdb'
-import { firstParam } from '../../utils/core/query'
+import { normalizeTvTitle, getProviderIds } from '../../features/catalog/tmdb'
+import { firstParam } from '../../lib/query'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const GENRE_MAP: Record<string, number> = {
@@ -24,8 +24,8 @@ const GENRE_MAP: Record<string, number> = {
   western: 37
 }
 
-import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../utils/core/api'
+import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { requireMethod, rejectBot, setApiCache } from '../../lib/api'
 
 type RawResult = TitleSummary & TmdbTvShow
 

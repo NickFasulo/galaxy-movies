@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../utils/core/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/core/api'
-import { getRedis, WATCH_PENDING_KEY } from '../../utils/alerts/waitlistStore'
-import { mergeWatchTitles, type WatchTitle } from '../../utils/alerts/titleAlerts'
-import { SITE_URL } from '../../utils/core/site'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../lib/rateLimiter'
+import { requireMethod, rejectBot } from '../../lib/api'
+import { getRedis, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
+import { mergeWatchTitles, type WatchTitle } from '../../features/alerts/titleAlerts'
+import { SITE_URL } from '../../lib/site'
 import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!process.env.RESEND_API_KEY) {
       console.warn('RESEND_API_KEY not set — confirming title watch directly (dev/local fallback)')
-      const { WATCH_KEY } = await import('../../utils/alerts/waitlistStore')
+      const { WATCH_KEY } = await import('../../features/alerts/waitlistStore')
       const current = await kv.hget<{ unsub: string; titles: WatchTitle[] }>(WATCH_KEY, email)
       await kv.hset(WATCH_KEY, {
         [email]: { unsub: current?.unsub || randomUUID(), titles: mergeWatchTitles(current?.titles || [], watchTitle) }

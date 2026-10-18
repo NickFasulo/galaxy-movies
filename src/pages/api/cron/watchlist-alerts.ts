@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { sendWatchlistAlerts } from '../../../utils/alerts/watchlistAlerts'
-import { isCronAuthorized } from '../../../utils/core/auth'
+import { sendWatchlistAlerts } from '../../../features/alerts/watchlistAlerts'
+import { isCronAuthorized } from '../../../lib/auth'
 
 export const config = { maxDuration: 60 }
 

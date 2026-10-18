@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, PROVIDER_NAME_MATCH } from '../../utils/catalog/tmdb'
-import { getSourceIdMap } from '../../utils/catalog/streamingChanges'
+import { fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, PROVIDER_NAME_MATCH } from '../../features/catalog/tmdb'
+import { getSourceIdMap } from '../../features/catalog/streamingChanges'
 
 // Live upstream contract checks, run weekly by contract.yml with real keys to
 // catch TMDB/Watchmode response-shape drift before it breaks the crons.

@@ -1,4 +1,4 @@
-import CategoryPage, { categoryServerSideProps } from '../../../components/CategoryPage'
+import CategoryPage, { categoryServerSideProps } from '../../../features/catalog/components/CategoryPage'
 
 export const getServerSideProps = categoryServerSideProps('tv')
 

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createHmac } from 'crypto'
-import { getRedis, BILLING_KEY } from '../../../utils/alerts/waitlistStore'
-import { safeEqual } from '../../../utils/core/auth'
+import { getRedis, BILLING_KEY } from '../../../features/alerts/waitlistStore'
+import { safeEqual } from '../../../lib/auth'
 
 // Raw body is required for the webhook signature check.
 export const config = {

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type { ImageResponse as ImageResponseType } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
+import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
 
 async function toJpegDataUri(url: string): Promise<string | null> {
   try {

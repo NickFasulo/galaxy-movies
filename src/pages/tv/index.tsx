@@ -1,13 +1,13 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { Heading, SimpleGrid, Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
+import MovieGrid from '../../features/catalog/components/MovieGrid'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
 import LinkTile from '../../components/LinkTile'
-import { fetchDiscoverTv, tvCategories, tvGenres, streamingProviders } from '../../utils/catalog/tmdb'
-import { setSwrCache } from '../../utils/core/ssr'
-import { titleListSchema } from '../../utils/catalog/schema'
-import { SITE_URL } from '../../utils/core/site'
+import { fetchDiscoverTv, tvCategories, tvGenres, streamingProviders } from '../../features/catalog/tmdb'
+import { setSwrCache } from '../../lib/ssr'
+import { titleListSchema } from '../../features/catalog/schema'
+import { SITE_URL } from '../../lib/site'
 import type { TitleSummary } from '../../types/tmdb'
 
 interface Props {

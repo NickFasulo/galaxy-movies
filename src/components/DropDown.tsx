@@ -1,5 +1,5 @@
 import { Menu, Button, Portal } from '@chakra-ui/react';
-import removeUnderscores from '../utils/format/removeUnderscores'
+import removeUnderscores from '../lib/format/removeUnderscores'
 import { menuItemProps } from './NavMenu'
 import { LuChevronDown } from 'react-icons/lu';
 

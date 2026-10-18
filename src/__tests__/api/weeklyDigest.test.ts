@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/cron/weekly-digest'
-import { CONFIRMED_KEY, ALERTS_PREFS_KEY, BILLING_KEY } from '../../utils/alerts/waitlistStore'
+import { CONFIRMED_KEY, ALERTS_PREFS_KEY, BILLING_KEY } from '../../features/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
   kvHgetall: vi.fn<(key?: string) => Promise<Record<string, unknown> | null>>(async () => null),
@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => ({
   monthly: vi.fn<(keys: string[]) => Promise<Record<string, unknown>>>(async () => ({}))
 }))
 
-vi.mock('../../utils/core/redis', () => ({ getRedis: () => ({ hgetall: mocks.kvHgetall }) }))
-vi.mock('../../utils/catalog/streamingChanges', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../utils/catalog/streamingChanges')>()),
+vi.mock('../../lib/redis', () => ({ getRedis: () => ({ hgetall: mocks.kvHgetall }) }))
+vi.mock('../../features/catalog/streamingChanges', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../features/catalog/streamingChanges')>()),
   getProviderChanges: (keys: string[], opts?: { region?: string }) =>
     opts?.region === 'IN' ? mocks.inChanges() : mocks.usChanges(),
   getMonthlyChanges: (keys: string[]) => mocks.monthly(keys)

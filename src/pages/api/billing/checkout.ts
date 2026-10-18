@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../../utils/core/api'
-import { getClientIP, checkDistributedRateLimit } from '../../../utils/core/rateLimiter'
-import { getLinkedEmail } from '../../../utils/billing/billing'
-import { polarConfigured, polarPost, productForPlan, PLUS_SUCCESS_URL } from '../../../utils/billing/polar'
+import { requireMethod, rejectBot } from '../../../lib/api'
+import { getClientIP, checkDistributedRateLimit } from '../../../lib/rateLimiter'
+import { getLinkedEmail } from '../../../features/billing/billing'
+import { polarConfigured, polarPost, productForPlan, PLUS_SUCCESS_URL } from '../../../features/billing/polar'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'POST')) return

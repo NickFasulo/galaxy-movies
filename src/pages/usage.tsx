@@ -3,7 +3,7 @@ import { Badge, Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
 import { LuExternalLink, LuRefreshCw } from 'react-icons/lu'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import type { UsagePanel } from '../utils/core/usageSources'
+import type { UsagePanel } from '../lib/usageSources'
 
 const TOKEN_KEY = 'gm.usage.token'
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect

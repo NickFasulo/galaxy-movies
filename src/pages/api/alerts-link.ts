@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, SYNCKEY_KEY } from '../../utils/alerts/waitlistStore'
-import { safeEqual } from '../../utils/core/auth'
-import { requireMethod } from '../../utils/core/api'
+import { getRedis, SYNCKEY_KEY } from '../../features/alerts/waitlistStore'
+import { safeEqual } from '../../lib/auth'
+import { requireMethod } from '../../lib/api'
 
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i
 

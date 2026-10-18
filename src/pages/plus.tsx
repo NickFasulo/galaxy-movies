@@ -5,9 +5,9 @@ import { Badge, Box, Button, Flex, Input, List, Text } from '@chakra-ui/react'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
-import WaitlistForm from '../components/WaitlistForm'
-import { usePlusStatus } from '../hooks/usePlus'
-import { firstParam } from '../utils/core/query'
+import WaitlistForm from '../features/alerts/components/WaitlistForm'
+import { usePlusStatus } from '../features/billing/usePlus'
+import { firstParam } from '../lib/query'
 
 const FEATURES = [
   'Alerts for new arrivals on your services, matched to what you rate highly',

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireMethod, rejectBot } from '../../utils/core/api'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
-import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../utils/billing/billing'
-import { getRedis, CHAT_HISTORY_KEY } from '../../utils/alerts/waitlistStore'
+import { requireMethod, rejectBot } from '../../lib/api'
+import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { getLinkedEmail, getBillingRecord, isPlusActive } from '../../features/billing/billing'
+import { getRedis, CHAT_HISTORY_KEY } from '../../features/alerts/waitlistStore'
 
 const MAX_MESSAGES = 30
 const MAX_LINK_KEYS = 30

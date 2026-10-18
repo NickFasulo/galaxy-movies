@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { topicSeeds, type TopicSeed } from '../../../utils/catalog/topicSeeds'
+import { topicSeeds, type TopicSeed } from '../../../features/catalog/topicSeeds'
 import {
   fetchListMovies,
   fetchListTv,
@@ -10,8 +10,8 @@ import {
   searchKeywordId,
   searchMovieByTitle,
   searchTvByTitle
-} from '../../../utils/catalog/tmdb'
-import { MIN_INDEXABLE_MOVIES } from '../../../utils/catalog/contentOpportunities'
+} from '../../../features/catalog/tmdb'
+import { MIN_INDEXABLE_MOVIES } from '../../../features/catalog/contentOpportunities'
 import {
   appendRunLog,
   getGeneratedLists,
@@ -20,12 +20,12 @@ import {
   saveGeneratedList,
   setSeedStatus,
   MAX_GENERATED_LISTS
-} from '../../../utils/catalog/generatedLists'
-import { curatedLists } from '../../../utils/catalog/curatedLists'
-import { isCronAuthorized } from '../../../utils/core/auth'
-import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../../utils/ai/openai'
-import { pingIndexNow } from '../../../utils/core/indexnow'
-import { SITE_URL } from '../../../utils/core/site'
+} from '../../../features/catalog/generatedLists'
+import { curatedLists } from '../../../features/catalog/curatedLists'
+import { isCronAuthorized } from '../../../lib/auth'
+import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../../features/ai/openai'
+import { pingIndexNow } from '../../../lib/indexnow'
+import { SITE_URL } from '../../../lib/site'
 
 export const config = { maxDuration: 60 }
 

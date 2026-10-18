@@ -1,4 +1,4 @@
-import ProviderGenrePage, { providerGenreServerSideProps } from '../../../../components/ProviderGenrePage'
+import ProviderGenrePage, { providerGenreServerSideProps } from '../../../../features/catalog/components/ProviderGenrePage'
 
 export const getServerSideProps = providerGenreServerSideProps('tv')
 

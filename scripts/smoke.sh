@@ -51,7 +51,7 @@ if [ "$LEVEL" = "full" ]; then
 fi
 
 # The IndexNow ownership file must be served or every ping 403s upstream.
-KEY=$(grep -o "INDEXNOW_KEY = '[^']*'" "$(dirname "$0")/../src/utils/core/indexnow.ts" | cut -d"'" -f2)
+KEY=$(grep -o "INDEXNOW_KEY = '[^']*'" "$(dirname "$0")/../src/lib/indexnow.ts" | cut -d"'" -f2)
 if [ -n "$KEY" ]; then
   check "/$KEY.txt" "$KEY"
 fi

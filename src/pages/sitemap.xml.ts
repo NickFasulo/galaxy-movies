@@ -1,13 +1,13 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { TmdbMovieDetails, TmdbTvDetails, Credits, AggregateCredits } from '../types/tmdb'
-import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../utils/catalog/tmdb'
-import { DEFAULT_REGION } from '../utils/core/region'
-import { curatedLists } from '../utils/catalog/curatedLists'
-import { getGeneratedLists } from '../utils/catalog/generatedLists'
-import { getProviderGenreTargets, getTvProviderGenreTargets } from '../utils/catalog/contentOpportunities'
-import { franchiseCollectionIds } from '../utils/catalog/franchises'
-import { SITE_URL as siteUrl } from '../utils/core/site'
-import { setSwrCache } from '../utils/core/ssr'
+import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../features/catalog/tmdb'
+import { DEFAULT_REGION } from '../lib/region'
+import { curatedLists } from '../features/catalog/curatedLists'
+import { getGeneratedLists } from '../features/catalog/generatedLists'
+import { getProviderGenreTargets, getTvProviderGenreTargets } from '../features/catalog/contentOpportunities'
+import { franchiseCollectionIds } from '../features/catalog/franchises'
+import { SITE_URL as siteUrl } from '../lib/site'
+import { setSwrCache } from '../lib/ssr'
 
 const escapeXml = (value: string) =>
   value

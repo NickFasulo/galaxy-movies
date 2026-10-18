@@ -1,4 +1,4 @@
-import TitleDetailPage, { titleDetailServerSideProps } from '../../components/TitleDetailPage'
+import TitleDetailPage, { titleDetailServerSideProps } from '../../features/catalog/components/TitleDetailPage'
 
 export const getServerSideProps = titleDetailServerSideProps('tv')
 

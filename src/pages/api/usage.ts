@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getClientIP, checkDistributedRateLimit } from '../../utils/core/rateLimiter'
-import { requireMethod, rejectBot } from '../../utils/core/api'
-import { safeEqual } from '../../utils/core/auth'
-import { aggregateUsage, type UsagePanel } from '../../utils/core/usageSources'
+import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { requireMethod, rejectBot } from '../../lib/api'
+import { safeEqual } from '../../lib/auth'
+import { aggregateUsage, type UsagePanel } from '../../lib/usageSources'
 
 const CACHE_MS = 60_000
 let cached: { at: number; panels: UsagePanel[] } | null = null

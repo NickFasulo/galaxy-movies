@@ -1,11 +1,11 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
 import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
-import MovieGrid from '../../components/MovieGrid'
-import MovieCard from '../../components/MovieCard'
+import MovieGrid from '../../features/catalog/components/MovieGrid'
+import MovieCard from '../../features/catalog/components/MovieCard'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { getRedis, SHARE_LOOKUP_KEY, ALERTS_PREFS_KEY } from '../../utils/alerts/waitlistStore'
+import { getRedis, SHARE_LOOKUP_KEY, ALERTS_PREFS_KEY } from '../../features/alerts/waitlistStore'
 import type { TitleSummary } from '../../types/tmdb'
 
 interface SharedItem {

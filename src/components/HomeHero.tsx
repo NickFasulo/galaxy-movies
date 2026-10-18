@@ -5,7 +5,7 @@ import { Box, Flex, Heading, Text, Badge } from '@chakra-ui/react'
 import { Tooltip } from './ui/tooltip'
 import TopBackdrop from './TopBackdrop'
 import Backdrop, { BACKDROP_OVERLAYS } from './Backdrop'
-import WatchlistButton from './WatchlistButton'
+import WatchlistButton from '../features/alerts/components/WatchlistButton'
 import type { TitleSummary, WatchProvider } from '../types/tmdb'
 
 const MAX_LOGOS = 5
