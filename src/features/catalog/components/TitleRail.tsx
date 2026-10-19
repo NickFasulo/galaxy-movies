@@ -2,6 +2,7 @@ import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 import { Box, Flex, Heading, Link } from '@chakra-ui/react'
 import MovieCard from './MovieCard'
+import ScrollRail from './ScrollRail'
 import type { TitleSummary } from '../../../types/tmdb'
 
 export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, onCardLeave }: {
@@ -24,9 +25,8 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
           </Link>
         )}
       </Flex>
-      <Flex
+      <ScrollRail
         gap={4}
-        overflowX='auto'
         // Scroll containers clip at the padding box — the card shadow needs
         // ~20px below and the hover scale a few px all around, so pad the
         // scrollport and pull it back with negative margins to keep the
@@ -34,25 +34,7 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
         mt={-2} mb={-4} pt={2} pb={6}
         mx={{ base: '-1.5rem', md: '-3rem', xl: '-0.5rem' }}
         px={{ base: '1.5rem', md: '3rem', xl: '0.5rem' }}
-        css={{
-          scrollSnapType: 'x proximity',
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'transparent transparent',
-          transition: 'scrollbar-color 0.25s ease',
-          '&::-webkit-scrollbar': { height: '6px' },
-          '&::-webkit-scrollbar-track': { background: 'transparent' },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'transparent',
-            borderRadius: '9999px',
-            transition: 'background-color 0.25s ease'
-          },
-          '&:hover': {
-            scrollbarColor: 'var(--chakra-colors-gray-500) transparent'
-          },
-          '&:hover::-webkit-scrollbar-thumb': {
-            backgroundColor: 'var(--chakra-colors-gray-500)'
-          }
-        }}
+        css={{ scrollSnapType: 'x proximity' }}
       >
         {movies.map((movie) => (
           <Box
@@ -66,7 +48,7 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
             <MovieCard movie={movie} badge={badgeFor?.(movie)} />
           </Box>
         ))}
-      </Flex>
+      </ScrollRail>
     </Box>
   )
 }

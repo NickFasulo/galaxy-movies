@@ -2,6 +2,7 @@ import Image from 'next/image'
 import NextLink from 'next/link'
 import { Box, Flex, Link, Text } from '@chakra-ui/react'
 import { Tooltip } from '../../../components/ui/tooltip'
+import ScrollRail from './ScrollRail'
 import { useUserData } from '../../alerts/hooks/useUserData'
 import { setServices } from '../../../lib/userData'
 import { streamingProviders, getProviderId, isProviderAvailableInRegion } from '../tmdb'
@@ -32,7 +33,7 @@ export default function ProviderBar({ catalog }: { catalog: Map<number, WatchPro
           <NextLink href='/streaming'>Browse all services</NextLink>
         </Link>
       </Flex>
-      <Flex mt={1} gap={{ base: 3, md: 4 }} overflowX='auto' mx='-0.5rem' px='0.5rem' py='0.5rem' role='group' aria-label='Your streaming services'>
+      <ScrollRail mt={1} gap={{ base: 3, md: 4 }} mx='-0.5rem' px='0.5rem' py='0.5rem' role='group' aria-label='Your streaming services'>
         {entries.map(({ key, id, name }) => {
           const selected = providers.includes(key)
           const logo = catalog?.get(id)?.logo_path
@@ -67,7 +68,7 @@ export default function ProviderBar({ catalog }: { catalog: Map<number, WatchPro
             </Tooltip>
           )
         })}
-      </Flex>
+      </ScrollRail>
     </Box>
   )
 }

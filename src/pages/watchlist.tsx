@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Badge, Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import MovieGrid from '../features/catalog/components/MovieGrid'
 import MovieCard from '../features/catalog/components/MovieCard'
+import ScrollRail from '../features/catalog/components/ScrollRail'
 import ServicesPicker from '../features/alerts/components/ServicesPicker'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import PageHead from '../components/PageHead'
@@ -164,20 +165,19 @@ export default function Watchlist() {
             <Text color='gray.400' fontSize='sm' mb={4}>
               Because of what you rated highly — refreshed daily.
             </Text>
-            <Flex
+            <ScrollRail
               gap={4}
-              overflowX='auto'
               pb={2}
               mx='-1.5rem'
               px='1.5rem'
-              css={{ scrollSnapType: 'x proximity', scrollbarWidth: 'thin' }}
+              css={{ scrollSnapType: 'x proximity' }}
             >
               {picks.map((movie) => (
                 <Box key={`${movie.mediaType || 'movie'}:${movie.id}`} w={{ base: '8.5rem', md: '10.5rem' }} flexShrink={0} scrollSnapAlign='start'>
                   <MovieCard movie={movie} posterFallback='/poster_fallback_galaxy.webp' />
                 </Box>
               ))}
-            </Flex>
+            </ScrollRail>
           </Box>
         )}
 
