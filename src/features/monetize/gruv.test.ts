@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchGruvProduct } from './gruv'
+import { matchGruvProduct, matchGruvBoxSet } from './gruv'
 
 const prod = (title: string, extra: { available?: boolean } = {}) => ({
   title,
@@ -96,5 +96,40 @@ describe('matchGruvProduct', () => {
     const products = [prod('The Wire (2020) [DVD]')]
     expect(matchGruvProduct(products, { title: 'The Wire', year: 2002, mediaType: 'tv' })?.title).toBe('The Wire (2020) [DVD]')
     expect(matchGruvProduct(products, { title: 'The Wire', year: 2002, mediaType: 'movie' })).toBeNull()
+  })
+})
+
+describe('matchGruvBoxSet', () => {
+  it('matches a complete-collection product to the franchise name', () => {
+    const products = [
+      prod('Harry Potter and the Sorcerer\'s Stone [4K Ultra HD]'),
+      prod('Harry Potter: Complete 8-Film Collection [Blu-ray]')
+    ]
+    expect(matchGruvBoxSet(products, { name: 'Harry Potter Collection' })?.title).toContain('Complete 8-Film Collection')
+  })
+
+  it('strips the trailing "Collection" from TMDB collection names', () => {
+    const products = [prod('The Lord of the Rings: The Motion Picture Trilogy [4K Ultra HD]')]
+    expect(matchGruvBoxSet(products, { name: 'The Lord of the Rings Collection' })?.title).toContain('Trilogy')
+  })
+
+  it('still finds literal "box set" phrasing despite the edition stripper', () => {
+    const products = [prod('The Matrix 4-Film Deja Vu Collection Box Set [DVD]')]
+    expect(matchGruvBoxSet(products, { name: 'The Matrix Collection' })?.title).toContain('Box Set')
+  })
+
+  it('rejects a single-film edition that lacks a box-set marker', () => {
+    const products = [prod('John Wick [4K Ultra HD]')]
+    expect(matchGruvBoxSet(products, { name: 'John Wick Collection' })).toBeNull()
+  })
+
+  it('rejects collections from a different franchise', () => {
+    const products = [prod('The Hunger Games: Complete 4-Film Collection [Blu-ray]')]
+    expect(matchGruvBoxSet(products, { name: 'John Wick Collection' })).toBeNull()
+  })
+
+  it('skips sold-out products', () => {
+    const products = [prod('John Wick: 4-Film Collection [Blu-ray]', { available: false })]
+    expect(matchGruvBoxSet(products, { name: 'John Wick Collection' })).toBeNull()
   })
 })

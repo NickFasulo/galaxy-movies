@@ -168,3 +168,35 @@ export async function resolveGruvProduct({ title, year, mediaType = 'movie' }: {
   }
   return null
 }
+
+// Franchise box sets don't title-match a single film ("Harry Potter Collection"
+// vs "Harry Potter: Complete 8-Film Collection"), so the rule is looser than
+// matchGruvProduct: every significant franchise token must appear, plus a
+// box-set marker word.
+const BOX_SET_TOKENS = /\b(collection|collections|complete|box ?set|anthology|saga|series|trilogy|film set)\b/
+const COLLECTION_SUFFIX = /\s+collection$/i
+
+export function matchGruvBoxSet(products: SuggestProduct[], { name }: { name: string }): GruvProduct | null {
+  const franchise = normalizeTitle(stripParens(String(name).replace(COLLECTION_SUFFIX, '')))
+  const tokens = franchise.split(' ').filter((t) => t.length > 1 && !/^(the|of|and|a|an|to|in)$/.test(t))
+  if (!tokens.length) return null
+
+  for (const p of products) {
+    if (p.available === false) continue
+    // Marker test runs before stripEdition, which eats "box set"/"boxset".
+    const full = normalizeTitle(stripParens(String(p.title || '')))
+    if (!BOX_SET_TOKENS.test(full)) continue
+    const norm = stripEdition(full)
+    if (!tokens.every((t) => norm.includes(t))) continue
+    const path = String(p.url || '').split('?')[0]
+    if (!path.startsWith('/products/')) continue
+    return { url: `https://gruv.com${path}`, title: String(p.title) }
+  }
+  return null
+}
+
+export async function resolveGruvBoxSet({ name }: { name?: string | null }): Promise<GruvProduct | null> {
+  const clean = String(name || '').replace(COLLECTION_SUFFIX, '').trim()
+  if (!clean) return null
+  return matchGruvBoxSet(await suggest(`${clean} collection`), { name: clean })
+}

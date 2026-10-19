@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-import { Box, Flex, Text, Link, NativeSelect, Image as ChakraImage } from '@chakra-ui/react';
+import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink, tagAmazonUrl } from '../../monetize/affiliates'
 import { sameStore, type PriceOffer } from '../prices'
@@ -8,31 +8,9 @@ import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../../alerts/hooks/useUserData'
 import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../../monetize/affiliates'
 import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../../monetize/affiliates'
+import AffiliateTextLink from '../../monetize/components/AffiliateTextLink'
 import { LuArrowUpRight } from 'react-icons/lu'
 import type { MediaType, WatchProvider, WatchProvidersRegion } from '../../../types/tmdb'
-
-function AffiliateTextLink({ href, pixel, text, event }: { href: string; pixel: string; text: string; event: string }) {
-  return (
-    <Box position='relative'>
-      <Link
-        href={href}
-        rel='sponsored nofollow noopener'
-        data-umami-event={event}
-        fontSize='2xs'
-        color='gray.500'
-        display='inline-flex'
-        alignItems='center'
-        gap={0.5}
-        transition='color 0.15s'
-        _hover={{ color: 'white' }}
-        target='_blank'
-      >
-        {text} <LuArrowUpRight />
-      </Link>
-      <ChakraImage src={pixel} alt='' aria-hidden w='1px' h='1px' position='absolute' />
-    </Box>
-  );
-}
 
 function VpnLink() {
   return <AffiliateTextLink href={VPN_AFFILIATE_LINK} pixel={VPN_AFFILIATE_PIXEL} text={VPN_LINK_TEXT} event='vpn-click' />
