@@ -14,6 +14,20 @@ export function buildAmazonAffiliateLink(movieTitle = '') {
   return `https://www.amazon.com/s?${params.toString()}`
 }
 
+// Watchmode web_urls are raw store deep links — unpaid unless the Associates
+// tag is appended. Non-Amazon URLs pass through untouched.
+export function tagAmazonUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const parsed = new URL(url)
+    if (!/(^|\.)amazon\.com$/i.test(parsed.hostname)) return url
+    parsed.searchParams.set('tag', AMAZON_ASSOCIATE_TAG)
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 // CJ tracking links for Gruv (program 5830404) — physical media: DVD, Blu-ray,
 // 4K. The 1x1 images are CJ's impression pixels — they power CTR reporting,
 // keep them next to each link.

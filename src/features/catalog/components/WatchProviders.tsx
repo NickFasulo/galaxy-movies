@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Link, NativeSelect, Image as ChakraImage } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { isAmazonProvider, buildAmazonAffiliateLink } from '../../monetize/affiliates'
+import { isAmazonProvider, buildAmazonAffiliateLink, tagAmazonUrl } from '../../monetize/affiliates'
 import { sameStore, type PriceOffer } from '../prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../../alerts/hooks/useUserData'
@@ -77,9 +77,9 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, buck
     </Flex>
   )
 
-  const href = offer?.url || (isAmazonProvider(provider.provider_name)
-    ? buildAmazonAffiliateLink(movieTitle)
-    : affiliateLink)
+  const href = offer?.url
+    ? (isAmazonProvider(provider.provider_name) ? tagAmazonUrl(offer.url) : offer.url)
+    : (isAmazonProvider(provider.provider_name) ? buildAmazonAffiliateLink(movieTitle) : affiliateLink)
 
   if (href) {
     return (
