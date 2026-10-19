@@ -1,5 +1,6 @@
 import { getRedis } from '../../lib/redis'
 import { checkGlobalBudget } from '../../lib/rateLimiter'
+import { resolveGruvProduct, type GruvProduct } from '../monetize/gruv'
 import type { MediaType } from '../../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
@@ -54,6 +55,7 @@ export interface PriceExtras {
   criticScore: number | null
   userRating: number | null
   relevancePercentile: number | null
+  gruv: GruvProduct | null
 }
 
 export interface PricePayload {
@@ -145,10 +147,12 @@ const cheapestOf = (offers: PriceOffer[], type: string): PriceOffer | null =>
     .filter((o) => o.type === type && o.price != null)
     .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0] || null
 
-export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US' }: {
+export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US', title, year }: {
   tmdbId: string | number
   mediaType?: MediaType
   region?: string
+  title?: string | null
+  year?: string | number | null
 }): Promise<PricePayload> {
   const withinBudget = WATCHMODE_REGIONS.includes(region) && (await checkGlobalBudget('watchmode', {
     maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
@@ -156,9 +160,10 @@ export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US
   }))
   const wmId = withinBudget ? await resolveWatchmodeId(tmdbId, mediaType) : null
 
-  const [sources, details] = await Promise.all([
+  const [sources, details, gruv] = await Promise.all([
     wmId ? fetchWatchmodeJson<WatchmodeSource[]>(`/title/${wmId}/sources/?regions=${region}`) : null,
-    wmId ? fetchWatchmodeJson<WatchmodeDetails>(`/title/${wmId}/details`) : null
+    wmId ? fetchWatchmodeJson<WatchmodeDetails>(`/title/${wmId}/details`) : null,
+    region === 'US' ? resolveGruvProduct({ title, year, mediaType }) : null
   ])
 
   const offers = dedupeOffers(sources ? toWatchmodeOffers(sources) : [])
@@ -168,12 +173,11 @@ export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US
     fetchedAt: Date.now(),
     offers,
     cheapest: { rent: cheapestOf(offers, 'rent'), buy: cheapestOf(offers, 'buy') },
-    extras: details
-      ? {
-          criticScore: details.critic_score ?? null,
-          userRating: details.user_rating ?? null,
-          relevancePercentile: details.relevance_percentile ?? null
-        }
-      : { criticScore: null, userRating: null, relevancePercentile: null }
+    extras: {
+      criticScore: details?.critic_score ?? null,
+      userRating: details?.user_rating ?? null,
+      relevancePercentile: details?.relevance_percentile ?? null,
+      gruv
+    }
   }
 }

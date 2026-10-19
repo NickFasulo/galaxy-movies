@@ -38,8 +38,9 @@ function VpnLink() {
   return <AffiliateTextLink href={VPN_AFFILIATE_LINK} pixel={VPN_AFFILIATE_PIXEL} text={VPN_LINK_TEXT} event='vpn-click' />
 }
 
-function GruvLink({ title }: { title?: string }) {
-  return <AffiliateTextLink href={buildGruvLink(title)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} event='gruv-click' />
+function GruvLink({ product }: { product?: { url: string; title: string } | null }) {
+  if (!product?.url) return null
+  return <AffiliateTextLink href={buildGruvLink(product.url)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} event='gruv-click' />
 }
 
 function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, bucket }: {
@@ -174,6 +175,7 @@ export default function WatchProviders({
   const cheapestRent = priceData?.cheapest?.rent
   const cheapestBuy = priceData?.cheapest?.buy
   const criticScore = priceData?.extras?.criticScore
+  const gruv = priceData?.extras?.gruv
 
   const seasonNotes = mediaType === 'tv'
     ? offers
@@ -279,7 +281,7 @@ export default function WatchProviders({
                       cheapestBuy && `Buy from ${formatPrice(cheapestBuy)}`
                     ].filter(Boolean).join(' · ')}
                   </Text>
-                  <GruvLink title={movieTitle} />
+                  <GruvLink product={gruv} />
                 </Flex>
               </Box>
             )}
@@ -290,7 +292,7 @@ export default function WatchProviders({
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
             <Flex align='center' gap={4} wrap='wrap'>
-              <GruvLink title={movieTitle} />
+              <GruvLink product={gruv} />
               <VpnLink />
             </Flex>
           </Box>

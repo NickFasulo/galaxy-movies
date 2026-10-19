@@ -15,7 +15,7 @@ const PRICE_TTL_SECONDS = 60 * 60 * 24
 const EMPTY_TTL_SECONDS = 60 * 10
 const EMPTY_TTL_MS = EMPTY_TTL_SECONDS * 1000
 
-const EMPTY: Pick<PricePayload, 'offers' | 'cheapest' | 'extras'> = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null } }
+const EMPTY: Pick<PricePayload, 'offers' | 'cheapest' | 'extras'> = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null, gruv: null } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireMethod(req, res, 'GET')) return
@@ -70,15 +70,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
   }
 
+  const title = firstParam(req.query.title)
+  const year = firstParam(req.query.year)
+
   let payload: PricePayload
   try {
-    payload = { cacheKey, ...(await getPriceOffers({ tmdbId, mediaType, region })) }
+    payload = { cacheKey, ...(await getPriceOffers({ tmdbId, mediaType, region, title, year })) }
   } catch (err) {
     console.error('Price lookup failed:', err)
     payload = { region, fetchedAt: Date.now(), ...EMPTY }
   }
 
-  const isEmpty = !payload.offers?.length && !payload.extras?.criticScore
+  const isEmpty = !payload.offers?.length && !payload.extras?.criticScore && !payload.extras?.gruv
   priceCache.set(cacheKey, payload, { ttl: isEmpty ? EMPTY_TTL_MS : undefined })
   if (kv) {
     try {
