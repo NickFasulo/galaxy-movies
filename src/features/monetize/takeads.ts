@@ -4,9 +4,12 @@ const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/
 
 // TMDB provider_name substrings → homepage. Amazon is intentionally absent:
 // those providers keep the existing Associates search link instead.
-// Offers are GEO-gated per Takeads' merchant list (Oct 2026) — e.g. Disney+
-// only converts in ID/MY/TH, STARZ only in MENA — so some links resolve but
-// only monetize clicks from those regions.
+// Offers are GEO-gated per Takeads' merchant directory (audited Oct 19, 2026):
+// US-converting: Paramount+ (US-only), Disney+ ($11 CPA, US incl.), fubo
+// (CA/ES/US), Hulu (WW, $9.60 — catalog-active but this account's resolve
+// returns null, needs program approval). Non-US: STARZplay (MENA only).
+// Unverifiable without dashboard access: apple tv, crunchyroll, espn+, plex,
+// sling. Everything else resolves to null — plain outbound link, unpaid.
 const PROVIDER_HOME_PAGES: [string, string][] = [
   ['netflix', 'https://www.netflix.com'],
   ['hulu', 'https://www.hulu.com'],
