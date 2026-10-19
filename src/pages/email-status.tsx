@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
+import { Box } from '@chakra-ui/react'
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
+import PlusUpsell from '../features/billing/components/PlusUpsell'
 import { firstParam } from '../lib/http'
 import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../features/alerts/alertsSync'
 import { getUserData, mergeSyncedPrefs } from '../lib/userData'
@@ -27,6 +29,9 @@ const STATUSES: Record<string, { title: string; body: string }> = {
 export default function EmailStatus() {
   const { query } = useRouter()
   const status = STATUSES[firstParam(query.status) ?? ''] || STATUSES.error
+  const [credsReady, setCredsReady] = useState(false)
+  const statusKey = firstParam(query.status)
+  const showUpsell = statusKey === 'confirmed' || statusKey === 'watch-confirmed'
 
   // Credentials travel in the URL fragment (never sent to the server on
   // redirect) rather than the query string, so they're read here client-side.
@@ -44,6 +49,8 @@ export default function EmailStatus() {
     // existing profile instead of overwriting it with empty local state.
     const creds = { email, key }
     void (async () => {
+      // Remount the upsell so its localStorage read sees the fresh creds.
+      setCredsReady(true)
       const prefs = await fetchSyncedPrefs(creds)
       if (prefs) mergeSyncedPrefs(prefs)
       await syncAlertsNow(getUserData(), creds)
@@ -54,6 +61,11 @@ export default function EmailStatus() {
     <>
       <InfoPage title={status.title} description={status.body} noindex withBackButton>
         <InfoParagraph>{status.body}</InfoParagraph>
+        {showUpsell && (
+          <Box mt={4} maxW='24rem'>
+            <PlusUpsell key={String(credsReady)} />
+          </Box>
+        )}
       </InfoPage>
     </>
   )

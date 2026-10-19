@@ -6,6 +6,7 @@ import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
+import { startPlusCheckout } from '../features/billing/components/PlusUpsell'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
 import { firstParam } from '../lib/http'
 
@@ -35,21 +36,12 @@ export default function Plus() {
     if (!creds) return
     setBusy(plan)
     setError('')
-    try {
-      const resp = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: creds.email, key: creds.key, plan })
-      })
-      const data = await resp.json().catch(() => ({}))
-      if (resp.ok && data.url) {
-        window.location.href = data.url
-        return
-      }
-      setError(data.error || 'Could not start checkout. Please try again.')
-    } catch {
-      setError('Could not start checkout. Please try again.')
+    const { url, error } = await startPlusCheckout(creds, plan)
+    if (url) {
+      window.location.href = url
+      return
     }
+    setError(error || 'Could not start checkout. Please try again.')
     setBusy(null)
   }
 

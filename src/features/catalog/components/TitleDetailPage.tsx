@@ -14,6 +14,7 @@ import { DetailCreditLine, DetailCreditLink } from './DetailCredit'
 import RatingWidget from '../../alerts/components/RatingWidget'
 import WatchProviders from './WatchProviders'
 import TitleAvailability from './TitleAvailability'
+import PlusUpsell from '../../billing/components/PlusUpsell'
 import SimilarMovies from './SimilarMovies'
 import GalaxyBotTake from './GalaxyBotTake'
 import CastSection from './CastSection'
@@ -417,6 +418,10 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                 tmdbType={media}
                 title={displayTitle || ''}
               />
+            </Box>
+
+            <Box w='20rem' maxW='100%'>
+              <PlusUpsell />
             </Box>
           </>
         }
