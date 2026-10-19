@@ -178,7 +178,8 @@ export default function ThisMonthProvider({ provider, providerLabel, monthLabel,
             )}
 
             <Text mt={8} color='gray.500' fontSize='sm'>
-              <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>See the full dated list for {providerLabel}</Link> or{' '}
+              See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel}</Link>,{' '}
+              <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what left</Link>, or{' '}
               <Link href={`/streaming/${provider}`} style={{ textDecoration: 'underline' }}>browse the whole catalog</Link>.
             </Text>
           </>

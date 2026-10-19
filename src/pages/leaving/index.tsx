@@ -17,8 +17,8 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 export default function LeavingIndex() {
   const canonicalUrl = `${SITE_URL}/leaving`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const title = `What's New and Leaving Streaming (${monthLabel})`
-  const description = `Dated lists of movies and shows added to and leaving each major streaming service in ${monthLabel}, plus what's coming next — tracked daily from US catalogs.`
+  const title = `What's Leaving Streaming Services (${monthLabel})`
+  const description = `Dated lists of movies and shows leaving each major streaming service in ${monthLabel} — tracked daily from US catalogs.`
 
   const providers = Object.keys(PROVIDER_NAME_MATCH)
     .filter((key) => streamingProviders[key])
@@ -30,7 +30,7 @@ export default function LeavingIndex() {
     url: canonicalUrl,
     items: providers.map((p) => ({
       '@type': 'WebPage',
-      name: `What's new and leaving ${p.label}`,
+      name: `Leaving ${p.label}`,
       url: `${SITE_URL}/leaving/${p.key}`
     }))
   })
@@ -44,14 +44,14 @@ export default function LeavingIndex() {
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'Added & Leaving', url: canonicalUrl }
+          { name: 'Leaving', url: canonicalUrl }
         ]}
       >
         <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.400' fontStyle='italic'>
-          Also see <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases streaming now</Link> or{' '}
+          Also see <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>what&apos;s new on each service</Link> or{' '}
           <Link href='/this-month' style={{ textDecoration: 'underline' }}>which service is worth it this month</Link>.
         </Text>
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Pick a service</Heading>

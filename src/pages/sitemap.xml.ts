@@ -91,6 +91,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/widgets`),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`)),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/this-month/${provider}`)),
+    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/new-on-streaming/${provider}`)),
     urlEntry(`${siteUrl}/free`),
     urlEntry(`${siteUrl}/collections`),
     urlEntry(`${siteUrl}/lists`),

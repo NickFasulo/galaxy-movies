@@ -227,6 +227,13 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
           </>
         )}
 
+        {PROVIDER_NAME_MATCH[provider] && (
+          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+            See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel} this month</Link> or{' '}
+            <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s leaving</Link>.
+          </Text>
+        )}
+
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
           Compare other services
         </Heading>

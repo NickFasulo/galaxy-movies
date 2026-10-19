@@ -37,8 +37,6 @@ interface Props {
   monthLabel: string
   monthShort: string
   updatedLabel: string | null
-  coming: DayGroup[]
-  arrived: DayGroup[]
   departed: DayGroup[]
   trackedProviders: { key: string; label: string }[]
   dataError?: boolean
@@ -83,15 +81,11 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
 
   try {
     const monthly = (await getMonthlyChanges([slug]))[slug]
-    let coming: DayGroup[] = []
-    let arrived: DayGroup[] = []
     let departed: DayGroup[] = []
     let updatedAt: number | null = monthly?.updatedAt ?? null
     let month = monthly?.month ?? today.slice(0, 7)
 
     if (monthly) {
-      coming = groupDays(monthly.coming, 'asc')
-      arrived = groupDays(monthly.arrived, 'desc')
       departed = groupDays(monthly.departed, 'desc')
     } else {
       const fallback = (await getProviderChanges([slug]))[slug]
@@ -99,8 +93,6 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
         updatedAt = fallback.updatedAt
         month = new Date(fallback.updatedAt).toISOString().slice(0, 7)
         const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
-        coming = groupDays(fallback.coming, 'asc')
-        arrived = groupDays(fallback.added.map((t) => ({ ...t, date: stamp })), 'desc')
         departed = groupDays(fallback.left.map((t) => ({ ...t, date: stamp })), 'desc')
       }
     }
@@ -113,8 +105,6 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
         monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
         monthShort: MONTHS_SHORT[monthNum - 1],
         updatedLabel: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : null,
-        coming,
-        arrived,
         departed
       }
     }
@@ -127,8 +117,6 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
         monthLabel: `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`,
         monthShort: MONTHS_SHORT[Number(today.slice(5, 7)) - 1],
         updatedLabel: null,
-        coming: [],
-        arrived: [],
         departed: [],
         dataError: true
       }
@@ -163,16 +151,16 @@ function DaySection({ heading, groups, emptyText }: { heading: string; groups: D
   )
 }
 
-export default function LeavingProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, coming, arrived, departed, trackedProviders, dataError }: Props) {
+export default function LeavingProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, departed, trackedProviders, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/leaving/${provider}`
-  const title = `What's New and Leaving ${providerLabel} (${monthLabel})`
-  const description = `Movies and shows added to and leaving ${providerLabel} in ${monthLabel}, plus what's coming next — tracked daily from the US catalog.`
+  const title = `Leaving ${providerLabel} in ${monthLabel}`
+  const description = `Movies and shows that left ${providerLabel} in ${monthLabel} — the dated departures list, updated daily from the US catalog.`
 
   const itemListData = itemListSchema({
     name: title,
     description,
     url: canonicalUrl,
-    items: [...arrived, ...coming]
+    items: departed
       .flatMap((group) => group.items)
       .slice(0, 20)
       .map((t) => ({
@@ -191,7 +179,7 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'Added & Leaving', url: `${SITE_URL}/leaving` },
+          { name: 'Leaving', url: `${SITE_URL}/leaving` },
           { name: providerLabel, url: canonicalUrl }
         ]}
       >
@@ -202,21 +190,18 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
           <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} US catalog.</Text>
         )}
         <Text mt={2} color='gray.500' fontSize='sm'>
-          Browse <Link href={`/streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything currently on {providerLabel}</Link> or see{' '}
-          <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases across all services</Link>.
+          See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s new on {providerLabel}</Link>, browse{' '}
+          <Link href={`/streaming/${provider}`} style={{ textDecoration: 'underline' }}>the full catalog</Link>, or check{' '}
+          <Link href={`/this-month/${provider}`} style={{ textDecoration: 'underline' }}>whether it&apos;s worth it this month</Link>.
         </Text>
 
         {dataError ? (
           <Text mt={10}>Streaming data is temporarily unavailable. Please try again later.</Text>
         ) : (
-          <>
-            <DaySection heading='Coming soon' groups={coming} emptyText={`No upcoming ${providerLabel} releases tracked yet.`} />
-            <DaySection heading={`Added in ${monthShort}`} groups={arrived} emptyText={`No additions tracked yet in ${monthShort}.`} />
-            <DaySection heading={`Left in ${monthShort}`} groups={departed} emptyText={`No departures tracked yet in ${monthShort}.`} />
-          </>
+          <DaySection heading={`Left in ${monthShort}`} groups={departed} emptyText={`No departures tracked yet in ${monthShort}.`} />
         )}
 
-        <Heading as='h2' size='sm' mt={12} mb={3}>Other services</Heading>
+        <Heading as='h2' size='sm' mt={12} mb={3}>Leaving other services</Heading>
         <Flex wrap='wrap' columnGap={2} rowGap={1} fontSize='sm'>
           {trackedProviders.filter((p) => p.key !== provider).map((p, i) => (
             <Fragment key={p.key}>
@@ -227,12 +212,11 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         </Flex>
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
-          Arrival dates come from the service&apos;s release schedule where available. &quot;Left&quot; dates mark the day a title was
-          detected out of the tracked catalog — official removal dates aren&apos;t published by all services. List covers the US catalog and updates daily.
+          &quot;Left&quot; dates mark the day a title was detected out of the tracked catalog — official removal dates aren&apos;t
+          published by all services. List covers the US catalog and updates daily.
         </Text>
         <Text mt={4} color='gray.500' fontSize='sm'>
-          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily. Or{' '}
-          <Link href={`/this-month/${provider}`} style={{ textDecoration: 'underline' }}>is {providerLabel} worth it this month?</Link>
+          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily.
         </Text>
       </PageShell>
     </>
