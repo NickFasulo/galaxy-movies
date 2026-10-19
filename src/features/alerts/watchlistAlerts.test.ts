@@ -102,6 +102,28 @@ describe('matchItems', () => {
     expect(matches[0]).toMatchObject({ kind: 'leaving', notifiedKey: 'leaving:movie:1@netflix' })
   })
 
+  it('matches scheduled departures with the announced date', () => {
+    const changes = {
+      netflix: providerChanges({
+        leavingSoon: [{ tmdbId: 1, tmdbType: 'movie', title: 'Title 1', date: '2026-11-01', season: null }]
+      })
+    }
+    const matches = matchItems(prefs(), changes, new Set(), { leaving: true })
+    expect(matches).toHaveLength(1)
+    expect(matches[0]).toMatchObject({ kind: 'leaving', date: '2026-11-01', notifiedKey: 'leaving:movie:1@netflix' })
+  })
+
+  it('the leaving heads-up dedupes the later detected departure', () => {
+    const notified = new Set(['leaving:movie:1@netflix'])
+    const changes = {
+      netflix: providerChanges({
+        left: [catalogTitle(1)],
+        leavingSoon: [{ tmdbId: 1, tmdbType: 'movie', title: 'Title 1', date: '2026-11-01', season: null }]
+      })
+    }
+    expect(matchItems(prefs(), changes, notified, { leaving: true })).toHaveLength(0)
+  })
+
   it('taste-matches added titles against the rec index, crediting the rated title', () => {
     const taste = new Map([['movie:99', 'Inception']])
     const matches = matchItems(

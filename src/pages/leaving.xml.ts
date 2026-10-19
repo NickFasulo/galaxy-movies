@@ -61,6 +61,16 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
         description: `${t.title} arrives on ${label} on ${t.date}.`
       })
     }
+    for (const t of change.leavingSoon || []) {
+      if (!t.tmdbId) continue
+      items.push({
+        title: `${t.title} leaving ${label} ${t.date}`,
+        link: `${SITE_URL}/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`,
+        guid: `leaving:${t.tmdbType}:${t.tmdbId}@${key}:${t.date}`,
+        pubDate,
+        description: `${t.title} is scheduled to leave ${label} on ${t.date}.`
+      })
+    }
   }
 
   items.sort((a, b) => b.pubDate - a.pubDate)

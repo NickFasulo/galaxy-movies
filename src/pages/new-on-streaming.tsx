@@ -1,10 +1,10 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
-import { Box, Heading, Text } from '@chakra-ui/react'
+import { Box, Flex, Heading, Text } from '@chakra-ui/react'
 import MovieGrid from '../features/catalog/components/MovieGrid'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import { streamingProviders, getProviderIds, isProviderAvailableInRegion, fetchListMovies } from '../features/catalog/tmdb'
+import { streamingProviders, getProviderIds, isProviderAvailableInRegion, fetchListMovies, PROVIDER_NAME_MATCH } from '../features/catalog/tmdb'
 import { detectRegion } from '../lib/region'
 import { withTimeout } from '../lib/withTimeout'
 import { getProviderChanges, type ProviderChanges } from '../features/catalog/streamingChanges'
@@ -149,6 +149,19 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
         <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
+          <Flex wrap='wrap' columnGap={2} rowGap={1} mt={2} fontSize='sm' align='center'>
+            <Text color='gray.500'>Dated arrivals by service:</Text>
+            {Object.keys(PROVIDER_NAME_MATCH)
+              .filter((key) => streamingProviders[key])
+              .map((key, i, arr) => (
+                <Text key={key} as='span'>
+                  <Link href={`/new-on-streaming/${key}`} style={{ textDecoration: 'underline' }}>
+                    {streamingProviders[key].title.replace(' Movies', '')}
+                  </Link>
+                  {i < arr.length - 1 && <Text as='span' color='gray.600'> ·</Text>}
+                </Text>
+              ))}
+          </Flex>
           {dataError ? (
             <Text mt={10} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>
           ) : sections.length === 0 ? (

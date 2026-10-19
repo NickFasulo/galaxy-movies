@@ -1,5 +1,6 @@
 import { getRedis } from '../../lib/redis'
 import { checkGlobalBudget } from '../../lib/rateLimiter'
+import { recordWatchmodeQuota, watchmodeQuotaExceeded } from './watchmodeQuota'
 import { resolveGruvProduct, type GruvProduct } from '../monetize/gruv'
 import type { MediaType } from '../../types/tmdb'
 
@@ -7,7 +8,7 @@ const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const WM_ID_TTL_SECONDS = 60 * 60 * 24 * 7
 // Hard daily cap on uncached title lookups: Watchmode quota is monthly, so rotating-IP
 // scraping of /api/prices must not be able to exhaust it.
-const DAILY_UPSTREAM_LOOKUP_BUDGET = Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 300
+const DAILY_UPSTREAM_LOOKUP_BUDGET = Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 150
 const SEARCH_FIELD: Record<MediaType, string> = { movie: 'tmdb_movie_id', tv: 'tmdb_tv_id' }
 
 // Watchmode free tier only serves US sources — skip upstream calls elsewhere.
@@ -87,6 +88,7 @@ async function resolveWatchmodeId(tmdbId: string | number, mediaType: MediaType)
   try {
     const url = `${WATCHMODE_BASE}/search/?search_field=${SEARCH_FIELD[mediaType] || SEARCH_FIELD.movie}&search_value=${tmdbId}`
     const resp = await fetch(url, { headers: { 'X-API-Key': apiKey } })
+    recordWatchmodeQuota(resp)
     if (!resp.ok) return null
     const data: { title_results?: { id: number }[] } = await resp.json()
     const wmId = data.title_results?.[0]?.id || null
@@ -106,6 +108,7 @@ async function fetchWatchmodeJson<T>(path: string): Promise<T | null> {
   if (!apiKey) return null
   try {
     const resp = await fetch(`${WATCHMODE_BASE}${path}`, { headers: { 'X-API-Key': apiKey } })
+    recordWatchmodeQuota(resp)
     if (!resp.ok) return null
     return await resp.json()
   } catch {
@@ -154,15 +157,19 @@ export async function getPriceOffers({ tmdbId, mediaType = 'movie', region = 'US
   title?: string | null
   year?: string | number | null
 }): Promise<PricePayload> {
-  const withinBudget = WATCHMODE_REGIONS.includes(region) && (await checkGlobalBudget('watchmode', {
-    maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
-    windowSeconds: 60 * 60 * 24
-  }))
+  const withinBudget = WATCHMODE_REGIONS.includes(region)
+    && !(await watchmodeQuotaExceeded(0.9))
+    && (await checkGlobalBudget('watchmode', {
+      maxRequests: DAILY_UPSTREAM_LOOKUP_BUDGET,
+      windowSeconds: 60 * 60 * 24
+    }))
   const wmId = withinBudget ? await resolveWatchmodeId(tmdbId, mediaType) : null
 
-  const [sources, details, gruv] = await Promise.all([
-    wmId ? fetchWatchmodeJson<WatchmodeSource[]>(`/title/${wmId}/sources/?regions=${region}`) : null,
-    wmId ? fetchWatchmodeJson<WatchmodeDetails>(`/title/${wmId}/details`) : null,
+  // Details costs a second credit — skip it when nothing is on offer upstream
+  // (resolved-but-offerless titles are the bulk of empty payloads).
+  const sources = wmId ? await fetchWatchmodeJson<WatchmodeSource[]>(`/title/${wmId}/sources/?regions=${region}`) : null
+  const [details, gruv] = await Promise.all([
+    wmId && sources?.length ? fetchWatchmodeJson<WatchmodeDetails>(`/title/${wmId}/details`) : null,
     region === 'US' ? resolveGruvProduct({ title, year, mediaType }) : null
   ])
 

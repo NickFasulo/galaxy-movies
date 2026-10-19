@@ -1,9 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getWeeklySlate, providerLabel } from '../../../features/game/questions'
+import { checkPublicDigestLimit } from '../../../lib/rateLimiter'
 
 // Public read-only weekly prediction slate for the Still Streaming? Devvit app.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+  if (!(await checkPublicDigestLimit(req))) return res.status(429).json({ error: 'Rate limit reached' })
 
   try {
     const slate = await getWeeklySlate()

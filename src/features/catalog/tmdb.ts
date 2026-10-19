@@ -35,6 +35,7 @@ export interface DiscoverOptions {
   region?: string
   page?: number
   releasedAfter?: string
+  monetizationTypes?: string
 }
 
 export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promise<T> {
@@ -247,11 +248,14 @@ const pagedTv = (data: TmdbPaged<TmdbTvShow>): TmdbPaged<NormalizedTvShow> => ({
   results: (data.results || []).filter(hasPoster).map(normalizeTvTitle)
 })
 
-function withCatalogFilters(params: TmdbParams, { genreId, providerId, region }: Pick<DiscoverOptions, 'genreId' | 'providerId' | 'region'>): TmdbParams {
+function withCatalogFilters(params: TmdbParams, { genreId, providerId, region, monetizationTypes }: Pick<DiscoverOptions, 'genreId' | 'providerId' | 'region' | 'monetizationTypes'>): TmdbParams {
   if (genreId) params.with_genres = genreId
   if (providerId) {
     params.with_watch_providers = providerId
     params.watch_region = region || 'US'
+    // Only meaningful alongside with_watch_providers — without it the catalogs
+    // would include rent/buy-only titles, unlike the sub+free diffs we track.
+    if (monetizationTypes) params.with_watch_monetization_types = monetizationTypes
   }
   return params
 }
@@ -280,6 +284,10 @@ export const streamingProviders: Record<string, StreamingProvider> = {
   'mgm-plus': { title: 'MGM+ Movies', ids: { default: 34 }, regions: ['US'] },
   crunchyroll: { title: 'Crunchyroll Movies', ids: { default: 283 }, regions: ['US'] },
   'discovery-plus': { title: 'Discovery+ Movies', ids: { default: 520, IN: 510 } },
+  plex: { title: 'Plex Movies', ids: { default: 538 }, regions: ['US'] },
+  kanopy: { title: 'Kanopy Movies', ids: { default: 191 }, regions: ['US'] },
+  shudder: { title: 'Shudder Movies', ids: { default: 99 }, regions: ['US'] },
+  criterion: { title: 'Criterion Channel Movies', ids: { default: 258 }, regions: ['US'] },
   jiohotstar: { title: 'JioHotstar Movies', ids: { default: 2336 }, regions: ['IN'] },
   zee5: { title: 'ZEE5 Movies', ids: { default: 232 }, regions: ['IN'] },
   sonyliv: { title: 'SonyLIV Movies', ids: { default: 237 }, regions: ['IN'] },
@@ -323,7 +331,13 @@ export const PROVIDER_NAME_MATCH: Record<string, RegExp> = {
   'amc-plus': /^amc\+|amc plus/i,
   'mgm-plus': /^mgm/i,
   'crunchyroll': /^crunchyroll/i,
-  'discovery-plus': /^discovery/i
+  'discovery-plus': /^discovery/i,
+  // Anchored patterns: add-on channels like "Shudder Amazon Channel" or
+  // "Plex Channel" must not resolve to the primary service.
+  'plex': /^plex$/i,
+  'kanopy': /^kanopy$/i,
+  'shudder': /^shudder$/i,
+  'criterion': /criterion channel$/i
 }
 
 export function getProviderId(providerKey: string, region = 'US'): number | null {
@@ -336,7 +350,7 @@ export function isProviderAvailableInRegion(providerKey: string, region = 'US'):
   return !provider.regions || provider.regions.includes(region)
 }
 
-export async function fetchDiscoverMovies({ category, genreId, providerId, region, releasedAfter, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
+export async function fetchDiscoverMovies({ category, genreId, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
@@ -368,7 +382,7 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params.with_original_language = categoryLanguage
   }
 
-  withCatalogFilters(params, { genreId, providerId, region })
+  withCatalogFilters(params, { genreId, providerId, region, monetizationTypes })
 
   return pagedMovies(await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params))
 }
@@ -386,7 +400,7 @@ async function fetchList(path: '/discover/movie' | '/discover/tv', discoverParam
   })
 }
 
-export async function fetchDiscoverTv({ category, genreId, providerId, region, releasedAfter, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
+export async function fetchDiscoverTv({ category, genreId, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const daysAgo = (n: number) => {
@@ -431,7 +445,7 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, r
     params.sort_by = 'first_air_date.desc'
   }
 
-  withCatalogFilters(params, { genreId, providerId, region })
+  withCatalogFilters(params, { genreId, providerId, region, monetizationTypes })
 
   return pagedTv(await fetchTmdb<TmdbPaged<TmdbTvShow>>('/discover/tv', params))
 }

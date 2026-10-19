@@ -8,11 +8,12 @@ import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
 
 // Server-side proxy for Watchmode pricing — keeps WATCHMODE_API_KEY off the
 // client and caches hard, since free-tier Watchmode quota is monthly.
-const priceCache = new LRUCache<string, PricePayload>({ max: 5000, ttl: 1000 * 60 * 60 * 24 })
-const PRICE_TTL_SECONDS = 60 * 60 * 24
+const priceCache = new LRUCache<string, PricePayload>({ max: 5000, ttl: 1000 * 60 * 60 * 72 })
+const PRICE_TTL_SECONDS = 60 * 60 * 72
 // Empty results are usually transient (upstream hiccup, missing key) — don't
-// poison the day-long cache with them.
-const EMPTY_TTL_SECONDS = 60 * 10
+// poison the long cache with them. Still long enough to stop resolved-but-
+// offerless titles from re-burning Watchmode credits on every pageview.
+const EMPTY_TTL_SECONDS = 60 * 60 * 6
 const EMPTY_TTL_MS = EMPTY_TTL_SECONDS * 1000
 
 const EMPTY: Pick<PricePayload, 'offers' | 'cheapest' | 'extras'> = { offers: [], cheapest: { rent: null, buy: null }, extras: { criticScore: null, userRating: null, relevancePercentile: null, gruv: null } }
@@ -64,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       maxRequests: 60,
       windowSeconds: 60 * 60
     }),
-    checkGlobalBudget('price', { maxRequests: 500, windowSeconds: 60 * 60 })
+    checkGlobalBudget('price', { maxRequests: 100, windowSeconds: 60 * 60 })
   ])
   if (!allowed || !withinGlobal) {
     return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })

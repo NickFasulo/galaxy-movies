@@ -124,6 +124,21 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
           provider: change.source
         })
       }
+      // Scheduled departures share the plain `leaving:` key — the heads-up
+      // counts as notified, so the later detection doesn't re-ping.
+      for (const item of change.leavingSoon || []) {
+        if (!item.tmdbId || !watchlistKeys.has(`${item.tmdbType}:${item.tmdbId}`)) continue
+        push({
+          kind: 'leaving',
+          notifiedKey: `leaving:${item.tmdbType}:${item.tmdbId}@${providerKey}`,
+          tmdbId: item.tmdbId,
+          tmdbType: item.tmdbType,
+          title: item.title,
+          provider: change.source,
+          date: item.date,
+          season: item.season
+        })
+      }
     }
 
     if (opts.taste?.size) {
@@ -189,7 +204,7 @@ export function statusLine(item: MatchedItem): string {
     case 'coming':
       return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
-      return `Leaving ${escapeHtml(item.provider)} soon`
+      return `Leaving ${escapeHtml(item.provider)}${item.date ? ` ${prettyDate(item.date)}` : ' soon'}${item.season ? `, season ${item.season}` : ''}`
     case 'episode':
       return episodeLine(item)
     case 'taste':
@@ -229,7 +244,7 @@ function discordStatusLine(item: MatchedItem): string {
     case 'coming':
       return `Coming to ${item.provider}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
-      return `Leaving ${item.provider} soon`
+      return `Leaving ${item.provider}${item.date ? ` ${prettyDate(item.date)}` : ' soon'}${item.season ? `, season ${item.season}` : ''}`
     case 'episode':
       return episodeLine(item)
     case 'taste':

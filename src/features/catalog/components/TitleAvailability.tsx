@@ -26,6 +26,9 @@ export default function TitleAvailability({ events, tmdbId, tmdbType, title }: P
   for (const e of events?.coming || []) {
     rows.push({ text: `Arrives on ${providerLabel(e.p)}${e.date ? `, ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }
+  for (const e of events?.leaving || []) {
+    rows.push({ text: `Leaves ${providerLabel(e.p)}${e.date ? ` ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
+  }
   for (const e of events?.added || []) {
     rows.push({ text: `Added to ${providerLabel(e.p)}${e.date ? `, ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }

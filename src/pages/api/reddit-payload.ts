@@ -1,12 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getProviderChanges } from '../../features/catalog/streamingChanges'
 import { BROADCAST_LINK, BROADCAST_PROVIDERS, buildBroadcastPost } from '../../features/social/socialBroadcast'
+import { checkPublicDigestLimit } from '../../lib/rateLimiter'
 
 // Public read-only payload the r/galaxymovies Devvit app polls on its weekly
 // schedule. Contains only already-public digest content; `key` lets the caller
-// dedupe without comparing bodies.
+// dedupe without comparing bodies. Rate-limited but no UA check — the Devvit
+// fetcher isn't a browser.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+
+  if (!(await checkPublicDigestLimit(req))) {
+    return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
+  }
 
   try {
     const changes = await getProviderChanges(BROADCAST_PROVIDERS)

@@ -1,4 +1,5 @@
 import { getRedis } from './redis'
+import { getWatchmodeQuota } from '../features/catalog/watchmodeQuota'
 import { getCostEstimate, getUsageStats } from '../features/ai/aiUsage'
 import { isPlusActive, parseBillingRecord } from '../features/billing/billing'
 import {
@@ -501,7 +502,7 @@ async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise
   metrics.push({
     label: 'Expenses (this month)',
     value: `$${expenses.toFixed(2)}`,
-    hint: `${expenseParts.join(' · ') || 'none'}${fixedExpenses?.length ? '' : ' — Cloudflare, Resend, Watchmode untracked'}`
+    hint: `${expenseParts.join(' · ') || 'none'}${fixedExpenses?.length ? '' : ' — Cloudflare, Resend untracked'}`
   })
   if (hasIncome) metrics.push({ label: 'Net (this month)', value: `$${(income - expenses).toFixed(2)}` })
   metrics.push(...detail)
@@ -513,7 +514,7 @@ async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise
 // (rather than exported) so a cap change can't silently shift the display only.
 const BUDGET_WINDOWS = [
   { key: 'chat', label: 'Chat calls', cap: 1000, per: 'day' },
-  { key: 'watchmode', label: 'Watchmode lookups', cap: Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 300, per: 'day' },
+  { key: 'watchmode', label: 'Watchmode lookups', cap: Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 150, per: 'day' },
   { key: 'waitlist', label: 'Waitlist submissions', cap: 500, per: 'day' },
   { key: 'billing_recover', label: 'Recovery emails', cap: 500, per: 'day' },
   { key: 'ai_review', label: 'AI reviews', cap: 20, per: 'min' },
@@ -521,8 +522,40 @@ const BUDGET_WINDOWS = [
   { key: 'ai_list_intro', label: 'AI list intros', cap: 10, per: 'min' },
   { key: 'wp_lookup', label: 'Uncached provider lookups', cap: 5000, per: 'hour' },
   { key: 'discover', label: 'Discover calls', cap: 2000, per: 'hour' },
-  { key: 'price', label: 'Uncached price lookups', cap: 500, per: 'hour' }
+  { key: 'price', label: 'Uncached price lookups', cap: 100, per: 'hour' }
 ]
+
+// /status is the zero-credit quota probe; the recorded response headers are the
+// freshest seen mid-flight sample and confirm the circuit breaker has data.
+async function watchmodePanel(): Promise<UsagePanel> {
+  const apiKey = process.env.WATCHMODE_API_KEY
+  const link = 'https://api.watchmode.com/dashboard'
+  if (!apiKey) return unconfigured('Watchmode', ['WATCHMODE_API_KEY'], link)
+
+  const metrics: UsageMetric[] = []
+  try {
+    const resp = await fetch('https://api.watchmode.com/v1/status/', { headers: { 'X-API-Key': apiKey } })
+    const live = resp.ok ? ((await resp.json()) as { quota?: number; quotaUsed?: number }) : null
+    if (live?.quota && live.quotaUsed != null) {
+      metrics.push({
+        label: 'Monthly quota',
+        value: `${fmt(live.quotaUsed)} / ${fmt(live.quota)}`,
+        hint: `${Math.round((live.quotaUsed / live.quota) * 100)}% used`
+      })
+    }
+  } catch {}
+
+  const seen = await getWatchmodeQuota()
+  if (seen) {
+    metrics.push({
+      label: 'Last seen via headers',
+      value: `${fmt(seen.used)} / ${fmt(seen.quota)}`,
+      hint: `${Math.max(0, Math.round((Date.now() - seen.at) / 60000))}m ago`
+    })
+  }
+
+  return { name: 'Watchmode', status: 'ok', link, metrics }
+}
 
 async function rateLimitsPanel(): Promise<UsagePanel> {
   const kv = getRedis()
@@ -650,6 +683,7 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     guarded('Polar', polarPanel),
     guarded('Finance', () => financePanel(costBucketsPromise)),
     guarded('Rate limits', rateLimitsPanel),
+    guarded('Watchmode', watchmodePanel),
     guarded('Subscribers', subscribersPanel),
     guarded('AI usage', aiUsagePanel)
   ])

@@ -16,7 +16,27 @@ const BOT_PATTERNS = [
   /phantom/i,
   /selenium/i,
   /chromedriver/i,
-  /geckodriver/i
+  /geckodriver/i,
+  // HTTP client libraries — scrapers that don't bother spoofing a browser UA.
+  /axios/i,
+  /okhttp/i,
+  /httpx/i,
+  /aiohttp/i,
+  /node-fetch/i,
+  /undici/i,
+  /scrapy/i,
+  /postman/i,
+  /insomnia/i,
+  /reqwest/i,
+  /got\//i,
+  /libwww/i,
+  /httpie/i,
+  /restsharp/i,
+  /mechanize/i,
+  /php/i,
+  /perl/i,
+  /ruby/i,
+  /dart\//i
 ]
 
 // Legit crawlers let through even though their UA matches BOT_PATTERNS: search
@@ -178,4 +198,14 @@ export async function checkGlobalBudget(name: string, options: RateLimitOptions)
   if (allowed) trippedGlobalBudgets.delete(name)
   else trippedGlobalBudgets.set(name, Date.now() + GLOBAL_TRIP_RECHECK_MS)
   return allowed
+}
+
+// Public digest endpoints the Devvit apps poll on a schedule — rate-limited,
+// but deliberately no UA check: those callers aren't browsers.
+export function checkPublicDigestLimit(req: RateLimitRequest): Promise<boolean> {
+  return checkDistributedRateLimit(getClientIP(req), {
+    keyPrefix: 'public_digest_rl',
+    maxRequests: 60,
+    windowSeconds: 60 * 60
+  })
 }

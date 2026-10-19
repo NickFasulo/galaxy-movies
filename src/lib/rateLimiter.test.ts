@@ -11,10 +11,20 @@ describe('isBot', () => {
     expect(isBot(null)).toBe(true)
   })
 
-  it.each(['curl/8.0', 'python-requests/2.31', 'HeadlessChrome/120.0', 'AhrefsBot/7.0'])(
-    'rejects %s',
-    (ua) => expect(isBot(ua)).toBe(true)
-  )
+  it.each([
+    'curl/8.0',
+    'python-requests/2.31',
+    'HeadlessChrome/120.0',
+    'AhrefsBot/7.0',
+    // HTTP client libraries — the default UAs most scrapers never change.
+    'axios/1.7.2',
+    'okhttp/4.12.0',
+    'python-httpx/0.27.0',
+    'Scrapy/2.11.0 (+https://scrapy.org)',
+    'PostmanRuntime/7.32.3',
+    'Go-http-client/1.1',
+    'Dart/3.4 (dart:io)'
+  ])('rejects %s', (ua) => expect(isBot(ua)).toBe(true))
 
   it.each([
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
