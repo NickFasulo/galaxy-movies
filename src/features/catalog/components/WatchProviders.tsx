@@ -1,8 +1,11 @@
 import Image from 'next/image'
+import NextLink from 'next/link'
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink, tagAmazonUrl } from '../../monetize/affiliates'
+import { providerKeyForId, streamingProviders, isProviderAvailableInRegion } from '../tmdb'
+import { StreamingAlertCta } from './TitleAvailability'
 import { sameStore, type PriceOffer } from '../prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../../alerts/hooks/useUserData'
@@ -103,6 +106,30 @@ function bestOfferFor(providerName: string, offers: PriceOffer[]): PriceOffer | 
 const formatPrice = (offer: PriceOffer | null | undefined) =>
   offer ? `$${(offer.price ?? 0).toFixed(2)} on ${offer.provider}` : null
 
+// Internal links from detail pages (the site's ranking surface) to the
+// provider catalog pages — "browse Netflix" is also the natural next click
+// when the searched title isn't streaming anywhere.
+function CatalogLinks({ providerIds, region, mediaType }: { providerIds?: number[]; region: string; mediaType: MediaType }) {
+  const keys = providerIds?.length
+    ? [...new Set(providerIds.map((id) => providerKeyForId(id, region)).filter((k): k is string => Boolean(k)))]
+    : Object.keys(streamingProviders).filter((k) => isProviderAvailableInRegion(k, region)).slice(0, 6)
+  if (!keys.length) return null
+  const base = mediaType === 'tv' ? '/tv/streaming' : '/streaming'
+  return (
+    <Text color='gray.500' fontSize='2xs' mt={2}>
+      Browse:{' '}
+      {keys.map((key, i) => (
+        <span key={key}>
+          {i > 0 && ' · '}
+          <Link asChild color='gray.400' _hover={{ color: 'white', textDecoration: 'underline' }}>
+            <NextLink href={`${base}/${key}`}>{streamingProviders[key].title.replace(/ Movies$/, '')}</NextLink>
+          </Link>
+        </span>
+      ))}
+    </Text>
+  )
+}
+
 export default function WatchProviders({
   watchProviders,
   allWatchProviders,
@@ -112,7 +139,8 @@ export default function WatchProviders({
   myProviderIds,
   tmdbId,
   mediaType = 'movie',
-  releaseYear
+  releaseYear,
+  hasTitleEvents
 }: {
   watchProviders?: WatchProvidersRegion | null
   allWatchProviders?: Record<string, WatchProvidersRegion> | null
@@ -123,6 +151,7 @@ export default function WatchProviders({
   tmdbId: number
   mediaType?: MediaType
   releaseYear?: string | number | null
+  hasTitleEvents?: boolean
 }) {
   const { services } = useUserData()
   const [chosenRegion, setChosenRegion] = useState<string | null>(null)
@@ -221,6 +250,7 @@ export default function WatchProviders({
                     <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} bucket='stream' />
                   ))}
                 </Flex>
+                <CatalogLinks providerIds={flatrate.map((p) => p.provider_id)} region={activeRegion} mediaType={mediaType} />
                 {seasonNotes.length > 0 && (
                   <Text color='gray.500' fontSize='2xs' mt={1.5}>
                     {seasonNotes.join(' · ')}
@@ -269,10 +299,14 @@ export default function WatchProviders({
             <Text color='gray.300' fontSize='xs' mb={1.5}>
               Not currently available to stream — a VPN can sometimes unlock it in another region.
             </Text>
-            <Flex align='center' gap={4} wrap='wrap'>
+            {!hasTitleEvents && movieTitle && (
+              <StreamingAlertCta tmdbId={tmdbId} tmdbType={mediaType} title={movieTitle} />
+            )}
+            <Flex align='center' gap={4} wrap='wrap' mt={2}>
               <GruvLink product={gruv} />
               <VpnLink />
             </Flex>
+            <CatalogLinks region={activeRegion} mediaType={mediaType} />
           </Box>
         )}
         {(hasProviders || !!footerNotes) && (

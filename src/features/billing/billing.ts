@@ -2,6 +2,7 @@ import { LRUCache } from 'lru-cache'
 import type { NextApiRequest } from 'next'
 import { getRedis, SYNCKEY_KEY, BILLING_KEY } from '../alerts/waitlistStore'
 import { safeEqual } from '../../lib/auth'
+import { SITE_URL } from '../../lib/site'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i
@@ -63,6 +64,15 @@ export async function getLinkedEmail(req: NextApiRequest): Promise<string | null
   } catch {
     return null
   }
+}
+
+// Upsell link used in outbound emails: the synckey rides the URL fragment
+// (never sent to the server, per the alerts-link convention) so a subscriber
+// on a new device lands on /plus already linked and can check out directly.
+export function plusLink(email: string, key?: string | null): string {
+  return key
+    ? `${SITE_URL}/plus#email=${encodeURIComponent(email)}&key=${encodeURIComponent(key)}`
+    : `${SITE_URL}/plus`
 }
 
 export async function isPlusSubscriber(email: string, key: string): Promise<boolean> {

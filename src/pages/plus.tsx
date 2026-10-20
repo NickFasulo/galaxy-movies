@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { Badge, Box, Button, Flex, Input, List, Text } from '@chakra-ui/react'
@@ -8,6 +8,7 @@ import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import { startPlusCheckout } from '../features/billing/components/PlusUpsell'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
+import { setAlertsCredentials } from '../features/alerts/alertsSync'
 import { firstParam } from '../lib/http'
 
 const FEATURES = [
@@ -27,10 +28,23 @@ const FEATURES = [
 
 export default function Plus() {
   const { query } = useRouter()
-  const { loading, creds, plus } = usePlusStatus()
+  const { loading, creds, plus, refresh } = usePlusStatus()
   const [busy, setBusy] = useState<'monthly' | 'yearly' | null>(null)
   const [error, setError] = useState('')
   const success = firstParam(query.status) === 'success'
+
+  // Digest/alert emails link here with sync creds in the fragment (same
+  // convention as alerts-link): store them so checkout works on this device.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const email = params.get('email')
+    const key = params.get('key')
+    if (!email || !key) return
+    setAlertsCredentials(email, key)
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const checkout = async (plan: 'monthly' | 'yearly') => {
     if (!creds) return

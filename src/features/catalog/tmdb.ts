@@ -350,6 +350,15 @@ export function isProviderAvailableInRegion(providerKey: string, region = 'US'):
   return !provider.regions || provider.regions.includes(region)
 }
 
+// TMDB provider_id → our provider key, region-aware since ids differ per
+// watch_region catalog (Amazon Prime is 9 in US but 119 in IN).
+export function providerKeyForId(providerId: number, region = 'US'): string | null {
+  for (const key of Object.keys(streamingProviders)) {
+    if (getProviderIds(key, region).includes(providerId)) return key
+  }
+  return null
+}
+
 export async function fetchDiscoverMovies({ category, genreId, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]

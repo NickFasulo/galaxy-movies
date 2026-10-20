@@ -69,6 +69,9 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
 export default function Collection({ collection, movies, boxSet }: Props) {
   const canonicalUrl = `${SITE_URL}/collections/${collection.id}`
   const title = `${collection.name} Movies in Order`
+  // SERP title adds the streaming hook — "movies in order" alone doesn't
+  // answer the follow-up question searchers actually have.
+  const pageTitle = `${collection.name} Movies in Order & Where to Stream`
   const description = collection.overview
     ? collection.overview.slice(0, 160)
     : `All ${movies.length} ${collection.name} movies in release order — and where each one is streaming now.`
@@ -76,7 +79,7 @@ export default function Collection({ collection, movies, boxSet }: Props) {
   return (
     <>
       <PageHead
-        title={title}
+        title={pageTitle}
         description={description}
         canonicalUrl={canonicalUrl}
         posterPath={movies[0]?.poster_path}

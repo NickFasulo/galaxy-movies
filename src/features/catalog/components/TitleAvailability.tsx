@@ -53,7 +53,20 @@ export default function TitleAvailability({ events, tmdbId, tmdbType, title }: P
   )
 }
 
-function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents }: { tmdbId: number; tmdbType: MediaType; title: string; hasEvents: boolean }) {
+// Rendered inside WatchProviders' empty state when a title streams nowhere —
+// watch-intent searchers land on these pages and the signup is the conversion.
+export function StreamingAlertCta({ tmdbId, tmdbType, title }: { tmdbId: number; tmdbType: MediaType; title: string }) {
+  return (
+    <Box>
+      <Text color='gray.300' fontSize='xs' mb={1.5}>
+        Get an email the day {title} lands on a tracked service. No newsletter, just this title.
+      </Text>
+      <TitleAlertForm tmdbId={tmdbId} tmdbType={tmdbType} title={title} hasEvents={false} hideDescription />
+    </Box>
+  )
+}
+
+export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescription }: { tmdbId: number; tmdbType: MediaType; title: string; hasEvents: boolean; hideDescription?: boolean }) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
@@ -89,11 +102,11 @@ function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents }: { tmdbId: number
 
   return (
     <>
-      <Text color='gray.400' fontSize='sm' mb={3}>
+      {!hideDescription && <Text color='gray.400' fontSize='sm' mb={3}>
         {hasEvents
           ? 'Get an email when this title lands on or leaves a tracked service. No newsletter, just this title.'
           : 'Not streaming anywhere we track? Leave your email and we\u2019ll tell you the day it lands. No newsletter, just this title.'}
-      </Text>
+      </Text>}
       <Flex gap={2} direction='column' asChild><form onSubmit={submit}>
           <Input
             type='email'
@@ -109,7 +122,8 @@ function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents }: { tmdbId: number
             color='white'
             _placeholder={{ color: 'gray.500' }}
           />
-          <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}>
+          <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}
+            data-umami-event='title-alert-submit' data-umami-event-title={title}>
             Notify me
           </Button>
         </form></Flex>

@@ -2,10 +2,10 @@ import { getRedis } from '../../lib/redis'
 import { sendTitleWatchAlerts } from './titleAlerts'
 import { getProviderChanges, IN_TRACKED_PROVIDERS, type ProviderChanges } from '../catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH } from '../catalog/tmdb'
-import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY } from './waitlistStore'
+import { ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, CONFIRMED_KEY, BILLING_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY, SYNCKEY_KEY } from './waitlistStore'
 import { sendTelegramAlert } from './telegram'
 import { sendPushAlert, parseStoredSubs } from './webpush'
-import { isPlusActive, parseBillingRecord } from '../billing/billing'
+import { isPlusActive, parseBillingRecord, plusLink } from '../billing/billing'
 import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from '../catalog/tmdb'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, TmdbTvDetails } from '../../types/tmdb'
@@ -214,7 +214,7 @@ export function statusLine(item: MatchedItem): string {
   }
 }
 
-export function buildEmail(items: MatchedItem[], email: string, unsubToken: string) {
+export function buildEmail(items: MatchedItem[], email: string, unsubToken: string, plusUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
@@ -229,6 +229,7 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
       <p style="color: #666; margin-top: 0;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
       <ul style="padding-left: 18px; margin: 6px 0 18px;">${rows}</ul>
       <p style="margin-top: 24px;"><a href="${SITE_URL}/watchlist" style="color: #2b6cb0;">View your list →</a></p>
+      ${plusUrl ? `<p style="margin-top: 18px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 13px; color: #444;">Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #2b6cb0;">See Galaxy Plus →</a></p>` : ''}
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
       <p style="color: #999; font-size: 12px;">
         You asked for streaming alerts from Galaxy Movies.
@@ -281,8 +282,8 @@ async function sendDiscord(webhookUrl: string, items: MatchedItem[]): Promise<bo
   }
 }
 
-async function sendAlertEmail(from: string, items: MatchedItem[], email: string, unsubToken: string): Promise<boolean> {
-  const { html, headers } = buildEmail(items, email, unsubToken)
+async function sendAlertEmail(from: string, items: MatchedItem[], email: string, unsubToken: string, plusUrl?: string | null): Promise<boolean> {
+  const { html, headers } = buildEmail(items, email, unsubToken, plusUrl)
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -430,14 +431,15 @@ export async function sendWatchlistAlerts() {
     return { sent: 0, reason: 'no changes available' }
   }
 
-  const [prefsHash, notifiedHash, unsubTokens, billingHash, discordHash, telegramHash, pushHash] = await Promise.all([
+  const [prefsHash, notifiedHash, unsubTokens, billingHash, discordHash, telegramHash, pushHash, syncKeys] = await Promise.all([
     kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
     kv.hgetall<Record<string, unknown>>(ALERTS_NOTIFIED_KEY),
     kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
     kv.hgetall<Record<string, unknown>>(BILLING_KEY),
     kv.hgetall<Record<string, string>>(DISCORD_KEY),
     kv.hgetall<Record<string, string>>(TELEGRAM_KEY),
-    kv.hgetall<Record<string, unknown>>(PUSH_KEY)
+    kv.hgetall<Record<string, unknown>>(PUSH_KEY),
+    kv.hgetall<Record<string, string>>(SYNCKEY_KEY)
   ])
 
   const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
@@ -507,7 +509,7 @@ export async function sendWatchlistAlerts() {
       }
     }
 
-    if (!ok) ok = await sendAlertEmail(from, matches, email, unsubToken)
+    if (!ok) ok = await sendAlertEmail(from, matches, email, unsubToken, isPlus ? null : plusLink(email, syncKeys?.[email]))
 
     if (ok) {
       sent++

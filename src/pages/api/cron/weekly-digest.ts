@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getRedis } from '../../../lib/redis'
 import { getProviderChanges, getMonthlyChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../features/catalog/streamingChanges'
-import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY } from '../../../features/alerts/waitlistStore'
+import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY, SYNCKEY_KEY } from '../../../features/alerts/waitlistStore'
 import { parsePrefs } from '../../../features/alerts/watchlistAlerts'
-import { isPlusActive, parseBillingRecord } from '../../../features/billing/billing'
+import { isPlusActive, parseBillingRecord, plusLink } from '../../../features/billing/billing'
 import { isCronAuthorized } from '../../../lib/auth'
 import { SITE_URL } from '../../../lib/site'
 
@@ -57,7 +57,7 @@ function itemList(items: DigestItem[], showDate: boolean) {
     .join('')}</ul>`
 }
 
-function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = []) {
+function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = [], plusUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
   const html = `
     <div style="font-family: sans-serif; max-width: 520px; color: #111;">
@@ -67,6 +67,7 @@ function buildEmail(items: DigestItems, email: string, token: string, leaving: D
       ${items.coming.length ? `<h3 style="margin-bottom: 4px;">Coming soon</h3>${itemList(items.coming, true)}` : ''}
       ${leaving.length ? `<h3 style="margin-bottom: 4px;">Leaving this month</h3>${itemList(leaving, true)}` : ''}
       <p style="margin-top: 24px;"><a href="${SITE_URL}/new-on-streaming" style="color: #2b6cb0;">See everything new on streaming →</a></p>
+      ${plusUrl ? `<p style="margin-top: 18px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 13px; color: #444;">Plus members also see what's leaving their services each month and get matched on every provider we track — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #2b6cb0;">See Galaxy Plus →</a></p>` : ''}
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
       <p style="color: #999; font-size: 12px;">
         You asked for streaming alerts from Galaxy Movies.
@@ -102,10 +103,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, reason: 'no changes this week' })
     }
 
-    const [confirmed, prefsHash, billingHash] = await Promise.all([
+    const [confirmed, prefsHash, billingHash, syncKeys] = await Promise.all([
       kv.hgetall<Record<string, string>>(CONFIRMED_KEY),
       kv.hgetall<Record<string, unknown>>(ALERTS_PREFS_KEY),
-      kv.hgetall<Record<string, unknown>>(BILLING_KEY)
+      kv.hgetall<Record<string, unknown>>(BILLING_KEY),
+      kv.hgetall<Record<string, string>>(SYNCKEY_KEY)
     ])
     const entries = Object.entries(confirmed || {})
     if (!entries.length) {
@@ -125,7 +127,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Plus subscribers also see what departs their services this month —
         // changes:monthly:* is already accumulated by the streaming-changes cron.
         const leaving: DigestItem[] = []
-        if (prefs && isPlusActive(parseBillingRecord(billingHash?.[email]))) {
+        const isPlus = isPlusActive(parseBillingRecord(billingHash?.[email]))
+        if (prefs && isPlus) {
           const monthly = await getMonthlyChanges(prefs.services)
           const seen = new Set<string>()
           for (const [providerKey, m] of Object.entries(monthly)) {
@@ -139,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           leaving.length = Math.min(leaving.length, MAX_ITEMS)
         }
 
-        const { html, headers } = buildEmail(items, email, token, leaving)
+        const { html, headers } = buildEmail(items, email, token, leaving, isPlus ? null : plusLink(email, syncKeys?.[email]))
         return fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {

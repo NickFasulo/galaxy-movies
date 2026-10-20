@@ -13,7 +13,7 @@ import VoteScore from './VoteScore'
 import { DetailCreditLine, DetailCreditLink } from './DetailCredit'
 import RatingWidget from '../../alerts/components/RatingWidget'
 import WatchProviders from './WatchProviders'
-import TitleAvailability from './TitleAvailability'
+import TitleAvailability, { StreamingAlertCta } from './TitleAvailability'
 import PlusUpsell from '../../billing/components/PlusUpsell'
 import SimilarMovies from './SimilarMovies'
 import GalaxyBotTake from './GalaxyBotTake'
@@ -319,6 +319,25 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
   const canonicalUrl = `${SITE_URL}/${isTv ? 'tv' : 'movies'}/${title.id}`
   const description = title.overview || `Where to watch ${displayTitle}.`
+
+  // "Streaming" = included with a subscription or free — rent/buy alone still
+  // leaves the dominant watch-intent unmet, so the alert CTA stays the hook.
+  const hasStreaming = Boolean(
+    watchProviders?.flatrate?.length || watchProviders?.free?.length || watchProviders?.ads?.length
+  )
+  const hasAnyProviders = hasStreaming || Boolean(watchProviders?.rent?.length || watchProviders?.buy?.length)
+  const hasTitleEvents = Boolean(
+    titleChanges?.coming?.length || titleChanges?.leaving?.length ||
+    titleChanges?.added?.length || titleChanges?.left?.length
+  )
+  // Zero providers + no catalog events: the alert form moves up into the
+  // "Where to Watch" box, so the sidebar block is suppressed to avoid two
+  // identical forms stacked back to back.
+  const embedAlert = !hasAnyProviders && !hasTitleEvents && Boolean(displayTitle)
+
+  const metaDescription = hasStreaming
+    ? description
+    : `${displayTitle} isn't on any streaming service yet — get an email the day it lands.`
   const genres = title.genres?.map((g) => g.name) || []
   const ogSubtitle = (!isTv && tagline) || description
   const releaseYear = Number((releaseDate || '').slice(0, 4)) || null
@@ -368,7 +387,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         // "Where to watch {title}" is the dominant title-query phrasing — the
         // tag front-loads it while the on-page H1 stays the bare title.
         title={isTv ? `Where to Watch ${displayTitle} (TV Series)` : `Where to Watch ${displayTitle}`}
-        description={description}
+        description={metaDescription}
         canonicalUrl={canonicalUrl}
         ogType={isTv ? 'video.tv_show' : 'video.movie'}
         ogTitle={displayTitle}
@@ -408,17 +427,20 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                 tmdbId={title.id}
                 mediaType={media}
                 releaseYear={releaseYear}
+                hasTitleEvents={hasTitleEvents}
               />
             </Box>
 
-            <Box w='20rem' maxW='100%'>
-              <TitleAvailability
-                events={titleChanges}
-                tmdbId={title.id}
-                tmdbType={media}
-                title={displayTitle || ''}
-              />
-            </Box>
+            {!embedAlert && (
+              <Box w='20rem' maxW='100%'>
+                <TitleAvailability
+                  events={titleChanges}
+                  tmdbId={title.id}
+                  tmdbType={media}
+                  title={displayTitle || ''}
+                />
+              </Box>
+            )}
 
             <Box w='20rem' maxW='100%'>
               <PlusUpsell />
@@ -546,6 +568,15 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
             <GalaxyBotTake synopsis={aiSynopsis} />
 
             <DetailActions videoKey={videoKey} item={listItem} />
+
+            {!hasStreaming && hasAnyProviders && displayTitle && (
+              <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
+                <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={2}>
+                  Rent/buy only right now
+                </Text>
+                <StreamingAlertCta tmdbId={title.id} tmdbType={media} title={displayTitle} />
+              </Box>
+            )}
 
             <CastSection cast={topCast} />
 
