@@ -15,7 +15,11 @@ FAIL=0
 check() {
   local path="$1" want="${2:-}"
   local out code body
-  out=$(curl -sS -m 15 -w $'\n%{http_code}' "$BASE$path" 2>&1)
+  # -i keeps response headers in the output: paths behind the managed-challenge
+  # WAF rule answer curl with 403 + cf-mitigated: challenge — on prod that IS
+  # the healthy response (the edge is enforcing); hosts without the zone rules
+  # (workers.dev, wrangler dev) fall through to the normal 200 check.
+  out=$(curl -sSi -m 15 -w $'\n%{http_code}' "$BASE$path" 2>&1)
   if [ $? -ne 0 ]; then
     echo "FAIL $path (curl: $out)"
     FAIL=1
@@ -23,6 +27,10 @@ check() {
   fi
   code="${out##*$'\n'}"
   body="${out%$'\n'*}"
+  if printf '%s' "$body" | head -30 | grep -qiF 'cf-mitigated: challenge'; then
+    echo "ok   $path (managed challenge)"
+    return
+  fi
   if [ "$code" != "200" ]; then
     echo "FAIL $path -> HTTP $code"
     FAIL=1
