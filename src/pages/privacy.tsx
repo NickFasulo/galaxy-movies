@@ -5,7 +5,7 @@ import { List } from '@chakra-ui/react';
 export default function Privacy() {
   return (
     <InfoPage title='Privacy Policy' description='Read the Galaxy Movies privacy policy.' withBackButton>
-      <InfoParagraph><em>Last updated: October 6, 2026</em></InfoParagraph>
+      <InfoParagraph><em>Last updated: October 20, 2026</em></InfoParagraph>
       <InfoParagraph>
         Galaxy Movies (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates galaxymovies.app (the
         &quot;Service&quot;), a movie and TV discovery site with streaming availability information and an
@@ -144,7 +144,8 @@ export default function Privacy() {
       <InfoHeading>11. Contact Us</InfoHeading>
       <InfoParagraph>
         If you have questions about this Privacy Policy or want to exercise your data rights, reach
-        us through the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>.
+        us through the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>,
+        or write to Galaxy Movies, 921 S Beacon St, Los Angeles, CA 90731.
       </InfoParagraph>
 
     </InfoPage>

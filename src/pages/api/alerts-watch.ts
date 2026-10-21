@@ -3,6 +3,7 @@ import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../..
 import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
 import { mergeWatchTitles, type WatchTitle } from '../../features/alerts/titleAlerts'
+import { emailCta, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { SITE_URL } from '../../lib/site'
 import { randomUUID, createHash } from 'crypto'
 
@@ -15,28 +16,16 @@ interface WatchPending {
 
 async function sendConfirmEmail(email: string, token: string, title: string): Promise<boolean> {
   const confirmUrl = `${SITE_URL}/api/alerts-watch-confirm?email=${encodeURIComponent(email)}&token=${token}`
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to: email,
-      subject: `Confirm: get notified when ${title} moves`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px;">
-          <h2>Confirm your title alert</h2>
-          <p>You asked Galaxy Movies to email you when <strong>${title}</strong> lands on or leaves a tracked streaming service. Click below to confirm — if you didn't ask for this, just ignore it.</p>
-          <p><a href="${confirmUrl}" style="display: inline-block; background: #2b6cb0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Confirm my alert</a></p>
-          <p style="color: #888; font-size: 12px;">Or paste this link: ${confirmUrl}</p>
-        </div>`
+  return sendEmail({
+    to: email,
+    subject: `Confirm: get notified when ${title} moves`,
+    html: emailLayout({
+      heading: 'Confirm your title alert',
+      preheader: `Get notified when ${title} moves`,
+      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">You asked Galaxy Movies to email you when <strong style="color:#ffffff;">${escapeHtml(title)}</strong> lands on or leaves a tracked streaming service. Click below to confirm — if you didn't ask for this, just ignore it.</p>${emailCta(confirmUrl, 'Confirm my alert', true)}`,
+      reason: 'You received this email because a title alert was started with this address.'
     })
   })
-  return resp.ok
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

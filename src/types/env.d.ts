@@ -42,6 +42,8 @@ declare namespace NodeJS {
     TUMBLR_ACCESS_TOKEN?: string
     PINTEREST_BOARD?: string
     PINTEREST_ACCESS_TOKEN?: string
+    FB_PAGE_ID?: string
+    FB_PAGE_ACCESS_TOKEN?: string
     NEXT_PUBLIC_SITE_URL?: string
   NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
   WEBPUSH_PRIVATE_KEY?: string

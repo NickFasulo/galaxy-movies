@@ -5,6 +5,7 @@ import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY, SYNCKEY_KEY } from '../..
 import { parsePrefs } from '../../../features/alerts/watchlistAlerts'
 import { isPlusActive, parseBillingRecord, plusLink } from '../../../features/billing/billing'
 import { isCronAuthorized } from '../../../lib/auth'
+import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { SITE_URL } from '../../../lib/site'
 
 export const config = { maxDuration: 60 }
@@ -17,9 +18,6 @@ interface DigestItems {
   added: DigestItem[]
   coming: DigestItem[]
 }
-
-const escapeHtml = (s: unknown) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const prettyDate = (stamp: string | null | undefined) => {
@@ -46,34 +44,35 @@ function gatherItems(changes: Record<string, ProviderChanges>): DigestItems {
   return { added: pick('added').slice(0, MAX_ITEMS), coming: pick('coming').slice(0, MAX_ITEMS) }
 }
 
+const sectionHead = (label: string) =>
+  `<div style="font-size: 15px; font-weight: 700; color: #ffffff; margin: 20px 0 6px;">${label}</div>`
+
 function itemList(items: DigestItem[], showDate: boolean) {
   if (!items.length) return ''
-  return `<ul style="padding-left: 18px; margin: 6px 0 18px;">${items
+  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #d7dde4;">${items
     .map(
       (t) =>
-        `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #2b6cb0;">${escapeHtml(t.title)}</a>` +
-        `<span style="color: #666;"> — ${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</span></li>`
+        `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
+        `<div style="color: #8f9aa7; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
     )
     .join('')}</ul>`
 }
 
 function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = [], plusUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
-  const html = `
-    <div style="font-family: sans-serif; max-width: 520px; color: #111;">
-      <h2 style="margin-bottom: 4px;">This week on streaming</h2>
-      <p style="color: #666; margin-top: 0;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
-      ${items.added.length ? `<h3 style="margin-bottom: 4px;">Just added</h3>${itemList(items.added, false)}` : ''}
-      ${items.coming.length ? `<h3 style="margin-bottom: 4px;">Coming soon</h3>${itemList(items.coming, true)}` : ''}
-      ${leaving.length ? `<h3 style="margin-bottom: 4px;">Leaving this month</h3>${itemList(leaving, true)}` : ''}
-      <p style="margin-top: 24px;"><a href="${SITE_URL}/new-on-streaming" style="color: #2b6cb0;">See everything new on streaming →</a></p>
-      ${plusUrl ? `<p style="margin-top: 18px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 13px; color: #444;">Plus members also see what's leaving their services each month and get matched on every provider we track — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #2b6cb0;">See Galaxy Plus →</a></p>` : ''}
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
-      <p style="color: #999; font-size: 12px;">
-        You asked for streaming alerts from Galaxy Movies.
-        <a href="${unsub}" style="color: #999;">Unsubscribe</a>
-      </p>
-    </div>`
+  const html = emailLayout({
+    heading: 'This week on streaming',
+    preheader: "New arrivals and what's coming to your services",
+    body: `
+      <p style="margin: 0 0 6px; color: #93a0ad; line-height: 1.6;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
+      ${items.added.length ? `${sectionHead('Just added')}${itemList(items.added, false)}` : ''}
+      ${items.coming.length ? `${sectionHead('Coming soon')}${itemList(items.coming, true)}` : ''}
+      ${leaving.length ? `${sectionHead('Leaving this month')}${itemList(leaving, true)}` : ''}
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See everything new on streaming →</a></p>
+      ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a>`) : ''}`,
+    reason: 'You asked for streaming alerts from Galaxy Movies.',
+    unsubUrl: unsub
+  })
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
@@ -114,8 +113,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, reason: 'no subscribers' })
     }
 
-    const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
-
     const results = await Promise.allSettled(
       entries.map(async ([email, token]) => {
         const prefs = parsePrefs(prefsHash?.[email])
@@ -143,24 +140,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const { html, headers } = buildEmail(items, email, token, leaving, isPlus ? null : plusLink(email, syncKeys?.[email]))
-        return fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from,
-            to: email,
-            subject: 'New this week on streaming',
-            html,
-            headers
-          })
-        })
+        return sendEmail({ to: email, subject: 'New this week on streaming', html, headers })
       })
     )
 
-    const sent = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length
+    const sent = results.filter((r) => r.status === 'fulfilled' && r.value).length
     const failed = results.length - sent
     return res.status(200).json({ sent, failed, total: entries.length })
   } catch (err) {

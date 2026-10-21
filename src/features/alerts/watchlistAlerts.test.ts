@@ -258,6 +258,12 @@ describe('buildEmail', () => {
     expect(headers['List-Unsubscribe']).toContain('token=secret-token')
   })
 
+  it('renders the branded footer with logo and mailing address', () => {
+    const { html } = buildEmail([item], 'a@b.com', 'tok')
+    expect(html).toContain('/icons/icon-192.png')
+    expect(html).toContain('921 S Beacon St, Los Angeles, CA 90731')
+  })
+
   it('renders coming releases with provider, formatted date, and season', () => {
     const coming: MatchedItem = { ...item, kind: 'coming', tmdbType: 'tv', provider: 'Hulu', date: '20260115', season: 2 }
     const { html } = buildEmail([coming], 'a@b.com', 'tok')

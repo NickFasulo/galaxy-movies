@@ -1,5 +1,6 @@
 import { getRedis } from '../../lib/redis'
 import { ALERTS_NOTIFIED_KEY, WATCH_KEY } from './waitlistStore'
+import { emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType } from '../../types/tmdb'
 import type { CatalogTitle, ComingTitle, ProviderChanges } from '../catalog/streamingChanges'
@@ -87,9 +88,6 @@ export function matchWatchEntry(
   return { matches, arrived }
 }
 
-const escapeHtml = (s: unknown) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const prettyDate = (stamp: string | null | undefined) => {
   const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
@@ -113,56 +111,41 @@ export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken:
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
-      `<li style="margin: 4px 0;"><a href="${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
-      `<span style="color: #666;"> — ${titleStatusLine(item)}</span></li>`
+      `<li style="margin: 8px 0;"><a href="${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
+      `<div style="color: #8f9aa7; font-size: 13px; margin-top: 1px;">${titleStatusLine(item)}</div></li>`
     )
     .join('')
 
-  const html = `
-    <div style="font-family: sans-serif; max-width: 520px; color: #111;">
-      <h2 style="margin-bottom: 4px;">A title you're tracking just moved</h2>
-      <p style="color: #666; margin-top: 0;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
-      <ul style="padding-left: 18px; margin: 6px 0 18px;">${rows}</ul>
-      <p style="margin-top: 24px;"><a href="${SITE_URL}" style="color: #2b6cb0;">Track another title →</a></p>
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
-      <p style="color: #999; font-size: 12px;">
-        You asked Galaxy Movies to notify you about these titles.
-        <a href="${unsub}" style="color: #999;">Unsubscribe</a>
-      </p>
-    </div>`
+  const html = emailLayout({
+    heading: "A title you're tracking just moved",
+    preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles you're tracking`,
+    body: `
+      <p style="margin: 0 0 14px; color: #93a0ad; line-height: 1.6;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
+      <ul style="list-style: none; padding: 0; margin: 0; color: #d7dde4;">${rows}</ul>
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">Track another title →</a></p>`,
+    reason: 'You asked Galaxy Movies to notify you about these titles.',
+    unsubUrl: unsub
+  })
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
-async function sendWatchEmail(from: string, items: MatchedItem[], email: string, unsubToken: string): Promise<boolean> {
+async function sendWatchEmail(items: MatchedItem[], email: string, unsubToken: string): Promise<boolean> {
   const { html, headers } = buildWatchEmail(items, email, unsubToken)
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from,
-        to: email,
-        subject: items.length === 1 ? `${items[0].title}: ${titleStatusLine(items[0])}` : "A title you're tracking just moved",
-        html,
-        headers
-      })
-    })
-    return resp.ok
-  } catch (err) {
-    console.error('Title watch alert send failed:', err)
-    return false
-  }
+  const ok = await sendEmail({
+    to: email,
+    subject: items.length === 1 ? `${items[0].title}: ${titleStatusLine(items[0])}` : "A title you're tracking just moved",
+    html,
+    headers
+  })
+  if (!ok) console.error('Title watch alert send failed for', email)
+  return ok
 }
 
 // Called from the watchlist-alerts cron after subscriber matching — shares its
 // fresh US diff set and the notified hash so a title event never double-sends.
 export async function sendTitleWatchAlerts(
   usChanges: Record<string, ProviderChanges>,
-  notifiedHash: Record<string, unknown> | null | undefined,
-  from: string
+  notifiedHash: Record<string, unknown> | null | undefined
 ): Promise<{ sent: number; failed: number; tracked: number }> {
   const kv = getRedis()
   if (!kv) return { sent: 0, failed: 0, tracked: 0 }
@@ -182,7 +165,7 @@ export async function sendTitleWatchAlerts(
     const { matches, arrived } = matchWatchEntry(entry, usChanges, notified)
     if (!matches.length) continue
 
-    const ok = await sendWatchEmail(from, matches, email, entry.unsub)
+    const ok = await sendWatchEmail(matches, email, entry.unsub)
     if (!ok) {
       failed++
       continue

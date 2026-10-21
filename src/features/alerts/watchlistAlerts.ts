@@ -7,6 +7,7 @@ import { sendTelegramAlert } from './telegram'
 import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, parseBillingRecord, plusLink } from '../billing/billing'
 import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from '../catalog/tmdb'
+import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, TmdbTvDetails } from '../../types/tmdb'
 
@@ -185,9 +186,6 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
   return out.slice(0, MAX_MATCHES_PER_EMAIL)
 }
 
-const escapeHtml = (s: unknown) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const prettyDate = (stamp: string | null | undefined) => {
   const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
@@ -218,24 +216,22 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
-      `<li style="margin: 4px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #2b6cb0;">${escapeHtml(item.title)}</a>` +
-      `<span style="color: #666;"> — ${statusLine(item)}</span></li>`
+      `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
+      `<div style="color: #8f9aa7; font-size: 13px; margin-top: 1px;">${statusLine(item)}</div></li>`
     )
     .join('')
 
-  const html = `
-    <div style="font-family: sans-serif; max-width: 520px; color: #111;">
-      <h2 style="margin-bottom: 4px;">Something on your list just moved</h2>
-      <p style="color: #666; margin-top: 0;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
-      <ul style="padding-left: 18px; margin: 6px 0 18px;">${rows}</ul>
-      <p style="margin-top: 24px;"><a href="${SITE_URL}/watchlist" style="color: #2b6cb0;">View your list →</a></p>
-      ${plusUrl ? `<p style="margin-top: 18px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 13px; color: #444;">Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #2b6cb0;">See Galaxy Plus →</a></p>` : ''}
-      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0 12px;" />
-      <p style="color: #999; font-size: 12px;">
-        You asked for streaming alerts from Galaxy Movies.
-        <a href="${unsub}" style="color: #999;">Unsubscribe</a>
-      </p>
-    </div>`
+  const html = emailLayout({
+    heading: 'Something on your list just moved',
+    preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles on your watchlist`,
+    body: `
+      <p style="margin: 0 0 14px; color: #93a0ad; line-height: 1.6;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
+      <ul style="list-style: none; padding: 0; margin: 0; color: #d7dde4;">${rows}</ul>
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/watchlist" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">View your list →</a></p>
+      ${plusUrl ? emailCallout(`Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a>`) : ''}`,
+    reason: 'You asked for streaming alerts from Galaxy Movies.',
+    unsubUrl: unsub
+  })
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
@@ -282,28 +278,11 @@ async function sendDiscord(webhookUrl: string, items: MatchedItem[]): Promise<bo
   }
 }
 
-async function sendAlertEmail(from: string, items: MatchedItem[], email: string, unsubToken: string, plusUrl?: string | null): Promise<boolean> {
+async function sendAlertEmail(items: MatchedItem[], email: string, unsubToken: string, plusUrl?: string | null): Promise<boolean> {
   const { html, headers } = buildEmail(items, email, unsubToken, plusUrl)
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from,
-        to: email,
-        subject: 'Something on your watchlist just moved',
-        html,
-        headers
-      })
-    })
-    return resp.ok
-  } catch (err) {
-    console.error('Watchlist alert send failed:', err)
-    return false
-  }
+  const ok = await sendEmail({ to: email, subject: 'Something on your watchlist just moved', html, headers })
+  if (!ok) console.error('Watchlist alert send failed for', email)
+  return ok
 }
 
 export function topRatedTitles(prefs: AlertPrefs): { id: number; mediaType: MediaType; title: string }[] {
@@ -442,10 +421,9 @@ export async function sendWatchlistAlerts() {
     kv.hgetall<Record<string, string>>(SYNCKEY_KEY)
   ])
 
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
   // Single-title subscribers are a separate audience — they still get matched
   // even when nobody has synced watchlist prefs.
-  const watchResult = await sendTitleWatchAlerts(usChanges, notifiedHash, from)
+  const watchResult = await sendTitleWatchAlerts(usChanges, notifiedHash)
 
   const entries = Object.entries(prefsHash || {})
   if (!entries.length) return { sent: 0, reason: 'no subscribers', watch: watchResult }
@@ -509,7 +487,7 @@ export async function sendWatchlistAlerts() {
       }
     }
 
-    if (!ok) ok = await sendAlertEmail(from, matches, email, unsubToken, isPlus ? null : plusLink(email, syncKeys?.[email]))
+    if (!ok) ok = await sendAlertEmail(matches, email, unsubToken, isPlus ? null : plusLink(email, syncKeys?.[email]))
 
     if (ok) {
       sent++

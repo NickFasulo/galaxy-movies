@@ -4,6 +4,7 @@ import { requireMethod, rejectBot } from '../../../lib/http'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../../lib/rateLimiter'
 import { getRedis, getOrCreateSyncKey } from '../../../features/alerts/waitlistStore'
 import { getBillingRecord } from '../../../features/billing/billing'
+import { emailCta, emailLayout, sendEmail } from '../../../lib/email'
 import { SITE_URL } from '../../../lib/site'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
@@ -14,27 +15,16 @@ const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]
 // the endpoint can't probe which emails hold subscriptions.
 async function sendAccessLinkEmail(email: string, key: string): Promise<boolean> {
   const linkUrl = `${SITE_URL}/api/alerts-link?email=${encodeURIComponent(email)}&key=${key}`
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to: email,
-      subject: 'Your Galaxy Plus access link',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px;">
-          <h2>Your access link</h2>
-          <p>Click below to sign in to Galaxy Plus on this device. If you didn't ask for this, just ignore it.</p>
-          <p><a href="${linkUrl}" style="display: inline-block; background: #2b6cb0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Sign in to Galaxy Plus</a></p>
-          <p style="color: #888; font-size: 12px;">Or paste this link: ${linkUrl}</p>
-        </div>`
+  return sendEmail({
+    to: email,
+    subject: 'Your Galaxy Plus access link',
+    html: emailLayout({
+      heading: 'Your access link',
+      preheader: 'Sign in to Galaxy Plus on this device',
+      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">Click below to sign in to Galaxy Plus on this device. If you didn't ask for this, just ignore it.</p>${emailCta(linkUrl, 'Sign in to Galaxy Plus', true)}`,
+      reason: 'You received this email because a Galaxy Plus sign-in link was requested for this address.'
     })
   })
-  return resp.ok
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

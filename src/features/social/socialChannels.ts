@@ -255,4 +255,32 @@ const pinterest: SocialChannel = {
     })
 }
 
-export const SOCIAL_CHANNELS: SocialChannel[] = [bsky, discord, telegram, mastodon, x, reddit, tumblr, pinterest]
+// ---------- Facebook Page (Graph API feed post; token in body, not URL) ----------
+
+const facebook: SocialChannel = {
+  name: 'facebook',
+  maxLen: 63206,
+  ready: () => Boolean(process.env.FB_PAGE_ID && process.env.FB_PAGE_ACCESS_TOKEN),
+  post: (text, linkUrl) =>
+    postJson(`https://graph.facebook.com/v21.0/${process.env.FB_PAGE_ID}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        access_token: process.env.FB_PAGE_ACCESS_TOKEN!,
+        message: text,
+        link: linkUrl
+      }).toString()
+    })
+}
+
+export const SOCIAL_CHANNELS: SocialChannel[] = [
+  bsky,
+  discord,
+  telegram,
+  mastodon,
+  x,
+  reddit,
+  tumblr,
+  pinterest,
+  facebook
+]

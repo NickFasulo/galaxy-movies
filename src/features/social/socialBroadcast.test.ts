@@ -50,6 +50,8 @@ describe('broadcastWeeklyDigest', () => {
     fetchSpy.mockReset()
     delete process.env.BSKY_HANDLE
     delete process.env.BSKY_APP_PASSWORD
+    delete process.env.FB_PAGE_ID
+    delete process.env.FB_PAGE_ACCESS_TOKEN
   })
 
   afterAll(() => fetchSpy.mockRestore())
@@ -88,5 +90,21 @@ describe('broadcastWeeklyDigest', () => {
     const results = await broadcastWeeklyDigest()
     expect(results.bsky.status).toBe('failed')
     expect(results.discord.status).toBe('posted')
+  })
+
+  it('posts to the facebook page with the token in the form body, not the URL', async () => {
+    process.env.FB_PAGE_ID = '123'
+    process.env.FB_PAGE_ACCESS_TOKEN = 'page-token'
+    fetchSpy.mockResolvedValue(new Response('{}', { status: 200 }))
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.facebook.status).toBe('posted')
+    const fbCall = fetchSpy.mock.calls.find(([input]) => String(input).includes('graph.facebook.com'))
+    expect(fbCall).toBeDefined()
+    const [url, init] = fbCall!
+    expect(String(url)).toContain('graph.facebook.com/v21.0/123/feed')
+    expect(String(url)).not.toContain('page-token')
+    expect(String(init?.body)).toContain('page-token')
+    expect(String(init?.body)).toContain('link=')
   })
 })
