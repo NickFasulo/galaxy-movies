@@ -1,7 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { Badge, Box, Button, Flex, Input, List, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Heading, Input, SimpleGrid, Text } from '@chakra-ui/react'
+import {
+  LuArrowLeftRight,
+  LuBell,
+  LuBot,
+  LuCalendar,
+  LuFileOutput,
+  LuHourglass,
+  LuImport,
+  LuLayers,
+  LuSend,
+  LuShare2,
+  LuSparkles,
+  LuTv
+} from 'react-icons/lu'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
@@ -12,26 +26,35 @@ import { setAlertsCredentials } from '../features/alerts/alertsSync'
 import { firstParam } from '../lib/http'
 
 const FEATURES = [
-  'Alerts for new arrivals on your services, matched to what you rate highly',
-  'Leaving-soon warnings when something on your list is about to disappear',
-  'Next-episode alerts when a show on your list is about to air',
-  'Galaxy Bot goes from 10 to 100 messages an hour — knows your taste, and your chat history follows you across devices',
-  'A "Picked for you" rail on your list page, seeded by what you rate highly',
-  'Two-way Trakt sync — push your list out, or pull your existing Trakt history in',
-  'Import a Letterboxd export in seconds — watchlist and ratings carry over',
-  'Export as JSON or Letterboxd-ready CSVs anytime',
-  'A calendar feed of upcoming releases for your watchlist — plug it into Google or Apple Calendar',
-  'Alerts delivered to your Telegram DMs or your own Discord channel instead of email, if you want',
-  'A shareable public link for your list and ratings',
-  'Bigger limits: 1,000 list entries and 2,500 ratings synced across every device you link'
+  { icon: LuBell, title: 'Taste-matched alerts', blurb: 'New arrivals on your services, matched to what you rate highly.' },
+  { icon: LuHourglass, title: 'Leaving-soon warnings', blurb: 'A heads-up before something on your list disappears.' },
+  { icon: LuTv, title: 'Next-episode alerts', blurb: 'Know when a show on your list is about to air.' },
+  { icon: LuSend, title: 'Alerts anywhere', blurb: 'Email by default, or Telegram DMs and your own Discord channel.' },
+  { icon: LuBot, title: '10× Galaxy Bot', blurb: '100 messages an hour — knows your taste, and your chat history follows you across devices.' },
+  { icon: LuSparkles, title: 'Picked for you', blurb: 'A recommendations rail on your list page, seeded by your ratings.' },
+  { icon: LuShare2, title: 'A shareable list', blurb: 'A public link for your watchlist and ratings you can send to friends.' },
+  { icon: LuLayers, title: 'Bigger limits', blurb: '1,000 list entries and 2,500 ratings synced across every device you link.' },
+  { icon: LuArrowLeftRight, title: 'Two-way Trakt sync', blurb: 'Push your list out, or pull your existing Trakt history in.' },
+  { icon: LuImport, title: 'Letterboxd import', blurb: 'Watchlist and ratings carry over in seconds.' },
+  { icon: LuFileOutput, title: 'Export anytime', blurb: 'JSON or Letterboxd-ready CSVs whenever you want them.' },
+  { icon: LuCalendar, title: 'Calendar feed', blurb: 'Upcoming releases for your watchlist in Google or Apple Calendar.' }
 ]
+
+const cardProps = {
+  bg: 'blackAlpha.500',
+  border: '1px solid',
+  borderColor: 'border.subtle',
+  borderRadius: 'lg'
+} as const
 
 export default function Plus() {
   const { query } = useRouter()
   const { loading, creds, plus, refresh } = usePlusStatus()
   const [busy, setBusy] = useState<'monthly' | 'yearly' | null>(null)
   const [error, setError] = useState('')
-  const success = firstParam(query.status) === 'success'
+  const status = firstParam(query.status)
+  const success = status === 'success'
+  const confirmed = status === 'confirmed'
 
   // Digest/alert emails link here with sync creds in the fragment (same
   // convention as alerts-link): store them so checkout works on this device.
@@ -76,26 +99,69 @@ export default function Plus() {
         h={{ base: '22rem', md: '34rem' }}
       />
       <Box position='relative' flex='1' display='flex' flexDirection='column'>
-        <PageShell
-          title='Galaxy Plus'
-          description='The free tier already syncs your list and ratings across devices. Plus makes your taste profile work harder.'
-          withBackButton
-        >
+        <PageShell withBackButton>
+        <Flex direction='column' align='center' textAlign='center'>
+          <Heading
+            as='h1'
+            fontFamily='display'
+            fontWeight='normal'
+            fontSize={{ base: '2.25rem', md: '3.25rem' }}
+            lineHeight={1.1}
+            textShadow='0 0 14px rgba(125, 175, 255, 0.28)'
+            mt={4}
+          >
+            Galaxy Plus
+          </Heading>
+          <Text maxW='36rem' mt={4} color='gray.300'>
+            The free tier already syncs your list and ratings across devices. Plus makes your taste profile work harder.
+          </Text>
+        </Flex>
+
         {success && (
-          <Box mt={6} bg='green.900' border='1px solid var(--chakra-colors-green-700)' borderRadius='lg' p={4} maxW='36rem'>
+          <Box mt={8} mx='auto' bg='green.900' border='1px solid var(--chakra-colors-green-700)' borderRadius='lg' p={4} maxW='36rem'>
             <Text color='green.200' fontSize='sm'>
               You&apos;re in! Plus activates as soon as the payment clears, usually within seconds.
             </Text>
           </Box>
         )}
+        {confirmed && !loading && !plus && (
+          <Box mt={8} mx='auto' bg='green.900' border='1px solid var(--chakra-colors-green-700)' borderRadius='lg' p={4} maxW='36rem'>
+            <Text color='green.200' fontSize='sm'>
+              You&apos;re confirmed — pick a plan below to finish signing up for Plus.
+            </Text>
+          </Box>
+        )}
 
-        <List.Root as='ul' mt={8} pl={4} gap={2} maxW='36rem' color='gray.200' fontSize='sm'>
-          {FEATURES.map((feature) => <List.Item key={feature}>{feature}</List.Item>)}
-        </List.Root>
+        <Heading as='h2' size='md' mt={12} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+          Everything in Plus
+        </Heading>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={3}>
+          {FEATURES.map(({ icon: Icon, title, blurb }) => (
+            <Flex key={title} gap={3} align='flex-start' {...cardProps} p={4}>
+              <Flex
+                flexShrink={0}
+                align='center'
+                justify='center'
+                w={9}
+                h={9}
+                borderRadius='md'
+                bg='whiteAlpha.100'
+                color='yellow.300'
+                fontSize='lg'
+              >
+                <Icon />
+              </Flex>
+              <Box>
+                <Text color='white' fontWeight='bold' fontSize='sm'>{title}</Text>
+                <Text color='gray.400' fontSize='sm' mt={0.5}>{blurb}</Text>
+              </Box>
+            </Flex>
+          ))}
+        </SimpleGrid>
 
-        <Box mt={8}>
+        <Box mt={12}>
           {loading ? null : plus ? (
-            <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4} maxW='36rem'>
+            <Box {...cardProps} p={5} maxW='36rem' mx={{ base: 'auto', md: 0 }}>
               <Flex align='center' gap={2} mb={1}>
                 <Badge colorPalette='yellow'>Plus</Badge>
                 <Text color='white' fontWeight='bold' fontSize='sm'>Galaxy Plus is active</Text>
@@ -111,32 +177,49 @@ export default function Plus() {
               </Text>
             </Box>
           ) : creds ? (
-            <Flex gap={4} direction={{ base: 'column', md: 'row' }} maxW='36rem'>
-              <Box flex={1} bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
-                <Text color='white' fontWeight='bold'>Monthly</Text>
-                <Text color='gray.400' fontSize='sm' mb={3}>$3 / month, cancel anytime</Text>
-                <Button size='sm' variant='outline' color='white' borderColor='border.subtle' _hover={{ bg: 'surface.overlay' }}
-                  loading={busy === 'monthly'} onClick={() => checkout('monthly')} w='100%'>
-                  Go monthly
-                </Button>
-              </Box>
-              <Box flex={1} bg='blackAlpha.500' border='1px solid var(--chakra-colors-yellow-700)' borderRadius='lg' p={4}>
-                <Flex align='center' gap={2}>
-                  <Text color='white' fontWeight='bold'>Yearly</Text>
-                  <Badge colorPalette='yellow' fontSize='2xs'>Best value</Badge>
+            <>
+              <Heading as='h2' size='md' mb={4} textAlign={{ base: 'center', md: 'left' }}>
+                Pick a plan
+              </Heading>
+              <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4} maxW='42rem'>
+                <Flex direction='column' {...cardProps} borderRadius='xl' p={6}>
+                  <Text color='white' fontWeight='bold'>Monthly</Text>
+                  <Flex align='baseline' gap={1} mt={2}>
+                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$3</Text>
+                    <Text color='gray.400' fontSize='sm'>/ month</Text>
+                  </Flex>
+                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>Cancel anytime</Text>
+                  <Button mt='auto' variant='outline' color='white' borderColor='border.subtle' _hover={{ bg: 'surface.overlay' }}
+                    loading={busy === 'monthly'} onClick={() => checkout('monthly')} w='100%'>
+                    Go monthly
+                  </Button>
                 </Flex>
-                <Text color='gray.400' fontSize='sm' mb={3}>$20 / year, about $1.67 a month</Text>
-                <Button size='sm' colorPalette='yellow' loading={busy === 'yearly'} onClick={() => checkout('yearly')} w='100%'>
-                  Go yearly
-                </Button>
-              </Box>
-            </Flex>
+                <Flex
+                  direction='column'
+                  {...cardProps}
+                  borderRadius='xl'
+                  p={6}
+                  borderColor='yellow.700'
+                  boxShadow='0 0 32px rgba(236, 201, 75, 0.07)'
+                >
+                  <Flex align='center' gap={2}>
+                    <Text color='white' fontWeight='bold'>Yearly</Text>
+                    <Badge colorPalette='yellow' fontSize='2xs'>Best value</Badge>
+                  </Flex>
+                  <Flex align='baseline' gap={1} mt={2}>
+                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$20</Text>
+                    <Text color='gray.400' fontSize='sm'>/ year</Text>
+                  </Flex>
+                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $1.67 a month — save 44%</Text>
+                  <Button mt='auto' colorPalette='yellow' loading={busy === 'yearly'} onClick={() => checkout('yearly')} w='100%'>
+                    Go yearly
+                  </Button>
+                </Flex>
+              </SimpleGrid>
+            </>
           ) : (
-            <Box maxW='36rem'>
-              <Text color='gray.400' fontSize='sm' mb={3}>
-                Plus works through your email. No passwords, no account. Confirm yours and it becomes your login on every device.
-              </Text>
-              <WaitlistForm purpose='login' />
+            <Box maxW='36rem' mx={{ base: 'auto', md: 0 }}>
+              <WaitlistForm purpose='login' onConfirmed={refresh} />
               <RecoverAccess />
             </Box>
           )}

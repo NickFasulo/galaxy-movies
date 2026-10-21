@@ -2,63 +2,46 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../../lib/rateLimiter'
 import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, PENDING_KEY, CONFIRMED_KEY, getOrCreateSyncKey } from '../../features/alerts/waitlistStore'
+import { emailCta, emailLayout, sendEmail } from '../../lib/email'
 import { SITE_URL } from '../../lib/site'
 import { randomUUID, createHash } from 'crypto'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 
-async function sendConfirmationEmail(email: string, token: string): Promise<boolean> {
-  const confirmUrl = `${SITE_URL}/api/waitlist-confirm?email=${encodeURIComponent(email)}&token=${token}`
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to: email,
-      subject: 'Confirm your Galaxy Movies alerts signup',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px;">
-          <h2>Confirm your alerts signup</h2>
-          <p>You signed up for streaming alerts on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email.</p>
-          <p><a href="${confirmUrl}" style="display: inline-block; background: #2b6cb0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Confirm my email</a></p>
-          <p style="color: #888; font-size: 12px;">Or paste this link: ${confirmUrl}</p>
-        </div>`
+async function sendConfirmationEmail(email: string, token: string, next?: string): Promise<boolean> {
+  const confirmUrl = `${SITE_URL}/api/waitlist-confirm?email=${encodeURIComponent(email)}&token=${token}${next ? `&next=${next}` : ''}`
+  const toPlus = next === 'plus'
+  return sendEmail({
+    to: email,
+    subject: 'Confirm your Galaxy Movies alerts signup',
+    html: emailLayout({
+      heading: toPlus ? 'Confirm your email' : 'Confirm your alerts signup',
+      preheader: toPlus ? 'One click to confirm and pick your plan' : 'One click to start streaming alerts',
+      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">${toPlus
+        ? "You're one click from Galaxy Plus — confirm your email and you'll land back on the Plus page to pick a plan. If you didn't sign up, just ignore this email."
+        : "You signed up for streaming alerts on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email."}</p>${emailCta(confirmUrl, 'Confirm my email', true)}`,
+      reason: 'You received this email because an alerts signup was started with this address.'
     })
   })
-  return resp.ok
 }
 
 // Already-confirmed subscribers hitting the form again from a new device need
 // a link bearing their sync key so this device's watchlist can start syncing too.
-async function sendLinkDeviceEmail(email: string, key: string): Promise<boolean> {
-  const linkUrl = `${SITE_URL}/api/alerts-link?email=${encodeURIComponent(email)}&key=${key}`
-  const from = process.env.RESEND_FROM || 'Galaxy Movies <onboarding@resend.dev>'
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to: email,
-      subject: 'Link this device to your Galaxy Movies alerts',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px;">
-          <h2>Link this device</h2>
-          <p>You're already signed up for streaming alerts. Click below to sync this device's watchlist so we can alert you when a saved title lands on your services.</p>
-          <p><a href="${linkUrl}" style="display: inline-block; background: #2b6cb0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Link this device</a></p>
-          <p style="color: #888; font-size: 12px;">Or paste this link: ${linkUrl}</p>
-        </div>`
+async function sendLinkDeviceEmail(email: string, key: string, next?: string): Promise<boolean> {
+  const linkUrl = `${SITE_URL}/api/alerts-link?email=${encodeURIComponent(email)}&key=${key}${next ? `&next=${next}` : ''}`
+  const toPlus = next === 'plus'
+  return sendEmail({
+    to: email,
+    subject: 'Link this device to your Galaxy Movies alerts',
+    html: emailLayout({
+      heading: toPlus ? 'Continue to Galaxy Plus' : 'Link this device',
+      preheader: toPlus ? 'Pick up where you left off on Galaxy Plus' : 'Sync this device to your Galaxy Movies alerts',
+      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">${toPlus
+        ? "You're already signed up — click below to head back to Galaxy Plus and pick a plan."
+        : "You're already signed up for streaming alerts. Click below to sync this device's watchlist so we can alert you when a saved title lands on your services."}</p>${emailCta(linkUrl, toPlus ? 'Continue to Plus' : 'Link this device', true)}`,
+      reason: 'You received this email because a device link was requested for this address.'
     })
   })
-  return resp.ok
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -69,6 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!EMAIL_PATTERN.test(email) || email.length > 254) {
     return res.status(400).json({ error: 'Valid email address required' })
   }
+
+  // Signups from /plus round-trip through the confirm email back to /plus so
+  // the user lands already authed on the plan picker — see waitlist-confirm.
+  const next = req.body?.purpose === 'login' ? 'plus' : undefined
 
   const clientId = getClientIP(req)
   const allowed = await checkDistributedRateLimit(clientId, {
@@ -104,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.warn('RESEND_API_KEY not set — returning alerts sync key directly (dev/local fallback)')
         return res.status(200).json({ ok: true, confirmed: true, devSyncKey: key })
       }
-      await sendLinkDeviceEmail(email, key).catch((err) => console.error('Link-device email failed:', err))
+      await sendLinkDeviceEmail(email, key, next).catch((err) => console.error('Link-device email failed:', err))
       return res.status(200).json({ ok: true, pending: true })
     }
 
@@ -121,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     await kv.hset(PENDING_KEY, { [email]: token })
-    const sent = await sendConfirmationEmail(email, token)
+    const sent = await sendConfirmationEmail(email, token, next)
     if (!sent) {
       return res.status(502).json({ error: 'Could not send confirmation email. Please try again.' })
     }

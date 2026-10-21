@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Box, Button, Flex, Input, Text } from '@chakra-ui/react'
+import { setAlertsCredentials } from '../alertsSync'
 
-export default function WaitlistForm({ purpose = 'alerts' }: { purpose?: 'alerts' | 'login' }) {
+export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purpose?: 'alerts' | 'login'; onConfirmed?: () => void }) {
   const login = purpose === 'login'
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
@@ -15,13 +16,19 @@ export default function WaitlistForm({ purpose = 'alerts' }: { purpose?: 'alerts
       const resp = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, purpose })
       })
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}))
         throw new Error(body.error || 'Something went wrong')
       }
       const body = await resp.json()
+      // Dev/local fallback: no RESEND_API_KEY means the API confirms directly
+      // and returns the sync key, so store it like a followed email link.
+      if (body.devSyncKey) {
+        setAlertsCredentials(email, body.devSyncKey)
+        onConfirmed?.()
+      }
       setStatus(body.pending ? 'pending' : 'done')
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -38,7 +45,7 @@ export default function WaitlistForm({ purpose = 'alerts' }: { purpose?: 'alerts
         <Text color='green.300' fontSize='sm'>
           {status === 'pending'
             ? login
-              ? 'Check your inbox — open the link we sent, then come back to pick a plan.'
+              ? 'Check your inbox — the link we sent drops you back here to pick a plan.'
               : 'Check your inbox — we sent a confirmation link to verify your email.'
             : login
               ? 'You\u2019re confirmed — pick a plan below.'

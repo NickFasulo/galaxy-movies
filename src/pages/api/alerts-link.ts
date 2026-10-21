@@ -23,7 +23,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const stored = await kv.hget<string>(SYNCKEY_KEY, email)
     if (!stored || !safeEqual(stored, key)) return redirect('error')
 
-    return redirect('confirmed', `email=${encodeURIComponent(email)}&key=${key}`)
+    const fragment = `email=${encodeURIComponent(email)}&key=${key}`
+    // Same whitelisted hand-off as waitlist-confirm — /plus signups land back
+    // on the plan picker instead of the email-status page.
+    if (req.query.next === 'plus') {
+      return res.redirect(302, `/plus?status=confirmed#${fragment}`)
+    }
+    return redirect('confirmed', fragment)
   } catch (err) {
     console.error('Alerts link error:', err)
     return redirect('error')

@@ -29,7 +29,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Fragment never reaches the server on redirect follow, so the sync
     // credential stays out of access logs from this point on.
     const syncKey = await getOrCreateSyncKey(kv, email)
-    return redirect('confirmed', `email=${encodeURIComponent(email)}&key=${syncKey}`)
+    const fragment = `email=${encodeURIComponent(email)}&key=${syncKey}`
+    // Signups started on /plus land back there already authed — the plan
+    // picker is the next step, not the email-status page. Whitelisted value
+    // only, so `next` can't become an open redirect.
+    if (req.query.next === 'plus') {
+      return res.redirect(302, `/plus?status=confirmed#${fragment}`)
+    }
+    return redirect('confirmed', fragment)
   } catch (err) {
     console.error('Waitlist confirm error:', err)
     return redirect('error')
