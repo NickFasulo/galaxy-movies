@@ -171,6 +171,10 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
       // AI-less bot renders stay uncached so they can't be served to
       // humans/Googlebot (see the Cache-Control branch below).
       const skipAi = isBot(context.req.headers['user-agent'])
+      // Generation additionally requires a referer or a search-engine UA:
+      // clean-UA scrapers on rotating residential IPs arrive as referer-less
+      // bare navigations, so that fingerprint can read cache but not spend.
+      const mayGenerateAi = isSearchEngine(context.req.headers['user-agent']) || Boolean(context.req.headers.referer)
       const displayTitle = media === 'tv' ? title.name : title.title
       const genres = title.genres?.map((g) => g.name) || []
 
@@ -210,7 +214,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
               overview: title.overview,
               genres,
               mediaType: media,
-              generate: !skipAi,
+              generate: !skipAi && mayGenerateAi,
               cachedValue: reviewCached
             }), 4500, null)
           : null,
@@ -222,7 +226,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
               genres,
               candidates: recommendationCandidates,
               mediaType: media,
-              generate: !skipAi,
+              generate: !skipAi && mayGenerateAi,
               cachedValue: similarCached
             }), 4500, [])
           : [],

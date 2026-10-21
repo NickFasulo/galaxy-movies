@@ -30,7 +30,7 @@ const MAX_RESULTS = 5
 
 const memorySimilarCache = new LRUCache<string, SimilarTitle[]>({ max: 500, ttl: SIMILAR_TTL_SECONDS * 1000 })
 
-const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
+const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 5
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
 export function similarCacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
@@ -70,7 +70,7 @@ async function writeCache(kv: Redis | null, key: string, value: SimilarTitle[]):
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie', generate = true, cachedValue }: {
+export async function getOrGenerateSimilarMovies({ movieId, title, overview, genres = [], candidates = [], mediaType = 'movie', generate = true, cachedValue, budget }: {
   movieId: number
   title: string
   overview?: string
@@ -81,6 +81,9 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   // undefined reads the shared cache; provided values (null = checked miss)
   // are trusted so callers can batch several cache reads into one MGET.
   cachedValue?: SimilarTitle[] | null
+  // Cron warm-ups pass their own bucket so a batch can't starve the much
+  // tighter pageview-time generation budget.
+  budget?: { key: string; maxRequests: number; windowSeconds: number }
 }): Promise<SimilarTitle[]> {
   if (!movieId || !title || candidates.length === 0) return []
 
@@ -99,9 +102,9 @@ export async function getOrGenerateSimilarMovies({ movieId, title, overview, gen
   if (!client) return []
   if (!(await isAiAvailable())) return []
 
-  const withinBudget = await checkGlobalBudget('ai_similar', {
-    maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
-    windowSeconds: 60
+  const withinBudget = await checkGlobalBudget(budget?.key || 'ai_similar', {
+    maxRequests: budget?.maxRequests ?? MAX_GLOBAL_GENERATIONS_PER_MINUTE,
+    windowSeconds: budget?.windowSeconds ?? 60
   })
   if (!withinBudget) {
     console.warn(`AI similar-movies generation budget exceeded; skipping generation for movie ${movieId}`)

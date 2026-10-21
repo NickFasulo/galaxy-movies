@@ -2,6 +2,7 @@ import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../lib/redis'
 import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders, PROVIDER_NAME_MATCH } from './tmdb'
 import { recordWatchmodeQuota, watchmodeQuotaExceeded } from './watchmodeQuota'
+import { warmAiTitleCache, type WarmCandidate } from '../ai/warmCache'
 import { pingIndexNow } from '../../lib/indexnow'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
@@ -338,15 +339,18 @@ export async function updateStreamingChanges() {
   const kv = getRedis()
   if (!kv) return { error: 'Redis unavailable' }
 
-  const summary: Record<string, { added: number; left: number; coming: number; catalog: number } | string> = {}
+  const summary: Record<string, { added: number; left: number; coming: number; catalog: number } | string | number> = {}
 
   // Every diff item is a detail page whose "where to watch" answer just
   // changed — collect their URLs and ping IndexNow once at the end so Bing
   // recrawls them before the search-demand spike, not weeks after.
   const indexNowUrls = new Set<string>()
-  const pushTitleUrls = (items: { tmdbId: number | null; tmdbType: MediaType }[]) => {
+  const warmCandidates: WarmCandidate[] = []
+  const pushTitleUrls = (items: { tmdbId: number | null; tmdbType: MediaType; title?: string; popularity?: number }[]) => {
     for (const t of items) {
-      if (t.tmdbId) indexNowUrls.add(`${SITE_URL}/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`)
+      if (!t.tmdbId) continue
+      indexNowUrls.add(`${SITE_URL}/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`)
+      if (t.title) warmCandidates.push({ id: t.tmdbId, mediaType: t.tmdbType, title: t.title, popularity: t.popularity })
     }
   }
 
@@ -532,13 +536,26 @@ export async function updateStreamingChanges() {
     fetchTmdb<TmdbPaged<TmdbMovie>>('/trending/movie/week', { page: 1 }).catch((): null => null),
     fetchTmdb<TmdbPaged<TmdbTvShow>>('/trending/tv/week', { page: 1 }).catch((): null => null)
   ])
-  for (const t of trendingMovies?.results || []) if (t?.id) indexNowUrls.add(`${SITE_URL}/movies/${t.id}`)
-  for (const t of trendingTv?.results || []) if (t?.id) indexNowUrls.add(`${SITE_URL}/tv/${t.id}`)
+  for (const t of trendingMovies?.results || []) {
+    if (!t?.id) continue
+    indexNowUrls.add(`${SITE_URL}/movies/${t.id}`)
+    warmCandidates.push({ id: t.id, mediaType: 'movie', title: t.title, popularity: t.popularity })
+  }
+  for (const t of trendingTv?.results || []) {
+    if (!t?.id) continue
+    indexNowUrls.add(`${SITE_URL}/tv/${t.id}`)
+    warmCandidates.push({ id: t.id, mediaType: 'tv', title: t.name, popularity: t.popularity })
+  }
 
   if (indexNowUrls.size) {
     indexNowUrls.add(`${SITE_URL}/new-on-streaming`)
     await pingIndexNow([...indexNowUrls])
   }
+
+  // Referer-less requests (the scraper fingerprint) can no longer trigger AI
+  // generation in SSR — warm the surfaced set here so real users and crawlers
+  // still see generated content on the pages that get search traffic.
+  summary.aiWarm = await warmAiTitleCache(warmCandidates).catch(() => 'failed')
 
   return summary
 }

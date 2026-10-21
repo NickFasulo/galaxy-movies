@@ -11,7 +11,7 @@ const MAX_OVERVIEW_LENGTH = 1200
 
 const memoryReviewCache = new LRUCache<string, string>({ max: 500, ttl: REVIEW_TTL_SECONDS * 1000 })
 
-const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 20
+const MAX_GLOBAL_GENERATIONS_PER_MINUTE = 5
 
 // tv keys are namespaced — movie and tv ids overlap in TMDB.
 export function reviewCacheKey(movieId: number | string, mediaType: MediaType = 'movie'): string {
@@ -57,7 +57,7 @@ async function writeCache(kv: Redis | null, key: string, value: string): Promise
 
 // Cache-first and safe to call from getServerSideProps — OpenAI generation is
 // capped globally so a crawler burst can't spike spend.
-export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie', generate = true, cachedValue }: {
+export async function getOrGenerateMovieReview({ movieId, title, overview, genres = [], mediaType = 'movie', generate = true, cachedValue, budget }: {
   movieId: number
   title: string
   overview?: string
@@ -67,6 +67,9 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
   // undefined reads the shared cache; provided values (null = checked miss)
   // are trusted so callers can batch several cache reads into one MGET.
   cachedValue?: string | null
+  // Cron warm-ups pass their own bucket so a batch can't starve the much
+  // tighter pageview-time generation budget.
+  budget?: { key: string; maxRequests: number; windowSeconds: number }
 }): Promise<string | null> {
   if (!movieId || !title || !overview) return null
 
@@ -86,9 +89,9 @@ export async function getOrGenerateMovieReview({ movieId, title, overview, genre
   if (!client) return null
   if (!(await isAiAvailable())) return null
 
-  const withinBudget = await checkGlobalBudget('ai_review', {
-    maxRequests: MAX_GLOBAL_GENERATIONS_PER_MINUTE,
-    windowSeconds: 60
+  const withinBudget = await checkGlobalBudget(budget?.key || 'ai_review', {
+    maxRequests: budget?.maxRequests ?? MAX_GLOBAL_GENERATIONS_PER_MINUTE,
+    windowSeconds: budget?.windowSeconds ?? 60
   })
   if (!withinBudget) {
     console.warn(`AI review generation budget exceeded; skipping generation for movie ${movieId}`)
