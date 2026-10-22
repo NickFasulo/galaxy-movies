@@ -3,12 +3,30 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest'
 vi.mock('../../lib/redis', () => ({ getRedis: () => null }))
 vi.mock('../catalog/streamingChanges', () => ({
   getProviderChanges: () =>
-    Promise.resolve({ netflix: { added: items(['Frankenstein']), left: items(['Old Show']), coming: [] } })
+    Promise.resolve({
+      netflix: {
+        added: items(['Frankenstein']),
+        left: items(['Old Show']),
+        coming: [],
+        leavingSoon: [{ title: 'Gone Soon', date: '2026-10-31' }]
+      }
+    })
 }))
 
-import { buildBroadcastPost, buildRedditDigest, broadcastWeeklyDigest } from './socialBroadcast'
+import {
+  buildBroadcastPost,
+  buildDeparturesPost,
+  buildRedditDigest,
+  broadcastMonthlyDepartures,
+  broadcastWeeklyDigest
+} from './socialBroadcast'
 
 const items = (titles: string[]) => titles.map((title) => ({ title }))
+
+// One shared spy for every describe — nested spyOn()s wrap each other and let
+// calls fall through to the real network once the inner spy is restored.
+const fetchSpy = vi.spyOn(globalThis, 'fetch')
+afterAll(() => fetchSpy.mockRestore())
 
 describe('buildBroadcastPost', () => {
   it('lists top adds and leaves per provider with the site link', () => {
@@ -87,9 +105,43 @@ describe('buildRedditDigest', () => {
   })
 })
 
-describe('broadcastWeeklyDigest', () => {
-  const fetchSpy = vi.spyOn(globalThis, 'fetch')
+describe('buildDeparturesPost', () => {
+  it('lists dated departures per provider with the site link', () => {
+    const text = buildDeparturesPost({
+      netflix: { leavingSoon: [{ title: 'Gone Soon', date: '2026-10-31' }, { title: 'Also Gone' }] },
+      hulu: { leavingSoon: [{ title: 'Hulu Exit', date: '2026-10-30' }] },
+      max: {}
+    })
+    expect(text).toContain('− Gone Soon (Oct 31) ← Netflix')
+    expect(text).toContain('− Also Gone ← Netflix')
+    expect(text).toContain('− Hulu Exit (Oct 30) ← Hulu')
+    expect(text).not.toContain('← Max')
+    expect(text).toContain('galaxymovies.app/leaving')
+    expect(text.length).toBeLessThanOrEqual(300)
+  })
 
+  it('returns empty string when nothing is leaving', () => {
+    expect(buildDeparturesPost({ netflix: {} })).toBe('')
+  })
+
+  it('drops lines until the post fits the cap', () => {
+    const long = Array.from({ length: 20 }, (_, i) => ({
+      title: `A Very Long Title Indeed Number ${i + 1}`,
+      date: '2026-10-31'
+    }))
+    const big = Object.fromEntries(
+      ['netflix', 'hulu', 'max', 'disney-plus', 'amazon-prime-video', 'apple-tv'].map((k) => [
+        k,
+        { leavingSoon: long }
+      ])
+    )
+    const text = buildDeparturesPost(big, 300)
+    expect(text.length).toBeLessThanOrEqual(300)
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+})
+
+describe('broadcastWeeklyDigest', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
     delete process.env.BSKY_HANDLE
@@ -98,8 +150,6 @@ describe('broadcastWeeklyDigest', () => {
     delete process.env.FB_PAGE_ACCESS_TOKEN
     delete process.env.SOCIAL_FACEBOOK_WEBHOOK
   })
-
-  afterAll(() => fetchSpy.mockRestore())
 
   it('skips every channel when no credentials are set', async () => {
     const results = await broadcastWeeklyDigest()
@@ -167,5 +217,36 @@ describe('broadcastWeeklyDigest', () => {
     expect(String(url)).not.toContain('page-token')
     expect(String(init?.body)).toContain('page-token')
     expect(String(init?.body)).toContain('link=')
+  })
+})
+
+describe('broadcastMonthlyDepartures', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    delete process.env.BSKY_HANDLE
+    delete process.env.BSKY_APP_PASSWORD
+    delete process.env.SOCIAL_DISCORD_WEBHOOK
+    delete process.env.FB_PAGE_ID
+    delete process.env.FB_PAGE_ACCESS_TOKEN
+    delete process.env.SOCIAL_FACEBOOK_WEBHOOK
+  })
+
+  it('posts the leaving-soon post to configured channels', async () => {
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
+    fetchSpy.mockResolvedValue(new Response('Accepted', { status: 200 }))
+
+    const results = await broadcastMonthlyDepartures()
+    expect(results.facebook.status).toBe('posted')
+    expect(results.bsky.status).toBe('skipped')
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+    expect(body.message).toContain('Leaving soon')
+    expect(body.message).toContain('Gone Soon (Oct 31)')
+    expect(body.link).toContain('galaxymovies.app/leaving')
+  })
+
+  it('skips every channel when no credentials are set', async () => {
+    const results = await broadcastMonthlyDepartures()
+    for (const r of Object.values(results)) expect(r.status).toBe('skipped')
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

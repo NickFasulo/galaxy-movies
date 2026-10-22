@@ -55,7 +55,8 @@ const CRON_ROUTES = {
   '30 6 * * *': '/api/cron/streaming-changes',
   '0 7 * * *': '/api/cron/watchlist-alerts',
   '0 16 * * 5': '/api/cron/weekly-digest',
-  '30 15 * * 1': '/api/cron/social-broadcast'
+  '30 15 * * 1': '/api/cron/social-broadcast',
+  '0 17 25 * *': '/api/cron/social-monthly'
 }
 
 export default {

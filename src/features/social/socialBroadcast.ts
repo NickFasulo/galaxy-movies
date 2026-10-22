@@ -101,18 +101,21 @@ export function buildRedditDigest(
 
 // Per-channel dedupe: `gm:social:last-post:{channel}` stores the last text
 // posted through it, so a partial failure retries only the channels that
-// missed the post instead of spamming the ones that didn't.
-const lastPostKey = (channel: string) => `gm:social:last-post:${channel}`
+// missed the post instead of spamming the ones that didn't. `scope` separates
+// the broadcast types (weekly vs monthly) so one's dedupe can't suppress or
+// resurrect the other's posts.
+const lastPostKey = (channel: string, scope?: string) =>
+  `gm:social:last-post:${scope ? `${scope}:` : ''}${channel}`
 
 export interface ChannelResult {
   status: 'posted' | 'skipped' | 'failed'
   reason?: string
 }
 
-export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelResult>> {
-  const changes = await getProviderChanges(BROADCAST_PROVIDERS)
-  if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
-
+async function broadcastToChannels(
+  textFor: (maxLen: number) => string,
+  opts: { scope?: string; ttlDays: number }
+): Promise<Record<string, ChannelResult>> {
   const kv = getRedis()
   const results: Record<string, ChannelResult> = {}
 
@@ -122,13 +125,14 @@ export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelRes
       continue
     }
 
-    const text = buildBroadcastPost(changes, channel.maxLen)
+    const text = textFor(channel.maxLen)
     if (text.length < 40) {
       results[channel.name] = { status: 'skipped', reason: 'nothing to post' }
       continue
     }
 
-    const last = kv ? await kv.get<string>(lastPostKey(channel.name)).catch(() => null) : null
+    const key = lastPostKey(channel.name, opts.scope)
+    const last = kv ? await kv.get<string>(key).catch(() => null) : null
     if (last === text) {
       results[channel.name] = { status: 'skipped', reason: 'already posted' }
       continue
@@ -139,9 +143,43 @@ export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelRes
       results[channel.name] = { status: 'failed', reason: failure }
       continue
     }
-    await kv?.set(lastPostKey(channel.name), text, { ex: 60 * 60 * 24 * 8 }).catch(() => {})
+    await kv?.set(key, text, { ex: 60 * 60 * 24 * opts.ttlDays }).catch(() => {})
     results[channel.name] = { status: 'posted' }
   }
 
   return results
+}
+
+export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelResult>> {
+  const changes = await getProviderChanges(BROADCAST_PROVIDERS)
+  if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
+  return broadcastToChannels((maxLen) => buildBroadcastPost(changes, maxLen), { ttlDays: 8 })
+}
+
+// Month-end post: the dated departures Watchmode's leavingSoon says are about
+// to disappear. Runs on the 25th so subscribers get a few days' warning.
+export function buildDeparturesPost(
+  changes: Record<string, { leavingSoon?: { title: string; date?: string | null }[] }>,
+  maxLen = 300
+): string {
+  const lines: string[] = [`Leaving soon on streaming:`]
+  for (const key of BROADCAST_PROVIDERS) {
+    for (const t of changes[key]?.leavingSoon?.slice(0, 3) || []) {
+      lines.push(`− ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} ← ${providerLabel(key)}`)
+    }
+  }
+  if (lines.length === 1) return ''
+
+  let text = `${lines.join('\n')}\n\nFull lists updated daily: ${BROADCAST_LINK}`
+  while (text.length > maxLen && lines.length > 1) {
+    lines.pop()
+    text = `${lines.join('\n')}\n\nFull lists updated daily: ${BROADCAST_LINK}`
+  }
+  return text
+}
+
+export async function broadcastMonthlyDepartures(): Promise<Record<string, ChannelResult>> {
+  const changes = await getProviderChanges(BROADCAST_PROVIDERS)
+  if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
+  return broadcastToChannels((maxLen) => buildDeparturesPost(changes, maxLen), { scope: 'monthly', ttlDays: 35 })
 }
