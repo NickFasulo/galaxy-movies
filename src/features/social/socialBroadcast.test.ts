@@ -52,6 +52,7 @@ describe('broadcastWeeklyDigest', () => {
     delete process.env.BSKY_APP_PASSWORD
     delete process.env.FB_PAGE_ID
     delete process.env.FB_PAGE_ACCESS_TOKEN
+    delete process.env.SOCIAL_FACEBOOK_WEBHOOK
   })
 
   afterAll(() => fetchSpy.mockRestore())
@@ -92,15 +93,31 @@ describe('broadcastWeeklyDigest', () => {
     expect(results.discord.status).toBe('posted')
   })
 
+  it('posts {message, link} JSON to the facebook webhook when no page token is set', async () => {
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
+    fetchSpy.mockResolvedValue(new Response('Accepted', { status: 200 }))
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.facebook.status).toBe('posted')
+    const fbCall = fetchSpy.mock.calls.find(([input]) => String(input).includes('hook.us1.make.com'))
+    expect(fbCall).toBeDefined()
+    const body = JSON.parse(String(fbCall![1]?.body))
+    expect(body.message).toContain('galaxymovies.app/leaving')
+    expect(body.link).toContain('galaxymovies.app/leaving')
+  })
+
   it('posts to the facebook page with the token in the form body, not the URL', async () => {
     process.env.FB_PAGE_ID = '123'
     process.env.FB_PAGE_ACCESS_TOKEN = 'page-token'
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
     fetchSpy.mockResolvedValue(new Response('{}', { status: 200 }))
 
     const results = await broadcastWeeklyDigest()
     expect(results.facebook.status).toBe('posted')
     const fbCall = fetchSpy.mock.calls.find(([input]) => String(input).includes('graph.facebook.com'))
     expect(fbCall).toBeDefined()
+    // direct Graph wins over the webhook when both are configured
+    expect(fetchSpy.mock.calls.find(([input]) => String(input).includes('hook.us1.make.com'))).toBeUndefined()
     const [url, init] = fbCall!
     expect(String(url)).toContain('graph.facebook.com/v21.0/123/feed')
     expect(String(url)).not.toContain('page-token')

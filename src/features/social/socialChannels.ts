@@ -255,22 +255,34 @@ const pinterest: SocialChannel = {
     })
 }
 
-// ---------- Facebook Page (Graph API feed post; token in body, not URL) ----------
+// ---------- Facebook Page ----------
+// Direct Graph feed post when FB_PAGE_ID + FB_PAGE_ACCESS_TOKEN exist (the
+// token rides in the form body, never the URL, so it can't land in access
+// logs). Otherwise POST {message, link} to SOCIAL_FACEBOOK_WEBHOOK — a
+// Make/Zapier catch hook whose scenario publishes via its own approved app,
+// which is how page posting works without a Meta developer account.
 
 const facebook: SocialChannel = {
   name: 'facebook',
   maxLen: 63206,
-  ready: () => Boolean(process.env.FB_PAGE_ID && process.env.FB_PAGE_ACCESS_TOKEN),
-  post: (text, linkUrl) =>
-    postJson(`https://graph.facebook.com/v21.0/${process.env.FB_PAGE_ID}/feed`, {
+  ready: () =>
+    Boolean(process.env.SOCIAL_FACEBOOK_WEBHOOK || (process.env.FB_PAGE_ID && process.env.FB_PAGE_ACCESS_TOKEN)),
+  post: (text, linkUrl) => {
+    const pageId = process.env.FB_PAGE_ID
+    const pageToken = process.env.FB_PAGE_ACCESS_TOKEN
+    if (pageId && pageToken) {
+      return postJson(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ access_token: pageToken, message: text, link: linkUrl }).toString()
+      })
+    }
+    return postJson(process.env.SOCIAL_FACEBOOK_WEBHOOK!, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        access_token: process.env.FB_PAGE_ACCESS_TOKEN!,
-        message: text,
-        link: linkUrl
-      }).toString()
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, link: linkUrl })
     })
+  }
 }
 
 export const SOCIAL_CHANNELS: SocialChannel[] = [

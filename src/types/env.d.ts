@@ -44,6 +44,7 @@ declare namespace NodeJS {
     PINTEREST_ACCESS_TOKEN?: string
     FB_PAGE_ID?: string
     FB_PAGE_ACCESS_TOKEN?: string
+    SOCIAL_FACEBOOK_WEBHOOK?: string
     NEXT_PUBLIC_SITE_URL?: string
   NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
   WEBPUSH_PRIVATE_KEY?: string
