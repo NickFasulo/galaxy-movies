@@ -6,7 +6,7 @@ vi.mock('../catalog/streamingChanges', () => ({
     Promise.resolve({ netflix: { added: items(['Frankenstein']), left: items(['Old Show']), coming: [] } })
 }))
 
-import { buildBroadcastPost, broadcastWeeklyDigest } from './socialBroadcast'
+import { buildBroadcastPost, buildRedditDigest, broadcastWeeklyDigest } from './socialBroadcast'
 
 const items = (titles: string[]) => titles.map((title) => ({ title }))
 
@@ -40,6 +40,50 @@ describe('buildBroadcastPost', () => {
     const text = buildBroadcastPost({})
     expect(text).toContain('streaming moves')
     expect(text.length).toBeLessThanOrEqual(300)
+  })
+})
+
+describe('buildRedditDigest', () => {
+  const changes = {
+    netflix: {
+      added: items(['Frankenstein', 'The Rip']),
+      left: items(['Old Show']),
+      coming: [{ title: 'New Thing', date: '2026-10-30' }],
+      leavingSoon: [{ title: 'Gone Soon', date: '2026-10-28' }]
+    },
+    hulu: { added: items(['Hulu Movie']), left: items([]), coming: [] },
+    max: { added: items([]), left: items(['Max Movie']), coming: [] }
+  }
+
+  it('groups titles under provider sections in requested order', () => {
+    const text = buildRedditDigest(changes, ['hulu', 'netflix', 'max'], 10000)
+    expect(text.indexOf('**Hulu**')).toBeLessThan(text.indexOf('**Netflix**'))
+    expect(text).toContain('- Added: Frankenstein, The Rip')
+    expect(text).toContain('- Removed: Old Show')
+    expect(text).toContain('New Thing (Oct 30)')
+    expect(text).toContain('Gone Soon (Oct 28)')
+    expect(text).toContain('- Removed: Max Movie')
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+
+  it('skips providers with no diff data', () => {
+    const text = buildRedditDigest(changes, ['netflix', 'peacock'], 10000)
+    expect(text).toContain('**Netflix**')
+    expect(text).not.toContain('**Peacock**')
+  })
+
+  it('trims whole lines until the post fits without an orphaned header', () => {
+    const long = Array.from({ length: 40 }, (_, i) => `A Very Long Title Indeed Number ${i + 1}`)
+    const big = {
+      netflix: { added: items(long), left: items(long), coming: [] },
+      hulu: { added: items(long), left: items(long), coming: [] },
+      max: { added: items(long), left: items(long), coming: [] }
+    }
+    const text = buildRedditDigest(big, ['netflix', 'hulu', 'max'], 1200)
+    expect(text.length).toBeLessThanOrEqual(1200)
+    expect(text).toContain('galaxymovies.app/leaving')
+    const content = text.split('Full lists updated daily')[0].trimEnd()
+    expect(content.endsWith('**')).toBe(false)
   })
 })
 

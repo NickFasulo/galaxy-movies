@@ -201,11 +201,13 @@ export async function checkGlobalBudget(name: string, options: RateLimitOptions)
 }
 
 // Public digest endpoints the Devvit apps poll on a schedule — rate-limited,
-// but deliberately no UA check: those callers aren't browsers.
+// but deliberately no UA check: those callers aren't browsers. The cap is high
+// because every install's cron fires at the same minute through Reddit's few
+// shared egress IPs — per-IP limiting would starve installs, not abuse.
 export function checkPublicDigestLimit(req: RateLimitRequest): Promise<boolean> {
   return checkDistributedRateLimit(getClientIP(req), {
     keyPrefix: 'public_digest_rl',
-    maxRequests: 60,
+    maxRequests: 1500,
     windowSeconds: 60 * 60
   })
 }

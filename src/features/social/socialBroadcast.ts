@@ -1,6 +1,6 @@
 import { getRedis } from '../../lib/redis'
 import { getProviderChanges } from '../catalog/streamingChanges'
-import { PROVIDER_NAME_MATCH } from '../catalog/tmdb'
+import { PROVIDER_NAME_MATCH, streamingProviders } from '../catalog/tmdb'
 import { SOCIAL_CHANNELS } from './socialChannels'
 import { SITE_URL } from '../../lib/site'
 
@@ -18,7 +18,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   netflix: 'Netflix',
   hulu: 'Hulu'
 }
-const providerLabel = (key: string) => PROVIDER_LABELS[key] || key
+export const providerLabel = (key: string) =>
+  PROVIDER_LABELS[key] || streamingProviders[key]?.title.replace(/ Movies$/, '') || key
 
 export const BROADCAST_LINK = `${SITE_URL}/leaving`
 
@@ -44,6 +45,56 @@ export function buildBroadcastPost(
   while (text.length > maxLen && lines.length > 1) {
     lines.pop()
     text = `${lines.join('\n')}\n\nFull lists updated daily: ${BROADCAST_LINK}`
+  }
+  return text
+}
+
+const digestDate = (iso: string) => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+// Fuller markdown digest for subreddit posts (the /api/reddit-payload Devvit
+// app): per-provider sections with dated coming/leaving rows, unlike the terse
+// single-line format social channels need.
+export function buildRedditDigest(
+  changes: Record<
+    string,
+    {
+      added: { title: string }[]
+      left: { title: string }[]
+      coming: { title: string; date?: string | null }[]
+      leavingSoon?: { title: string; date?: string | null }[]
+    }
+  >,
+  providerKeys: string[],
+  maxLen = 10000
+): string {
+  const join = (titles: { title: string; date?: string | null }[], cap: number, dated: boolean) =>
+    titles
+      .slice(0, cap)
+      .map((t) => (dated && t.date ? `${t.title} (${digestDate(t.date)})` : t.title))
+      .join(', ')
+
+  const lines: string[] = ["This week's streaming moves:"]
+  for (const key of providerKeys) {
+    const change = changes[key]
+    if (!change) continue
+    const section: string[] = []
+    if (change.added.length) section.push(`- Added: ${join(change.added, 8, false)}`)
+    if (change.left.length) section.push(`- Removed: ${join(change.left, 8, false)}`)
+    if (change.leavingSoon?.length) section.push(`- Leaving soon: ${join(change.leavingSoon, 6, true)}`)
+    if (change.coming.length) section.push(`- Coming soon: ${join(change.coming, 6, true)}`)
+    if (section.length) lines.push('', `**${providerLabel(key)}**`, ...section)
+  }
+
+  const footer = `Full lists updated daily: ${BROADCAST_LINK}`
+  let text = `${lines.join('\n')}\n\n${footer}`
+  while (text.length > maxLen && lines.length > 1) {
+    lines.pop()
+    // Don't leave an orphaned provider header as the last content line.
+    while (lines.length > 1 && lines[lines.length - 1].startsWith('**')) lines.pop()
+    text = `${lines.join('\n')}\n\n${footer}`
   }
   return text
 }
