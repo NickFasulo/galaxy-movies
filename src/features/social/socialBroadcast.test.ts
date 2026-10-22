@@ -15,6 +15,7 @@ vi.mock('../catalog/streamingChanges', () => ({
 
 import {
   buildBroadcastPost,
+  buildDeparturesDigest,
   buildDeparturesPost,
   buildRedditDigest,
   broadcastMonthlyDepartures,
@@ -102,6 +103,37 @@ describe('buildRedditDigest', () => {
     expect(text).toContain('galaxymovies.app/leaving')
     const content = text.split('Full lists updated daily')[0].trimEnd()
     expect(content.endsWith('**')).toBe(false)
+  })
+})
+
+describe('buildDeparturesDigest', () => {
+  it('renders only dated leaving rows under provider sections', () => {
+    const text = buildDeparturesDigest(
+      {
+        netflix: {
+          added: items(['Should Not Appear']),
+          leavingSoon: [
+            { title: 'Gone Soon', date: '2026-10-31' },
+            { title: 'Also Leaving', date: '2026-10-30' }
+          ]
+        },
+        hulu: { leavingSoon: [{ title: 'Hulu Exit', date: '2026-10-29' }] },
+        max: { leavingSoon: [] }
+      },
+      ['netflix', 'hulu', 'max'],
+      10000
+    )
+    expect(text).toContain('Leaving soon on streaming:')
+    expect(text).toContain('**Netflix**')
+    expect(text).toContain('- Leaving soon: Gone Soon (Oct 31), Also Leaving (Oct 30)')
+    expect(text).toContain('**Hulu**')
+    expect(text).not.toContain('**Max**')
+    expect(text).not.toContain('Should Not Appear')
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+
+  it('returns empty string when nothing is leaving', () => {
+    expect(buildDeparturesDigest({ netflix: { leavingSoon: [] } }, ['netflix'])).toBe('')
   })
 })
 

@@ -68,7 +68,8 @@ export function buildRedditDigest(
     }
   >,
   providerKeys: string[],
-  maxLen = 10000
+  maxLen = 10000,
+  headline = "This week's streaming moves:"
 ): string {
   const join = (titles: { title: string; date?: string | null }[], cap: number, dated: boolean) =>
     titles
@@ -76,7 +77,7 @@ export function buildRedditDigest(
       .map((t) => (dated && t.date ? `${t.title} (${digestDate(t.date)})` : t.title))
       .join(', ')
 
-  const lines: string[] = ["This week's streaming moves:"]
+  const lines: string[] = [headline]
   for (const key of providerKeys) {
     const change = changes[key]
     if (!change) continue
@@ -97,6 +98,29 @@ export function buildRedditDigest(
     text = `${lines.join('\n')}\n\n${footer}`
   }
   return text
+}
+
+// Departures-only variant for the Devvit monthly task (/api/reddit-payload
+// ?kind=leaving): same per-provider markdown layout, restricted to dated
+// leavingSoon rows. Empty so quiet months produce 'nothing to post'.
+export function buildDeparturesDigest(
+  changes: Record<
+    string,
+    {
+      added?: { title: string }[]
+      left?: { title: string }[]
+      coming?: { title: string; date?: string | null }[]
+      leavingSoon?: { title: string; date?: string | null }[]
+    }
+  >,
+  providerKeys: string[],
+  maxLen = 10000
+): string {
+  if (!providerKeys.some((key) => changes[key]?.leavingSoon?.length)) return ''
+  const onlyLeaving = Object.fromEntries(
+    providerKeys.map((key) => [key, { added: [], left: [], coming: [], leavingSoon: changes[key]?.leavingSoon || [] }])
+  )
+  return buildRedditDigest(onlyLeaving, providerKeys, maxLen, 'Leaving soon on streaming:')
 }
 
 // Per-channel dedupe: `gm:social:last-post:{channel}` stores the last text
