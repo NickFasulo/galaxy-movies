@@ -106,7 +106,9 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     ...Object.keys(movieGenres).map(genre =>
       urlEntry(`${siteUrl}/genre/${genre}`)
     ),
-    ...Object.keys(streamingProviders).map(provider =>
+    ...Object.keys(streamingProviders)
+      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION))
+      .map(provider =>
       urlEntry(`${siteUrl}/streaming/${provider}`)
     ),
     // Googlebot sends no geo headers, so it always crawls the DEFAULT_REGION
@@ -124,7 +126,9 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     ...Object.keys(tvGenres).map(genre =>
       urlEntry(`${siteUrl}/tv/genre/${genre}`)
     ),
-    ...Object.keys(streamingProviders).map(provider =>
+    ...Object.keys(streamingProviders)
+      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION))
+      .map(provider =>
       urlEntry(`${siteUrl}/tv/streaming/${provider}`)
     ),
     ...getTvProviderGenreTargets()
