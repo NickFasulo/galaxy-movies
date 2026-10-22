@@ -13,7 +13,7 @@ const CRAWLER_BUDGETS: [RegExp, string][] = [
   [/exasearchbot/i, 'ai_exa']
 ]
 
-const CRAWLER_BUDGET_MAX = 300
+const CRAWLER_BUDGET_MAX = 600
 const CRAWLER_BUDGET_WINDOW_S = 60 * 60
 
 export function crawlerBudgetName(userAgent: string | null | undefined): string | null {
