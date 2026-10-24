@@ -1,30 +1,43 @@
-// Rasterizes public/logo.svg to a transparent PNG for email clients — Gmail and
-// Outlook drop SVG images entirely. The wordmark's homepage glow (Wordmark.tsx
-// textShadow) is baked in as a blurred blue underlay. Deterministic; re-run
-// after logo.svg changes.
+// Renders the email header logo: the homepage Wordmark ("Galaxy Movies" in
+// SpaceRanger Laser Italic with the site's blue text-shadow glow) rasterized
+// via next/og — the same path /api/og uses — because Gmail/Outlook drop SVG
+// images and can't be trusted to load web fonts. Deterministic; re-run after
+// font or theme changes.
 // Usage: node scripts/generate-email-logo.js
-const sharp = require('sharp')
 const path = require('path')
+const { readFileSync, writeFileSync } = require('fs')
+const { ImageResponse } = require('next/og')
+const sharp = require('sharp')
 
-const SRC = path.join(__dirname, '..', 'public', 'logo.svg')
+const FONT = path.join(__dirname, '..', 'public', 'fonts', 'SpaceRangerLaserItalic-J7an.otf')
 const OUT = path.join(__dirname, '..', 'public', 'email-logo.png')
 
-const WIDTH = 720 // ~3x the 240px display size in the email header
-const PAD = 36 // canvas slack so the glow isn't clipped
-const GLOW = { r: 125, g: 175, b: 255 } // matches Wordmark's rgba(125,175,255)
-
 async function main() {
-  const logo = await sharp(SRC, { density: 300 }).resize({ width: WIDTH }).png().toBuffer()
-  const glow = await sharp(logo)
-    .extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .tint(GLOW)
-    .blur(9)
-    .png()
-    .toBuffer()
-  await sharp(glow)
-    .composite([{ input: logo, gravity: 'center' }])
-    .png()
-    .toFile(OUT)
+  const res = new ImageResponse(
+    {
+      type: 'div',
+      props: {
+        style: {
+          fontFamily: 'SpaceRangerLaserItalic',
+          fontSize: '96px',
+          color: '#ffffff',
+          letterSpacing: '0.04em',
+          lineHeight: 1,
+          textShadow: '0 0 32px rgba(125, 175, 255, 0.35)',
+          padding: '48px 56px',
+          display: 'flex'
+        },
+        children: 'Galaxy Movies'
+      }
+    },
+    {
+      width: 1200,
+      height: 300,
+      fonts: [{ name: 'SpaceRangerLaserItalic', data: readFileSync(FONT) }]
+    }
+  )
+  const png = Buffer.from(await res.arrayBuffer())
+  await sharp(png).trim({ threshold: 8 }).png().toFile(OUT)
   const meta = await sharp(OUT).metadata()
   console.log(`email-logo.png: ${meta.width}x${meta.height}`)
 }

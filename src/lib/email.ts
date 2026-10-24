@@ -45,9 +45,9 @@ ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide
 }
 
 export function emailCta(url: string, label: string, showRawLink = false): string {
-  const button = `<p style="margin:22px 0 6px;"><a href="${url}" style="display:inline-block; background-color:#2b6cb0; color:#ffffff; padding:11px 22px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">${label}</a></p>`
+  const button = `<p style="margin:22px 0 6px; text-align:center;"><a href="${url}" style="display:inline-block; background-color:#2b6cb0; color:#ffffff; padding:11px 22px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">${label}</a></p>`
   if (!showRawLink) return button
-  return button + `<p style="margin:14px 0 0; color:#718096; font-size:12px; word-break:break-all;">Or paste this link: ${url}</p>`
+  return button + `<p style="margin:14px 0 0; color:#718096; font-size:12px; word-break:break-all; text-align:center;">Or paste this link: ${url}</p>`
 }
 
 // Inset panel for the Plus upsell inside the raised card.
