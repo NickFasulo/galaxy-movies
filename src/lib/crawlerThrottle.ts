@@ -4,7 +4,10 @@ import { checkGlobalBudget } from './rateLimiter'
 // get a shared hourly budget per family instead of a hard block. Training-only
 // crawlers (ClaudeBot, GPTBot, CCBot, ...) are blocked at the edge instead and
 // never reach this. Search engines (Googlebot/Bingbot/...) stay unlimited:
-// their indexing is worth more than the requests cost.
+// their indexing is worth more than the requests cost. These UA families are
+// exempted from the zone's navigations managed-challenge WAF rule — keep the
+// lists in sync (it's dashboard config, not in this repo) or requests get
+// challenged before the budget ever sees them.
 const CRAWLER_BUDGETS: [RegExp, string][] = [
   [/claude-searchbot|claude-user/i, 'ai_claude'],
   [/oai-searchbot|chatgpt-user/i, 'ai_openai'],
