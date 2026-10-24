@@ -11,6 +11,8 @@ export interface TopicSeed {
 // Keyword-informed backlog for the content pipeline. Volumes/KD from OpenSEO
 // research (US, Oct 2026); the Oct 19 reseed batch is popularity-informed
 // (IMDb/Letterboxd most-popular lists) because OpenSEO credits were exhausted.
+// Array order is the generation priority: the cron takes the first 3 pending
+// seeds daily, so append-at-end means ~weeks of delay for a hot new title.
 // `similar` seeds resolve movieTitle via TMDB search and
 // power "Movies Like X" pages off /movie/{id}/recommendations. `discover` seeds
 // hand the keyword + hint to the generator, which drafts TMDB discover params.
@@ -19,6 +21,9 @@ export const topicSeeds: TopicSeed[] = [
   { slug: 'movies-like-the-notebook', keyword: 'movies like the notebook', type: 'similar', movieTitle: 'The Notebook' },
   { slug: 'movies-like-the-hunger-games', keyword: 'movies like the hunger games', type: 'similar', movieTitle: 'The Hunger Games' },
   { slug: 'movies-like-superbad', keyword: 'movies like superbad', type: 'similar', movieTitle: 'Superbad' },
+  { slug: 'movies-like-kpop-demon-hunters', keyword: 'movies like kpop demon hunters', type: 'similar', movieTitle: 'KPop Demon Hunters' },
+  { slug: 'movies-like-sinners', keyword: 'movies like sinners', type: 'similar', movieTitle: 'Sinners' },
+  { slug: 'movies-like-weapons', keyword: 'movies like weapons', type: 'similar', movieTitle: 'Weapons' },
   { slug: 'movies-like-shutter-island', keyword: 'movies like shutter island', type: 'similar', movieTitle: 'Shutter Island' },
   { slug: 'movies-like-knives-out', keyword: 'movies like knives out', type: 'similar', movieTitle: 'Knives Out' },
   { slug: 'movies-like-coraline', keyword: 'movies like coraline', type: 'similar', movieTitle: 'Coraline' },
@@ -65,8 +70,6 @@ export const topicSeeds: TopicSeed[] = [
   { slug: 'movies-like-saltburn', keyword: 'movies like saltburn', type: 'similar', movieTitle: 'Saltburn' },
   { slug: 'movies-like-the-substance', keyword: 'movies like the substance', type: 'similar', movieTitle: 'The Substance' },
   { slug: 'movies-like-longlegs', keyword: 'movies like longlegs', type: 'similar', movieTitle: 'Longlegs' },
-  { slug: 'movies-like-sinners', keyword: 'movies like sinners', type: 'similar', movieTitle: 'Sinners' },
-  { slug: 'movies-like-weapons', keyword: 'movies like weapons', type: 'similar', movieTitle: 'Weapons' },
   { slug: 'movies-like-talk-to-me', keyword: 'movies like talk to me', type: 'similar', movieTitle: 'Talk to Me' },
   { slug: 'movies-like-smile', keyword: 'movies like smile', type: 'similar', movieTitle: 'Smile' },
   { slug: 'movies-like-a-quiet-place', keyword: 'movies like a quiet place', type: 'similar', movieTitle: 'A Quiet Place' },
@@ -87,26 +90,6 @@ export const topicSeeds: TopicSeed[] = [
   { slug: 'movies-like-500-days-of-summer', keyword: 'movies like 500 days of summer', type: 'similar', movieTitle: '(500) Days of Summer' },
   { slug: 'movies-like-shrek', keyword: 'movies like shrek', type: 'similar', movieTitle: 'Shrek' },
   { slug: 'movies-like-spider-verse', keyword: 'movies like spider verse', type: 'similar', movieTitle: 'Spider-Man: Into the Spider-Verse' },
-  { slug: 'movies-like-kpop-demon-hunters', keyword: 'movies like kpop demon hunters', type: 'similar', movieTitle: 'KPop Demon Hunters' },
-
-  { slug: 'underrated-horror-movies', keyword: 'underrated horror movies', type: 'discover', hint: 'Well-reviewed horror films most people missed — high vote average, moderate-to-low vote counts.' },
-  { slug: 'underrated-comedy-movies', keyword: 'underrated comedy movies', type: 'discover', hint: 'Well-reviewed comedies that flew under the radar — high vote average, moderate-to-low vote counts.' },
-  { slug: 'underrated-sci-fi-movies', keyword: 'underrated sci fi movies', type: 'discover', hint: 'Well-reviewed science fiction films that never got a wide audience — high vote average, moderate-to-low vote counts.' },
-  { slug: 'underrated-thriller-movies', keyword: 'underrated thriller movies', type: 'discover', hint: 'Well-reviewed thrillers most people missed — high vote average, moderate-to-low vote counts.' },
-  { slug: 'underrated-80s-movies', keyword: 'underrated 80s movies', type: 'discover', hint: 'Well-reviewed 1980s films most people missed — released 1980-1989, high vote average, moderate vote counts.' },
-  { slug: 'underrated-2000s-movies', keyword: 'underrated 2000s movies', type: 'discover', hint: 'Well-reviewed 2000s films that flew under the radar — released 2000-2009, high vote average, moderate vote counts.' },
-  { slug: 'feel-good-comedy-movies', keyword: 'feel good comedy movies', type: 'discover', hint: 'Uplifting comedies — light, warm, rewatchable.' },
-  { slug: 'romantic-movies-to-watch', keyword: 'romantic movies to watch', type: 'discover', hint: 'Great romance films — crowd-pleasing and well-reviewed.' },
-  { slug: 'movies-to-watch-high', keyword: 'movies to watch high', type: 'discover', hint: 'Visually trippy or absurdly funny films — stoner-comedy keywords, surreal animated or psychedelic picks.' },
-  { slug: 'scary-movies-to-watch', keyword: 'scary movies to watch', type: 'discover', hint: 'The scariest well-regarded horror films — horror genre with strong ratings.' },
-  { slug: 'classic-movies-to-watch', keyword: 'classic movies to watch', type: 'discover', hint: 'Essential pre-1990 classics that still hold up — high vote average, high vote counts.' },
-  { slug: 'mind-bending-horror-movies', keyword: 'mind bending horror movies', type: 'discover', hint: 'Horror films with psychological or reality-twisting angles — psychological-horror / surreal keywords where possible.' },
-  { slug: 'time-loop-movies', keyword: 'time loop movies', type: 'discover', hint: 'Films built around repeating days or time loops — Groundhog Day-style mechanics across genres.' },
-  { slug: 'whodunit-movies', keyword: 'whodunit movies', type: 'discover', hint: 'Murder-mystery whodunits with ensemble suspects — mystery/crime with strong ratings.' },
-  { slug: 'sad-movies-that-make-you-cry', keyword: 'sad movies that will make you cry', type: 'discover', hint: 'Emotionally devastating dramas — tearjerkers with high vote averages.' },
-  { slug: 'cozy-movies', keyword: 'cozy movies', type: 'discover', hint: 'Warm, low-stakes comfort films — gentle pacing, feel-good tone.' },
-  { slug: 'animated-movies-for-adults', keyword: 'animated movies for adults', type: 'discover', hint: 'Animation aimed at grown-ups — adult themes, not family fare.' },
-  { slug: 'heist-movies', keyword: 'heist movies', type: 'discover', hint: 'Caper and heist films — clever crew-driven jobs, crime genre with strong ratings.' },
 
   // media: 'tv' seeds run the same pipeline against /discover/tv and
   // /tv/{id}/recommendations — TMDB tv genre ids differ from movie ids.
@@ -159,6 +142,25 @@ export const topicSeeds: TopicSeed[] = [
   { slug: 'shows-like-the-pitt', keyword: 'shows like the pitt', type: 'similar', media: 'tv', showTitle: 'The Pitt' },
   { slug: 'shows-like-adolescence', keyword: 'shows like adolescence', type: 'similar', media: 'tv', showTitle: 'Adolescence' },
   { slug: 'shows-like-silo', keyword: 'shows like silo', type: 'similar', media: 'tv', showTitle: 'Silo' },
+
+  { slug: 'underrated-horror-movies', keyword: 'underrated horror movies', type: 'discover', hint: 'Well-reviewed horror films most people missed — high vote average, moderate-to-low vote counts.' },
+  { slug: 'underrated-comedy-movies', keyword: 'underrated comedy movies', type: 'discover', hint: 'Well-reviewed comedies that flew under the radar — high vote average, moderate-to-low vote counts.' },
+  { slug: 'underrated-sci-fi-movies', keyword: 'underrated sci fi movies', type: 'discover', hint: 'Well-reviewed science fiction films that never got a wide audience — high vote average, moderate-to-low vote counts.' },
+  { slug: 'underrated-thriller-movies', keyword: 'underrated thriller movies', type: 'discover', hint: 'Well-reviewed thrillers most people missed — high vote average, moderate-to-low vote counts.' },
+  { slug: 'underrated-80s-movies', keyword: 'underrated 80s movies', type: 'discover', hint: 'Well-reviewed 1980s films most people missed — released 1980-1989, high vote average, moderate vote counts.' },
+  { slug: 'underrated-2000s-movies', keyword: 'underrated 2000s movies', type: 'discover', hint: 'Well-reviewed 2000s films that flew under the radar — released 2000-2009, high vote average, moderate vote counts.' },
+  { slug: 'feel-good-comedy-movies', keyword: 'feel good comedy movies', type: 'discover', hint: 'Uplifting comedies — light, warm, rewatchable.' },
+  { slug: 'romantic-movies-to-watch', keyword: 'romantic movies to watch', type: 'discover', hint: 'Great romance films — crowd-pleasing and well-reviewed.' },
+  { slug: 'movies-to-watch-high', keyword: 'movies to watch high', type: 'discover', hint: 'Visually trippy or absurdly funny films — stoner-comedy keywords, surreal animated or psychedelic picks.' },
+  { slug: 'scary-movies-to-watch', keyword: 'scary movies to watch', type: 'discover', hint: 'The scariest well-regarded horror films — horror genre with strong ratings.' },
+  { slug: 'classic-movies-to-watch', keyword: 'classic movies to watch', type: 'discover', hint: 'Essential pre-1990 classics that still hold up — high vote average, high vote counts.' },
+  { slug: 'mind-bending-horror-movies', keyword: 'mind bending horror movies', type: 'discover', hint: 'Horror films with psychological or reality-twisting angles — psychological-horror / surreal keywords where possible.' },
+  { slug: 'time-loop-movies', keyword: 'time loop movies', type: 'discover', hint: 'Films built around repeating days or time loops — Groundhog Day-style mechanics across genres.' },
+  { slug: 'whodunit-movies', keyword: 'whodunit movies', type: 'discover', hint: 'Murder-mystery whodunits with ensemble suspects — mystery/crime with strong ratings.' },
+  { slug: 'sad-movies-that-make-you-cry', keyword: 'sad movies that will make you cry', type: 'discover', hint: 'Emotionally devastating dramas — tearjerkers with high vote averages.' },
+  { slug: 'cozy-movies', keyword: 'cozy movies', type: 'discover', hint: 'Warm, low-stakes comfort films — gentle pacing, feel-good tone.' },
+  { slug: 'animated-movies-for-adults', keyword: 'animated movies for adults', type: 'discover', hint: 'Animation aimed at grown-ups — adult themes, not family fare.' },
+  { slug: 'heist-movies', keyword: 'heist movies', type: 'discover', hint: 'Caper and heist films — clever crew-driven jobs, crime genre with strong ratings.' },
 
   { slug: 'underrated-tv-shows', keyword: 'underrated tv shows', type: 'discover', media: 'tv', hint: 'Well-reviewed series most people missed — high vote average, moderate-to-low vote counts.' },
   { slug: 'binge-worthy-tv-shows', keyword: 'binge worthy tv shows', type: 'discover', media: 'tv', hint: 'Addictive multi-season series — high popularity and strong ratings.' },

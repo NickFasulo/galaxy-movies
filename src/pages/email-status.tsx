@@ -6,6 +6,7 @@ import PlusUpsell from '../features/billing/components/PlusUpsell'
 import { firstParam } from '../lib/http'
 import { fetchSyncedPrefs, setAlertsCredentials, syncAlertsNow } from '../features/alerts/alertsSync'
 import { getUserData, mergeSyncedPrefs } from '../lib/userData'
+import { trackEvent } from '../lib/umami'
 
 const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {
@@ -32,6 +33,11 @@ export default function EmailStatus() {
   const [credsReady, setCredsReady] = useState(false)
   const statusKey = firstParam(query.status)
   const showUpsell = statusKey === 'confirmed' || statusKey === 'watch-confirmed'
+
+  useEffect(() => {
+    if (statusKey === 'confirmed') trackEvent('waitlist-confirmed')
+    else if (statusKey === 'watch-confirmed') trackEvent('title-alert-confirmed')
+  }, [statusKey])
 
   // Credentials travel in the URL fragment (never sent to the server on
   // redirect) rather than the query string, so they're read here client-side.

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Box, Button, Flex, Input, Text } from '@chakra-ui/react'
 import { setAlertsCredentials } from '../alertsSync'
+import { trackEvent } from '../../../lib/umami'
 
 export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purpose?: 'alerts' | 'login'; onConfirmed?: () => void }) {
   const login = purpose === 'login'
@@ -30,6 +31,7 @@ export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purp
         onConfirmed?.()
       }
       setStatus(body.pending ? 'pending' : 'done')
+      trackEvent('waitlist-signup', { purpose, result: body.pending ? 'pending' : 'done' })
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setStatus('idle')

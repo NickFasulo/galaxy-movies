@@ -205,7 +205,7 @@ function PersonContent({ person, directedMovies, actingMovies, tvShows }: { pers
   return (
     <>
       <PageHead
-        title={person.name}
+        title={`${person.name} Movies and TV Shows`}
         description={description}
         canonicalUrl={canonicalUrl}
         ogType='profile'

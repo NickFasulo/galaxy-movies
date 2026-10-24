@@ -24,6 +24,7 @@ import { startPlusCheckout } from '../features/billing/components/PlusUpsell'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
 import { setAlertsCredentials } from '../features/alerts/alertsSync'
 import { firstParam } from '../lib/http'
+import { trackEvent } from '../lib/umami'
 
 const FEATURES = [
   { icon: LuBell, title: 'Taste-matched alerts', blurb: 'New arrivals on your services, matched to what you rate highly.' },
@@ -69,12 +70,18 @@ export default function Plus() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (success) trackEvent('plus-subscribed')
+    else if (confirmed) trackEvent('waitlist-confirmed')
+  }, [success, confirmed])
+
   const checkout = async (plan: 'monthly' | 'yearly') => {
     if (!creds) return
     setBusy(plan)
     setError('')
     const { url, error } = await startPlusCheckout(creds, plan)
     if (url) {
+      trackEvent('plus-checkout-start', { plan })
       window.location.href = url
       return
     }

@@ -153,9 +153,14 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   try {
     const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
     const categories = Object.keys(movieCategories)
+    // Release-day demand spikes on titles well below the top-40 upcoming, and
+    // a page only captures it if Google indexed it before release — 'upcoming'
+    // gets 4 pages (~80 titles) for that reason alone.
+    const UPCOMING_PAGES = 4
     const categoryResults = await runBatched(
       categories.flatMap(category =>
-        pageRange.map(page => () => fetchDiscoverMovies({ category, page }))
+        (category === 'upcoming' ? Array.from({ length: UPCOMING_PAGES }, (_, i) => i + 1) : pageRange)
+          .map(page => () => fetchDiscoverMovies({ category, page }))
       )
     )
 
