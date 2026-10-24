@@ -21,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "prepare": "husky",
     "smoke": "bash scripts/smoke.sh",
-    "smoke:workerd": "bash scripts/workerd-smoke.sh"
+    "smoke:workerd": "bash scripts/workerd-smoke.sh",
+    "index:check": "node scripts/check-upcoming-indexing.js"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.37.0",

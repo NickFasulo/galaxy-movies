@@ -10,6 +10,7 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 - `npm run lint` — ESLint flat config (`eslint.config.mjs`, `next/core-web-vitals` + `next/typescript`)
 - `npm run check` — typecheck + production build
 - `npm run smoke` — post-deploy probe (`scripts/smoke.sh`); `SMOKE_BASE=<url>` retargets it (e.g. the workers.dev host), `SMOKE_LEVEL=core` drops the Redis-backed API + apex checks for secret-less environments.
+- `npm run index:check` — URL Inspection API over the top upcoming US+IN releases (`--top N`); needs `.secrets-gsc.json` service-account key added as a GSC user. Prints pre-filled inspect links for unindexed pages — Google's "Request indexing" is UI-only (the Indexing API is JobPosting/BroadcastEvent-only). Repeatable agent flow lives in `.devin/skills/indexing-check/`.
 - `npm run smoke:workerd` — boots the last `cf:build` output under `wrangler dev` (real workerd) and runs the core smoke set; forwards `TMDB_API_KEY` via `--var` when set since wrangler doesn't read `.env.local`.
 - husky `pre-commit` runs typecheck + lint + test (~8s, suite is fast); `git commit --no-verify` skips.
 - `npm run dev` — dev server on :3000 (webpack). `npm run dev:turbo` runs Turbopack, but Next 16.4.0 has a Pages Router Turbopack dev bug (vercel/next.js#99789) that hydration-crashes pages with "module factory is not available" — keep `dev` on webpack until the backported fix ships, then swap the flags back.
