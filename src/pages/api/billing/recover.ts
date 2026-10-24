@@ -21,7 +21,7 @@ async function sendAccessLinkEmail(email: string, key: string): Promise<boolean>
     html: emailLayout({
       heading: 'Your access link',
       preheader: 'Sign in to Galaxy Plus on this device',
-      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">Click below to sign in to Galaxy Plus on this device. If you didn't ask for this, just ignore it.</p>${emailCta(linkUrl, 'Sign in to Galaxy Plus', true)}`,
+      body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">Click below to sign in to Galaxy Plus on this device. If you didn't ask for this, just ignore it.</p>${emailCta(linkUrl, 'Sign in to Galaxy Plus', true)}`,
       reason: 'You received this email because a Galaxy Plus sign-in link was requested for this address.'
     })
   })

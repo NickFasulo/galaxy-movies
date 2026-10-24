@@ -13,7 +13,7 @@ describe('emailLayout', () => {
     const html = emailLayout({ heading: 'Hello', body: '<p>Body</p>' })
     expect(html).toContain('Hello')
     expect(html).toContain('<p>Body</p>')
-    expect(html).toContain('/icons/icon-192.png')
+    expect(html).toContain('/email-logo.png')
     expect(html).toContain(MAILING_ADDRESS)
   })
 

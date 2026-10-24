@@ -17,7 +17,7 @@ async function sendConfirmationEmail(email: string, token: string, next?: string
     html: emailLayout({
       heading: toPlus ? 'Confirm your email' : 'Confirm your alerts signup',
       preheader: toPlus ? 'One click to confirm and pick your plan' : 'One click to start streaming alerts',
-      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">${toPlus
+      body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">${toPlus
         ? "You're one click from Galaxy Plus — confirm your email and you'll land back on the Plus page to pick a plan. If you didn't sign up, just ignore this email."
         : "You signed up for streaming alerts on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email."}</p>${emailCta(confirmUrl, 'Confirm my email', true)}`,
       reason: 'You received this email because an alerts signup was started with this address.'
@@ -36,7 +36,7 @@ async function sendLinkDeviceEmail(email: string, key: string, next?: string): P
     html: emailLayout({
       heading: toPlus ? 'Continue to Galaxy Plus' : 'Link this device',
       preheader: toPlus ? 'Pick up where you left off on Galaxy Plus' : 'Sync this device to your Galaxy Movies alerts',
-      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">${toPlus
+      body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">${toPlus
         ? "You're already signed up — click below to head back to Galaxy Plus and pick a plan."
         : "You're already signed up for streaming alerts. Click below to sync this device's watchlist so we can alert you when a saved title lands on your services."}</p>${emailCta(linkUrl, toPlus ? 'Continue to Plus' : 'Link this device', true)}`,
       reason: 'You received this email because a device link was requested for this address.'

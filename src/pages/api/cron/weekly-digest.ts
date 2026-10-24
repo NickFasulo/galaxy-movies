@@ -49,11 +49,11 @@ const sectionHead = (label: string) =>
 
 function itemList(items: DigestItem[], showDate: boolean) {
   if (!items.length) return ''
-  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #d7dde4;">${items
+  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #e2e8f0;">${items
     .map(
       (t) =>
         `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
-        `<div style="color: #8f9aa7; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
+        `<div style="color: #718096; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
     )
     .join('')}</ul>`
 }
@@ -64,7 +64,7 @@ function buildEmail(items: DigestItems, email: string, token: string, leaving: D
     heading: 'This week on streaming',
     preheader: "New arrivals and what's coming to your services",
     body: `
-      <p style="margin: 0 0 6px; color: #93a0ad; line-height: 1.6;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
+      <p style="margin: 0 0 6px; color: #a0aec0; line-height: 1.6;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
       ${items.added.length ? `${sectionHead('Just added')}${itemList(items.added, false)}` : ''}
       ${items.coming.length ? `${sectionHead('Coming soon')}${itemList(items.coming, true)}` : ''}
       ${leaving.length ? `${sectionHead('Leaving this month')}${itemList(leaving, true)}` : ''}

@@ -217,7 +217,7 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
   const rows = items
     .map((item) =>
       `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
-      `<div style="color: #8f9aa7; font-size: 13px; margin-top: 1px;">${statusLine(item)}</div></li>`
+      `<div style="color: #718096; font-size: 13px; margin-top: 1px;">${statusLine(item)}</div></li>`
     )
     .join('')
 
@@ -225,8 +225,8 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
     heading: 'Something on your list just moved',
     preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles on your watchlist`,
     body: `
-      <p style="margin: 0 0 14px; color: #93a0ad; line-height: 1.6;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
-      <ul style="list-style: none; padding: 0; margin: 0; color: #d7dde4;">${rows}</ul>
+      <p style="margin: 0 0 14px; color: #a0aec0; line-height: 1.6;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
+      <ul style="list-style: none; padding: 0; margin: 0; color: #e2e8f0;">${rows}</ul>
       <p style="margin: 22px 0 0;"><a href="${SITE_URL}/watchlist" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">View your list →</a></p>
       ${plusUrl ? emailCallout(`Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',

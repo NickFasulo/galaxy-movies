@@ -22,7 +22,7 @@ async function sendConfirmEmail(email: string, token: string, title: string): Pr
     html: emailLayout({
       heading: 'Confirm your title alert',
       preheader: `Get notified when ${title} moves`,
-      body: `<p style="margin:0; color:#93a0ad; line-height:1.6;">You asked Galaxy Movies to email you when <strong style="color:#ffffff;">${escapeHtml(title)}</strong> lands on or leaves a tracked streaming service. Click below to confirm — if you didn't ask for this, just ignore it.</p>${emailCta(confirmUrl, 'Confirm my alert', true)}`,
+      body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">You asked Galaxy Movies to email you when <strong style="color:#ffffff;">${escapeHtml(title)}</strong> lands on or leaves a tracked streaming service. Click below to confirm — if you didn't ask for this, just ignore it.</p>${emailCta(confirmUrl, 'Confirm my alert', true)}`,
       reason: 'You received this email because a title alert was started with this address.'
     })
   })
