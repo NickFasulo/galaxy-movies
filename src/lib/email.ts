@@ -31,7 +31,7 @@ ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide
       <a href="${SITE_URL}" style="text-decoration:none;"><img src="${SITE_URL}/email-logo.png" width="264" alt="Galaxy Movies" style="display:inline-block; border:0; width:264px; max-width:100%; height:auto; color:#ffffff; font-size:20px; font-weight:700;" /></a>
     </div>
     <div style="background-color:#1f252b; border:1px solid #2a3138; border-radius:14px; padding:26px 28px;">
-      <div style="font-size:20px; font-weight:700; color:#ffffff; margin:0 0 6px;">${heading}</div>
+      <div style="font-size:20px; font-weight:700; color:#ffffff; margin:0 0 6px; text-align:center;">${heading}</div>
       ${body}
     </div>
     <div style="padding:20px 8px 0; text-align:center; font-size:12px; line-height:1.6; color:#718096;">

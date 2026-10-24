@@ -69,7 +69,7 @@ function buildEmail(items: DigestItems, email: string, token: string, leaving: D
       ${items.coming.length ? `${sectionHead('Coming soon')}${itemList(items.coming, true)}` : ''}
       ${leaving.length ? `${sectionHead('Leaving this month')}${itemList(leaving, true)}` : ''}
       <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See everything new on streaming →</a></p>
-      ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track — $3/mo or $20/yr. <a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a>`) : ''}`,
+      ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track — $3/mo or $20/yr.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',
     unsubUrl: unsub
   })
