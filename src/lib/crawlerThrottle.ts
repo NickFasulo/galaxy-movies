@@ -5,9 +5,11 @@ import { checkGlobalBudget } from './rateLimiter'
 // crawlers (ClaudeBot, GPTBot, CCBot, ...) are blocked at the edge instead and
 // never reach this. Search engines (Googlebot/Bingbot/...) stay unlimited:
 // their indexing is worth more than the requests cost. These UA families are
-// exempted from the zone's navigations managed-challenge WAF rule — keep the
-// lists in sync (it's dashboard config, not in this repo) or requests get
-// challenged before the budget ever sees them.
+// exempted from the zone's navigations managed-challenge WAF rule — the IP-
+// pinned ones (perplexity, claude-*, oai-searchbot) are non-spoofable; the
+// UA-only ones (chatgpt-user, amzn-searchbot, exasearchbot) are claimable but
+// stay capped by the budget below. Keep both lists in sync — it's dashboard
+// config, not in this repo — or requests get challenged before this sees them.
 const CRAWLER_BUDGETS: [RegExp, string][] = [
   [/claude-searchbot|claude-user/i, 'ai_claude'],
   [/oai-searchbot|chatgpt-user/i, 'ai_openai'],
