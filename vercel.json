@@ -1,10 +1,7 @@
 {
   "git": {
-    "deploymentEnabled": {
-      "main": false
-    }
+    "deploymentEnabled": false
   },
-  "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ':!*.md' ':!.github' ':!scripts' ':!.devin' ':!lighthouserc.cjs'",
   "crons": [
     {
       "path": "/api/cron/generate-content",
