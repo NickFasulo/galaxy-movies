@@ -121,21 +121,27 @@ async function main() {
   console.log(`Checking ${titles.length} upcoming releases against the Google index…\n`)
   const token = await accessToken()
   const pending = []
+  let errors = 0
 
   for (const t of titles) {
     const url = `${siteBase}/movies/${t.id}`
     try {
       const r = await inspect(token, url)
-      const indexed = r.coverageState === 'Submitted and indexed' || /indexed/i.test(r.verdict === 'PASS' ? 'indexed' : '')
+      const indexed = r.verdict === 'PASS' || r.coverageState === 'Submitted and indexed'
       const state = r.coverageState || r.verdict || 'unknown'
       const crawl = r.lastCrawlTime ? ` · crawled ${r.lastCrawlTime.slice(0, 10)}` : ''
       console.log(`${indexed ? 'INDEXED  ' : 'PENDING  '}${(t.title || '').slice(0, 40).padEnd(40)} ${state}${crawl}`)
       if (!indexed) pending.push(url)
     } catch (err) {
+      errors++
       console.log(`ERROR    ${(t.title || '').slice(0, 40).padEnd(40)} ${err.message}`)
     }
   }
 
+  if (errors === titles.length) {
+    console.log('\nAll checks errored — fix the cause above before reading results.')
+    process.exit(1)
+  }
   if (pending.length) {
     console.log(`\n${pending.length} not indexed. "Request indexing" has no API — open each link and click Request Indexing (Google allows ~10-15/day):\n`)
     for (const url of pending) console.log(`  ${inspectLink(url)}`)
