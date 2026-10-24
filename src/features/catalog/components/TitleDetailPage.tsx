@@ -23,7 +23,7 @@ import { dateFormatter } from '../../../lib/format/formatters'
 import { getFirstPlayableKey } from '../youtubeCache'
 import { detectRegion } from '../../../lib/region'
 import { useUserData } from '../../alerts/hooks/useUserData'
-import { getProviderIds, normalizeTvTitle } from '../tmdb'
+import { getProviderIds, isAnimeTitle, normalizeTvTitle } from '../tmdb'
 import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey, stripEmphasis } from '../../ai/movieReview'
 import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../similarMovies'
 import { findSimilarListRef, type SimilarListRef } from '../generatedLists'
@@ -418,7 +418,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
               onError={() => setPosterSrc('/poster_fallback.webp')}
             />
 
-            <GenreBadges genres={title.genres} mediaType={media} />
+            <GenreBadges genres={title.genres} mediaType={media} isAnime={isAnimeTitle(title, media)} />
 
             <Box w='20rem' maxW='100%'>
               <WatchProviders

@@ -104,7 +104,7 @@ export function providerGenreServerSideProps(media: MediaType) {
     }
 
     try {
-      const data = await discover({ providerId, genreId, region, page })
+      const data = await discover({ providerId, genreId, genreParams: genres[genreSlug].params, region, page })
       const titles = data.results || []
       if (page > 1 && !titles.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: titles })

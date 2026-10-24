@@ -1,4 +1,4 @@
-import type { NormalizedTvShow, TmdbCollection, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
+import type { MediaType, NormalizedTvShow, TmdbCollection, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const TMDB_URL = 'https://api.themoviedb.org/3'
 
@@ -20,6 +20,28 @@ export interface TvCategory {
 export interface GenreDef {
   id: number
   title: string
+  // Pseudo-genres (e.g. anime) layer extra discover params onto the base genre
+  // id — TMDB has no anime genre, so it's Animation + Japanese origin.
+  params?: TmdbParams
+}
+
+// "Anime" = animation of Japanese origin (the JustWatch-style definition):
+// with_origin_country=JP keeps co-productions like Cyberpunk: Edgerunners
+// while excluding Western animation. Verified against live discover output —
+// for movies it matched with_original_language=ja within ~1% of results.
+export const ANIME_ORIGIN: TmdbParams = { with_origin_country: 'JP' }
+export const ANIME_PARAMS: TmdbParams = { with_genres: '16', ...ANIME_ORIGIN }
+
+// Detail-page detection — same definition the discover pages use, applied to
+// fields already present in the details payload.
+export function isAnimeTitle(
+  title: { genres?: { id: number }[]; original_language?: string; origin_country?: string[] },
+  media: MediaType
+): boolean {
+  if (!title.genres?.some((g) => g.id === 16)) return false
+  return media === 'tv'
+    ? Boolean(title.origin_country?.includes('JP'))
+    : title.original_language === 'ja'
 }
 
 export interface StreamingProvider {
@@ -31,6 +53,7 @@ export interface StreamingProvider {
 export interface DiscoverOptions {
   category?: string
   genreId?: number | string | null
+  genreParams?: TmdbParams
   providerId?: number | string | null
   region?: string
   page?: number
@@ -138,6 +161,10 @@ export const movieGenres: Record<string, GenreDef> = {
   action: { id: 28, title: 'Action Movies' },
   adventure: { id: 12, title: 'Adventure Movies' },
   animation: { id: 16, title: 'Animation Movies' },
+  // Pseudo-genre: shares Animation's id and layers ANIME_ORIGIN on top.
+  // Consumers that map raw TMDB genre ids → slugs (GenreBadges) must skip
+  // param'd defs — a bare genre id can't express the JP-origin filter.
+  anime: { id: 16, title: 'Anime Movies', params: ANIME_ORIGIN },
   comedy: { id: 35, title: 'Comedy Movies' },
   crime: { id: 80, title: 'Crime Movies' },
   documentary: { id: 99, title: 'Documentary Movies' },
@@ -210,6 +237,8 @@ export const tvCategories: Record<string, TvCategory> = {
 export const tvGenres: Record<string, GenreDef> = {
   'action-adventure': { id: 10759, title: 'Action & Adventure Shows' },
   animation: { id: 16, title: 'Animated Shows' },
+  // Pseudo-genre — see the movieGenres note above.
+  anime: { id: 16, title: 'Anime Shows', params: ANIME_ORIGIN },
   comedy: { id: 35, title: 'Comedy Shows' },
   crime: { id: 80, title: 'Crime Shows' },
   documentary: { id: 99, title: 'Documentary Shows' },
@@ -359,7 +388,7 @@ export function providerKeyForId(providerId: number, region = 'US'): string | nu
   return null
 }
 
-export async function fetchDiscoverMovies({ category, genreId, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
+export async function fetchDiscoverMovies({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
@@ -391,6 +420,8 @@ export async function fetchDiscoverMovies({ category, genreId, providerId, regio
     params.with_original_language = categoryLanguage
   }
 
+  if (genreParams) Object.assign(params, genreParams)
+
   withCatalogFilters(params, { genreId, providerId, region, monetizationTypes })
 
   return pagedMovies(await fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', params))
@@ -409,7 +440,7 @@ async function fetchList(path: '/discover/movie' | '/discover/tv', discoverParam
   })
 }
 
-export async function fetchDiscoverTv({ category, genreId, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
+export async function fetchDiscoverTv({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const daysAgo = (n: number) => {
@@ -448,6 +479,8 @@ export async function fetchDiscoverTv({ category, genreId, providerId, region, r
   if (categoryLanguage) {
     params.with_original_language = categoryLanguage
   }
+
+  if (genreParams) Object.assign(params, genreParams)
 
   if (releasedAfter) {
     params['first_air_date.gte'] = releasedAfter

@@ -14,6 +14,7 @@ export interface ProviderGenreTarget {
 export const providerGenreSlugs = [
   'action',
   'animation',
+  'anime',
   'comedy',
   'documentary',
   'drama',
@@ -27,6 +28,7 @@ export const providerGenreSlugs = [
 export const tvProviderGenreSlugs = [
   'action-adventure',
   'animation',
+  'anime',
   'comedy',
   'documentary',
   'drama',

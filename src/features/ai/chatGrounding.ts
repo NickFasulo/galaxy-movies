@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-import { fetchTmdb, fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, movieGenres, tvGenres, streamingProviders, type GenreDef } from '../catalog/tmdb'
+import { fetchTmdb, fetchDiscoverMovies, fetchDiscoverTv, getProviderIds, movieGenres, tvGenres, streamingProviders, type GenreDef, type TmdbParams } from '../catalog/tmdb'
 import { getProviderChanges } from '../catalog/streamingChanges'
 import { extractTitleMentions, resolveMovieMentions, searchMultiByQuery } from './movieSearch'
 import type { MediaType, WatchProvidersResponse } from '../../types/tmdb'
@@ -63,6 +63,7 @@ const GENRE_WORDS: Record<string, { movie?: string; tv?: string }> = {
   action: { movie: 'action', tv: 'action-adventure' },
   adventure: { movie: 'adventure', tv: 'action-adventure' },
   animation: { movie: 'animation', tv: 'animation' },
+  anime: { movie: 'anime', tv: 'anime' },
   comedy: { movie: 'comedy', tv: 'comedy' },
   crime: { movie: 'crime', tv: 'crime' },
   documentary: { movie: 'documentary', tv: 'documentary' },
@@ -105,6 +106,13 @@ const CHAT_ONLY_MOVIE_GENRES: Record<string, GenreDef> = {
 
 const genreMapFor = (mediaType: MediaType): Record<string, GenreDef> =>
   mediaType === 'tv' ? tvGenres : { ...movieGenres, ...CHAT_ONLY_MOVIE_GENRES }
+
+// Pseudo-genres (anime) carry extra discover params — merge them across the
+// resolved slugs so "anime comedy" becomes genre 16,35 + JP origin.
+const mergeGenreParams = (slugs: string[], map: Record<string, GenreDef>): TmdbParams | undefined => {
+  const merged = Object.assign({}, ...slugs.map((slug) => map[slug]?.params))
+  return Object.keys(merged).length ? merged : undefined
+}
 
 const canonicalGenre = (word: string): string => {
   const w = word.toLowerCase()
@@ -207,12 +215,14 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
     .map((slug) => genreMap[slug]?.title.replace(/\s+(Movies|Shows)$/i, ''))
     .filter(Boolean)
     .join(' + ') || null
+  const genreParams = mergeGenreParams(genreSlugs, genreMap)
   const recent = RECENT_PATTERN.test(message) || (contextText.length > 0 && RECENT_PATTERN.test(contextText))
   const releasedAfter = recent
     ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
     : undefined
 
-  const cacheKey = `${mediaType}:${region}:${keys.join('+')}:${genreId ?? 'any'}:${releasedAfter ?? 'all'}`
+  // Slug-keyed, not genreId-keyed: anime and animation share id 16.
+  const cacheKey = `${mediaType}:${region}:${keys.join('+')}:${genreSlugs.join('+') || 'any'}:${releasedAfter ?? 'all'}`
   const cached = picksCache.get(cacheKey)
   if (cached !== undefined) return cached.ctx
 
@@ -222,7 +232,7 @@ export async function fetchServicePicksContext(message: string, serviceKeys: str
     if (!providerIds.length) continue
     try {
       const discover = mediaType === 'tv' ? fetchDiscoverTv : fetchDiscoverMovies
-      const data = await discover({ providerId: providerIds.join('|'), genreId, region, releasedAfter })
+      const data = await discover({ providerId: providerIds.join('|'), genreId, genreParams, region, releasedAfter })
       const titles = (data.results || []).slice(0, TITLES_PER_PROVIDER).map((t) => ({
         id: t.id,
         title: t.title || '',
@@ -273,19 +283,20 @@ export async function fetchGenrePicksContext(message: string, region: string, co
     .map((slug) => genreMap[slug]?.title.replace(/\s+(Movies|Shows)$/i, ''))
     .filter(Boolean)
     .join(' + ') || null
+  const genreParams = mergeGenreParams(genreSlugs, genreMap)
   const recent = RECENT_PATTERN.test(message) || (contextText.length > 0 && RECENT_PATTERN.test(contextText))
   const releasedAfter = recent
     ? new Date(Date.now() - RECENT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
     : undefined
 
-  const cacheKey = `genre:${mediaType}:${region}:${genreId}:${releasedAfter ?? 'all'}`
+  const cacheKey = `genre:${mediaType}:${region}:${genreSlugs.join('+')}:${releasedAfter ?? 'all'}`
   const cached = genrePicksCache.get(cacheKey)
   if (cached !== undefined) return cached.ctx
 
   let ctx: GenrePicksContext | null = null
   try {
     const discover = mediaType === 'tv' ? fetchDiscoverTv : fetchDiscoverMovies
-    const data = await discover({ genreId, releasedAfter })
+    const data = await discover({ genreId, genreParams, releasedAfter })
     const titles = (data.results || []).slice(0, GENRE_PICK_TITLES)
     if (titles.length) {
       const rows = await Promise.all(

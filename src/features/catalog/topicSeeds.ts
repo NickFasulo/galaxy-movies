@@ -91,6 +91,23 @@ export const topicSeeds: TopicSeed[] = [
   { slug: 'movies-like-shrek', keyword: 'movies like shrek', type: 'similar', movieTitle: 'Shrek' },
   { slug: 'movies-like-spider-verse', keyword: 'movies like spider verse', type: 'similar', movieTitle: 'Spider-Man: Into the Spider-Verse' },
 
+  // Anime batch — sits ahead of the tv/discover backlog so the genre pages
+  // (/genre/anime, /tv/genre/anime) have fresh sibling content fast.
+  { slug: 'shows-like-jujutsu-kaisen', keyword: 'shows like jujutsu kaisen', type: 'similar', media: 'tv', showTitle: 'Jujutsu Kaisen' },
+  { slug: 'shows-like-demon-slayer', keyword: 'shows like demon slayer', type: 'similar', media: 'tv', showTitle: 'Demon Slayer: Kimetsu no Yaiba' },
+  { slug: 'shows-like-attack-on-titan', keyword: 'shows like attack on titan', type: 'similar', media: 'tv', showTitle: 'Attack on Titan' },
+  { slug: 'shows-like-solo-leveling', keyword: 'shows like solo leveling', type: 'similar', media: 'tv', showTitle: 'Solo Leveling' },
+  { slug: 'shows-like-frieren', keyword: 'shows like frieren', type: 'similar', media: 'tv', showTitle: "Frieren: Beyond Journey's End" },
+  { slug: 'shows-like-chainsaw-man', keyword: 'shows like chainsaw man', type: 'similar', media: 'tv', showTitle: 'Chainsaw Man' },
+  { slug: 'shows-like-dandadan', keyword: 'shows like dandadan', type: 'similar', media: 'tv', showTitle: 'DAN DA DAN' },
+  { slug: 'shows-like-spy-x-family', keyword: 'shows like spy x family', type: 'similar', media: 'tv', showTitle: 'SPY x FAMILY' },
+  { slug: 'shows-like-one-piece', keyword: 'shows like one piece', type: 'similar', media: 'tv', showTitle: 'One Piece' },
+  { slug: 'shows-like-my-hero-academia', keyword: 'shows like my hero academia', type: 'similar', media: 'tv', showTitle: 'My Hero Academia' },
+  { slug: 'movies-like-your-name', keyword: 'movies like your name', type: 'similar', movieTitle: 'Your Name.' },
+  { slug: 'movies-like-spirited-away', keyword: 'movies like spirited away', type: 'similar', movieTitle: 'Spirited Away' },
+  { slug: 'movies-like-a-silent-voice', keyword: 'movies like a silent voice', type: 'similar', movieTitle: 'A Silent Voice: The Movie' },
+  { slug: 'movies-like-suzume', keyword: 'movies like suzume', type: 'similar', movieTitle: 'Suzume' },
+
   // media: 'tv' seeds run the same pipeline against /discover/tv and
   // /tv/{id}/recommendations — TMDB tv genre ids differ from movie ids.
   { slug: 'shows-like-breaking-bad', keyword: 'shows like breaking bad', type: 'similar', media: 'tv', showTitle: 'Breaking Bad' },

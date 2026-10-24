@@ -98,6 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? await fetchDiscoverTv({
             category: category || undefined,
             genreId: genre ? genres[genre].id : undefined,
+            genreParams: genre ? genres[genre].params : undefined,
             providerId: provider ? getProviderIds(provider, region).join('|') : null,
             region,
             page
@@ -105,6 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : await fetchDiscoverMovies({
             category: category || undefined,
             genreId: genre ? genres[genre].id : undefined,
+            genreParams: genre ? genres[genre].params : undefined,
             providerId: provider ? getProviderIds(provider, region).join('|') : null,
             region,
             page

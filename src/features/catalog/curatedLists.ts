@@ -1,5 +1,5 @@
 import type { MediaType } from '../../types/tmdb'
-import type { TmdbParams } from './tmdb'
+import { ANIME_PARAMS, type TmdbParams } from './tmdb'
 
 interface BaseListDef {
   title: string
@@ -244,6 +244,40 @@ export const curatedLists: Record<string, ListDef> = {
       'vote_average.gte': 6.5,
       'vote_count.gte': 150,
       sort_by: 'popularity.desc'
+    }
+  },
+
+  'best-anime-series': {
+    title: 'Best Anime Series',
+    tagline: 'The top-rated anime shows of all time — modern hits and all-time classics.',
+    group: 'curated',
+    media: 'tv',
+    params: {
+      ...ANIME_PARAMS,
+      'vote_average.gte': 7.5,
+      'vote_count.gte': 300,
+      sort_by: 'vote_average.desc'
+    }
+  },
+  'best-anime-movies': {
+    title: 'Best Anime Movies',
+    tagline: 'The essential anime films — Ghibli classics, modern masterpieces, and theatrical hits.',
+    group: 'curated',
+    params: {
+      ...ANIME_PARAMS,
+      'vote_average.gte': 7,
+      'vote_count.gte': 300,
+      sort_by: 'vote_average.desc'
+    }
+  },
+  'studio-ghibli-essentials': {
+    title: 'Studio Ghibli Essentials',
+    tagline: 'Every essential film from the legendary studio, ranked by audience score.',
+    group: 'curated',
+    params: {
+      with_companies: '10342', // Studio Ghibli
+      'vote_count.gte': 100,
+      sort_by: 'vote_average.desc'
     }
   },
 

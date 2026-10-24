@@ -62,7 +62,7 @@ export function genreServerSideProps(media: MediaType) {
     const base = { media, genre: slug, title: genre.title, page }
 
     try {
-      const data = await discover({ genreId: genre.id, page })
+      const data = await discover({ genreId: genre.id, genreParams: genre.params, page })
       if (page > 1 && !data.results?.length) return { notFound: true }
       setSwrCache(res)
       return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1 } }

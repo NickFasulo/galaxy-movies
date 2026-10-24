@@ -5,15 +5,27 @@ import type { MediaType } from '../../../types/tmdb'
 
 // TMDB genre id → site slug, built once from the registries. Ids with no
 // registry entry (TV-only News/Talk/Soap) fall back to a plain badge.
+// Pseudo-genres (params-carrying defs like anime) are excluded — they share a
+// real genre's id but need extra filters a bare id can't express, so the real
+// genre must win the lookup.
 const SLUGS: Record<MediaType, Map<number, string>> = {
-  movie: new Map(Object.entries(movieGenres).map(([slug, genre]) => [genre.id, slug])),
-  tv: new Map(Object.entries(tvGenres).map(([slug, genre]) => [genre.id, slug]))
+  movie: new Map(Object.entries(movieGenres).filter(([, genre]) => !genre.params).map(([slug, genre]) => [genre.id, slug])),
+  tv: new Map(Object.entries(tvGenres).filter(([, genre]) => !genre.params).map(([slug, genre]) => [genre.id, slug]))
 }
 
-export default function GenreBadges({ genres, mediaType = 'movie' }: { genres?: { id: number; name: string }[]; mediaType?: MediaType }) {
+export default function GenreBadges({ genres, mediaType = 'movie', isAnime = false }: { genres?: { id: number; name: string }[]; mediaType?: MediaType; isAnime?: boolean }) {
   const basePath = mediaType === 'tv' ? '/tv/genre' : '/genre'
   return (
     <Wrap justify='center' gap={{ base: 4, md: 2 }}>
+      {isAnime && (
+        <WrapItem>
+          <Link asChild data-umami-event='genre-click' data-umami-event-genre='anime' _hover={{ textDecoration: 'none' }}>
+            <NextLink href={`${basePath}/anime`}>
+              <Badge as='span' cursor='pointer' _hover={{ bg: 'whiteAlpha.300' }}>Anime</Badge>
+            </NextLink>
+          </Link>
+        </WrapItem>
+      )}
       {genres?.map((genre) => {
         const slug = SLUGS[mediaType].get(genre.id)
         return (

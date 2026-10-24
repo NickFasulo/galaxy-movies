@@ -83,6 +83,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/streaming`),
     urlEntry(`${siteUrl}/browse`),
     urlEntry(`${siteUrl}/genre`),
+    urlEntry(`${siteUrl}/anime`),
     urlEntry(`${siteUrl}/streaming-in-india`),
     urlEntry(`${siteUrl}/justwatch-alternative`),
     urlEntry(`${siteUrl}/new-on-streaming`),
@@ -166,7 +167,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 
     const genreResults = await runBatched(
       Object.values(movieGenres).flatMap(genre =>
-        pageRange.map(page => () => fetchDiscoverMovies({ genreId: genre.id, page }))
+        pageRange.map(page => () => fetchDiscoverMovies({ genreId: genre.id, genreParams: genre.params, page }))
       )
     )
 
@@ -178,7 +179,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 
     const tvGenreResults = await runBatched(
       Object.values(tvGenres).flatMap(genre =>
-        pageRange.map(page => () => fetchDiscoverTv({ genreId: genre.id, page }))
+        pageRange.map(page => () => fetchDiscoverTv({ genreId: genre.id, genreParams: genre.params, page }))
       )
     )
 
