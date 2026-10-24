@@ -547,6 +547,30 @@ export async function updateStreamingChanges() {
     warmCandidates.push({ id: t.id, mediaType: 'tv', title: t.name, popularity: t.popularity })
   }
 
+  // Release-day queries hit before competitors index the title — the Jailer 2
+  // spike showed the payoff. Global popularity buries regional releases, so
+  // US and IN each get their own slice: daily ping + warm so the page is
+  // indexed and non-thin before the searches start.
+  const upcomingRegions = await Promise.all(
+    (['US', 'IN'] as const).map(region =>
+      fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', {
+        page: 1,
+        include_adult: 'false',
+        sort_by: 'popularity.desc',
+        region,
+        'release_date.gte': new Date().toISOString().split('T')[0],
+        'vote_count.gte': 10
+      }).catch((): null => null)
+    )
+  )
+  for (const t of upcomingRegions.flatMap(d => d?.results || [])) {
+    // No overview = detail page noindexes — skip rather than warming a page
+    // Google will refuse anyway.
+    if (!t?.id || !t.overview) continue
+    indexNowUrls.add(`${SITE_URL}/movies/${t.id}`)
+    if (t.title) warmCandidates.push({ id: t.id, mediaType: 'movie', title: t.title, popularity: t.popularity })
+  }
+
   if (indexNowUrls.size) {
     indexNowUrls.add(`${SITE_URL}/new-on-streaming`)
     await pingIndexNow([...indexNowUrls])

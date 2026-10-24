@@ -182,6 +182,22 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       )
     )
 
+    // Global popularity buries major regional releases below the 'upcoming'
+    // cutoff (Jailer 2's spike nearly missed it) — region-scoped slices
+    // guarantee the big US and IN titles always enter the sitemap pre-release.
+    const upcomingRegions = await runBatched(
+      (['US', 'IN'] as const).map(region => () =>
+        fetchTmdb<TmdbPaged<TmdbMovie>>('/discover/movie', {
+          page: 1,
+          include_adult: 'false',
+          sort_by: 'popularity.desc',
+          region,
+          'release_date.gte': today,
+          'vote_count.gte': 10
+        }).catch((): null => null)
+      )
+    )
+
     // Discover samples can miss spiking titles — merge the trending-week set so
     // the highest-demand pages always carry a sitemap entry.
     const [trendingMovies, trendingTv] = await Promise.all([
@@ -192,6 +208,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     const allMovies = [
       ...categoryResults.flatMap(d => d?.results || []),
       ...genreResults.flatMap(d => d?.results || []),
+      ...upcomingRegions.flatMap(d => d?.results || []),
       ...(trendingMovies?.results || []),
     ]
 
