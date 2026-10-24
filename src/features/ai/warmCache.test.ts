@@ -59,6 +59,19 @@ describe('warmAiTitleCache', () => {
     expect(mockTmdb).toHaveBeenNthCalledWith(2, '/movie/1', expect.anything())
   })
 
+  it('prioritizes titles releasing within two weeks over hotter trending titles', async () => {
+    await warmAiTitleCache([
+      { id: 1, mediaType: 'movie', title: 'Trending', popularity: 99 },
+      { id: 2, mediaType: 'movie', title: 'Releasing soon', popularity: 5, releasesWithinDays: 3 },
+      { id: 3, mediaType: 'movie', title: 'Releasing later', popularity: 1, releasesWithinDays: 10 },
+      { id: 4, mediaType: 'movie', title: 'Far out', popularity: 50, releasesWithinDays: 60 }
+    ])
+    expect(mockTmdb).toHaveBeenNthCalledWith(1, '/movie/2', expect.anything())
+    expect(mockTmdb).toHaveBeenNthCalledWith(2, '/movie/3', expect.anything())
+    expect(mockTmdb).toHaveBeenNthCalledWith(3, '/movie/1', expect.anything())
+    expect(mockTmdb).toHaveBeenNthCalledWith(4, '/movie/4', expect.anything())
+  })
+
   it('skips generation when the title has no overview', async () => {
     mockTmdb.mockResolvedValue(detail({ overview: '' }) as never)
     const warmed = await warmAiTitleCache([{ id: 1, mediaType: 'movie', title: 'Film' }])

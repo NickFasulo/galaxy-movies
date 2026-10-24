@@ -563,12 +563,21 @@ export async function updateStreamingChanges() {
       }).catch((): null => null)
     )
   )
+  // release_date on a discover result is the primary (earliest) date — for a
+  // cross-region title that's already out elsewhere it lands ≤0, which reads
+  // as "spiking now" in the warm sort. Right answer either way.
+  const nowMs = Date.now()
+  const daysUntilRelease = (date?: string) => {
+    if (!date) return undefined
+    const ms = new Date(date).getTime() - nowMs
+    return Number.isFinite(ms) ? Math.ceil(ms / 86400000) : undefined
+  }
   for (const t of upcomingRegions.flatMap(d => d?.results || [])) {
     // No overview = detail page noindexes — skip rather than warming a page
     // Google will refuse anyway.
     if (!t?.id || !t.overview) continue
     indexNowUrls.add(`${SITE_URL}/movies/${t.id}`)
-    if (t.title) warmCandidates.push({ id: t.id, mediaType: 'movie', title: t.title, popularity: t.popularity })
+    if (t.title) warmCandidates.push({ id: t.id, mediaType: 'movie', title: t.title, popularity: t.popularity, releasesWithinDays: daysUntilRelease(t.release_date) })
   }
 
   if (indexNowUrls.size) {
