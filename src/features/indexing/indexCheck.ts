@@ -5,7 +5,9 @@ import { SITE_URL } from '../../lib/site'
 // Weekly companion to scripts/check-upcoming-indexing.js — same upcoming set
 // and inspection calls, WebCrypto JWT so it runs in workerd where node
 // crypto.sign is unavailable.
-const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
+// Full scope — readonly can't PUT sitemap resubmits. Inspection and Search
+// Analytics are reads anyway, so this only adds the resubmit.
+const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters'
 const INSPECT_URL = 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect'
 
 export interface PendingEntry {
