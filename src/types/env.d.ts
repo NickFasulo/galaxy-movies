@@ -62,5 +62,9 @@ declare namespace NodeJS {
     OPENAI_ADMIN_KEY?: string
     OPENAI_CREDITS_BASELINE?: string
     OPENAI_CREDITS_BASELINE_DATE?: string
+    GSC_CLIENT_EMAIL?: string
+    GSC_PRIVATE_KEY?: string
+    GSC_SITE_URL?: string
+    INDEXING_REPORT_EMAIL?: string
   }
 }
