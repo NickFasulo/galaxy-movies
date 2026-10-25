@@ -81,3 +81,131 @@ describe('getOrGenerateMovieReview', () => {
     expect(result).toBeNull()
   })
 })
+
+import { peekReviewCache, reviewCacheKey, stripEmphasis } from './movieReview'
+import { isQuotaError, markAiUnavailable, recordAiUsage } from './openai'
+
+const mockQuota = vi.mocked(isQuotaError)
+const mockMarkDown = vi.mocked(markAiUnavailable)
+
+describe('reviewCacheKey', () => {
+  it('namespaces tv ids separately from movie ids', () => {
+    expect(reviewCacheKey(5)).toBe('ai_review:v2:5')
+    expect(reviewCacheKey(5, 'movie')).toBe('ai_review:v2:5')
+    expect(reviewCacheKey(5, 'tv')).toBe('ai_review:v2:tv:5')
+  })
+})
+
+describe('stripEmphasis', () => {
+  it('strips single and double markdown emphasis', () => {
+    expect(stripEmphasis('a *great* and **bold** pick')).toBe('a great and bold pick')
+    expect(stripEmphasis('plain text')).toBe('plain text')
+  })
+})
+
+describe('peekReviewCache', () => {
+  it('reads the instance-local cache after a write', async () => {
+    const result = await getOrGenerateMovieReview({
+      movieId: 777001, title: 'Peek Film', overview: 'o', cachedValue: null
+    })
+    expect(result).toBe('a generated review')
+    expect(peekReviewCache('ai_review:v2:777001')).toBe('a generated review')
+  })
+
+  it('returns null for an unwritten key', () => {
+    expect(peekReviewCache('ai_review:v2:nope')).toBeNull()
+  })
+})
+
+describe('getOrGenerateMovieReview edges', () => {
+  it('returns null immediately when id, title, or overview is missing', async () => {
+    expect(await getOrGenerateMovieReview({ movieId: 0, title: 'T', overview: 'o' })).toBeNull()
+    expect(await getOrGenerateMovieReview({ movieId: 1, title: '', overview: 'o' })).toBeNull()
+    expect(await getOrGenerateMovieReview({ movieId: 1, title: 'T', overview: '' })).toBeNull()
+    expect(mockClient).not.toHaveBeenCalled()
+  })
+
+  it('backfills the memory cache when a cachedValue is provided', async () => {
+    const key = reviewCacheKey(777002)
+    const result = await getOrGenerateMovieReview({
+      movieId: 777002, title: 'T', overview: 'o', cachedValue: 'provided review'
+    })
+    expect(result).toBe('provided review')
+    expect(peekReviewCache(key)).toBe('provided review')
+  })
+
+  it('reads the Redis cache on a local miss and memoizes it locally', async () => {
+    const kv = { get: vi.fn(async () => 'shared review'), set: vi.fn() }
+    vi.mocked(getRedis).mockReturnValue(kv as unknown as ReturnType<typeof getRedis>)
+    const result = await getOrGenerateMovieReview({ movieId: 777003, title: 'T', overview: 'o' })
+    expect(result).toBe('shared review')
+    expect(kv.get).toHaveBeenCalledWith('ai_review:v2:777003')
+    expect(peekReviewCache('ai_review:v2:777003')).toBe('shared review')
+    expect(mockClient).not.toHaveBeenCalled()
+  })
+
+  it('generates through a Redis read failure', async () => {
+    const kv = { get: vi.fn(async () => { throw new Error('redis down') }), set: vi.fn(async () => 'OK') }
+    vi.mocked(getRedis).mockReturnValue(kv as unknown as ReturnType<typeof getRedis>)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = await getOrGenerateMovieReview({ movieId: 777004, title: 'T', overview: 'o' })
+    expect(result).toBe('a generated review')
+    errSpy.mockRestore()
+  })
+
+  it('writes generated reviews to Redis with the year TTL', async () => {
+    const kv = { get: vi.fn(async () => null), set: vi.fn(async () => 'OK') }
+    vi.mocked(getRedis).mockReturnValue(kv as unknown as ReturnType<typeof getRedis>)
+    await getOrGenerateMovieReview({ movieId: 777005, title: 'T', overview: 'o' })
+    expect(kv.set).toHaveBeenCalledWith('ai_review:v2:777005', 'a generated review', { ex: 31536000 })
+    expect(vi.mocked(recordAiUsage)).toHaveBeenCalledWith('review', { prompt_tokens: 10, completion_tokens: 5 }, expect.objectContaining({ latencyMs: expect.any(Number) }))
+  })
+
+  it('swallows a Redis write failure after a successful generation', async () => {
+    const kv = { get: vi.fn(async () => null), set: vi.fn(async () => { throw new Error('write fail') }) }
+    vi.mocked(getRedis).mockReturnValue(kv as unknown as ReturnType<typeof getRedis>)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = await getOrGenerateMovieReview({ movieId: 777006, title: 'T', overview: 'o' })
+    expect(result).toBe('a generated review')
+    errSpy.mockRestore()
+  })
+
+  it('records usage with latency and marks AI unavailable on a quota error', async () => {
+    const client = fakeClient()
+    const quota = new Error('insufficient_quota')
+    client.chat.completions.create.mockRejectedValueOnce(quota)
+    mockClient.mockReturnValue(client as never)
+    mockQuota.mockImplementation((err) => err === quota)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = await getOrGenerateMovieReview({ movieId: 777007, title: 'T', overview: 'o' })
+    expect(result).toBeNull()
+    expect(mockMarkDown).toHaveBeenCalledTimes(1)
+    errSpy.mockRestore()
+  })
+
+  it('does not mark AI unavailable on a non-quota failure', async () => {
+    const client = fakeClient()
+    client.chat.completions.create.mockRejectedValueOnce(new Error('server 500'))
+    mockClient.mockReturnValue(client as never)
+    mockQuota.mockReturnValue(false)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await getOrGenerateMovieReview({ movieId: 777008, title: 'T', overview: 'o' })
+    expect(mockMarkDown).not.toHaveBeenCalled()
+    errSpy.mockRestore()
+  })
+
+  it('returns null when isAiAvailable is false and skips the budget check', async () => {
+    mockAvailable.mockResolvedValueOnce(false)
+    const result = await getOrGenerateMovieReview({ movieId: 777009, title: 'T', overview: 'o' })
+    expect(result).toBeNull()
+    expect(mockBudget).not.toHaveBeenCalled()
+  })
+
+  it('uses the tv-namespaced cache key for tv reviews', async () => {
+    const kv = { get: vi.fn(async () => null), set: vi.fn(async () => 'OK') }
+    vi.mocked(getRedis).mockReturnValue(kv as unknown as ReturnType<typeof getRedis>)
+    await getOrGenerateMovieReview({ movieId: 777010, title: 'T', overview: 'o', mediaType: 'tv' })
+    expect(kv.get).toHaveBeenCalledWith('ai_review:v2:tv:777010')
+    expect(kv.set).toHaveBeenCalledWith('ai_review:v2:tv:777010', expect.any(String), expect.anything())
+  })
+})

@@ -1,0 +1,26 @@
+name: prod-smoke
+
+# Daily probe of the deployed app — catches breakage CI can't: WAF rule drift,
+# R2/binding issues, upstream data changes breaking SSR, redirect failures.
+# Uses scripts/smoke.sh at full level so Redis-backed APIs + the apex redirect
+# are exercised; failures show up as a failed workflow, same as contract.yml.
+on:
+  schedule:
+    - cron: '0 15 * * *' # 15:00 UTC daily, after the crons settle
+  workflow_dispatch:
+
+concurrency:
+  group: prod-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run production smoke
+        run: bash scripts/smoke.sh
+        env:
+          SMOKE_BASE: https://www.galaxymovies.app
+          SMOKE_LEVEL: full

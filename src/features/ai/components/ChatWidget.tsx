@@ -18,6 +18,7 @@ import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../../../lib/userData'
 import { getAlertsCredentials } from '../../alerts/alertsSync'
 import type { ResolvedMention } from '../movieSearch'
+import { feedSseChunk, flushSseCarry, parseSseFrame } from '../chatStream'
 import { getProviderIds } from '../../catalog/tmdb'
 import { useUserData } from '../../alerts/hooks/useUserData'
 import { useProviderCatalog } from '../../catalog/hooks/useProviderCatalog'
@@ -344,29 +345,29 @@ export default function ChatWidget() {
       let sseBuffer = ''
 
       const handleSseData = (data: string) => {
-        if (data === '[DONE]') {
+        const event = parseSseFrame(data)
+        if (event.type === 'done') {
           setIsStreaming(false)
           return
         }
-        if (data === '[ERROR]') {
+        if (event.type === 'error') {
           throw new Error('Stream error occurred')
         }
-
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.content) {
-            aiMessage.content += parsed.content
-            setMessages(prev => {
-              const newMessages = [...prev]
-              newMessages[newMessages.length - 1] = aiMessage
-              return newMessages
-            })
-          }
-          if (parsed.links && parsed.links.length > 0) {
-            setMessageLinks(prev => ({ ...prev, [assistantIndex]: parsed.links }))
-          }
-        } catch (e) {
-          console.error('Error parsing stream data:', e)
+        if (event.type === 'unknown') {
+          console.error('Error parsing stream data:', event.raw)
+          return
+        }
+        if (event.content) {
+          aiMessage.content += event.content
+          setMessages(prev => {
+            const newMessages = [...prev]
+            newMessages[newMessages.length - 1] = aiMessage
+            return newMessages
+          })
+        }
+        const links = event.links
+        if (links) {
+          setMessageLinks(prev => ({ ...prev, [assistantIndex]: links }))
         }
       }
 
@@ -376,22 +377,15 @@ export default function ChatWidget() {
         const { done, value } = await reader.read()
         if (done) break
 
-        // A chunk can split an SSE line anywhere; carry the partial tail so
-        // the one-shot links event isn't dropped on a boundary.
-        sseBuffer += decoder.decode(value, { stream: true })
-        const lines = sseBuffer.split('\n')
-        sseBuffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            handleSseData(line.slice(6))
-          }
+        const { frames, carry } = feedSseChunk(sseBuffer, decoder.decode(value, { stream: true }))
+        sseBuffer = carry
+        for (const frame of frames) {
+          handleSseData(frame)
         }
       }
 
-      const tail = sseBuffer.trim()
-      if (tail.startsWith('data: ')) {
-        handleSseData(tail.slice(6))
+      for (const frame of flushSseCarry(sseBuffer)) {
+        handleSseData(frame)
       }
 
       if (!sessionId && messageCountRef.current >= 2) {
