@@ -38,7 +38,18 @@ async function signingKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey('pkcs8', der.buffer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'])
 }
 
-async function accessToken(): Promise<string> {
+let cachedToken: { token: string; exp: number } | null = null
+
+export async function gscAccessToken(): Promise<string> {
+  if (cachedToken && cachedToken.exp > Date.now() + 60000) return cachedToken.token
+  const token = await mintToken()
+  cachedToken = { token, exp: Date.now() + 3500 * 1000 }
+  return token
+}
+
+export const gscSite = () => process.env.GSC_SITE_URL || 'sc-domain:galaxymovies.app'
+
+async function mintToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
   const unsigned = `${b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64u(
     JSON.stringify({
@@ -71,7 +82,7 @@ async function inspect(token: string, url: string): Promise<InspectionResult> {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       inspectionUrl: url,
-      siteUrl: process.env.GSC_SITE_URL || 'sc-domain:galaxymovies.app',
+      siteUrl: gscSite(),
       languageCode: 'en-US'
     })
   })
@@ -106,7 +117,7 @@ export async function runIndexCheck(topN = 12): Promise<IndexReport> {
     .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
     .slice(0, topN)
 
-  const token = await accessToken()
+  const token = await gscAccessToken()
   const report: IndexReport = { checked: titles.length, indexed: 0, pending: [], errors: [] }
 
   for (const t of titles) {

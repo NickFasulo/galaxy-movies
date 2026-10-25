@@ -1,13 +1,85 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { hasGscCredentials, pendingSignature, runIndexCheck } from '../../../features/indexing/indexCheck'
+import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
+import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { getRedis } from '../../../lib/redis'
 
-export const config = { maxDuration: 60 }
+export const config = { maxDuration: 120 }
 
 const LAST_REPORT_KEY = 'gm:indexing:last-report'
+const LAST_BANDS_KEY = 'gm:gsc:lists-bands'
 const RECIPIENT = () => process.env.INDEXING_REPORT_EMAIL || 'fasulo.nick@gmail.com'
+
+const delta = (cur: number, prev: number) => {
+  const d = cur - prev
+  return `${d >= 0 ? '+' : ''}${d}`
+}
+
+const bandCounts = (bands: Record<string, Band>) => {
+  const counts: Record<Band, number> = { top10: 0, top20: 0, top50: 0, deep: 0 }
+  for (const b of Object.values(bands)) counts[b]++
+  return counts
+}
+
+function shiftsHtml(shifts: BandShift[], arrow: string, color: string) {
+  if (!shifts.length) return ''
+  return shifts
+    .slice(0, 5)
+    .map((s) => `<div style="font-size:12px; color:#a0aec0;">${arrow} <span style="color:${color};">${escapeHtml(s.page.replace(/^https:\/\/www\.galaxymovies\.app/, ''))}</span> ${s.from} → ${s.to}</div>`)
+    .join('')
+}
+
+function indexingSection(report: IndexReport, prevSignature: string | null | undefined) {
+  const prevSet = new Set((prevSignature || '').split('|').filter(Boolean))
+  const rows = report.pending
+    .map((p) => {
+      const isNew = !prevSet.has(p.url)
+      return `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${escapeHtml(p.link)}" style="color:#9ec1ff;">${escapeHtml(p.title)}${isNew ? ' <span style="color:#f6ad55; font-size:11px;">NEW</span>' : ''}</a><br/><span style="color:#718096; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
+    })
+    .join('')
+  return `<p style="margin:0; color:#a0aec0; font-size:14px; line-height:1.6;"><strong style="color:#e2e8f0;">Indexing</strong> · ${report.indexed}/${report.checked} upcoming pages indexed.${
+    report.pending.length
+      ? ' Open each link and click <strong>Request Indexing</strong> (quota ~10-15/day):'
+      : ' Nothing needs a manual request this week.'
+  }</p>${rows}${report.errors.length ? `<p style="margin:10px 0 0; color:#718096; font-size:12px;">${report.errors.length} checks errored and were skipped.</p>` : ''}`
+}
+
+function digestSection(d: WeeklyDigest) {
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #2a3138;">${html}</div>`
+  const rows = (items: string[]) => items.length ? items.join('') : '<div style="font-size:12px; color:#718096;">none this week</div>'
+
+  const pageRows = (rs: typeof d.topPages) =>
+    rs.map((r) => `<div style="font-size:12px; color:#a0aec0; line-height:1.6;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, '') || '/')}: ${r.clicks} clicks · ${r.impressions} imp · pos ${r.position.toFixed(0)}</div>`)
+
+  const moverRows = (ms: typeof d.movers.up, sign: string) =>
+    ms.map((m) => `<div style="font-size:12px; color:#a0aec0; line-height:1.6;">${escapeHtml(m.key.replace(/^https:\/\/www\.galaxymovies\.app/, '') || '/')}: ${m.prev} → ${m.cur} clicks (${sign}${m.delta})</div>`)
+
+  const counts = bandCounts(d.listsBands)
+  const top10 = counts.top10
+  const top20 = counts.top10 + counts.top20
+
+  return (
+    s(`<p style="margin:0; color:#a0aec0; font-size:14px;"><strong style="color:#e2e8f0;">This week in Search</strong> <span style="font-size:12px; color:#718096;">${d.rangeLabel}</span><br/><span style="font-size:13px;">${d.clicks} clicks (${delta(d.clicks, d.prevClicks)} vs prior wk) · ${d.impressions.toLocaleString()} impressions (${delta(d.impressions, d.prevImpressions)})</span></p>`) +
+    s(`<p style="margin:0 0 6px; color:#e2e8f0; font-size:13px;"><strong>Top pages by clicks</strong></p>${rows(pageRows(d.topPages.slice(0, 6)))}`) +
+    (d.movers.up.length || d.movers.down.length
+      ? s(`<p style="margin:0 0 6px; color:#e2e8f0; font-size:13px;"><strong>Movers</strong></p>${moverRows(d.movers.up, '+')}${moverRows(d.movers.down, '')}`)
+      : '') +
+    s(`<p style="margin:0 0 6px; color:#e2e8f0; font-size:13px;"><strong>New queries appearing</strong></p>${rows(d.newQueries.map((q) => `<div style="font-size:12px; color:#a0aec0; line-height:1.6;">"${escapeHtml(q.keys[0])}" · ${q.impressions} imp · pos ${q.position.toFixed(0)}</div>`))}`) +
+    s(`<p style="margin:0 0 6px; color:#e2e8f0; font-size:13px;"><strong>/lists/ position tracker</strong> <span style="color:#718096; font-size:12px;">goal: 10+ pages top-10</span><br/><span style="font-size:12px; color:#a0aec0;">${top10} in top 10 · ${top20} in top 20 · ${Object.keys(d.listsBands).length} ranked</span></p>` +
+      (d.bandShifts ? shiftsHtml(d.bandShifts.improved, '↑', '#68d391') + shiftsHtml(d.bandShifts.declined, '↓', '#fc8181') : '<div style="font-size:12px; color:#718096;">first run — band shifts appear next week</div>') +
+      (d.nearClick.length
+        ? `<p style="margin:10px 0 4px; color:#718096; font-size:12px;">Nearing click range (pos 8-25):</p>` +
+          d.nearClick.map((r) => `<div style="font-size:12px; color:#a0aec0;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, ''))}: pos ${r.position.toFixed(0)} · ${r.impressions} imp</div>`).join('')
+        : '')) +
+    (d.ctrGaps?.length
+      ? s(`<p style="margin:0 0 6px; color:#e2e8f0; font-size:13px;"><strong>CTR gaps</strong> <span style="color:#718096; font-size:12px;">impressions ≥100, CTR &lt;1% — rewrite titles/descriptions</span></p>${d.ctrGaps.map((r) => `<div style="font-size:12px; color:#a0aec0; line-height:1.6;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, ''))}: ${r.impressions} imp · ${(r.ctr * 100).toFixed(1)}% CTR · pos ${r.position.toFixed(0)}</div>`).join('')}`)
+      : '') +
+    (d.sitemap
+      ? s(`<p style="margin:0; color:#a0aec0; font-size:13px;"><strong style="color:#e2e8f0;">Sitemap</strong> · ${d.sitemap.resubmitted ? 'resubmitted' : 'resubmit failed'}${d.sitemap.lastDownloaded ? ` · last fetched ${d.sitemap.lastDownloaded.slice(0, 10)}` : ''}${d.sitemap.errors ? ` · <span style="color:#fc8181;">${d.sitemap.errors} errors</span>` : ''}${d.sitemap.warnings ? ` · ${d.sitemap.warnings} warnings` : ''}</p>`)
+      : '')
+  )
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
@@ -18,47 +90,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const report = await runIndexCheck()
-    if (!report.pending.length && !report.errors.length) {
-      return res.status(200).json({ emailed: false, ...report })
-    }
-
-    // An unchanged pending set means the operator already knows — don't
-    // re-send the same list every week.
-    const signature = pendingSignature(report.pending) + `|e:${report.errors.length}`
     const kv = getRedis()
-    const last = await kv?.get<string>(LAST_REPORT_KEY).catch(() => null)
-    if (last === signature) {
-      return res.status(200).json({ emailed: false, unchanged: true, ...report })
-    }
+    const [report, prevSignature, prevBands] = await Promise.all([
+      runIndexCheck(),
+      kv?.get<string>(LAST_REPORT_KEY).catch(() => null),
+      kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null)
+    ])
 
-    const rows = report.pending
-      .map(
-        (p) =>
-          // & in href must be escaped — a raw "&id=" breaks the URL in some
-          // mail clients and lands on a GSC 404.
-          `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${escapeHtml(p.link)}" style="color:#9ec1ff;">${escapeHtml(p.title)} — open inspection report</a><br/><span style="color:#718096; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
-      )
-      .join('')
-    const errLine = report.errors.length
-      ? `<p style="margin:14px 0 0; color:#718096; font-size:12px;">${report.errors.length} checks errored and were skipped.</p>`
-      : ''
+    // CTR-gap section is monthly: include on the first Monday of the month.
+    const includeCtrGaps = new Date().getDate() <= 7
+    const digest = await buildWeeklyDigest(prevBands ?? null, includeCtrGaps).catch((err) => {
+      console.error('Weekly digest failed:', err)
+      return null
+    })
+
+    const subject = report.pending.length
+      ? `${report.pending.length} upcoming release${report.pending.length === 1 ? '' : 's'} need indexing requests`
+      : 'Weekly GSC report: all upcoming pages indexed'
 
     const sent = await sendEmail({
       to: RECIPIENT(),
-      subject: `${report.pending.length} upcoming release${report.pending.length === 1 ? '' : 's'} need indexing requests`,
+      subject,
       html: emailLayout({
-        heading: 'Indexing requests needed',
-        preheader: `${report.pending.length} upcoming release pages aren't in Google's index`,
-        reason: 'Weekly indexing check for galaxymovies.app release pages.',
-        body:
-          `<p style="margin:0; color:#a0aec0; font-size:14px; line-height:1.6;">${report.indexed}/${report.checked} upcoming pages are indexed. These aren't — open each link and click <strong>Request Indexing</strong> (quota ~10-15/day):</p>` +
-          rows +
-          errLine
+        heading: 'Weekly search report',
+        preheader: subject,
+        reason: 'Weekly indexing + Search Console report for galaxymovies.app.',
+        body: indexingSection(report, prevSignature) + (digest ? digestSection(digest) : '<p style="color:#718096; font-size:12px;">Search Analytics section failed this week.</p>')
       })
     })
-    if (sent) await kv?.set(LAST_REPORT_KEY, signature).catch(() => {})
-    return res.status(200).json({ emailed: sent, ...report })
+    if (sent) {
+      await kv?.set(LAST_REPORT_KEY, pendingSignature(report.pending)).catch(() => {})
+      if (digest) await kv?.set(LAST_BANDS_KEY, digest.listsBands).catch(() => {})
+    }
+    return res.status(200).json({ emailed: sent, report, digest })
   } catch (err) {
     console.error('Indexing report failed:', err)
     return res.status(500).json({ error: 'Indexing report failed' })
