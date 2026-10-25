@@ -27,7 +27,8 @@ async function queryAnalytics(startDate: string, endDate: string, opts: Analytic
     endDate,
     dimensions: opts.dimensions,
     rowLimit: opts.rowLimit ?? 250,
-    aggregationType: 'byProperty'
+    // byProperty is rejected when 'page' is a dimension; auto is valid in all cases
+    aggregationType: 'auto'
   }
   if (opts.pageContains) {
     body.dimensionFilterGroups = [
