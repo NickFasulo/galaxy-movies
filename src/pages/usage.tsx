@@ -3,7 +3,7 @@ import { Badge, Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
 import { LuExternalLink, LuRefreshCw } from 'react-icons/lu'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
-import type { UsagePanel } from '../lib/usageSources'
+import type { UsagePanel, UsageSeries } from '../lib/usageSources'
 
 const TOKEN_KEY = 'gm.usage.token'
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
@@ -12,6 +12,51 @@ const STATUS_BADGE: Record<UsagePanel['status'], { colorPalette: string; text: s
   ok: { colorPalette: 'green', text: 'live' },
   unconfigured: { colorPalette: 'gray', text: 'not configured' },
   error: { colorPalette: 'red', text: 'error' }
+}
+
+const TONE_COLOR = { warn: 'orange.300', bad: 'red.300' } as const
+const SERIES_COLOR = { blue: 'var(--chakra-colors-blue-300)', yellow: 'var(--chakra-colors-yellow-300)' } as const
+
+const fmtSeries = (v: number | undefined, format?: UsageSeries['format']) => {
+  if (v == null) return ''
+  switch (format) {
+    case 'money':
+      return `$${v >= 1 ? v.toFixed(2) : v.toFixed(4)}`
+    case 'pct':
+      return `${v.toFixed(0)}%`
+    case 'ms':
+      return v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`
+    default:
+      return v.toLocaleString('en-US')
+  }
+}
+
+function Sparkline({ points, color }: { points: number[]; color?: UsageSeries['color'] }) {
+  if (points.length < 2) return null
+  const w = 100
+  const h = 22
+  const pad = 1.5
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const span = max - min || 1
+  const x = (i: number) => pad + (i * (w - pad * 2)) / (points.length - 1)
+  const y = (p: number) => h - pad - ((p - min) / span) * (h - pad * 2)
+  const line = points.map((p, i) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(' ')
+  const stroke = SERIES_COLOR[color || 'blue']
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio='none' style={{ width: '100%', height: '100%', display: 'block' }}>
+      <polygon points={`${pad},${h - pad} ${line} ${x(points.length - 1).toFixed(1)},${h - pad}`} fill={stroke} opacity={0.15} />
+      <polyline
+        points={line}
+        fill='none'
+        stroke={stroke}
+        strokeWidth={1.5}
+        vectorEffect='non-scaling-stroke'
+        strokeLinejoin='round'
+        strokeLinecap='round'
+      />
+    </svg>
+  )
 }
 
 function PanelCard({ panel }: { panel: UsagePanel }) {
@@ -51,7 +96,19 @@ function PanelCard({ panel }: { panel: UsagePanel }) {
               <Text fontSize='sm' color='gray.400'>{m.label}</Text>
               {m.hint && <Text fontSize='xs' color='gray.500'>{m.hint}</Text>}
             </Box>
-            <Text fontSize='sm' color='white' fontFamily='mono' flexShrink={0}>{m.value}</Text>
+            <Text fontSize='sm' color={m.tone ? TONE_COLOR[m.tone] : 'white'} fontFamily='mono' flexShrink={0}>{m.value}</Text>
+          </Flex>
+        ))}
+
+        {panel.series?.map((s) => (
+          <Flex key={s.label} align='center' gap={3} py={1}>
+            <Text fontSize='xs' color='gray.400' w='38%' flexShrink={0} truncate>{s.label}</Text>
+            <Box flex={1} minW={0} h={6}>
+              <Sparkline points={s.points} color={s.color} />
+            </Box>
+            <Text fontSize='xs' color='white' fontFamily='mono' w='4.5rem' textAlign='right' flexShrink={0}>
+              {fmtSeries(s.points[s.points.length - 1], s.format)}
+            </Text>
           </Flex>
         ))}
 
@@ -87,6 +144,7 @@ export default function Usage() {
   const [draft, setDraft] = useState('')
   const [panels, setPanels] = useState<UsagePanel[] | null>(null)
   const [generatedAt, setGeneratedAt] = useState<number | null>(null)
+  const [fetchedAgo, setFetchedAgo] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -107,6 +165,7 @@ export default function Usage() {
       const body = await resp.json()
       setPanels(body.panels || [])
       setGeneratedAt(body.generatedAt || null)
+      setFetchedAgo(Math.max(0, Math.round((Date.now() - (body.generatedAt || Date.now())) / 1000)))
     } catch {
       setError('Request failed.')
     } finally {
@@ -201,9 +260,23 @@ export default function Usage() {
               >
                 <LuRefreshCw /> Refresh
               </Button>
+              <Button
+                size='xs'
+                variant='ghost'
+                color='gray.500'
+                _hover={{ color: 'white' }}
+                onClick={() => {
+                  sessionStorage.removeItem(TOKEN_KEY)
+                  setToken('')
+                  setDraft('')
+                  setPanels(null)
+                }}
+              >
+                Sign out
+              </Button>
               {generatedAt && (
                 <Text fontSize='xs' color='gray.500'>
-                  {new Date(generatedAt).toLocaleTimeString()} - cached 60s server-side
+                  fetched {fetchedAgo}s ago · cached 60s server-side
                 </Text>
               )}
             </Flex>

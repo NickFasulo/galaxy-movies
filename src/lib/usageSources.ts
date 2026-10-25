@@ -20,12 +20,21 @@ export interface UsageMetric {
   label: string
   value: string
   hint?: string
+  tone?: 'warn' | 'bad'
+}
+
+export interface UsageSeries {
+  label: string
+  points: number[]
+  format?: 'money' | 'pct' | 'ms' | 'count'
+  color?: 'blue' | 'yellow'
 }
 
 export interface UsagePanel {
   name: string
   status: 'ok' | 'unconfigured' | 'error'
   metrics: UsageMetric[]
+  series?: UsageSeries[]
   needsEnv?: string[]
   link?: string
   links?: { label: string; url: string }[]
@@ -137,7 +146,8 @@ async function cloudflarePanel(): Promise<UsagePanel> {
         hint:
           overRequests > 0
             ? `~$${((overRequests / 1e6) * 0.3).toFixed(2)} over included · pace ~${fmtM(paceRequests)}`
-            : `on pace ~${fmtM(paceRequests)} · ${fmt(month.errors)} errors`
+            : `on pace ~${fmtM(paceRequests)} · ${fmt(month.errors)} errors`,
+        tone: overRequests > 0 ? 'warn' : undefined
       },
       {
         label: 'Est. CPU (billing month)',
@@ -145,7 +155,8 @@ async function cloudflarePanel(): Promise<UsagePanel> {
         hint:
           overCpu > 0
             ? `~$${((overCpu / 1e6) * 0.02).toFixed(2)}+ over ${fmtM(CF_INCLUDED_CPU_MS)} ms — p50 floor, Billing has exact`
-            : `of ${fmtM(CF_INCLUDED_CPU_MS)} ms included · p50 floor — Billing has exact`
+            : `of ${fmtM(CF_INCLUDED_CPU_MS)} ms included · p50 floor — Billing has exact`,
+        tone: overCpu > 0 ? 'warn' : undefined
       },
       { label: 'CPU per request', value: `${ms(today.p50)} p50`, hint: `${ms(today.p99)} p99` }
     ]
@@ -203,7 +214,10 @@ async function upstashPanel(): Promise<UsagePanel> {
       { label: 'Commands (this month)', value: fmt(stats.total_monthly_requests) },
       { label: 'Billed (this month)', value: `$${monthlyBilling.toFixed(2)}` },
       ...(keyspace != null ? [{ label: 'Keys stored', value: fmt(keyspace) }] : [])
-    ]
+    ],
+    ...(stats.keyspace?.length
+      ? { series: [{ label: 'Keys stored /day', points: stats.keyspace.map((k) => k.y), format: 'count' as const }] }
+      : {})
   }
 }
 
@@ -295,6 +309,10 @@ async function openaiPanel(costsPromise: Promise<CostBucket[] | null>): Promise<
   const totalRequests = [...byModel.values()].reduce((s, m) => s + m.requests, 0)
   const topModels = [...byModel.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 3)
 
+  const dailySpend = costBuckets
+    .map((b) => ({ t: b.start_time, v: (b.results || []).reduce((s, r) => s + Number(r.amount?.value || 0), 0) }))
+    .sort((a, b) => a.t - b.t)
+
   const creditsMetric: UsageMetric =
     creditsCostBuckets != null && creditsAsOf
       ? (() => {
@@ -322,7 +340,10 @@ async function openaiPanel(costsPromise: Promise<CostBucket[] | null>): Promise<
         value: `${fmt(m.requests)} reqs`,
         hint: `${fmt(m.input)} in / ${fmt(m.output)} out`
       }))
-    ]
+    ],
+    ...(dailySpend.length > 1
+      ? { series: [{ label: 'Spend /day', points: dailySpend.map((d) => d.v), format: 'money' as const }] }
+      : {})
   }
 }
 
@@ -541,10 +562,12 @@ async function watchmodePanel(): Promise<UsagePanel> {
     const resp = await fetch('https://api.watchmode.com/v1/status/', { headers: { 'X-API-Key': apiKey } })
     const live = resp.ok ? ((await resp.json()) as { quota?: number; quotaUsed?: number }) : null
     if (live?.quota && live.quotaUsed != null) {
+      const usedPct = (100 * live.quotaUsed) / live.quota
       metrics.push({
         label: 'Monthly quota',
         value: `${fmt(live.quotaUsed)} / ${fmt(live.quota)}`,
-        hint: `${Math.round((live.quotaUsed / live.quota) * 100)}% used`
+        hint: `${Math.round(usedPct)}% used`,
+        tone: usedPct >= 99 ? 'bad' : usedPct >= 90 ? 'warn' : undefined
       })
     }
   } catch {}
@@ -569,11 +592,15 @@ async function rateLimitsPanel(): Promise<UsagePanel> {
   return {
     name: 'Rate limits',
     status: 'ok',
-    metrics: BUDGET_WINDOWS.map((b, i) => ({
-      label: b.label,
-      value: fmt(counts[i]),
-      hint: `cap ${fmt(b.cap)} / ${b.per}`
-    }))
+    metrics: BUDGET_WINDOWS.map((b, i) => {
+      const count = counts[i] ?? 0
+      return {
+        label: b.label,
+        value: fmt(count),
+        hint: `cap ${fmt(b.cap)} / ${b.per}`,
+        tone: count >= b.cap ? ('bad' as const) : count >= 0.8 * b.cap ? ('warn' as const) : undefined
+      }
+    })
   }
 }
 
@@ -666,8 +693,21 @@ async function umamiPanel(): Promise<UsagePanel> {
     if (!resp.ok) throw new Error(`stats → HTTP ${resp.status}`)
     return (await resp.json()) as Record<string, UmamiBucket>
   }
+  // Older self-hosted Umami lacks /pageviews — graph is nice-to-have, not a
+  // panel failure.
+  const dailyVisitors = fetch(
+    `${base}/websites/${websiteId}/pageviews?startAt=${Date.now() - 30 * 86400000}&endAt=${Date.now()}&unit=day&timezone=UTC`,
+    { headers: { 'x-umami-api-key': apiKey } }
+  )
+    .then(async (r) => {
+      if (!r.ok) return [] as number[]
+      const body = (await r.json()) as Record<string, { x: string; y: number }[]>
+      const rows = body.uniques ?? body.visitors ?? body.sessions
+      return Array.isArray(rows) ? rows.map((p) => p.y) : []
+    })
+    .catch(() => [] as number[])
 
-  const [month, day] = await Promise.all([stats(30), stats(1)])
+  const [month, day, visitorSeries] = await Promise.all([stats(30), stats(1), dailyVisitors])
   const visitors = umamiVal(month.visitors ?? month.uniques)
   const prevVisitors = umamiPrev(month.visitors ?? month.uniques)
   const pageviews = umamiVal(month.pageviews)
@@ -686,7 +726,10 @@ async function umamiPanel(): Promise<UsagePanel> {
       { label: 'Visitors (24h)', value: fmt(umamiVal(day.visitors ?? day.uniques)) },
       { label: 'Pageviews (30d)', value: fmt(pageviews), hint: pctDelta(pageviews, prevPageviews).trim() || undefined },
       { label: 'Bounce (30d)', value: `${bounceRate}%`, hint: `avg visit ${Math.floor(avgSec / 60)}m${Math.round(avgSec % 60)}s` }
-    ]
+    ],
+    ...(visitorSeries.length > 1
+      ? { series: [{ label: 'Visitors /day', points: visitorSeries, format: 'count' as const }] }
+      : {})
   }
 }
 
@@ -694,11 +737,12 @@ async function searchConsolePanel(): Promise<UsagePanel> {
   const link = 'https://search.google.com/search-console'
   if (!hasGscCredentials()) return unconfigured('Search Console', ['GSC_CLIENT_EMAIL', 'GSC_PRIVATE_KEY'], link)
 
-  const { cur, prev } = reportWindows()
-  const [totals, prevTotals, listsRows, sitemap] = await Promise.all([
+  const { cur, prev, month } = reportWindows()
+  const [totals, prevTotals, listsRows, dateRows, sitemap] = await Promise.all([
     queryAnalytics(cur.start, cur.end, { dimensions: [] }),
     queryAnalytics(prev.start, prev.end, { dimensions: [] }),
     queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 250, pageContains: '/lists/' }),
+    queryAnalytics(month.start, month.end, { dimensions: ['date'], rowLimit: 60 }),
     sitemapStatus().catch(() => null)
   ])
   const sum = (rows: { clicks: number; impressions: number }[], k: 'clicks' | 'impressions') => rows.reduce((s, r) => s + r[k], 0)
@@ -709,6 +753,8 @@ async function searchConsolePanel(): Promise<UsagePanel> {
 
   const bands = { top10: 0, top20: 0, top50: 0, deep: 0 }
   for (const r of listsRows) bands[pageBand(r.position)]++
+  // date-dimension rows come back ordered by clicks — sort chronologically
+  const daily = [...dateRows].sort((a, b) => a.keys[0].localeCompare(b.keys[0]))
 
   return {
     name: 'Search Console',
@@ -726,10 +772,19 @@ async function searchConsolePanel(): Promise<UsagePanel> {
         ? [{
             label: 'Sitemap',
             value: `${fmt(sitemap.errors)} errors`,
-            hint: `${fmt(sitemap.warnings)} warnings${sitemap.isPending ? ' · resubmit pending' : ''} · fetched ${sitemap.lastDownloaded?.slice(0, 10) || 'never'}`
+            hint: `${fmt(sitemap.warnings)} warnings${sitemap.isPending ? ' · resubmit pending' : ''} · fetched ${sitemap.lastDownloaded?.slice(0, 10) || 'never'}`,
+            tone: (sitemap.errors ?? 0) > 0 ? ('warn' as const) : undefined
           }]
         : [])
-    ]
+    ],
+    ...(daily.length > 1
+      ? {
+          series: [
+            { label: 'Clicks /day (28d)', points: daily.map((r) => r.clicks), format: 'count' as const },
+            { label: 'Impressions /day (28d)', points: daily.map((r) => r.impressions), format: 'count' as const, color: 'yellow' as const }
+          ]
+        }
+      : {})
   }
 }
 

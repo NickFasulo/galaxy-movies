@@ -31,6 +31,15 @@ vi.mock('../../features/indexing/gscAnalytics', () => ({
     month: { start: '2026-09-25', end: '2026-10-22' }
   }),
   queryAnalytics: vi.fn(async (start: string, _end: string, opts: { dimensions: string[] }) => {
+    if (opts.dimensions.includes('date')) {
+      return [8, 5, 12].map((clicks, i) => ({
+        keys: [`2026-10-${20 + i}`],
+        clicks,
+        impressions: clicks * 80,
+        ctr: 0.01,
+        position: 12
+      }))
+    }
     if (opts.dimensions.includes('page')) {
       return [
         { keys: ['https://www.galaxymovies.app/lists/a'], clicks: 2, impressions: 40, ctr: 0.05, position: 15 },
@@ -71,7 +80,8 @@ interface MockRes extends NextApiResponse {
     panels?: {
       name: string
       status: string
-      metrics: { label: string; value: string; hint?: string }[]
+      metrics: { label: string; value: string; hint?: string; tone?: string }[]
+      series?: { label: string; points: number[]; format?: string; color?: string }[]
       links?: { label: string; url: string }[]
       error?: string
     }[]
@@ -307,6 +317,21 @@ describe('GET /api/usage', () => {
     mocks.fetch.mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes('api.umami.is')) {
+        if (url.includes('/pageviews')) {
+          return {
+            ok: true,
+            json: async () => ({
+              uniques: [
+                { x: '2026-10-24', y: 10 },
+                { x: '2026-10-25', y: 14 }
+              ],
+              pageviews: [
+                { x: '2026-10-24', y: 60 },
+                { x: '2026-10-25', y: 72 }
+              ]
+            })
+          } as Response
+        }
         return {
           ok: true,
           json: async () => ({
@@ -329,6 +354,7 @@ describe('GET /api/usage', () => {
     expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.value).toBe('312')
     expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.hint).toContain('+20%')
     expect(traffic?.metrics.find((m) => m.label === 'Bounce (30d)')?.value).toBe('61%')
+    expect(traffic?.series?.find((s) => s.label === 'Visitors /day')?.points).toEqual([10, 14])
 
     const gsc = panel(res, 'Search Console')
     expect(gsc?.status).toBe('ok')
@@ -337,7 +363,11 @@ describe('GET /api/usage', () => {
     const bands = gsc?.metrics.find((m) => m.label === '/lists/ ranking bands')
     expect(bands?.value).toBe('0 top10 · 1 top20')
     expect(bands?.hint).toContain('1 top50')
-    expect(gsc?.metrics.find((m) => m.label === 'Sitemap')?.value).toBe('59 errors')
+    const sitemap = gsc?.metrics.find((m) => m.label === 'Sitemap')
+    expect(sitemap?.value).toBe('59 errors')
+    expect(sitemap?.tone).toBe('warn')
+    expect(gsc?.series?.find((s) => s.label === 'Clicks /day (28d)')?.points).toEqual([8, 5, 12])
+    expect(gsc?.series?.find((s) => s.label === 'Impressions /day (28d)')?.color).toBe('yellow')
   })
 
   it('marks a panel error instead of failing when a vendor API rejects', async () => {
