@@ -72,7 +72,7 @@ function Item({ item, c, fallbackUrl }: { item: WidgetItem; c: Palette; fallback
       lineHeight='short'
       _hover={{ textDecoration: 'underline' }}
     >
-      {item.title}{item.year ? ` (${item.year})` : ''}{item.date ? ` — ${dayLabel(item.date)}` : ''}{item.season ? ` (season ${item.season})` : ''}
+      {item.title}{item.year ? ` (${item.year})` : ''}{item.date ? ` - ${dayLabel(item.date)}` : ''}{item.season ? ` (season ${item.season})` : ''}
     </Link>
   )
 }

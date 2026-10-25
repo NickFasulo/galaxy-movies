@@ -76,12 +76,12 @@ export default function SearchPage({ initialQ, initialTitles, initialTotalPages 
   return (
     <>
       <PageHead
-        title={active ? `${active} — Search` : 'Search'}
+        title={active ? `${active} - Search` : 'Search'}
         description='Search movies and TV shows on Galaxy Movies.'
         noindex
         hreflang={false}
       />
-      {/* Same top clearance as PageShell — the dark-page header is absolute. */}
+      {/* Same top clearance as PageShell: the dark-page header is absolute. */}
       <Box flex='1' pt={{ base: '5rem', md: '6rem' }} pb='4rem'>
         <StickySearchBar>
           <Box maxW='40rem' mx='auto' px={4} py={3}>

@@ -111,7 +111,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         else watchlistItems.push(...items)
       }
       if (!watchlistItems.length && !ratingItems.length) {
-        setNote('No Letterboxd rows found — use watchlist.csv or ratings.csv exports.')
+        setNote('No Letterboxd rows found: use watchlist.csv or ratings.csv exports.')
         return
       }
 
@@ -146,7 +146,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       scheduleAlertsSync(getUserData())
       setNote(
         `Imported ${prefs.watchlist!.length} watchlist + ${prefs.ratings!.length} ratings` +
-          (skipped ? ` — ${skipped} titles couldn't be matched` : '') +
+          (skipped ? `: ${skipped} titles couldn't be matched` : '') +
           '.'
       )
     })
@@ -166,7 +166,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
     const { ok, data } = await post('/api/telegram/link')
     if (ok && data?.url) {
       window.open(data.url, '_blank', 'noopener')
-      setNote('Telegram opened — press Start there to finish connecting.')
+      setNote('Telegram opened: press Start there to finish connecting.')
     } else {
       setNote(data?.error || 'Telegram is not available right now.')
     }
@@ -260,7 +260,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         </Text>
       ) : (
         <Text color='gray.400' fontSize='sm'>
-          {traktStatus === 'error' && <Text as='span' color='red.300'>Connection failed — try again. </Text>}
+          {traktStatus === 'error' && <Text as='span' color='red.300'>Connection failed: try again. </Text>}
           <a href={`/api/trakt/connect?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`} style={linkStyle}>
             Connect Trakt
           </a>
@@ -268,7 +268,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         </Text>
       )}
       {traktStatus === 'connected' && features?.traktConnected && (
-        <Text color='green.300' fontSize='xs' mt={1}>Trakt connected — hit Sync now to push your list.</Text>
+        <Text color='green.300' fontSize='xs' mt={1}>Trakt connected: hit Sync now to push your list.</Text>
       )}
 
       <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Calendar feed</Text>
@@ -288,7 +288,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           Copy
         </Button>
       </Flex>
-      <Text color='gray.500' fontSize='xs' mt={1}>Paste it into Google/Apple Calendar — watchlist releases appear as all-day events.</Text>
+      <Text color='gray.500' fontSize='xs' mt={1}>Paste it into Google/Apple Calendar: watchlist releases appear as all-day events.</Text>
 
       <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Discord alerts</Text>
       <Flex gap={2}>
@@ -314,7 +314,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Telegram alerts</Text>
       {features?.telegramConnected ? (
         <Text color='gray.400' fontSize='sm'>
-          Connected — alerts arrive as Telegram DMs instead of email.{' '}
+          Connected: alerts arrive as Telegram DMs instead of email.{' '}
           <button type='button' disabled={busy} onClick={disconnectTelegram} style={linkStyle}>Disconnect</button>
         </Text>
       ) : (

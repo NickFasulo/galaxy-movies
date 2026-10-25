@@ -41,7 +41,7 @@ function LinkGrid({ items }: { items: { href: string; label: string }[] }) {
 
 export default function TvIndex({ shows, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/tv`
-  const title = 'TV Shows – Browse Popular & Trending Series'
+  const title = 'TV Shows - Browse Popular & Trending Series'
   const description = 'Discover popular TV shows, browse by genre, and find where to stream them. Galaxy Movies helps you explore top-rated series and streaming options all in one place.'
 
   const categoryLinks = Object.entries(tvCategories).map(([key, category]) => ({

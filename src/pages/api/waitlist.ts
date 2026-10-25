@@ -18,8 +18,8 @@ async function sendConfirmationEmail(email: string, token: string, next?: string
       heading: toPlus ? 'Confirm your email' : 'Confirm your alerts signup',
       preheader: toPlus ? 'One click to confirm and pick your plan' : 'One click to start streaming alerts',
       body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">${toPlus
-        ? "You're one click from Galaxy Plus — confirm your email and you'll land back on the Plus page to pick a plan. If you didn't sign up, just ignore this email."
-        : "You signed up for streaming alerts on Galaxy Movies. Click below to confirm — if you didn't sign up, just ignore this email."}</p>${emailCta(confirmUrl, 'Confirm my email', true)}`,
+        ? "You're one click from Galaxy Plus: confirm your email and you'll land back on the Plus page to pick a plan. If you didn't sign up, just ignore this email."
+        : "You signed up for streaming alerts on Galaxy Movies. Click below to confirm. If you didn't sign up, just ignore this email."}</p>${emailCta(confirmUrl, 'Confirm my email', true)}`,
       reason: 'You received this email because an alerts signup was started with this address.'
     })
   })
@@ -37,7 +37,7 @@ async function sendLinkDeviceEmail(email: string, key: string, next?: string): P
       heading: toPlus ? 'Continue to Galaxy Plus' : 'Link this device',
       preheader: toPlus ? 'Pick up where you left off on Galaxy Plus' : 'Sync this device to your Galaxy Movies alerts',
       body: `<p style="margin:0; color:#a0aec0; line-height:1.6;">${toPlus
-        ? "You're already signed up — click below to head back to Galaxy Plus and pick a plan."
+        ? "You're already signed up. Click below to head back to Galaxy Plus and pick a plan."
         : "You're already signed up for streaming alerts. Click below to sync this device's watchlist so we can alert you when a saved title lands on your services."}</p>${emailCta(linkUrl, toPlus ? 'Continue to Plus' : 'Link this device', true)}`,
       reason: 'You received this email because a device link was requested for this address.'
     })
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (await kv.hget(CONFIRMED_KEY, email)) {
       const key = await getOrCreateSyncKey(kv, email)
       if (!process.env.RESEND_API_KEY) {
-        console.warn('RESEND_API_KEY not set — returning alerts sync key directly (dev/local fallback)')
+        console.warn('RESEND_API_KEY not set: returning alerts sync key directly (dev/local fallback)')
         return res.status(200).json({ ok: true, confirmed: true, devSyncKey: key })
       }
       await sendLinkDeviceEmail(email, key, next).catch((err) => console.error('Link-device email failed:', err))
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Without RESEND_API_KEY there's no way to verify ownership, so skip the
     // pending step and confirm directly (dev/local fallback).
     if (!process.env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY not set — confirming waitlist signup without verification')
+      console.warn('RESEND_API_KEY not set: confirming waitlist signup without verification')
       await kv.hset(CONFIRMED_KEY, { [email]: token })
       await kv.hdel(PENDING_KEY, email)
       const key = await getOrCreateSyncKey(kv, email)

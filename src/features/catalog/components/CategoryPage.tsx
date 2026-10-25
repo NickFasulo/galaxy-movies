@@ -109,7 +109,7 @@ export default function CategoryPage({ media, category, title, description, titl
   return (
     <>
       <PageHead
-        title={page > 1 ? `${title} — Page ${page}` : title}
+        title={page > 1 ? `${title} - Page ${page}` : title}
         description={description}
         canonicalUrl={canonicalUrl}
         posterPath={titles[0]?.poster_path}

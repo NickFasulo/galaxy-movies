@@ -11,11 +11,11 @@ import { trackEvent } from '../lib/umami'
 const STATUSES: Record<string, { title: string; body: string }> = {
   confirmed: {
     title: "You're confirmed",
-    body: "Thanks — we'll email you when something on your list lands on your streaming services."
+    body: "Thanks! We'll email you when something on your list lands on your streaming services."
   },
   'watch-confirmed': {
     title: 'Title alert confirmed',
-    body: "Done — we'll email you when that title lands on or leaves a tracked streaming service. Want alerts for everything you care about? Save titles to your list and turn on full alerts."
+    body: "Done. We'll email you when that title lands on or leaves a tracked streaming service. Want alerts for everything you care about? Save titles to your list and turn on full alerts."
   },
   unsubscribed: {
     title: 'Unsubscribed',
@@ -23,7 +23,7 @@ const STATUSES: Record<string, { title: string; body: string }> = {
   },
   error: {
     title: 'Link invalid or expired',
-    body: "This link didn't work — it may have already been used or expired. You can sign up again from your list page."
+    body: "This link didn't work. It may have already been used or expired. You can sign up again from your list page."
   }
 }
 

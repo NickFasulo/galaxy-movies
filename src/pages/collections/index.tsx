@@ -33,7 +33,7 @@ export async function getStaticProps() {
 export default function Collections({ collections }: InferGetStaticPropsType<typeof getStaticProps>) {
   const canonicalUrl = `${SITE_URL}/collections`
   const title = 'Movie Franchise Collections'
-  const description = 'Every movie in a franchise, in order — Marvel, Harry Potter, Star Wars, James Bond and more, with where each is streaming.'
+  const description = 'Every movie in a franchise, in order: Marvel, Harry Potter, Star Wars, James Bond and more, with where each is streaming.'
 
   return (
     <>

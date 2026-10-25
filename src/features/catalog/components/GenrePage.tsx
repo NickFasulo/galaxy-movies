@@ -82,7 +82,7 @@ export default function GenrePage({ media, genre, title, titles, totalPages, pag
   return (
     <>
       <PageHead
-        title={page > 1 ? `${title} — Page ${page}` : title}
+        title={page > 1 ? `${title} - Page ${page}` : title}
         description={description}
         canonicalUrl={canonicalUrl}
         posterPath={titles[0]?.poster_path}

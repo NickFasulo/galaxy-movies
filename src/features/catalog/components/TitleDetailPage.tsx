@@ -341,7 +341,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
   const metaDescription = hasStreaming
     ? description
-    : `${displayTitle} isn't on any streaming service yet — get an email the day it lands.`
+    : `${displayTitle} isn't on any streaming service yet: get an email the day it lands.`
   const genres = title.genres?.map((g) => g.name) || []
   const ogSubtitle = (!isTv && tagline) || description
   const releaseYear = Number((releaseDate || '').slice(0, 4)) || null

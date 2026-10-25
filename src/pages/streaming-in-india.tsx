@@ -43,7 +43,7 @@ const INDIAN_SHOW_CATEGORIES = Object.entries(tvCategories)
 export default function StreamingInIndia({ movies, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/streaming-in-india`
   const title = 'Where to Watch Movies Online in India'
-  const description = 'A guide to the top streaming platforms available in India — Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more — plus Bollywood, Tamil, and Telugu movies to watch right now.'
+  const description = 'A guide to the top streaming platforms available in India (Netflix, Amazon Prime Video, JioHotstar, ZEE5, SonyLIV, and more) plus Bollywood, Tamil, and Telugu movies to watch right now.'
 
   return (
     <>
@@ -69,7 +69,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
           ))}
         </SimpleGrid>
 
-        <VpnBanner message='International streaming catalogs carry titles not available in India — a VPN can unlock them.' />
+        <VpnBanner message='International streaming catalogs carry titles not available in India: a VPN can unlock them.' />
 
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bollywood, Tamil, Telugu &amp; regional-language movies</Heading>
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
@@ -97,7 +97,7 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
         )}
 
         <Text textAlign='center' mt={8} color='gray.400'>
-          Check each movie page for current provider availability — it changes by region and over time.
+          Check each movie page for current provider availability: it changes by region and over time.
         </Text>
       </PageShell>
     </>

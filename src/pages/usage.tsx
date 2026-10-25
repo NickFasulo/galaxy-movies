@@ -203,7 +203,7 @@ export default function Usage() {
               </Button>
               {generatedAt && (
                 <Text fontSize='xs' color='gray.500'>
-                  {new Date(generatedAt).toLocaleTimeString()} — cached 60s server-side
+                  {new Date(generatedAt).toLocaleTimeString()} - cached 60s server-side
                 </Text>
               )}
             </Flex>

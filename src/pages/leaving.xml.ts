@@ -79,7 +79,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
-<title>Galaxy Movies — streaming catalog changes</title>
+<title>Galaxy Movies: streaming catalog changes</title>
 <link>${SITE_URL}/leaving</link>
 <description>Daily-tracked additions, departures, and upcoming releases across US streaming services.</description>
 <atom:link href="${SITE_URL}/leaving.xml" rel="self" type="application/rss+xml" />

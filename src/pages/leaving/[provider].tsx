@@ -160,7 +160,7 @@ function DaySection({ heading, groups, emptyText }: { heading: string; groups: D
 export default function LeavingProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, departed, leavingSoon, trackedProviders, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/leaving/${provider}`
   const title = `Leaving ${providerLabel} in ${monthLabel}`
-  const description = `Movies and shows that left ${providerLabel} in ${monthLabel} — the dated departures list, updated daily from the US catalog.`
+  const description = `Movies and shows that left ${providerLabel} in ${monthLabel}: the dated departures list, updated daily from the US catalog.`
 
   const itemListData = itemListSchema({
     name: title,
@@ -226,7 +226,7 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
           title was detected out of the tracked catalog. List covers the US catalog and updates daily.
         </Text>
         <Text mt={4} color='gray.500' fontSize='sm'>
-          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily.
+          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link>: free, updates daily.
         </Text>
       </PageShell>
     </>

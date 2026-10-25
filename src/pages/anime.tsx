@@ -65,8 +65,8 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 
 export default function AnimeHub({ seasonName, seasonYear, series, movies, seasonal, newMovies }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const canonicalUrl = `${SITE_URL}/anime`
-  const title = 'Anime – Series & Movies Streaming Now'
-  const description = "The anime hub: this season's new shows, the most popular series and films, and where to stream them — Netflix, Crunchyroll, Hulu and more."
+  const title = 'Anime - Series & Movies Streaming Now'
+  const description = "The anime hub: this season's new shows, the most popular series and films, and where to stream them: Netflix, Crunchyroll, Hulu and more."
 
   const structuredData = titleListSchema({ name: title, description, url: canonicalUrl, titles: [...series, ...movies] })
 
@@ -102,7 +102,7 @@ export default function AnimeHub({ seasonName, seasonYear, series, movies, seaso
       />
       <PageShell title={title} description={description} withBackButton maxW='84rem'>
         <TitleRail
-          title={`New this season — ${seasonName} ${seasonYear}`}
+          title={`New this season: ${seasonName} ${seasonYear}`}
           href='/tv/genre/anime'
           movies={seasonal}
         />

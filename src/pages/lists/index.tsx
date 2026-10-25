@@ -24,7 +24,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 export default function ListsIndex({ generatedLists = [] }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const canonicalUrl = `${SITE_URL}/lists`
   const title = 'Curated Movie Lists & Mood Picks'
-  const description = 'Editorial movie collections for every mood — from cozy night-in picks to mind-bending thrillers and underrated 90s gems.'
+  const description = 'Editorial movie collections for every mood: from cozy night-in picks to mind-bending thrillers and underrated 90s gems.'
 
   const staticEntries = Object.entries(curatedLists).map(([slug, list]) => ({ slug, ...list }))
   const moodLists = staticEntries.filter((entry) => entry.group === 'mood')

@@ -51,7 +51,7 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
 export default function FreeStreaming({ movies, shows, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/free`
   const title = 'Free Movies & TV Shows to Stream Now'
-  const description = 'Popular movies and TV shows you can watch free right now — legally, on ad-supported services like Tubi, Pluto TV and Freevee. No subscription needed.'
+  const description = 'Popular movies and TV shows you can watch free right now: legally, on ad-supported services like Tubi, Pluto TV and Freevee. No subscription needed.'
 
   return (
     <>
@@ -90,7 +90,7 @@ export default function FreeStreaming({ movies, shows, dataError }: Props) {
         </Text>
 
         <Text textAlign='center' mt={8} color='gray.400'>
-          Free availability is ad-supported and changes by region and over time — check each title page for current options.
+          Free availability is ad-supported and changes by region and over time: check each title page for current options.
         </Text>
       </PageShell>
     </>

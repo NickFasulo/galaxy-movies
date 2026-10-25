@@ -20,7 +20,7 @@ const showGenres = Object.entries(tvGenres).map(([key, genre]) => ({
 export default function GenreIndex() {
   const canonicalUrl = `${SITE_URL}/genre`
   const title = 'Movie & TV Genres'
-  const description = 'Browse movies and shows by genre — action, comedy, drama, horror, sci-fi, documentaries, and more.'
+  const description = 'Browse movies and shows by genre: action, comedy, drama, horror, sci-fi, documentaries, and more.'
 
   const itemListData = itemListSchema({
     name: title,

@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const departed = (monthly?.departed || [])
     .filter((t) => t.tmdbId && t.title)
     .slice(0, 6)
-    .map((t) => `${t.title}${t.date ? ` — ${dayLabel(t.date)}` : ''}`)
+    .map((t) => `${t.title}${t.date ? ` - ${dayLabel(t.date)}` : ''}`)
 
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long' })
   const headline = `Leaving ${providerLabel} in ${monthLabel}`
@@ -153,7 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             display: 'flex',
           }}
         >
-          galaxymovies.app — tracked daily
+          galaxymovies.app - tracked daily
         </div>
 
         <div

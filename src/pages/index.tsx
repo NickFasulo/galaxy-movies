@@ -266,7 +266,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }, [moviesList.length])
 
-  const pageTitle = 'Galaxy Movies – Discover Popular & New Films'
+  const pageTitle = 'Galaxy Movies - Discover Popular & New Films'
   const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
 
   const websiteSchema = {

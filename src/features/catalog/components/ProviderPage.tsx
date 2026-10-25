@@ -123,7 +123,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
   const canonicalUrl = `${SITE_URL}${basePath}/${provider}${page > 1 ? `?page=${page}` : ''}`
   const providerLabel = title.replace(' Movies', '')
   const pageTitle = media === 'tv' ? `Best Shows on ${providerLabel}` : `Best Movies on ${providerLabel}`
-  const metaTitle = page > 1 ? `${pageTitle} — Page ${page}` : pageTitle
+  const metaTitle = page > 1 ? `${pageTitle} - Page ${page}` : pageTitle
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(regions)
   const description = availableInRegion
@@ -167,8 +167,8 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         {media === 'movie' && (
           <VpnBanner
             message={availableInRegion
-              ? `${providerLabel}'s catalog differs by country — a VPN can unlock titles available in other regions.`
-              : `${providerLabel} isn't available in ${regionName} — a VPN can unlock its catalog from a supported region.`}
+              ? `${providerLabel}'s catalog differs by country: a VPN can unlock titles available in other regions.`
+              : `${providerLabel} isn't available in ${regionName}: a VPN can unlock its catalog from a supported region.`}
           />
         )}
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>

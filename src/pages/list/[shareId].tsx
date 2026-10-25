@@ -110,7 +110,7 @@ export default function SharedList({ watchlist, ratings }: Props) {
 
         <Box mt={10} maxW='36rem'>
           <Text color='gray.400' fontSize='sm'>
-            Keep your own list — plus alerts when it hits your services — on{' '}
+            Keep your own list (plus alerts when it hits your services) on{' '}
             <Link href='/' style={{ textDecoration: 'underline' }}>Galaxy Movies</Link>.
           </Text>
         </Box>

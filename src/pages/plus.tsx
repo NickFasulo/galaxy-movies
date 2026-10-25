@@ -31,7 +31,7 @@ const FEATURES = [
   { icon: LuHourglass, title: 'Leaving-soon warnings', blurb: 'A heads-up before something on your list disappears.' },
   { icon: LuTv, title: 'Next-episode alerts', blurb: 'Know when a show on your list is about to air.' },
   { icon: LuSend, title: 'Alerts anywhere', blurb: 'Email by default, or Telegram DMs and your own Discord channel.' },
-  { icon: LuBot, title: '10× Galaxy Bot', blurb: '100 messages an hour — knows your taste, and your chat history follows you across devices.' },
+  { icon: LuBot, title: '10× Galaxy Bot', blurb: '100 messages an hour: knows your taste, and your chat history follows you across devices.' },
   { icon: LuSparkles, title: 'Picked for you', blurb: 'A recommendations rail on your list page, seeded by your ratings.' },
   { icon: LuShare2, title: 'A shareable list', blurb: 'A public link for your watchlist and ratings you can send to friends.' },
   { icon: LuLayers, title: 'Bigger limits', blurb: '1,000 list entries and 2,500 ratings synced across every device you link.' },
@@ -134,7 +134,7 @@ export default function Plus() {
         {confirmed && !loading && !plus && (
           <Box mt={8} mx='auto' bg='green.900' border='1px solid var(--chakra-colors-green-700)' borderRadius='lg' p={4} maxW='36rem'>
             <Text color='green.200' fontSize='sm'>
-              You&apos;re confirmed — pick a plan below to finish signing up for Plus.
+              You&apos;re confirmed. Pick a plan below to finish signing up for Plus.
             </Text>
           </Box>
         )}
@@ -217,7 +217,7 @@ export default function Plus() {
                     <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$20</Text>
                     <Text color='gray.400' fontSize='sm'>/ year</Text>
                   </Flex>
-                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $1.67 a month — save 44%</Text>
+                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $1.67 a month (save 44%)</Text>
                   <Button mt='auto' colorPalette='yellow' loading={busy === 'yearly'} onClick={() => checkout('yearly')} w='100%'>
                     Go yearly
                   </Button>

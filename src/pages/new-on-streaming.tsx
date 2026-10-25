@@ -105,7 +105,7 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
             )}
             <Link href={`/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`} passHref>
               <Text as='span' _hover={{ textDecoration: 'underline' }} cursor='pointer'>
-                {t.title}{t.year ? ` (${t.year})` : ''}{showDate && t.date ? ` — ${formatChangeDate(t.date)}` : ''}{t.season ? ` (season ${t.season})` : ''}
+                {t.title}{t.year ? ` (${t.year})` : ''}{showDate && t.date ? ` - ${formatChangeDate(t.date)}` : ''}{t.season ? ` (season ${t.season})` : ''}
               </Text>
             </Link>
           </Box>
@@ -119,7 +119,7 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
   const canonicalUrl = `${SITE_URL}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
   const title = `New Releases Streaming Now (${monthLabel})`
-  const description = `Recently released movies currently streaming by service, updated regularly — including Netflix, Amazon Prime Video, and more.`
+  const description = `Recently released movies currently streaming by service, updated regularly: including Netflix, Amazon Prime Video, and more.`
 
   const itemListData = itemListSchema({
     name: title,

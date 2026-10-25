@@ -44,7 +44,7 @@ export default function Widgets({ initialProvider }: Props) {
 
   const canonicalUrl = `${SITE_URL}/widgets`
   const title = 'Free Streaming Changes Widget'
-  const description = `Embed a live "what's new and leaving" list for major streaming services on your site — free, updated daily.`
+  const description = `Embed a live "what's new and leaving" list for major streaming services on your site: free, updated daily.`
 
   return (
     <>
@@ -132,7 +132,7 @@ export default function Widgets({ initialProvider }: Props) {
 
         <Heading as='h2' size='md' mt={12} mb={4}>JSON feed</Heading>
         <Text maxW='42rem' color='gray.400' fontSize='sm'>
-          Prefer raw data? The same diffs are available as JSON — <Text as='code'>added</Text>, <Text as='code'>left</Text> and{' '}
+          Prefer raw data? The same diffs are available as JSON: <Text as='code'>added</Text>, <Text as='code'>left</Text> and{' '}
           <Text as='code'>coming</Text> titles per service, refreshed daily. No key required; free usage is 120 requests/hour.
         </Text>
         <Box

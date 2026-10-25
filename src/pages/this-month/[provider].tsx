@@ -116,15 +116,15 @@ function TitleRow({ items }: { items: TitleRef[] }) {
 export default function ThisMonthProvider({ provider, providerLabel, monthLabel, arrivedCount, departedCount, comingCount, topArrived, topDeparted, topComing, trackedProviders, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/this-month/${provider}`
   const title = `Is ${providerLabel} Worth It in ${monthLabel}?`
-  const description = `${providerLabel} added ${arrivedCount} titles and lost ${departedCount} in ${monthLabel} — see the highlights and decide whether it's worth a month.`
+  const description = `${providerLabel} added ${arrivedCount} titles and lost ${departedCount} in ${monthLabel}: see the highlights and decide whether it's worth a month.`
 
   const net = arrivedCount - departedCount
   const verdict = dataError
     ? ''
     : arrivedCount === 0 && departedCount === 0
-      ? `We haven't tracked enough ${providerLabel} catalog movement in ${monthLabel} to call it either way yet — the list updates daily, so check back soon.`
+      ? `We haven't tracked enough ${providerLabel} catalog movement in ${monthLabel} to call it either way yet: the list updates daily, so check back soon.`
       : `${providerLabel} has added ${arrivedCount} title${arrivedCount === 1 ? '' : 's'} and lost ${departedCount} so far in ${monthLabel}` +
-        `${net > 0 ? ` — a net gain of ${net}` : net < 0 ? ` — a net loss of ${-net}` : ' — dead even'}.` +
+        `${net > 0 ? `, a net gain of ${net}` : net < 0 ? `, a net loss of ${-net}` : ', dead even'}.` +
         (comingCount > 0 ? ` Another ${comingCount} release${comingCount === 1 ? ' is' : 's are'} still on the way.` : '')
 
   const itemListData = itemListSchema({
@@ -197,7 +197,7 @@ export default function ThisMonthProvider({ provider, providerLabel, monthLabel,
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
           Counts cover the tracked US catalog and update daily. A pickup month makes sense when the arrivals you want
-          outweigh what&apos;s leaving — heavy watchers can rotate services month to month instead of stacking subscriptions.
+          outweigh what&apos;s leaving: heavy watchers can rotate services month to month instead of stacking subscriptions.
         </Text>
       </PageShell>
     </>

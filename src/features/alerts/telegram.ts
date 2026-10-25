@@ -18,7 +18,7 @@ function statusLine(item: MatchedItem): string {
     case 'episode':
       return `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
     case 'taste':
-      return `Now on ${item.provider} — because you rated ${item.via || ''} highly`
+      return `Now on ${item.provider} (because you rated ${item.via || ''} highly)`
     default:
       return `Now on ${item.provider}`
   }
@@ -26,7 +26,7 @@ function statusLine(item: MatchedItem): string {
 
 export function buildTelegramText(items: MatchedItem[]): string {
   const rows = items
-    .map((item) => `• [${escapeMd(item.title)}](${SITE_URL}${titlePath(item)}) — ${escapeMd(statusLine(item))}`)
+    .map((item) => `• [${escapeMd(item.title)}](${SITE_URL}${titlePath(item)}) - ${escapeMd(statusLine(item))}`)
     .join('\n')
   return `*Something on your list just moved*\n\n${rows}`.slice(0, 4000)
 }

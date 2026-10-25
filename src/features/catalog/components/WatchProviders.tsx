@@ -297,7 +297,7 @@ export default function WatchProviders({
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
-              Not currently available to stream — a VPN can sometimes unlock it in another region.
+              Not currently available to stream: a VPN can sometimes unlock it in another region.
             </Text>
             {!hasTitleEvents && movieTitle && (
               <StreamingAlertCta tmdbId={tmdbId} tmdbType={mediaType} title={movieTitle} />

@@ -157,7 +157,7 @@ function DaySection({ heading, groups, emptyText }: { heading: string; groups: D
 export default function NewOnProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, coming, arrived, trackedProviders, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/new-on-streaming/${provider}`
   const title = `New on ${providerLabel} in ${monthLabel}`
-  const description = `Movies and shows added to ${providerLabel} in ${monthLabel}, plus what's still coming — the dated arrivals list, updated daily from the US catalog.`
+  const description = `Movies and shows added to ${providerLabel} in ${monthLabel}, plus what's still coming: the dated arrivals list, updated daily from the US catalog.`
 
   const itemListData = itemListSchema({
     name: title,
@@ -222,7 +222,7 @@ export default function NewOnProvider({ provider, providerLabel, monthLabel, mon
           See also <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases across all services</Link>.
         </Text>
         <Text mt={4} color='gray.500' fontSize='sm'>
-          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link> — free, updates daily.
+          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link>: free, updates daily.
         </Text>
       </PageShell>
     </>

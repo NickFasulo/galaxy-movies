@@ -15,7 +15,7 @@ const categories = Object.entries(movieCategories).map(([key, category]) => ({
 export default function BrowseIndex() {
   const canonicalUrl = `${SITE_URL}/browse`
   const title = 'Browse Movies'
-  const description = 'Browse movies by category — popular picks, now playing, upcoming releases, and Bollywood, Tamil, and Telugu cinema.'
+  const description = 'Browse movies by category: popular picks, now playing, upcoming releases, and Bollywood, Tamil, and Telugu cinema.'
 
   const itemListData = itemListSchema({
     name: title,

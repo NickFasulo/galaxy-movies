@@ -74,7 +74,7 @@ export default function Collection({ collection, movies, boxSet }: Props) {
   const pageTitle = `${collection.name} Movies in Order & Where to Stream`
   const description = collection.overview
     ? collection.overview.slice(0, 160)
-    : `All ${movies.length} ${collection.name} movies in release order — and where each one is streaming now.`
+    : `All ${movies.length} ${collection.name} movies in release order: and where each one is streaming now.`
 
   return (
     <>
@@ -99,7 +99,7 @@ export default function Collection({ collection, movies, boxSet }: Props) {
         <MovieGrid movies={movies} />
 
         <Text textAlign='center' mt={8} color='gray.400'>
-          Sorted by release date — check each movie page for current streaming, rent and buy options.
+          Sorted by release date: check each movie page for current streaming, rent and buy options.
         </Text>
       </PageShell>
     </>

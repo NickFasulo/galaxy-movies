@@ -90,7 +90,7 @@ export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescrip
   if (status === 'pending') {
     return (
       <Text color='green.300' fontSize='sm'>
-        Check your inbox — we sent a link to confirm your alert for this title.
+        Check your inbox: we sent a link to confirm your alert for this title.
       </Text>
     )
   }

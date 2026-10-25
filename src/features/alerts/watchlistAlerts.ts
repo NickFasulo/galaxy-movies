@@ -203,7 +203,7 @@ export function statusLine(item: MatchedItem): string {
     case 'episode':
       return episodeLine(item)
     case 'taste':
-      return `Now on ${escapeHtml(item.provider)} — because you rated ${escapeHtml(item.via || '')} highly`
+      return `Now on ${escapeHtml(item.provider)} (because you rated ${escapeHtml(item.via || '')} highly)`
     default:
       return `Now on ${escapeHtml(item.provider)}`
   }
@@ -242,7 +242,7 @@ function discordStatusLine(item: MatchedItem): string {
     case 'episode':
       return episodeLine(item)
     case 'taste':
-      return `Now on ${item.provider} — because you rated ${item.via || ''} highly`
+      return `Now on ${item.provider} (because you rated ${item.via || ''} highly)`
     default:
       return `Now on ${item.provider}`
   }
@@ -250,7 +250,7 @@ function discordStatusLine(item: MatchedItem): string {
 
 export function buildDiscordMessage(items: MatchedItem[]) {
   const description = items
-    .map((item) => `• [${item.title}](${SITE_URL}${titlePath(item)}) — ${discordStatusLine(item)}`)
+    .map((item) => `• [${item.title}](${SITE_URL}${titlePath(item)}) - ${discordStatusLine(item)}`)
     .join('\n')
     .slice(0, 4000)
   return {

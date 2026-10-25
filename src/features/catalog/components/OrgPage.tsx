@@ -152,7 +152,7 @@ function OrgContent({ kind, org, titles, totalPages, page }: { kind: OrgKind; or
   return (
     <>
       <PageHead
-        title={page > 1 ? `${pageTitle} — Page ${page}` : pageTitle}
+        title={page > 1 ? `${pageTitle} - Page ${page}` : pageTitle}
         description={description}
         canonicalUrl={canonicalUrl}
         ogSubtitle={ogSubtitle}

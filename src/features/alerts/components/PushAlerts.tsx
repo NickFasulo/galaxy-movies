@@ -49,13 +49,13 @@ export default function PushAlerts({ creds }: { creds: AlertsCredentials }) {
         </Text>
       ) : support === 'blocked' ? (
         <Text color='gray.400' fontSize='sm'>
-          Notifications are blocked for this site — enable them in your browser&apos;s site settings to get alerts on this device.
+          Notifications are blocked for this site: enable them in your browser&apos;s site settings to get alerts on this device.
         </Text>
       ) : (
         <Text color='gray.400' fontSize='sm'>
           {on ? (
             <>
-              On for this device — alerts arrive here instead of email.{' '}
+              On for this device: alerts arrive here instead of email.{' '}
               <button type='button' disabled={busy} onClick={toggle} style={linkStyle}>Turn off</button>
             </>
           ) : (

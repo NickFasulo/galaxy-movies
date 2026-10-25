@@ -60,7 +60,7 @@ export default function LeavingIndex({ soon }: Props) {
   const canonicalUrl = `${SITE_URL}/leaving`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
   const title = `What's Leaving Streaming Services (${monthLabel})`
-  const description = `Dated lists of movies and shows leaving each major streaming service in ${monthLabel} — tracked daily from US catalogs.`
+  const description = `Dated lists of movies and shows leaving each major streaming service in ${monthLabel}: tracked daily from US catalogs.`
 
   const providers = Object.keys(PROVIDER_NAME_MATCH)
     .filter((key) => streamingProviders[key])
@@ -116,7 +116,7 @@ export default function LeavingIndex({ soon }: Props) {
               </Flex>
             ))}
             <Text color='gray.500' fontSize='xs' mt={3}>
-              Announced departure dates — services sometimes shift them. Full preview is limited; per-service pages update daily.
+              Announced departure dates: services sometimes shift them. Full preview is limited; per-service pages update daily.
             </Text>
           </Box>
         )}
@@ -134,7 +134,7 @@ export default function LeavingIndex({ soon }: Props) {
         </Text>
         <Text textAlign='center' mt={4} color='gray.500' fontSize='sm'>
           Write about streaming?{' '}
-          <Link href='/widgets' style={{ textDecoration: 'underline' }}>Embed these lists on your site — free</Link>.
+          <Link href='/widgets' style={{ textDecoration: 'underline' }}>Embed these lists on your site (free)</Link>.
           {' '}Or subscribe to the <Link href='/leaving.xml' style={{ textDecoration: 'underline' }}>RSS feed</Link>.
         </Text>
       </PageShell>

@@ -143,7 +143,7 @@ export function InfiniteTitleGrid({
         </InfiniteScroll>
       )}
       {status === 'error' && (
-        <Text textAlign='center' color='gray.500' mb={4}>Couldn&rsquo;t load titles — try again.</Text>
+        <Text textAlign='center' color='gray.500' mb={4}>Couldn&rsquo;t load titles. Try again.</Text>
       )}
       {!hasNextPage && loadedPages > 1 && (
         <Text textAlign='center' color='gray.500' p='1rem' mb='2rem'>You&rsquo;ve reached the end.</Text>

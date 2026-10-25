@@ -163,7 +163,7 @@ export default function ProviderGenrePage({
   return (
     <>
       <PageHead
-        title={page > 1 ? `${target.title} — Page ${page}` : target.title}
+        title={page > 1 ? `${target.title} - Page ${page}` : target.title}
         description={description}
         canonicalUrl={canonicalUrl}
         noindex={!isIndexable}

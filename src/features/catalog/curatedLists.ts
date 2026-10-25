@@ -69,7 +69,7 @@ export const curatedLists: Record<string, ListDef> = {
   },
   'quick-watch-under-90': {
     title: 'Great Movies Under 90 Minutes',
-    tagline: 'No filler — solid films that respect your evening.',
+    tagline: 'No filler: solid films that respect your evening.',
     group: 'mood',
     params: {
       'with_runtime.lte': 90,
@@ -160,7 +160,7 @@ export const curatedLists: Record<string, ListDef> = {
 
   'heist-movies': {
     title: 'Best Heist Movies',
-    tagline: 'Elaborate cons, big scores, and crews with a plan — or the confidence to fake one.',
+    tagline: 'Elaborate cons, big scores, and crews with a plan, or the confidence to fake one.',
     group: 'curated',
     params: {
       with_keywords: '10051', // heist
@@ -249,7 +249,7 @@ export const curatedLists: Record<string, ListDef> = {
 
   'best-anime-series': {
     title: 'Best Anime Series',
-    tagline: 'The top-rated anime shows of all time — modern hits and all-time classics.',
+    tagline: 'The top-rated anime shows of all time: modern hits and all-time classics.',
     group: 'curated',
     media: 'tv',
     params: {
@@ -261,7 +261,7 @@ export const curatedLists: Record<string, ListDef> = {
   },
   'best-anime-movies': {
     title: 'Best Anime Movies',
-    tagline: 'The essential anime films — Ghibli classics, modern masterpieces, and theatrical hits.',
+    tagline: 'The essential anime films: Ghibli classics, modern masterpieces, and theatrical hits.',
     group: 'curated',
     params: {
       ...ANIME_PARAMS,
@@ -286,7 +286,7 @@ export const curatedLists: Record<string, ListDef> = {
   'best-movie-podcasts': {
     type: 'editorial',
     title: 'Best Podcasts for Movie Lovers',
-    tagline: 'Smart film podcasts for every mood — deep dives, director retrospectives, awards chatter and Hollywood history.',
+    tagline: 'Smart film podcasts for every mood: deep dives, director retrospectives, awards chatter and Hollywood history.',
     group: 'guides',
     relatedParams: {
       'primary_release_date.gte': '2025-01-01',
@@ -298,7 +298,7 @@ export const curatedLists: Record<string, ListDef> = {
     sections: [
       {
         paragraphs: [
-          'Love movies but short on screen time? A good film podcast keeps the conversation going between watches — recommendations, context and arguments you\'ll want to pick a side on. These shows are worth a permanent slot in your podcast queue, whether you want weekly reviews, director deep dives or Hollywood history.'
+          'Love movies but short on screen time? A good film podcast keeps the conversation going between watches: recommendations, context and arguments you\'ll want to pick a side on. These shows are worth a permanent slot in your podcast queue, whether you want weekly reviews, director deep dives or Hollywood history.'
         ]
       },
       {
@@ -308,61 +308,61 @@ export const curatedLists: Record<string, ListDef> = {
             name: 'The Big Picture',
             kind: 'podcast',
             url: 'https://www.theringer.com/the-big-picture',
-            description: 'The Ringer\'s flagship movie show — Sean Fennessey, Amanda Dobbins and guests cover new releases, then break for obsessively ranked movie drafts and top-five lists.'
+            description: 'The Ringer\'s flagship movie show: Sean Fennessey, Amanda Dobbins and guests cover new releases, then break for obsessively ranked movie drafts and top-five lists.'
           },
           {
             name: 'Filmspotting',
             kind: 'podcast',
             url: 'https://www.filmspotting.net',
-            description: 'One of the longest-running movie podcasts around — weekly reviews plus the famous Top 5 lists that will send your watchlist spiraling.'
+            description: 'One of the longest-running movie podcasts around: weekly reviews plus the famous Top 5 lists that will send your watchlist spiraling.'
           },
           {
             name: 'Blank Check',
             kind: 'podcast',
             url: 'https://www.blankcheckpod.com',
-            description: 'Directors\' filmographies, one miniseries at a time — every film covered in order, early hits and blank checks alike. The ideal companion for a franchise binge.'
+            description: 'Directors\' filmographies, one miniseries at a time: every film covered in order, early hits and blank checks alike. The ideal companion for a franchise binge.'
           },
           {
             name: 'You Must Remember This',
             kind: 'podcast',
             url: 'https://www.youmustrememberthispodcast.com',
-            description: 'Karina Longworth\'s meticulously researched secret histories of Hollywood\'s first century — the closest thing to an audiobook series about the movies.'
+            description: 'Karina Longworth\'s meticulously researched secret histories of Hollywood\'s first century: the closest thing to an audiobook series about the movies.'
           },
           {
             name: 'Unspooled',
             kind: 'podcast',
             url: 'https://www.unspooledpodcast.com',
-            description: 'Paul Scheer and Amy Nicholson work through the most essential films ever made — a watchlist and a film education in one feed.'
+            description: 'Paul Scheer and Amy Nicholson work through the most essential films ever made: a watchlist and a film education in one feed.'
           },
           {
             name: 'The Rewatchables',
             kind: 'podcast',
             url: 'https://www.theringer.com/the-rewatchables',
-            description: 'Bill Simmons and rotating Ringer guests revisit the movies everyone has seen a dozen times — best listened to right after your own rewatch.'
+            description: 'Bill Simmons and rotating Ringer guests revisit the movies everyone has seen a dozen times: best listened to right after your own rewatch.'
           },
           {
             name: 'How Did This Get Made?',
             kind: 'podcast',
             url: 'https://www.earwolf.com/show/how-did-this-get-made',
-            description: 'Paul Scheer, June Diane Raphael and Jason Mantzoukas tear into gloriously bad movies. Watch the trainwreck first — it doubles the fun.'
+            description: 'Paul Scheer, June Diane Raphael and Jason Mantzoukas tear into gloriously bad movies. Watch the trainwreck first: it doubles the fun.'
           },
           {
             name: 'Scriptnotes',
             kind: 'podcast',
             url: 'https://scriptnotes.net',
-            description: 'Screenwriters John August and Craig Mazin on the craft and business of writing for film — the industry-side view most shows skip.'
+            description: 'Screenwriters John August and Craig Mazin on the craft and business of writing for film: the industry-side view most shows skip.'
           },
           {
             name: 'The Next Picture Show',
             kind: 'podcast',
             url: 'https://nextpictureshow.net',
-            description: 'Each episode pairs a classic with a new release that echoes it — two movies for your watchlist every week.'
+            description: 'Each episode pairs a classic with a new release that echoes it: two movies for your watchlist every week.'
           },
           {
             name: 'Maltin on Movies',
             kind: 'podcast',
             url: 'https://leonardmaltin.com',
-            description: 'Critic Leonard Maltin and daughter Jessie talk film with actors, directors and fellow obsessives — warm, encyclopedic and unpretentious.'
+            description: 'Critic Leonard Maltin and daughter Jessie talk film with actors, directors and fellow obsessives: warm, encyclopedic and unpretentious.'
           }
         ]
       }
@@ -371,7 +371,7 @@ export const curatedLists: Record<string, ListDef> = {
   'audiobook-adaptations': {
     type: 'editorial',
     title: 'Audiobooks Worth Hearing Before the Movie',
-    tagline: 'Great narration adds a layer the screen can\'t — these adaptations reward listening first.',
+    tagline: 'Great narration adds a layer the screen can\'t: these adaptations reward listening first.',
     group: 'guides',
     relatedParams: {
       with_keywords: '818', // based on novel or book
@@ -383,109 +383,109 @@ export const curatedLists: Record<string, ListDef> = {
     sections: [
       {
         paragraphs: [
-          'A good audiobook is a performance, not just a reading — full casts, unreliable narrators and voices that stay with you long after the adaptation\'s credits roll. Start with the recording, then stream the film to see what the director kept, changed or cut entirely.'
+          'A good audiobook is a performance, not just a reading: full casts, unreliable narrators and voices that stay with you long after the adaptation\'s credits roll. Start with the recording, then stream the film to see what the director kept, changed or cut entirely.'
         ]
       },
       {
         heading: 'Listen first, stream second',
         items: [
           {
-            name: 'The Martian — Andy Weir',
+            name: 'The Martian: Andy Weir',
             kind: 'book',
             path: '/movies/286217',
             pathLabel: 'Stream the adaptation',
-            description: 'R.C. Bray\'s narration of the original recording turns Watney\'s logs into a one-man show — the sarcasm and survival math hit harder aloud.'
+            description: 'R.C. Bray\'s narration of the original recording turns Watney\'s logs into a one-man show: the sarcasm and survival math hit harder aloud.'
           },
           {
-            name: 'World War Z — Max Brooks',
+            name: 'World War Z: Max Brooks',
             kind: 'book',
             path: '/movies/72190',
             pathLabel: 'Stream the adaptation',
-            description: 'The full-cast recording — Alan Alda, Mark Hamill and more — turns the oral-history structure into a documentary about a fictional war. The movie goes its own way, which makes hearing this first even better.'
+            description: 'The full-cast recording (Alan Alda, Mark Hamill and more) turns the oral-history structure into a documentary about a fictional war. The movie goes its own way, which makes hearing this first even better.'
           },
           {
-            name: 'Dune — Frank Herbert',
+            name: 'Dune: Frank Herbert',
             kind: 'book',
             path: '/movies/438631',
             pathLabel: 'Stream the adaptation',
             description: 'Herbert\'s dense world-building is easier to absorb by ear, and knowing who everyone is makes Villeneuve\'s adaptation land as spectacle instead of homework.'
           },
           {
-            name: 'Gone Girl — Gillian Flynn',
+            name: 'Gone Girl: Gillian Flynn',
             kind: 'book',
             path: '/movies/210577',
             pathLabel: 'Stream the adaptation',
-            description: 'Dual narrators Julia Whelan and Kirby Heyborne play Amy and Nick off each other — the midpoint twist lands differently once you\'ve lived inside both voices.'
+            description: 'Dual narrators Julia Whelan and Kirby Heyborne play Amy and Nick off each other: the midpoint twist lands differently once you\'ve lived inside both voices.'
           },
           {
-            name: 'Ready Player One — Ernest Cline',
+            name: 'Ready Player One: Ernest Cline',
             kind: 'book',
             path: '/movies/333339',
             pathLabel: 'Stream the adaptation',
-            description: 'Wil Wheaton narrates like he\'s reading his own fan letter to the \'80s — an enthusiasm Spielberg\'s film largely trades for spectacle.'
+            description: 'Wil Wheaton narrates like he\'s reading his own fan letter to the \'80s: an enthusiasm Spielberg\'s film largely trades for spectacle.'
           },
           {
-            name: 'Jurassic Park — Michael Crichton',
+            name: 'Jurassic Park: Michael Crichton',
             kind: 'book',
             path: '/movies/329',
             pathLabel: 'Stream the adaptation',
-            description: 'The novel\'s chaos-theory warnings and darker park failures explain choices the film only implies — plus set pieces that never made it to the screen.'
+            description: 'The novel\'s chaos-theory warnings and darker park failures explain choices the film only implies, plus set pieces that never made it to the screen.'
           },
           {
-            name: 'The Shining — Stephen King',
+            name: 'The Shining: Stephen King',
             kind: 'book',
             path: '/movies/694',
             pathLabel: 'Stream the adaptation',
-            description: 'King\'s Jack Torrance is a tragedy Kubrick deliberately flattened into a nightmare — Campbell Scott\'s narration makes the descent feel personal.'
+            description: 'King\'s Jack Torrance is a tragedy Kubrick deliberately flattened into a nightmare: Campbell Scott\'s narration makes the descent feel personal.'
           },
           {
-            name: 'Fight Club — Chuck Palahniuk',
+            name: 'Fight Club: Chuck Palahniuk',
             kind: 'book',
             path: '/movies/550',
             pathLabel: 'Stream the adaptation',
-            description: 'Hearing the narrator\'s voice in your head makes the reveal feel inevitable in hindsight — and the book\'s ending is a different animal entirely.'
+            description: 'Hearing the narrator\'s voice in your head makes the reveal feel inevitable in hindsight, and the book\'s ending is a different animal entirely.'
           },
           {
-            name: 'No Country for Old Men — Cormac McCarthy',
+            name: 'No Country for Old Men: Cormac McCarthy',
             kind: 'book',
             path: '/movies/6977',
             pathLabel: 'Stream the adaptation',
-            description: 'McCarthy\'s spare prose and Sheriff Bell\'s monologues are nearly a radio play already — the Coens filmed it almost word for word, so compare them directly.'
+            description: 'McCarthy\'s spare prose and Sheriff Bell\'s monologues are nearly a radio play already: the Coens filmed it almost word for word, so compare them directly.'
           },
           {
-            name: 'The Princess Bride — William Goldman',
+            name: 'The Princess Bride: William Goldman',
             kind: 'book',
             path: '/movies/2493',
             pathLabel: 'Stream the adaptation',
-            description: 'Goldman\'s "abridgement" framing device — an author annotating a book he claims he didn\'t write — is a joke the film can only hint at, and the asides are half the fun.'
+            description: 'Goldman\'s "abridgement" framing device (an author annotating a book he claims he didn\'t write) is a joke the film can only hint at, and the asides are half the fun.'
           },
           {
-            name: 'Oil! — Upton Sinclair',
+            name: 'Oil!: Upton Sinclair',
             kind: 'book',
             path: '/movies/7345',
             pathLabel: 'Stream the adaptation',
-            description: 'Paul Thomas Anderson borrowed the oilfields and the father-son antagonism, then wrote a different story — the source novel behind There Will Be Blood is the surprise prequel nobody expects.'
+            description: 'Paul Thomas Anderson borrowed the oilfields and the father-son antagonism, then wrote a different story: the source novel behind There Will Be Blood is the surprise prequel nobody expects.'
           },
           {
-            name: 'Do Androids Dream of Electric Sheep? — Philip K. Dick',
+            name: 'Do Androids Dream of Electric Sheep?: Philip K. Dick',
             kind: 'book',
             path: '/movies/78',
             pathLabel: 'Stream the adaptation',
-            description: 'Blade Runner kept the replicants and dropped the empathy religion and the titular sheep — the book is stranger and sadder than the film.'
+            description: 'Blade Runner kept the replicants and dropped the empathy religion and the titular sheep: the book is stranger and sadder than the film.'
           },
           {
-            name: 'The Silence of the Lambs — Thomas Harris',
+            name: 'The Silence of the Lambs: Thomas Harris',
             kind: 'book',
             path: '/movies/274',
             pathLabel: 'Stream the adaptation',
-            description: 'Frank Muller\'s widely praised recording voices Lecter with unnerving calm — a masterclass in narration from one of the form\'s best.'
+            description: 'Frank Muller\'s widely praised recording voices Lecter with unnerving calm: a masterclass in narration from one of the form\'s best.'
           },
           {
-            name: 'American Psycho — Bret Easton Ellis',
+            name: 'American Psycho: Bret Easton Ellis',
             kind: 'book',
             path: '/movies/1359',
             pathLabel: 'Stream the adaptation',
-            description: 'Far more disturbing and far funnier than the film — hearing Bateman\'s deadpan cataloguing read aloud is genuinely surreal.'
+            description: 'Far more disturbing and far funnier than the film: hearing Bateman\'s deadpan cataloguing read aloud is genuinely surreal.'
           }
         ]
       }
@@ -506,7 +506,7 @@ export const curatedLists: Record<string, ListDef> = {
     sections: [
       {
         paragraphs: [
-          'Awards season is the easiest time to catch up on the canon — Best Picture winners bounce between services constantly, so each entry links to a live "where to watch" page instead of a provider name that might be stale next month. Availability tracked daily across the major US services.'
+          'Awards season is the easiest time to catch up on the canon: Best Picture winners bounce between services constantly, so each entry links to a live "where to watch" page instead of a provider name that might be stale next month. Availability tracked daily across the major US services.'
         ]
       },
       {
@@ -516,13 +516,13 @@ export const curatedLists: Record<string, ListDef> = {
             name: 'Anora (2024)',
             path: '/movies/1064213',
             pathLabel: 'Where to stream',
-            description: 'Sean Baker\'s screwball-tragedy about a Brooklyn dancer who marries into Russian money — a rare indie sweep that took Picture, Director, Actress, Editing and Screenplay.'
+            description: 'Sean Baker\'s screwball-tragedy about a Brooklyn dancer who marries into Russian money: a rare indie sweep that took Picture, Director, Actress, Editing and Screenplay.'
           },
           {
             name: 'Oppenheimer (2023)',
             path: '/movies/872585',
             pathLabel: 'Where to stream',
-            description: 'Christopher Nolan\'s three-hour biopic that somehow played like a blockbuster — seven Oscars including Picture and Director.'
+            description: 'Christopher Nolan\'s three-hour biopic that somehow played like a blockbuster: seven Oscars including Picture and Director.'
           },
           {
             name: 'Everything Everywhere All at Once (2022)',
@@ -534,7 +534,7 @@ export const curatedLists: Record<string, ListDef> = {
             name: 'CODA (2021)',
             path: '/movies/776503',
             pathLabel: 'Where to stream',
-            description: 'The Sundance drama about a hearing child of deaf parents — the first streaming-first film to take the top prize.'
+            description: 'The Sundance drama about a hearing child of deaf parents: the first streaming-first film to take the top prize.'
           },
           {
             name: 'Nomadland (2020)',
@@ -546,73 +546,73 @@ export const curatedLists: Record<string, ListDef> = {
             name: 'Parasite (2019)',
             path: '/movies/496243',
             pathLabel: 'Where to stream',
-            description: 'Bong Joon-ho\'s class-war thriller — the first non-English-language film ever to win Best Picture, and still the reference point for the category.'
+            description: 'Bong Joon-ho\'s class-war thriller: the first non-English-language film ever to win Best Picture, and still the reference point for the category.'
           },
           {
             name: 'Green Book (2018)',
             path: '/movies/490132',
             pathLabel: 'Where to stream',
-            description: 'The crowd-pleasing road movie about Dr. Don Shirley\'s tour through the Jim Crow South — divisive win, undeniable watchability.'
+            description: 'The crowd-pleasing road movie about Dr. Don Shirley\'s tour through the Jim Crow South: divisive win, undeniable watchability.'
           },
           {
             name: 'The Shape of Water (2017)',
             path: '/movies/399055',
             pathLabel: 'Where to stream',
-            description: 'Guillermo del Toro\'s Cold War fairy tale — the first creature romance to take Best Picture, and the most del Toro film possible.'
+            description: 'Guillermo del Toro\'s Cold War fairy tale: the first creature romance to take Best Picture, and the most del Toro film possible.'
           },
           {
             name: 'Moonlight (2016)',
             path: '/movies/376867',
             pathLabel: 'Where to stream',
-            description: 'Barry Jenkins\' three-act portrait of a life — the envelope mix-up made history, the film deserved it on merit alone.'
+            description: 'Barry Jenkins\' three-act portrait of a life: the envelope mix-up made history, the film deserved it on merit alone.'
           },
           {
             name: 'Spotlight (2015)',
             path: '/movies/314365',
             pathLabel: 'Where to stream',
-            description: 'The Boston Globe\'s church-abuse investigation rendered as a procedural — the rare journalism movie with zero wasted scenes.'
+            description: 'The Boston Globe\'s church-abuse investigation rendered as a procedural: the rare journalism movie with zero wasted scenes.'
           },
           {
             name: 'Birdman (2014)',
             path: '/movies/194662',
             pathLabel: 'Where to stream',
-            description: 'Iñárritu\'s single-take showbiz panic attack — Michael Keaton\'s comeback role about a superhero actor chasing legitimacy.'
+            description: 'Iñárritu\'s single-take showbiz panic attack: Michael Keaton\'s comeback role about a superhero actor chasing legitimacy.'
           },
           {
             name: '12 Years a Slave (2013)',
             path: '/movies/76203',
             pathLabel: 'Where to stream',
-            description: 'Steve McQueen\'s unflinching Solomon Northup adaptation — the first film by a Black director to win Best Picture.'
+            description: 'Steve McQueen\'s unflinching Solomon Northup adaptation: the first film by a Black director to win Best Picture.'
           },
           {
             name: 'The Hurt Locker (2009)',
             path: '/movies/12162',
             pathLabel: 'Where to stream',
-            description: 'Kathryn Bigelow\'s bomb-squad procedural — beat Avatar for the top prize and made her the first woman to win Best Director.'
+            description: 'Kathryn Bigelow\'s bomb-squad procedural: beat Avatar for the top prize and made her the first woman to win Best Director.'
           },
           {
             name: 'Slumdog Millionaire (2008)',
             path: '/movies/12405',
             pathLabel: 'Where to stream',
-            description: 'Danny Boyle\'s Mumbai quiz-show fairy tale — eight Oscars and the feel-good winner that still holds up.'
+            description: 'Danny Boyle\'s Mumbai quiz-show fairy tale: eight Oscars and the feel-good winner that still holds up.'
           },
           {
             name: 'No Country for Old Men (2007)',
             path: '/movies/6977',
             pathLabel: 'Where to stream',
-            description: 'The Coens\' Cormac McCarthy adaptation — four awards, one cattle gun, and the most controlled thriller of the century.'
+            description: 'The Coens\' Cormac McCarthy adaptation: four awards, one cattle gun, and the most controlled thriller of the century.'
           },
           {
             name: 'The Departed (2006)',
             path: '/movies/1422',
             pathLabel: 'Where to stream',
-            description: 'Scorsese\'s Boston moles-vs-moles remake — the win that finally got him the Picture and Director statues.'
+            description: 'Scorsese\'s Boston moles-vs-moles remake: the win that finally got him the Picture and Director statues.'
           }
         ]
       },
       {
         paragraphs: [
-          'Winners rotate between services monthly — if a favorite left your subscription, it will surface elsewhere. We track daily catalog changes across the major US services, so each detail page shows the current answer.'
+          'Winners rotate between services monthly: if a favorite left your subscription, it will surface elsewhere. We track daily catalog changes across the major US services, so each detail page shows the current answer.'
         ]
       }
     ]

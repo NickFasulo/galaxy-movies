@@ -108,12 +108,12 @@ export default function Watchlist() {
     <>
       <PageHead
         title='My List'
-        description='Movies you have saved. Your list lives on this device — no account needed.'
+        description='Movies you have saved. Your list lives on this device: no account needed.'
         noindex
       />
       <PageShell
         title='My List'
-        description="Movies you've saved. Your list lives on this device — no account needed."
+        description="Movies you've saved. Your list lives on this device: no account needed."
         withBackButton
       >
         <Box mt={6}>
@@ -136,7 +136,7 @@ export default function Watchlist() {
           <Box as='section' mt={8}>
             <Heading as='h2' size='md' mb={2}>Your ratings</Heading>
             <Text color='gray.400' fontSize='sm'>
-              Ratings shape Galaxy Bot&apos;s picks — the more you rate, the sharper they get.
+              Ratings shape Galaxy Bot&apos;s picks: the more you rate, the sharper they get.
             </Text>
             <SimpleGrid
               my={{ base: '2rem', md: '3rem' }}
@@ -163,7 +163,7 @@ export default function Watchlist() {
           <Box as='section' mt={8}>
             <Heading as='h2' size='md' mb={1}>Picked for you</Heading>
             <Text color='gray.400' fontSize='sm' mb={4}>
-              Because of what you rated highly — refreshed daily.
+              Because of what you rated highly, refreshed daily.
             </Text>
             <ScrollRail
               gap={4}
@@ -194,7 +194,7 @@ export default function Watchlist() {
                 <Text color='white' fontWeight='bold' fontSize='sm' mb={1}>Galaxy Plus</Text>
                 <Text color='gray.400' fontSize='sm'>
                   {creds
-                    ? 'Your list and ratings already sync — Plus adds taste-matched alerts, leaving-soon warnings, and more Galaxy Bot. '
+                    ? 'Your list and ratings already sync. Plus adds taste-matched alerts, leaving-soon warnings, and more Galaxy Bot. '
                     : 'Taste-matched alerts, leaving-soon warnings, more Galaxy Bot, and sync across devices. Confirm your email above to get started. '}
                   <br />
                   <Link href='/plus' style={{ textDecoration: 'underline' }}>See Plus →</Link>
