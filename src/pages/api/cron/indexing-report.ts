@@ -35,7 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rows = report.pending
       .map(
         (p) =>
-          `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${p.link}" style="color:#9ec1ff; text-decoration:none;">${escapeHtml(p.title)}</a><br/><span style="color:#718096; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
+          // & in href must be escaped — a raw "&id=" breaks the URL in some
+          // mail clients and lands on a GSC 404.
+          `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${escapeHtml(p.link)}" style="color:#9ec1ff;">${escapeHtml(p.title)} — open inspection report</a><br/><span style="color:#718096; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
       )
       .join('')
     const errLine = report.errors.length
