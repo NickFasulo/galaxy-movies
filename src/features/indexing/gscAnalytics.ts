@@ -20,7 +20,7 @@ interface AnalyticsOpts {
   pageContains?: string
 }
 
-async function queryAnalytics(startDate: string, endDate: string, opts: AnalyticsOpts): Promise<AnalyticsRow[]> {
+export async function queryAnalytics(startDate: string, endDate: string, opts: AnalyticsOpts): Promise<AnalyticsRow[]> {
   const token = await gscAccessToken()
   const body: Record<string, unknown> = {
     startDate,
@@ -55,16 +55,12 @@ export interface SitemapStatus {
   resubmitted: boolean
 }
 
-// Resubmit the sitemap (a real recrawl nudge — IndexNow doesn't reach Google)
-// and return its status so the email can surface fetch errors.
-export async function resubmitAndStatus(): Promise<SitemapStatus> {
+// GET-only status for read surfaces (usage panel); the resubmit PUT is a
+// crawl nudge that belongs to the weekly cron, not page loads.
+export async function sitemapStatus(): Promise<SitemapStatus> {
   const token = await gscAccessToken()
   const site = encodeURIComponent(gscSite())
   const feed = encodeURIComponent(SITEMAP_PATH)
-  const put = await fetch(`${WM_BASE}/sites/${site}/sitemaps/${feed}`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}` }
-  })
   const get = await fetch(`${WM_BASE}/sites/${site}/sitemaps/${feed}`, {
     headers: { Authorization: `Bearer ${token}` }
   })
@@ -77,8 +73,21 @@ export async function resubmitAndStatus(): Promise<SitemapStatus> {
     isPending: data.isPending,
     warnings: data.warnings ?? contents.warnings,
     errors: data.errors ?? contents.errors,
-    resubmitted: put.ok
+    resubmitted: false
   }
+}
+
+// Resubmit the sitemap (a real recrawl nudge — IndexNow doesn't reach Google)
+// and return its status so the email can surface fetch errors.
+export async function resubmitAndStatus(): Promise<SitemapStatus> {
+  const token = await gscAccessToken()
+  const site = encodeURIComponent(gscSite())
+  const feed = encodeURIComponent(SITEMAP_PATH)
+  const put = await fetch(`${WM_BASE}/sites/${site}/sitemaps/${feed}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  return { ...(await sitemapStatus()), resubmitted: put.ok }
 }
 
 // ---- report shaping (pure, tested) ----

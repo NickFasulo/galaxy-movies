@@ -20,6 +20,34 @@ vi.mock('../../features/ai/aiUsage', () => ({
   getUsageStats: vi.fn(async () => ({ totalSessions: 5, totalMessages: 42, avgRating: '4.0', timeframe: '24h', timestamp: 0 })),
   getCostEstimate: vi.fn(async () => ({ estimatedCost: '1.2345', source: 'actual_usage', breakdown: {} }))
 }))
+vi.mock('../../features/indexing/indexCheck', () => ({
+  hasGscCredentials: () => Boolean(process.env.GSC_CLIENT_EMAIL && process.env.GSC_PRIVATE_KEY)
+}))
+vi.mock('../../features/indexing/gscAnalytics', () => ({
+  pageBand: (p: number) => (p <= 10 ? 'top10' : p <= 20 ? 'top20' : p <= 50 ? 'top50' : 'deep'),
+  reportWindows: () => ({
+    cur: { start: '2026-10-16', end: '2026-10-22' },
+    prev: { start: '2026-10-09', end: '2026-10-15' },
+    month: { start: '2026-09-25', end: '2026-10-22' }
+  }),
+  queryAnalytics: vi.fn(async (start: string, _end: string, opts: { dimensions: string[] }) => {
+    if (opts.dimensions.includes('page')) {
+      return [
+        { keys: ['https://www.galaxymovies.app/lists/a'], clicks: 2, impressions: 40, ctr: 0.05, position: 15 },
+        { keys: ['https://www.galaxymovies.app/lists/b'], clicks: 0, impressions: 30, ctr: 0, position: 42 }
+      ]
+    }
+    return [{ keys: [], clicks: start === '2026-10-16' ? 148 : 213, impressions: 10726, ctr: 0.014, position: 9 }]
+  }),
+  sitemapStatus: vi.fn(async () => ({
+    path: 'https://www.galaxymovies.app/sitemap.xml',
+    lastDownloaded: '2026-10-25T06:07:13.256Z',
+    isPending: false,
+    warnings: 0,
+    errors: 59,
+    resubmitted: false
+  }))
+}))
 vi.stubGlobal('fetch', mocks.fetch)
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
@@ -94,6 +122,13 @@ afterEach(() => {
   delete process.env.OPENAI_CREDITS_BASELINE_DATE
   delete process.env.CF_INCLUDED_REQUESTS
   delete process.env.CF_INCLUDED_CPU_MS
+  delete process.env.CLOUDFLARE_ACCOUNT_ID
+  delete process.env.CLOUDFLARE_API_TOKEN
+  delete process.env.GSC_CLIENT_EMAIL
+  delete process.env.GSC_PRIVATE_KEY
+  delete process.env.UMAMI_API_KEY
+  delete process.env.UMAMI_WEBSITE_ID
+  delete process.env.UMAMI_API_BASE
 })
 
 describe('GET /api/usage', () => {
@@ -138,6 +173,8 @@ describe('GET /api/usage', () => {
     expect(panel(res, 'OpenAI')?.status).toBe('unconfigured')
     expect(panel(res, 'Polar')?.status).toBe('unconfigured')
     expect(panel(res, 'Finance')?.status).toBe('unconfigured')
+    expect(panel(res, 'Traffic')?.status).toBe('unconfigured')
+    expect(panel(res, 'Search Console')?.status).toBe('unconfigured')
 
     const rateLimits = panel(res, 'Rate limits')
     const subscribers = panel(res, 'Subscribers')
@@ -260,6 +297,47 @@ describe('GET /api/usage', () => {
     const openai = panel(res, 'OpenAI')
     expect(openai?.status).toBe('ok')
     expect(openai?.metrics.find((m) => m.label === 'Credits remaining')?.value).toBe('≈$80.00')
+  })
+
+  it('shows Search Console and Traffic metrics when GSC and Umami creds are set', async () => {
+    process.env.GSC_CLIENT_EMAIL = 'sa@x.iam.gserviceaccount.com'
+    process.env.GSC_PRIVATE_KEY = 'key'
+    process.env.UMAMI_API_KEY = 'umami-key'
+    process.env.UMAMI_WEBSITE_ID = 'site-1'
+    mocks.fetch.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('api.umami.is')) {
+        return {
+          ok: true,
+          json: async () => ({
+            pageviews: { value: 4400, prev: 4000 },
+            visitors: { value: 312, prev: 260 },
+            visits: { value: 768, prev: 700 },
+            bounces: { value: 468, prev: 420 },
+            totaltime: { value: 174566, prev: 0 }
+          })
+        } as Response
+      }
+      return { ok: true, json: async () => ({}) } as Response
+    })
+
+    const res = makeRes()
+    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+
+    const traffic = panel(res, 'Traffic')
+    expect(traffic?.status).toBe('ok')
+    expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.value).toBe('312')
+    expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.hint).toContain('+20%')
+    expect(traffic?.metrics.find((m) => m.label === 'Bounce (30d)')?.value).toBe('61%')
+
+    const gsc = panel(res, 'Search Console')
+    expect(gsc?.status).toBe('ok')
+    expect(gsc?.metrics.find((m) => m.label === 'Clicks (7d)')?.value).toBe('148')
+    expect(gsc?.metrics.find((m) => m.label === 'Clicks (7d)')?.hint).toContain('vs 213')
+    const bands = gsc?.metrics.find((m) => m.label === '/lists/ ranking bands')
+    expect(bands?.value).toBe('0 top10 · 1 top20')
+    expect(bands?.hint).toContain('1 top50')
+    expect(gsc?.metrics.find((m) => m.label === 'Sitemap')?.value).toBe('59 errors')
   })
 
   it('marks a panel error instead of failing when a vendor API rejects', async () => {

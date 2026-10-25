@@ -51,9 +51,14 @@ declare namespace NodeJS {
   WEBPUSH_SUBJECT?: string
     NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
     NEXT_PUBLIC_UMAMI_SRC?: string
+    UMAMI_API_KEY?: string
+    UMAMI_WEBSITE_ID?: string
+    UMAMI_API_BASE?: string
     USAGE_DASH_TOKEN?: string
     CF_ACCOUNT_ID?: string
     CF_ANALYTICS_API_TOKEN?: string
+    CLOUDFLARE_ACCOUNT_ID?: string
+    CLOUDFLARE_API_TOKEN?: string
     CF_INCLUDED_REQUESTS?: string
     CF_INCLUDED_CPU_MS?: string
     UPSTASH_EMAIL?: string

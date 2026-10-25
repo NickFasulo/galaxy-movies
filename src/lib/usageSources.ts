@@ -2,6 +2,8 @@ import { getRedis } from './redis'
 import { getWatchmodeQuota } from '../features/catalog/watchmodeQuota'
 import { getCostEstimate, getUsageStats } from '../features/ai/aiUsage'
 import { isPlusActive, parseBillingRecord } from '../features/billing/billing'
+import { hasGscCredentials } from '../features/indexing/indexCheck'
+import { pageBand, queryAnalytics, reportWindows, sitemapStatus } from '../features/indexing/gscAnalytics'
 import {
   ALERTS_PREFS_KEY,
   BILLING_KEY,
@@ -66,10 +68,11 @@ const CF_INCLUDED_CPU_MS = Number(process.env.CF_INCLUDED_CPU_MS) || 30_000_000
 const fmtM = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : fmt(n))
 
 async function cloudflarePanel(): Promise<UsagePanel> {
-  const accountId = process.env.CF_ACCOUNT_ID
-  const token = process.env.CF_ANALYTICS_API_TOKEN
+  const accountId = process.env.CF_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
+  const token = process.env.CF_ANALYTICS_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN
   const link = 'https://dash.cloudflare.com/?to=/:account/workers-and-pages'
-  if (!accountId || !token) return unconfigured('Cloudflare Workers', ['CF_ACCOUNT_ID', 'CF_ANALYTICS_API_TOKEN'], link)
+  if (!accountId || !token)
+    return unconfigured('Cloudflare Workers', ['CF_ACCOUNT_ID', 'CF_ANALYTICS_API_TOKEN'], link)
 
   const now = new Date()
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
@@ -639,6 +642,97 @@ async function aiUsagePanel(): Promise<UsagePanel> {
   }
 }
 
+const pctDelta = (cur: number, prev: number | undefined) =>
+  prev ? ` ${cur >= prev ? '+' : '-'}${Math.abs(Math.round(((cur - prev) / prev) * 100))}% vs prior` : ''
+
+// Umami cloud /v1 returns {value, prev} buckets; self-hosted v1 used raw
+// numbers and 'uniques' instead of 'visitors' — handle both.
+type UmamiBucket = { value?: number; prev?: number } | number
+const umamiVal = (b: UmamiBucket | undefined) => (typeof b === 'number' ? b : b?.value ?? 0)
+const umamiPrev = (b: UmamiBucket | undefined) => (typeof b === 'number' ? undefined : b?.prev)
+
+async function umamiPanel(): Promise<UsagePanel> {
+  const link = 'https://cloud.umami.is'
+  const apiKey = process.env.UMAMI_API_KEY
+  const websiteId = process.env.UMAMI_WEBSITE_ID || process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID
+  if (!apiKey || !websiteId) return unconfigured('Traffic', ['UMAMI_API_KEY'], link)
+
+  const base = (process.env.UMAMI_API_BASE || 'https://api.umami.is/v1').replace(/\/$/, '')
+  const stats = async (days: number): Promise<Record<string, UmamiBucket>> => {
+    const end = Date.now()
+    const resp = await fetch(`${base}/websites/${websiteId}/stats?startAt=${end - days * 86400000}&endAt=${end}`, {
+      headers: { 'x-umami-api-key': apiKey }
+    })
+    if (!resp.ok) throw new Error(`stats → HTTP ${resp.status}`)
+    return (await resp.json()) as Record<string, UmamiBucket>
+  }
+
+  const [month, day] = await Promise.all([stats(30), stats(1)])
+  const visitors = umamiVal(month.visitors ?? month.uniques)
+  const prevVisitors = umamiPrev(month.visitors ?? month.uniques)
+  const pageviews = umamiVal(month.pageviews)
+  const prevPageviews = umamiPrev(month.pageviews)
+  const visits = umamiVal(month.visits) || 1
+  const bounceRate = Math.round((100 * umamiVal(month.bounces)) / visits)
+  const avgSec = umamiVal(month.totaltime) / visits
+  const visitorDelta = pctDelta(visitors, prevVisitors).trim()
+
+  return {
+    name: 'Traffic',
+    status: 'ok',
+    link,
+    metrics: [
+      { label: 'Visitors (30d)', value: fmt(visitors), hint: `${visitorDelta ? `${visitorDelta} · ` : ''}goal 800/mo` },
+      { label: 'Visitors (24h)', value: fmt(umamiVal(day.visitors ?? day.uniques)) },
+      { label: 'Pageviews (30d)', value: fmt(pageviews), hint: pctDelta(pageviews, prevPageviews).trim() || undefined },
+      { label: 'Bounce (30d)', value: `${bounceRate}%`, hint: `avg visit ${Math.floor(avgSec / 60)}m${Math.round(avgSec % 60)}s` }
+    ]
+  }
+}
+
+async function searchConsolePanel(): Promise<UsagePanel> {
+  const link = 'https://search.google.com/search-console'
+  if (!hasGscCredentials()) return unconfigured('Search Console', ['GSC_CLIENT_EMAIL', 'GSC_PRIVATE_KEY'], link)
+
+  const { cur, prev } = reportWindows()
+  const [totals, prevTotals, listsRows, sitemap] = await Promise.all([
+    queryAnalytics(cur.start, cur.end, { dimensions: [] }),
+    queryAnalytics(prev.start, prev.end, { dimensions: [] }),
+    queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 250, pageContains: '/lists/' }),
+    sitemapStatus().catch(() => null)
+  ])
+  const sum = (rows: { clicks: number; impressions: number }[], k: 'clicks' | 'impressions') => rows.reduce((s, r) => s + r[k], 0)
+  const clicks = sum(totals, 'clicks')
+  const prevClicks = sum(prevTotals, 'clicks')
+  const impressions = sum(totals, 'impressions')
+  const prevImpressions = sum(prevTotals, 'impressions')
+
+  const bands = { top10: 0, top20: 0, top50: 0, deep: 0 }
+  for (const r of listsRows) bands[pageBand(r.position)]++
+
+  return {
+    name: 'Search Console',
+    status: 'ok',
+    link,
+    metrics: [
+      { label: 'Clicks (7d)', value: fmt(clicks), hint: `vs ${fmt(prevClicks)} prior${pctDelta(clicks, prevClicks)} · thru ${cur.end}` },
+      { label: 'Impressions (7d)', value: fmt(impressions), hint: `vs ${fmt(prevImpressions)} prior${pctDelta(impressions, prevImpressions)}` },
+      {
+        label: '/lists/ ranking bands',
+        value: `${bands.top10} top10 · ${bands.top20} top20`,
+        hint: `${bands.top50} top50 · ${bands.deep} deep · goal: top20+`
+      },
+      ...(sitemap
+        ? [{
+            label: 'Sitemap',
+            value: `${fmt(sitemap.errors)} errors`,
+            hint: `${fmt(sitemap.warnings)} warnings${sitemap.isPending ? ' · resubmit pending' : ''} · fetched ${sitemap.lastDownloaded?.slice(0, 10) || 'never'}`
+          }]
+        : [])
+    ]
+  }
+}
+
 const linksPanel = (): UsagePanel => ({
   name: 'Dashboards',
   status: 'ok',
@@ -652,6 +746,7 @@ const linksPanel = (): UsagePanel => ({
     { label: 'Polar', url: 'https://polar.sh/dashboard' },
     { label: 'Watchmode', url: 'https://api.watchmode.com/dashboard' },
     { label: 'Umami', url: 'https://cloud.umami.is' },
+    { label: 'Search Console', url: 'https://search.google.com/search-console' },
     { label: 'Vercel (standby)', url: 'https://vercel.com/dashboard' }
   ]
 })
@@ -678,11 +773,13 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     : Promise.resolve(null)
 
   const panels = await Promise.all([
+    guarded('Traffic', umamiPanel),
+    guarded('Search Console', searchConsolePanel),
+    guarded('Finance', () => financePanel(costBucketsPromise)),
     guarded('Cloudflare Workers', cloudflarePanel),
     guarded('Upstash Redis', upstashPanel),
     guarded('OpenAI', () => openaiPanel(costBucketsPromise)),
     guarded('Polar', polarPanel),
-    guarded('Finance', () => financePanel(costBucketsPromise)),
     guarded('Rate limits', rateLimitsPanel),
     guarded('Watchmode', watchmodePanel),
     guarded('Subscribers', subscribersPanel),
