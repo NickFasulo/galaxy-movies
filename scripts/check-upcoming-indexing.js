@@ -104,11 +104,14 @@ async function inspect(token, url) {
     const msg = data?.error?.message || res.status
     throw new Error(`inspect ${url}: ${msg}${res.status === 403 ? ' — is the service account a user on this property, and does GSC_SITE_URL match it?' : ''}`)
   }
-  return data.inspectionResult?.indexStatusResult || {}
+  return data.inspectionResult || {}
 }
 
-const inspectLink = (url) =>
-  `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent(SITE_URL)}&id=${encodeURIComponent(url)}`
+// inspectionResultLink is the canonical deep link — its id= is an opaque
+// token, not the page URL. Building ?id=<url> by hand produces a 404.
+const inspectLink = (r, url) =>
+  r.inspectionResultLink ||
+  `https://search.google.com/search-console?resource_id=${encodeURIComponent(SITE_URL)}`
 
 async function main() {
   const [us, ind] = await Promise.all([fetchUpcoming('US'), fetchUpcoming('IN')])
@@ -127,11 +130,12 @@ async function main() {
     const url = `${siteBase}/movies/${t.id}`
     try {
       const r = await inspect(token, url)
-      const indexed = r.verdict === 'PASS' || r.coverageState === 'Submitted and indexed'
-      const state = r.coverageState || r.verdict || 'unknown'
-      const crawl = r.lastCrawlTime ? ` · crawled ${r.lastCrawlTime.slice(0, 10)}` : ''
+      const st = r.indexStatusResult || {}
+      const indexed = st.verdict === 'PASS' || st.coverageState === 'Submitted and indexed'
+      const state = st.coverageState || st.verdict || 'unknown'
+      const crawl = st.lastCrawlTime ? ` · crawled ${st.lastCrawlTime.slice(0, 10)}` : ''
       console.log(`${indexed ? 'INDEXED  ' : 'PENDING  '}${(t.title || '').slice(0, 40).padEnd(40)} ${state}${crawl}`)
-      if (!indexed) pending.push(url)
+      if (!indexed) pending.push({ url, link: inspectLink(r, url) })
     } catch (err) {
       errors++
       console.log(`ERROR    ${(t.title || '').slice(0, 40).padEnd(40)} ${err.message}`)
@@ -144,7 +148,7 @@ async function main() {
   }
   if (pending.length) {
     console.log(`\n${pending.length} not indexed. "Request indexing" has no API — open each link and click Request Indexing (Google allows ~10-15/day):\n`)
-    for (const url of pending) console.log(`  ${inspectLink(url)}`)
+    for (const p of pending) console.log(`  ${p.url}\n    ${p.link}`)
   } else {
     console.log('\nAll checked titles are indexed.')
   }
