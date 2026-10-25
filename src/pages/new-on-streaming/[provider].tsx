@@ -7,6 +7,7 @@ import PageShell from '../../components/PageShell'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
 import { getMonthlyChanges, getProviderChanges } from '../../features/catalog/streamingChanges'
 import { setSwrCache } from '../../lib/http'
+import { shortDate } from '../../lib/format/formatters'
 import { itemListSchema } from '../../features/catalog/schema'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType } from '../../types/tmdb'
@@ -14,11 +15,7 @@ import type { MediaType } from '../../types/tmdb'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-function dayLabel(date: string) {
-  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return date
-  return `${MONTHS_SHORT[Number(m[2]) - 1]} ${Number(m[3])}`
-}
+const dayLabel = (date: string) => shortDate(date, date)
 
 interface ListedTitle {
   tmdbId: number

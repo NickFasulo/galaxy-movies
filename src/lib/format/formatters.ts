@@ -12,6 +12,15 @@ export function timeFormatter(totalMinutes: number): string {
   return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
 }
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// 'YYYY-MM-DD'/'YYYYMMDD' → 'Jan 5'. Regex-only on purpose: Date('YYYY-MM-DD')
+// is UTC midnight, which renders a day behind in local timezones.
+export function shortDate(stamp: string | null | undefined, fallback = ''): string {
+  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
+  return m ? `${MONTHS_SHORT[Number(m[2]) - 1]} ${Number(m[3])}` : fallback
+}
+
 export function removeUnderscores(str: string): string {
   const frags = str.split('_')
   for (let i = 0; i < frags.length; i++) {

@@ -4,6 +4,7 @@ import { Box, Link, Text } from '@chakra-ui/react'
 import { getProviderChanges, type ProviderChanges } from '../../features/catalog/streamingChanges'
 import { isEmbeddableProvider, providerLabel } from '../../features/catalog/embed'
 import { setSwrCache } from '../../lib/http'
+import { shortDate } from '../../lib/format/formatters'
 import { withTimeout } from '../../lib/withTimeout'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType } from '../../types/tmdb'
@@ -49,12 +50,7 @@ export async function getServerSideProps({ params, query, res }: GetServerSidePr
   }
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function dayLabel(date: string) {
-  const m = date.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
-  return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : ''
-}
+const dayLabel = shortDate
 
 const PALETTES = {
   dark: { bg: '#14181c', text: 'whiteAlpha.900', sub: 'gray.400', divider: 'gray.600' },

@@ -152,16 +152,20 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     const top = ratingEntries(ratings)
       .filter((r) => r.rating >= 8)
       .sort((a, b) => b.rating - a.rating)[0]
-    if (!top) return
     let cancelled = false
-    fetch(`/api/recommendations?mediaType=${top.mediaType}&id=${top.id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!cancelled && Array.isArray(d?.results) && d.results.length) {
-          setTastePicks({ sourceTitle: top.title, sourceRating: top.rating, movies: d.results })
-        }
-      })
-      .catch(() => {})
+    // Clearing the last qualifying rating must hide the rail, not leave the
+    // picks it seeded mounted.
+    const load = top
+      ? fetch(`/api/recommendations?mediaType=${top.mediaType}&id=${top.id}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      : Promise.resolve(null)
+    load.then((d) => {
+      if (cancelled) return
+      setTastePicks(top && Array.isArray(d?.results) && d.results.length
+        ? { sourceTitle: top.title, sourceRating: top.rating, movies: d.results }
+        : null)
+    })
     return () => { cancelled = true }
   }, [ratings])
 

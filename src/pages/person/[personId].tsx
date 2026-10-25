@@ -7,7 +7,7 @@ import BackButton from '../../components/BackButton'
 import { DetailErrorView } from '../../features/catalog/components/DetailBits'
 import PageHead from '../../components/PageHead'
 import { dateFormatter } from '../../lib/format/formatters'
-import { normalizeTvTitle } from '../../features/catalog/tmdb'
+import { fetchTmdb, normalizeTvTitle, TmdbError } from '../../features/catalog/tmdb'
 import { MIN_INDEXABLE_MOVIES } from '../../features/catalog/contentOpportunities'
 import { setSwrCache } from '../../lib/http'
 import { absoluteImageUrl } from '../../features/catalog/schema'
@@ -41,21 +41,21 @@ export const getServerSideProps: GetServerSideProps<Props> = async (context) => 
 
   if (!/^\d{1,10}$/.test(String(personId))) return { notFound: true }
 
+  let person: TmdbPerson
   try {
-    const res = await fetch(
-      `https://api.themoviedb.org/3/person/${personId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=movie_credits,tv_credits`
-    )
-
-    if (!res.ok) {
-      if (res.status === 404) return { notFound: true }
-      return {
-        props: {
-          error: 'Person information is temporarily unavailable.'
-        }
+    person = await fetchTmdb<TmdbPerson>(`/person/${personId}`, {
+      append_to_response: 'movie_credits,tv_credits'
+    })
+  } catch (err) {
+    if (err instanceof TmdbError && err.status === 404) return { notFound: true }
+    return {
+      props: {
+        error: 'Person information is temporarily unavailable.'
       }
     }
+  }
 
-    const person: TmdbPerson = await res.json()
+  try {
 
     const crewMovies = person.movie_credits?.crew || []
     const directedList = crewMovies.filter((m) => m.job === 'Director')

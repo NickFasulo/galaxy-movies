@@ -24,6 +24,17 @@ describe('getProviderHomePage', () => {
     expect(getProviderHomePage('Amazon Prime Video')).toBeNull()
   })
 
+  it.each([
+    // "max" is a substring of ManoramaMAX — a bare includes() sent it to HBO.
+    ['ManoramaMAX', 'https://www.manoramamax.com'],
+    // MENA Starzplay is a different service from the US Starz network.
+    ['Starzplay', 'https://www.starzplay.com'],
+    ['Starzplay Arabia', 'https://www.starzplay.com'],
+    ['Lionsgate Play', 'https://lionsgateplay.com']
+  ])('maps %s without substring collisions', (provider, url) => {
+    expect(getProviderHomePage(provider)).toBe(url)
+  })
+
   it.each(['Niche Streamer', '', undefined])('returns null for unmapped provider %j', (provider) => {
     expect(getProviderHomePage(provider)).toBeNull()
   })

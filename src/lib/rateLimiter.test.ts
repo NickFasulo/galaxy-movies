@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { checkDistributedRateLimit, checkGlobalBudget, getClientIP, isBot, isSearchEngine } from './rateLimiter'
+import { checkDistributedRateLimit, checkGlobalBudget, getClientIP, isBot, isPreviewBot, isSearchEngine } from './rateLimiter'
 import { getRedis } from './redis'
 
 vi.mock('./redis', () => ({ getRedis: vi.fn(() => null) }))
@@ -48,6 +48,31 @@ describe('isSearchEngine', () => {
   it('returns false for a missing user agent', () => {
     expect(isSearchEngine(undefined)).toBe(false)
   })
+})
+
+describe('isPreviewBot', () => {
+  it.each([
+    'facebookexternalhit/1.1',
+    'Twitterbot/1.0',
+    'Slackbot-LinkExpanding 1.0',
+    'Discordbot/2.0',
+    'LinkedInBot/1.0',
+    'TelegramBot (like TwitterBot)',
+    'WhatsApp/2.23'
+  ])('identifies %s', (ua) => expect(isPreviewBot(ua)).toBe(true))
+
+  it.each(['Googlebot/2.1', 'bingbot/2.0', 'DuckDuckBot/1.1'])(
+    'excludes search engine %s — their crawls index shared content',
+    (ua) => expect(isPreviewBot(ua)).toBe(false)
+  )
+
+  it.each([
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+    'curl/8.0',
+    'AhrefsBot/7.0',
+    undefined,
+    null
+  ])('excludes %j', (ua) => expect(isPreviewBot(ua)).toBe(false))
 })
 
 describe('getClientIP', () => {
@@ -118,6 +143,24 @@ describe('checkDistributedRateLimit', () => {
     await expect(checkDistributedRateLimit('2a13:f47:fb13:dacb:cccc', opts)).resolves.toBe(false)
     // A neighboring /64 gets its own
     await expect(checkDistributedRateLimit('2a13:f47:fb13:dacc:dddd', opts)).resolves.toBe(true)
+  })
+
+  it('buckets compressed IPv6 addresses into their /64 prefix', async () => {
+    const opts = { keyPrefix: 'v6c_rl', maxRequests: 2, windowSeconds: 60 }
+    await expect(checkDistributedRateLimit('2001:db8::1', opts)).resolves.toBe(true)
+    await expect(checkDistributedRateLimit('2001:db8::2', opts)).resolves.toBe(true)
+    // `::` must expand before truncation — before the fix these rotated
+    // addresses each minted their own bucket.
+    await expect(checkDistributedRateLimit('2001:db8::3', opts)).resolves.toBe(false)
+    // Mixed compressed/expanded spellings of the same /64 also share.
+    await expect(checkDistributedRateLimit('2001:db8:0:0::4', opts)).resolves.toBe(false)
+    await expect(checkDistributedRateLimit('2001:db9::1', opts)).resolves.toBe(true)
+  })
+
+  it('buckets IPv6 loopback-style addresses without crashing', async () => {
+    const opts = { keyPrefix: 'v6l_rl', maxRequests: 1, windowSeconds: 60 }
+    await expect(checkDistributedRateLimit('::1', opts)).resolves.toBe(true)
+    await expect(checkDistributedRateLimit('::ffff:10.0.0.1', opts)).resolves.toBe(true)
   })
 
   it('leaves IPv4 and non-IP client ids alone', async () => {

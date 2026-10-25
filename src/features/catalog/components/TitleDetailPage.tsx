@@ -23,12 +23,12 @@ import { dateFormatter } from '../../../lib/format/formatters'
 import { getFirstPlayableKey } from '../youtubeCache'
 import { detectRegion } from '../../../lib/region'
 import { useUserData } from '../../alerts/hooks/useUserData'
-import { getProviderIds, isAnimeTitle, normalizeTvTitle } from '../tmdb'
+import { getProviderIds, isAnimeTitle, normalizeTvTitle, fetchTmdb, TmdbError } from '../tmdb'
 import { getOrGenerateMovieReview, peekReviewCache, reviewCacheKey, stripEmphasis } from '../../ai/movieReview'
 import { getOrGenerateSimilarMovies, peekSimilarCache, similarCacheKey, type SimilarTitle } from '../similarMovies'
 import { findSimilarListRef, type SimilarListRef } from '../generatedLists'
 import { getRedis } from '../../../lib/redis'
-import { isBot, isSearchEngine } from '../../../lib/rateLimiter'
+import { isBot, isPreviewBot, isSearchEngine } from '../../../lib/rateLimiter'
 import { getProviderAffiliateLinks } from '../../monetize/takeads'
 import { getTitleChanges, type TitleChangeEvents } from '../streamingChanges'
 import { withTimeout } from '../../../lib/withTimeout'
@@ -90,20 +90,19 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
     const errorProps = (error: string) => ({ props: { media, error } as TitleDetailProps })
 
     try {
-      const apiKey = process.env.TMDB_API_KEY
-
       // Non-indexing bots get a one-request render: they sweep the TMDB id
       // space in bulk and don't need providers, credits, videos, or AI slots,
       // so running the full fetch chain for them was the dominant function
       // duration cost. no-store keeps the stripped page out of the CDN cache
       // that humans and search engines share.
       if (isBot(context.req.headers['user-agent']) && !isSearchEngine(context.req.headers['user-agent'])) {
-        const botTitleRes = await fetch(`https://api.themoviedb.org/3/${media}/${id}?api_key=${apiKey}`)
-        if (!botTitleRes.ok) {
-          if (botTitleRes.status === 404) return { notFound: true }
+        let title: TmdbMovieDetails & TmdbTvDetails
+        try {
+          title = await fetchTmdb<TmdbMovieDetails & TmdbTvDetails>(`/${media}/${id}`)
+        } catch (err) {
+          if (err instanceof TmdbError && err.status === 404) return { notFound: true }
           return errorProps(`${noun} data is temporarily unavailable. Please try again later.`)
         }
-        const title: TmdbMovieDetails & TmdbTvDetails = await botTitleRes.json()
         context.res.setHeader('Cache-Control', 'private, no-store')
         const thin: CommonProps = {
           videoKey: null,
@@ -122,25 +121,25 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           : { props: { ...thin, media, title, creators: [], topCast: [] } }
       }
 
-      const [titleRes, providersRes, creditsRes, ratingsRes, recommendationsRes] = await Promise.all([
-        fetch(`https://api.themoviedb.org/3/${media}/${id}?api_key=${apiKey}&append_to_response=videos`),
-        fetch(`https://api.themoviedb.org/3/${media}/${id}/watch/providers?api_key=${apiKey}`),
-        fetch(`https://api.themoviedb.org/3/${media}/${id}/${creditsEndpoint}?api_key=${apiKey}`),
-        fetch(`https://api.themoviedb.org/3/${media}/${id}/${ratingsEndpoint}?api_key=${apiKey}`),
-        fetch(`https://api.themoviedb.org/3/${media}/${id}/recommendations?api_key=${apiKey}`)
-      ])
-
-      if (!titleRes.ok) {
-        if (titleRes.status === 404) return { notFound: true }
-        return errorProps(titleRes.status === 401
+      let title: TmdbMovieDetails & TmdbTvDetails
+      let providersData: WatchProvidersResponse | null
+      let creditsData: Credits & AggregateCredits
+      let ratingsData: ReleaseDatesResponse & ContentRatingsResponse
+      let recommendationsData: Partial<TmdbPaged<TmdbMovie | TmdbTvShow>>
+      try {
+        ;[title, providersData, creditsData, ratingsData, recommendationsData] = await Promise.all([
+          fetchTmdb<TmdbMovieDetails & TmdbTvDetails>(`/${media}/${id}`, { append_to_response: 'videos' }),
+          fetchTmdb<WatchProvidersResponse>(`/${media}/${id}/watch/providers`).catch(() => null),
+          fetchTmdb<Credits & AggregateCredits>(`/${media}/${id}/${creditsEndpoint}`).catch((): Credits & AggregateCredits => ({ cast: [], crew: [] })),
+          fetchTmdb<ReleaseDatesResponse & ContentRatingsResponse>(`/${media}/${id}/${ratingsEndpoint}`).catch((): ReleaseDatesResponse & ContentRatingsResponse => ({ results: [] })),
+          fetchTmdb<Partial<TmdbPaged<TmdbMovie | TmdbTvShow>>>(`/${media}/${id}/recommendations`).catch((): Partial<TmdbPaged<TmdbMovie | TmdbTvShow>> => ({ results: [] }))
+        ])
+      } catch (err) {
+        if (err instanceof TmdbError && err.status === 404) return { notFound: true }
+        return errorProps(err instanceof TmdbError && err.status === 401
           ? `${noun} data is unavailable because the configured TMDB API key was rejected.`
           : `${noun} data is temporarily unavailable. Please try again later.`)
       }
-
-      const title: TmdbMovieDetails & TmdbTvDetails = await titleRes.json()
-      const providersData: WatchProvidersResponse = await providersRes.json()
-      const creditsData: Credits & AggregateCredits = creditsRes.ok ? await creditsRes.json() : { cast: [], crew: [] }
-      const ratingsData: ReleaseDatesResponse & ContentRatingsResponse = ratingsRes.ok ? await ratingsRes.json() : { results: [] }
 
       const usRatings = ratingsData.results?.find((r) => r.iso_3166_1 === 'US')
       const cert = media === 'movie'
@@ -148,29 +147,30 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         : (usRatings as { rating?: string } | undefined)?.rating || 'NR'
 
       const countryCode = detectRegion(context.req)
-      const userProviders = providersData.results?.[countryCode] || providersData.results?.US || Object.values(providersData.results || {})[0] || null
+      const userProviders = providersData?.results?.[countryCode] || providersData?.results?.US || Object.values(providersData?.results || {})[0] || null
 
       const directorObj = media === 'movie' ? creditsData.crew?.find((person) => person.job === 'Director') : null
       const director = directorObj ? { id: directorObj.id, name: directorObj.name } : null
       const creators = media === 'tv' ? (title.created_by || []).map((person) => ({ id: person.id, name: person.name })) : []
       const topCast = creditsData.cast?.slice(0, 15) || []
 
-      const recommendationsData: Partial<TmdbPaged<TmdbMovie | TmdbTvShow>> = recommendationsRes.ok ? await recommendationsRes.json() : { results: [] }
       const recommendationCandidates = (recommendationsData.results || [])
         .filter((candidate) => candidate?.id && candidate.poster_path && candidate.id !== title.id)
         .map((candidate): TmdbMovie | NormalizedTvShow => (media === 'tv' ? normalizeTvTitle(candidate as TmdbTvShow) : candidate as TmdbMovie))
 
       // All regions + buckets: the client region switcher and "Watch free" row
       // render providers outside the detected region, and each still needs a link.
-      const providerNames = Object.values(providersData.results || {}).flatMap((bucket) =>
+      const providerNames = Object.values(providersData?.results || {}).flatMap((bucket) =>
         (['flatrate', 'free', 'ads', 'rent', 'buy'] as const)
           .flatMap((key) => bucket?.[key]?.map((p) => p.provider_name) || [])
       )
 
-      // Bots still get already-cached content but never trigger generation;
-      // AI-less bot renders stay uncached so they can't be served to
-      // humans/Googlebot (see the Cache-Control branch below).
-      const skipAi = isBot(context.req.headers['user-agent'])
+      // Preview bots still get already-cached content but never trigger
+      // generation; AI-less bot renders stay uncached so they can't be served
+      // to humans/Googlebot (see the Cache-Control branch below). isBot() is
+      // always false here — every recognized non-search bot is in
+      // ALLOWED_BOT_PATTERNS — so isPreviewBot is what identifies them.
+      const skipAi = isPreviewBot(context.req.headers['user-agent'])
       // Generation additionally requires a referer or a search-engine UA:
       // clean-UA scrapers on rotating residential IPs arrive as referer-less
       // bare navigations, so that fingerprint can read cache but not spend.
@@ -251,7 +251,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
       const common: CommonProps = {
         videoKey: validVideoKey || null,
         watchProviders: userProviders,
-        watchProvidersByRegion: providersData.results || {},
+        watchProvidersByRegion: providersData?.results || {},
         detectedRegion: countryCode,
         ageRating: cert,
         aiSynopsis: aiSynopsis || null,

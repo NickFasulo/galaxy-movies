@@ -6,7 +6,7 @@ import BackButton from '../../../components/BackButton'
 import PaginatedGrid from './PaginatedGrid'
 import PageHead from '../../../components/PageHead'
 import { DetailErrorView } from './DetailBits'
-import { normalizeTvTitle } from '../tmdb'
+import { fetchTmdb, normalizeTvTitle, TmdbError, type TmdbParams } from '../tmdb'
 import { getContentIndexability } from '../contentOpportunities'
 import { setSwrCache, getPageParam } from '../../../lib/http'
 import { tmdbImage, SITE_URL } from '../../../lib/site'
@@ -18,7 +18,7 @@ export type OrgKind = 'company' | 'network'
 interface OrgConfig {
   apiSegment: string
   discoverPath: string
-  discoverQuery: (id: string) => string
+  discoverQuery: (id: string) => TmdbParams
   normalize: (results: (TmdbMovie | TmdbTvShow)[]) => TitleSummary[]
   basePath: string
   crumbRoot: { name: string; path: string } | null
@@ -35,7 +35,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
   company: {
     apiSegment: 'company',
     discoverPath: 'movie',
-    discoverQuery: (id) => `with_companies=${id}&sort_by=popularity.desc`,
+    discoverQuery: (id) => ({ with_companies: id, sort_by: 'popularity.desc' }),
     normalize: (results) => results as TitleSummary[],
     basePath: '/company',
     crumbRoot: null,
@@ -50,7 +50,7 @@ const CONFIG: Record<OrgKind, OrgConfig> = {
   network: {
     apiSegment: 'network',
     discoverPath: 'tv',
-    discoverQuery: (id) => `with_networks=${id}&sort_by=vote_count.desc&vote_count.gte=100`,
+    discoverQuery: (id) => ({ with_networks: id, sort_by: 'vote_count.desc', 'vote_count.gte': 100 }),
     normalize: (results) => (results as TmdbTvShow[]).filter((s) => s.poster_path).map(normalizeTvTitle),
     basePath: '/network',
     crumbRoot: { name: 'TV Shows', path: '/tv' },
@@ -82,21 +82,22 @@ export function orgServerSideProps(kind: OrgKind): GetServerSideProps<OrgPagePro
 
     const errorProps = (error: string) => ({ props: { kind, error } })
 
+    let org: TmdbCompany
+    let titlesData: Partial<TmdbPaged<TmdbMovie | TmdbTvShow>>
     try {
-      const [orgRes, titlesRes] = await Promise.all([
-        fetch(`https://api.themoviedb.org/3/${apiSegment}/${id}?api_key=${process.env.TMDB_API_KEY}`),
-        fetch(`https://api.themoviedb.org/3/discover/${discoverPath}?api_key=${process.env.TMDB_API_KEY}&${discoverQuery(id)}&page=${page}`)
+      ;[org, titlesData] = await Promise.all([
+        fetchTmdb<TmdbCompany>(`/${apiSegment}/${id}`),
+        fetchTmdb<TmdbPaged<TmdbMovie | TmdbTvShow>>(`/discover/${discoverPath}`, { ...discoverQuery(id), page })
+          .catch((): Partial<TmdbPaged<TmdbMovie | TmdbTvShow>> => ({ results: [] }))
       ])
+    } catch (err) {
+      if (err instanceof TmdbError && err.status === 404) return { notFound: true }
+      return errorProps(err instanceof TmdbError && err.status === 401
+        ? `${noun} data is unavailable because the configured TMDB API key was rejected.`
+        : `${noun} data is temporarily unavailable. Please try again later.`)
+    }
 
-      if (!orgRes.ok) {
-        if (orgRes.status === 404) return { notFound: true }
-        return errorProps(orgRes.status === 401
-          ? `${noun} data is unavailable because the configured TMDB API key was rejected.`
-          : `${noun} data is temporarily unavailable. Please try again later.`)
-      }
-
-      const org: TmdbCompany = await orgRes.json()
-      const titlesData: Partial<TmdbPaged<TmdbMovie | TmdbTvShow>> = titlesRes.ok ? await titlesRes.json() : { results: [] }
+    try {
       if (page > 1 && !titlesData.results?.length) return { notFound: true }
 
       if (context.res) setSwrCache(context.res)

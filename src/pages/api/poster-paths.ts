@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchTmdb } from '../../features/catalog/tmdb'
-import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../lib/rateLimiter'
 import { requireMethod, rejectBot } from '../../lib/http'
 
 const MAX_ITEMS = 50
@@ -26,12 +26,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (!items.length) return res.status(400).json({ error: 'items are required' })
 
-  const allowed = await checkDistributedRateLimit(getClientIP(req), {
-    keyPrefix: 'poster_rl',
-    maxRequests: 30,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
+  // Each item costs a TMDB detail call — per-IP alone can't bound a
+  // rotating-IP flood, so upstream fan-out carries a global breaker too.
+  if (isGlobalBudgetTripped('poster')) {
+    res.setHeader('Retry-After', String(60 * 60))
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' })
+  }
+  const [allowed, withinGlobal] = await Promise.all([
+    checkDistributedRateLimit(getClientIP(req), {
+      keyPrefix: 'poster_rl',
+      maxRequests: 30,
+      windowSeconds: 60 * 60
+    }),
+    checkGlobalBudget('poster', {
+      maxRequests: 2000,
+      windowSeconds: 60 * 60,
+      cost: items.length
+    })
+  ])
+  if (!allowed || !withinGlobal) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ error: 'Too many requests. Please try again later.' })
   }

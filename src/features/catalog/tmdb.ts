@@ -61,6 +61,17 @@ export interface DiscoverOptions {
   monetizationTypes?: string
 }
 
+// Carries the upstream status so SSR callers can map 404 → notFound instead
+// of the generic temporary-error page.
+export class TmdbError extends Error {
+  status?: number
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'TmdbError'
+    this.status = status
+  }
+}
+
 export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promise<T> {
   const apiKey = process.env.TMDB_API_KEY
 
@@ -91,7 +102,7 @@ export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promi
   }
 
   if (!response?.ok) {
-    throw new Error(`TMDB request failed with status ${response?.status ?? 'timeout'}`)
+    throw new TmdbError(`TMDB request failed with status ${response?.status ?? 'timeout'}`, response?.status)
   }
 
   return response.json() as Promise<T>

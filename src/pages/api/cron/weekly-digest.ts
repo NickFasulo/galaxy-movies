@@ -5,6 +5,7 @@ import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY, SYNCKEY_KEY } from '../..
 import { parsePrefs } from '../../../features/alerts/watchlistAlerts'
 import { isPlusActive, parseBillingRecord, plusLink } from '../../../features/billing/billing'
 import { isCronAuthorized } from '../../../lib/auth'
+import { shortDate } from '../../../lib/format/formatters'
 import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { SITE_URL } from '../../../lib/site'
 
@@ -19,11 +20,7 @@ interface DigestItems {
   coming: DigestItem[]
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const prettyDate = (stamp: string | null | undefined) => {
-  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
-  return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : ''
-}
+const prettyDate = shortDate
 
 const titlePath = (t: DigestItem) => `/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`
 

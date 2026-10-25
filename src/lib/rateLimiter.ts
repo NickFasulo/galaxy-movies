@@ -93,6 +93,15 @@ export function isSearchEngine(userAgent: string | null | undefined): boolean {
   return SEARCH_ENGINE_PATTERNS.some((pattern) => pattern.test(ua))
 }
 
+// Link-preview/social bots pass isBot (they sit in ALLOWED_BOT_PATTERNS) but
+// aren't indexers — detail pages use this to keep them off shared-cache reads
+// without paying a billed Redis command per preview crawl.
+export function isPreviewBot(userAgent: string | null | undefined): boolean {
+  if (!userAgent) return false
+  const ua = userAgent.toLowerCase()
+  return ALLOWED_BOT_PATTERNS.some((pattern) => pattern.test(ua)) && !isSearchEngine(ua)
+}
+
 // Node API routes expose headers as a plain object, edge routes as a Headers instance.
 function readHeader(req: RateLimitRequest, name: string): string | undefined {
   const { headers } = req
@@ -155,7 +164,19 @@ return count
 // so buckets key on the /64 a customer is normally assigned, not the
 // individual address. Anything wider evades per-IP caps entirely.
 function rateLimitSubject(clientId: string): string {
-  const hextets = clientId.split(':')
+  // IPv4 (and v4-mapped ::ffff:a.b.c.d) keeps its exact address — folding it
+  // into a v6 prefix would merge unrelated clients into one bucket.
+  if (!clientId.includes(':') || clientId.includes('.')) return clientId
+  // `::` must be expanded into zero hextets before truncation — the raw first
+  // four segments of a compressed address are position-dependent, so rotated
+  // hosts like 2001:db8::1 and 2001:db8::2 would otherwise land in different
+  // buckets and slip the cap.
+  const [head, ...tails] = clientId.split('::')
+  const headParts = head ? head.split(':') : []
+  const tailParts = tails.length ? tails.join(':').split(':').filter(Boolean) : []
+  const hextets = tails.length
+    ? [...headParts, ...new Array(Math.max(8 - headParts.length - tailParts.length, 1)).fill('0'), ...tailParts]
+    : headParts
   if (hextets.length < 4) return clientId
   return `${hextets.slice(0, 4).join(':')}:`
 }

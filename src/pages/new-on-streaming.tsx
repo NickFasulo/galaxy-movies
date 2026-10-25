@@ -9,6 +9,7 @@ import { detectRegion } from '../lib/region'
 import { withTimeout } from '../lib/withTimeout'
 import { getProviderChanges, type ProviderChanges } from '../features/catalog/streamingChanges'
 import { setSwrCache } from '../lib/http'
+import { shortDate } from '../lib/format/formatters'
 import { itemListSchema, titleItem } from '../features/catalog/schema'
 import { SITE_URL } from '../lib/site'
 import type { MediaType, TmdbMovie } from '../types/tmdb'
@@ -81,13 +82,7 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
   }
 }
 
-const CHANGE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function formatChangeDate(stamp: string | null | undefined) {
-  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
-  if (!m) return ''
-  return `${CHANGE_MONTHS[Number(m[2]) - 1]} ${Number(m[3])}`
-}
+const formatChangeDate = shortDate
 
 function ChangeList({ label, items, showDate = false }: { label: string; items?: ChangeItem[]; showDate?: boolean }) {
   if (!items?.length) return null

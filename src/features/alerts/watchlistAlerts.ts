@@ -8,6 +8,7 @@ import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, parseBillingRecord, plusLink } from '../billing/billing'
 import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from '../catalog/tmdb'
 import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
+import { shortDate } from '../../lib/format/formatters'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, TmdbTvDetails } from '../../types/tmdb'
 
@@ -186,11 +187,7 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
   return out.slice(0, MAX_MATCHES_PER_EMAIL)
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const prettyDate = (stamp: string | null | undefined) => {
-  const m = String(stamp || '').match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
-  return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : ''
-}
+const prettyDate = shortDate
 
 const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 

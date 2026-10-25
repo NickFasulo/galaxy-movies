@@ -4,6 +4,7 @@ import { Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
 import { getMonthlyChanges } from '../../features/catalog/streamingChanges'
 import { setSwrCache } from '../../lib/http'
+import { shortDate } from '../../lib/format/formatters'
 import { itemListSchema } from '../../features/catalog/schema'
 import { SITE_URL } from '../../lib/site'
 import PageHead from '../../components/PageHead'
@@ -11,11 +12,7 @@ import PageShell from '../../components/PageShell'
 import LinkTile from '../../components/LinkTile'
 import type { MediaType } from '../../types/tmdb'
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const dayLabel = (date: string) => {
-  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  return m ? `${MONTHS_SHORT[Number(m[2]) - 1]} ${Number(m[3])}` : date
-}
+const dayLabel = (date: string) => shortDate(date, date)
 
 interface SoonItem {
   tmdbId: number | null

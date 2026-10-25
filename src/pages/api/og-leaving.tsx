@@ -5,12 +5,9 @@ import path from 'path'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
 import { getMonthlyChanges } from '../../features/catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
+import { shortDate } from '../../lib/format/formatters'
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const dayLabel = (date: string) => {
-  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  return m ? `${MONTHS_SHORT[Number(m[2]) - 1]} ${Number(m[3])}` : date
-}
+const dayLabel = (date: string) => shortDate(date, date)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchRecommendedMovies, fetchRecommendedTv } from '../../features/catalog/tmdb'
-import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../lib/rateLimiter'
 import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
 import { firstParam } from '../../lib/http'
 
@@ -16,12 +16,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Valid id is required' })
   }
 
-  const allowed = await checkDistributedRateLimit(getClientIP(req), {
-    keyPrefix: 'recs_rl',
-    maxRequests: 60,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
+  if (isGlobalBudgetTripped('recs')) {
+    res.setHeader('Retry-After', String(60 * 60))
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' })
+  }
+  const [allowed, withinGlobal] = await Promise.all([
+    checkDistributedRateLimit(getClientIP(req), {
+      keyPrefix: 'recs_rl',
+      maxRequests: 60,
+      windowSeconds: 60 * 60
+    }),
+    checkGlobalBudget('recs', { maxRequests: 2000, windowSeconds: 60 * 60 })
+  ])
+  if (!allowed || !withinGlobal) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ error: 'Too many requests. Please try again later.' })
   }

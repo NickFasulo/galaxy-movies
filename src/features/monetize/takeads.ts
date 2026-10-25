@@ -39,6 +39,7 @@ const PROVIDER_HOME_PAGES: [string, string][] = [
   ['espn', 'https://plus.espn.com'],
   ['dazn', 'https://www.dazn.com'],
   ['crave', 'https://www.crave.ca'],
+  ['starzplay', 'https://www.starzplay.com'],
   ['starz', 'https://www.starz.com'],
   ['showtime', 'https://www.paramountplus.com'],
   ['mubi', 'https://mubi.com'],
@@ -56,6 +57,7 @@ const PROVIDER_HOME_PAGES: [string, string][] = [
   ['discovery', 'https://www.discoveryplus.com'],
   ['lionsgate', 'https://lionsgateplay.com'],
   ['hungama', 'https://www.hungama.com'],
+  ['manorama', 'https://www.manoramamax.com'],
   ['vi movies', 'https://www.myvi.in'],
   ['kanopy', 'https://www.kanopy.com'],
   ['hoopla', 'https://www.hoopladigital.com'],
@@ -85,7 +87,12 @@ const linkCache = new LRUCache<string, string>({ max: 500, ttl: 1000 * 60 * 60 *
 export function getProviderHomePage(providerName = ''): string | null {
   const name = providerName.toLowerCase()
   if (name.includes('amazon')) return null
-  const match = PROVIDER_HOME_PAGES.find(([key]) => name.includes(key))
+  // Keys are substrings but must start at a word boundary — a bare includes()
+  // maps ManoramaMAX to max.com because it contains "max".
+  const match = PROVIDER_HOME_PAGES.find(([key]) => {
+    const i = name.indexOf(key)
+    return i !== -1 && (i === 0 || !/[a-z0-9]/.test(name[i - 1]))
+  })
   return match?.[1] || null
 }
 

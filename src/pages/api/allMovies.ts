@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { normalizeTvTitle, getProviderIds } from '../../features/catalog/tmdb'
-import { firstParam } from '../../lib/http'
+import { fetchTmdb, normalizeTvTitle, getProviderIds, TmdbError, type TmdbParams } from '../../features/catalog/tmdb'
+import { firstParam, requireMethod, rejectBot, setApiCache } from '../../lib/http'
+import { getClientIP, checkDistributedRateLimit, checkGlobalBudget, isGlobalBudgetTripped } from '../../lib/rateLimiter'
 import type { TitleSummary, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const GENRE_MAP: Record<string, number> = {
@@ -23,9 +24,6 @@ const GENRE_MAP: Record<string, number> = {
   war: 10752,
   western: 37
 }
-
-import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { requireMethod, rejectBot, setApiCache } from '../../lib/http'
 
 type RawResult = TitleSummary & TmdbTvShow
 
@@ -63,12 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const ip = getClientIP(req)
 
-  const allowed = await checkDistributedRateLimit(ip, {
-    keyPrefix: 'movies_rl',
-    maxRequests: 50,
-    windowSeconds: 60 * 60
-  })
-  if (!allowed) {
+  // Same rotating-IP breaker as /api/discover — this feed fans out to TMDB
+  // on every uncached page, so per-IP alone can't bound upstream calls.
+  if (isGlobalBudgetTripped('allmovies')) {
+    res.setHeader('Retry-After', String(60 * 60))
+    return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
+  }
+  const [allowed, withinGlobal] = await Promise.all([
+    checkDistributedRateLimit(ip, {
+      keyPrefix: 'movies_rl',
+      maxRequests: 50,
+      windowSeconds: 60 * 60
+    }),
+    checkGlobalBudget('allmovies', { maxRequests: 5000, windowSeconds: 60 * 60 })
+  ])
+  if (!allowed || !withinGlobal) {
     res.setHeader('Retry-After', String(60 * 60))
     return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' })
   }
@@ -84,18 +91,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .filter(Boolean)
     .flatMap((key) => getProviderIds(key, region))
   // TMDB search/trending/movie-list endpoints don't support watch-provider
-  // filtering — only discover endpoints get it appended below.
-  const providerFilter = providerIds.length
-    ? `&with_watch_providers=${providerIds.join('%7C')}&watch_region=${region}&with_watch_monetization_types=flatrate%7Cfree%7Cads`
-    : ''
+  // filtering — only discover endpoints get it merged below.
+  const providerParams: TmdbParams = providerIds.length
+    ? {
+        with_watch_providers: providerIds.join('|'),
+        watch_region: region,
+        with_watch_monetization_types: 'flatrate|free|ads'
+      }
+    : {}
 
   if (!MEDIA_TYPES.has(media) || !VALID_CATEGORIES.has(category)) {
     return res.status(400).json({ message: 'Invalid category or media type' })
   }
 
-  const apiKey = process.env.TMDB_API_KEY
-
-  if (!apiKey) {
+  if (!process.env.TMDB_API_KEY) {
     return res.status(500).json({ message: 'TMDB API key is missing' })
   }
 
@@ -107,48 +116,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const pageNum = Math.min(MAX_PAGE, Math.max(1, parseInt(page, 10) || 1))
-    let endpoint = ''
+    let path = ''
+    let params: TmdbParams = {}
 
     if (search.trim().length > 0) {
-      if (media === 'tv') {
-        endpoint = `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
-      } else if (media === 'trending') {
-        endpoint = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
-      } else {
-        endpoint = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(search)}&page=${pageNum}&include_adult=false`
-      }
+      path = media === 'tv' ? '/search/tv' : media === 'trending' ? '/search/multi' : '/search/movie'
+      params = { query: search, page: pageNum, include_adult: 'false' }
     } else if (media === 'tv') {
-      endpoint = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10${providerFilter}`
+      path = '/discover/tv'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'popularity.desc', 'vote_count.gte': 10, ...providerParams }
     } else if (media === 'trending') {
-      endpoint = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&page=${pageNum}`
+      path = '/trending/all/week'
+      params = { page: pageNum }
     } else if (LANGUAGE_MAP[category]) {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&vote_count.gte=10&with_original_language=${LANGUAGE_MAP[category]}${providerFilter}`
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'popularity.desc', 'vote_count.gte': 10, with_original_language: LANGUAGE_MAP[category], ...providerParams }
     } else if (GENRE_MAP[category]) {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=primary_release_date.desc&primary_release_date.lte=${todayStr}&vote_count.gte=50&with_genres=${GENRE_MAP[category]}${providerFilter}`
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'primary_release_date.desc', 'primary_release_date.lte': todayStr, 'vote_count.gte': 50, with_genres: GENRE_MAP[category], ...providerParams }
     } else if (category === 'popular') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${popularCutoffDate}${providerFilter}`
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'popularity.desc', 'primary_release_date.gte': popularCutoffDate, ...providerParams }
     } else if (category === 'now_playing') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${ninetyDaysAgo}&primary_release_date.lte=${todayStr}${providerFilter}`
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'popularity.desc', 'primary_release_date.gte': ninetyDaysAgo, 'primary_release_date.lte': todayStr, ...providerParams }
     } else if (category === 'upcoming') {
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${todayStr}${providerFilter}`
-    } else if (category === 'top_rated' && providerFilter) {
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'popularity.desc', 'primary_release_date.gte': todayStr, ...providerParams }
+    } else if (category === 'top_rated' && providerIds.length) {
       // /movie/top_rated can't filter by provider — swap to an equivalent discover query
-      endpoint = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&page=${pageNum}&include_adult=false&sort_by=vote_average.desc&vote_count.gte=200${providerFilter}`
+      path = '/discover/movie'
+      params = { page: pageNum, include_adult: 'false', sort_by: 'vote_average.desc', 'vote_count.gte': 200, ...providerParams }
     } else {
-      endpoint = `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${pageNum}&include_adult=false`
+      path = `/movie/${category}`
+      params = { page: pageNum, include_adult: 'false' }
     }
 
-    const response = await fetch(endpoint)
-    if (!response.ok) {
-      const status = response.status === 401 ? 502 : response.status
-      return res.status(status).json({
-        message: response.status === 401
-          ? 'TMDB rejected the configured API key'
-          : 'TMDB API fetch failed'
-      })
-    }
-
-    const data: TmdbPaged<RawResult> = await response.json()
+    const data = await fetchTmdb<TmdbPaged<RawResult>>(path, params)
 
     if (media !== 'movie') {
       setApiCache(res, 1800, 3600, { cdn: true })
@@ -184,6 +188,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   } catch (error) {
     console.error('allMovies error:', error)
+    const status = error instanceof TmdbError ? error.status : undefined
+    if (status === 401) {
+      return res.status(502).json({ message: 'TMDB rejected the configured API key' })
+    }
+    if (status) {
+      return res.status(status).json({ message: 'TMDB API fetch failed' })
+    }
     return res.status(500).json({ message: 'Internal Server Error' })
   }
 }

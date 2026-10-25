@@ -1,18 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
 import { streamingProviders } from '../tmdb'
+import { shortDate } from '../../../lib/format/formatters'
 import type { MediaType } from '../../../types/tmdb'
 import type { TitleChangeEvents } from '../streamingChanges'
 
 const providerLabel = (key: string) => streamingProviders[key]?.title?.replace(/ Movies$/, '') || key
 
-// dateFormatter parses 'YYYY-MM-DD' as UTC midnight → one day behind in local
-// rendering; the leaving pages sidestep it with the same regex-only approach.
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const shortDate = (date: string) => {
-  const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  return m ? `${MONTHS_SHORT[Number(m[2]) - 1]} ${Number(m[3])}` : date
-}
+const dayLabel = (date: string) => shortDate(date, date)
 
 interface Props {
   events: TitleChangeEvents | null
@@ -24,16 +19,16 @@ interface Props {
 export default function TitleAvailability({ events, tmdbId, tmdbType, title }: Props) {
   const rows: { text: string; href: string }[] = []
   for (const e of events?.coming || []) {
-    rows.push({ text: `Arrives on ${providerLabel(e.p)}${e.date ? `, ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
+    rows.push({ text: `Arrives on ${providerLabel(e.p)}${e.date ? `, ${dayLabel(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }
   for (const e of events?.leaving || []) {
-    rows.push({ text: `Leaves ${providerLabel(e.p)}${e.date ? ` ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
+    rows.push({ text: `Leaves ${providerLabel(e.p)}${e.date ? ` ${dayLabel(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }
   for (const e of events?.added || []) {
-    rows.push({ text: `Added to ${providerLabel(e.p)}${e.date ? `, ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
+    rows.push({ text: `Added to ${providerLabel(e.p)}${e.date ? `, ${dayLabel(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }
   for (const e of events?.left || []) {
-    rows.push({ text: `Left ${providerLabel(e.p)}${e.date ? `, ${shortDate(e.date)}` : ''}`, href: `/leaving/${e.p}` })
+    rows.push({ text: `Left ${providerLabel(e.p)}${e.date ? `, ${dayLabel(e.date)}` : ''}`, href: `/leaving/${e.p}` })
   }
 
   return (
