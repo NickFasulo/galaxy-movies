@@ -4,7 +4,7 @@ Next.js 15 Pages Router app (React 19, Chakra UI, @tanstack/react-query v5). All
 
 ## Commands
 
-- `npm run typecheck` — `tsc --noEmit`
+- `npm run typecheck` — `tsc --noEmit`, which resolves to native TypeScript 7 via the `@typescript/native` alias. `typescript` itself points at `npm:@typescript/typescript6` so tools needing the classic JS API (typescript-eslint, `next build`'s typecheck step) keep working — TS 7.0 ships no API. Collapse back to a plain `typescript` dep once typescript-eslint supports TS ≥7.1 (typescript-eslint/typescript-eslint#10940).
 - `npm test` — Vitest unit tests, colocated as `src/**/*.test.ts` (config `vitest.config.ts`)
 - `npm run test:coverage` — same suite + v8 coverage floor (70 lines / 67 stmts / 65 fns / 60 branches, ~3pts under current baseline — a ratchet, tighten as coverage climbs). CI runs this instead of `npm test`.
 - `npm run lint` — ESLint flat config (`eslint.config.mjs`, `next/core-web-vitals` + `next/typescript`)
