@@ -670,7 +670,7 @@ async function aiUsagePanel(): Promise<UsagePanel> {
 }
 
 const pctDelta = (cur: number, prev: number | undefined) =>
-  prev ? ` ${cur >= prev ? '+' : '-'}${Math.abs(Math.round(((cur - prev) / prev) * 100))}% vs prior` : ''
+  prev ? ` ${cur >= prev ? '+' : '-'}${Math.abs(Math.round(((cur - prev) / prev) * 100))}%` : ''
 
 async function searchConsolePanel(): Promise<UsagePanel> {
   const link = 'https://search.google.com/search-console'
