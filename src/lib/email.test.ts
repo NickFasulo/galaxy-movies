@@ -39,6 +39,16 @@ describe('emailLayout', () => {
     expect(html).toContain('&lt;b&gt;sneaky&lt;/b&gt;')
     expect(html).not.toContain('<b>sneaky</b>')
   })
+
+  it('carries the Gmail dark-mode-inversion defenses', () => {
+    const html = emailLayout({ heading: 'H', body: '' })
+    expect(html).toContain('supported-color-schemes" content="light only"')
+    expect(html).toContain('bgcolor="#14181c"')
+    expect(html).toContain('linear-gradient(#14181c,#14181c)')
+    expect(html).toContain('u + .body')
+    expect(html).toContain('class="gmail-blend-screen"')
+    expect(html).toContain('class="gmail-blend-difference"')
+  })
 })
 
 describe('emailCta', () => {
