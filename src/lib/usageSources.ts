@@ -584,6 +584,65 @@ async function watchmodePanel(): Promise<UsagePanel> {
   return { name: 'Watchmode', status: 'ok', link, metrics }
 }
 
+interface ResendUsageQuota {
+  used?: number
+  sent?: number
+  limit?: number | null
+  resets_at?: string
+}
+
+interface ResendUsage {
+  emails?: { daily?: ResendUsageQuota; monthly?: ResendUsageQuota }
+  domains?: { used?: number; limit?: number | null }
+  rate_limit?: { limit?: number; duration?: string }
+}
+
+async function resendPanel(): Promise<UsagePanel> {
+  const apiKey = process.env.RESEND_API_KEY
+  const link = 'https://resend.com/emails'
+  if (!apiKey) return unconfigured('Resend', ['RESEND_API_KEY'], link)
+
+  const resp = await fetch('https://api.resend.com/usage', { headers: { Authorization: `Bearer ${apiKey}` } })
+  if (!resp.ok) throw new Error(`usage → HTTP ${resp.status}`)
+  const u = (await resp.json()) as ResendUsage
+
+  const day = u.emails?.daily
+  const month = u.emails?.monthly
+  const usedPct = month?.limit ? ((month.used ?? 0) / month.limit) * 100 : null
+  const domains = u.domains?.limit != null ? u.domains : null
+  const rate = u.rate_limit?.limit ? u.rate_limit : null
+
+  return {
+    name: 'Resend',
+    status: 'ok',
+    link,
+    metrics: [
+      {
+        label: 'Emails (billing month)',
+        value: month?.limit ? `${fmt(month.used)} / ${fmt(month.limit)}` : fmt(month?.used),
+        hint: `${fmt(month?.sent)} sent${usedPct != null ? ` · ${Math.round(usedPct)}% used` : ''} · resets ${month?.resets_at?.slice(0, 10) || '—'}`,
+        tone: usedPct == null ? undefined : usedPct >= 99 ? 'bad' : usedPct >= 90 ? 'warn' : undefined
+      },
+      {
+        label: 'Emails today',
+        value: day?.limit ? `${fmt(day.used)} / ${fmt(day.limit)}` : fmt(day?.used),
+        hint: day?.limit ? `daily cap · resets ${day.resets_at?.slice(0, 10) || '—'}` : 'no daily cap on this plan',
+        tone: day?.limit != null && (day.used ?? 0) >= day.limit ? 'warn' : undefined
+      },
+      ...(domains
+        ? [{
+            label: 'Sending domains',
+            value: `${fmt(domains.used)} / ${fmt(domains.limit)}`,
+            tone: (domains.used ?? 0) >= (domains.limit ?? Infinity) ? ('warn' as const) : undefined
+          }]
+        : []),
+      ...(rate
+        ? [{ label: 'Send rate limit', value: `${fmt(rate.limit)} req${rate.duration === '1000ms' ? '/s' : ` per ${rate.duration || 's'}`}` }]
+        : [])
+    ]
+  }
+}
+
 async function rateLimitsPanel(): Promise<UsagePanel> {
   const kv = getRedis()
   if (!kv) return unconfigured('Rate limits', REDIS_ENV, UPSTASH_LINK)
@@ -775,6 +834,7 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     guarded('Polar', polarPanel),
     guarded('Rate limits', rateLimitsPanel),
     guarded('Watchmode', watchmodePanel),
+    guarded('Resend', resendPanel),
     guarded('Subscribers', subscribersPanel),
     guarded('AI usage', aiUsagePanel)
   ])

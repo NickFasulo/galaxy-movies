@@ -136,6 +136,7 @@ afterEach(() => {
   delete process.env.CLOUDFLARE_API_TOKEN
   delete process.env.GSC_CLIENT_EMAIL
   delete process.env.GSC_PRIVATE_KEY
+  delete process.env.RESEND_API_KEY
 })
 
 describe('GET /api/usage', () => {
@@ -324,6 +325,33 @@ describe('GET /api/usage', () => {
     expect(sitemap?.tone).toBe('warn')
     expect(gsc?.series?.find((s) => s.label === 'Clicks /day (28d)')?.points).toEqual([8, 5, 12])
     expect(gsc?.series?.find((s) => s.label === 'Impressions /day (28d)')?.color).toBe('yellow')
+  })
+
+  it('shows Resend quota usage when RESEND_API_KEY is set', async () => {
+    process.env.RESEND_API_KEY = 're_test'
+    mocks.fetch.mockImplementation(async (input) => {
+      expect(String(input)).toContain('api.resend.com/usage')
+      return {
+        ok: true,
+        json: async () => ({
+          emails: {
+            daily: { used: 1, sent: 1, received: 0, limit: 100, resets_at: '2026-10-26T23:59:59.999Z' },
+            monthly: { used: 22, sent: 22, received: 0, limit: 3000, resets_at: '2026-11-13T16:16:12.201Z' }
+          },
+          domains: { used: 2, limit: 3 },
+          rate_limit: { limit: 10, duration: '1000ms' }
+        })
+      } as Response
+    })
+
+    const res = makeRes()
+    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    const resend = panel(res, 'Resend')
+    expect(resend?.status).toBe('ok')
+    expect(resend?.metrics.find((m) => m.label === 'Emails (billing month)')?.value).toBe('22 / 3,000')
+    expect(resend?.metrics.find((m) => m.label === 'Emails (billing month)')?.hint).toContain('resets 2026-11-13')
+    expect(resend?.metrics.find((m) => m.label === 'Emails today')?.value).toBe('1 / 100')
+    expect(resend?.metrics.find((m) => m.label === 'Sending domains')?.value).toBe('2 / 3')
   })
 
   it('marks a panel error instead of failing when a vendor API rejects', async () => {
