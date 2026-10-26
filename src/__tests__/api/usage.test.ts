@@ -136,9 +136,6 @@ afterEach(() => {
   delete process.env.CLOUDFLARE_API_TOKEN
   delete process.env.GSC_CLIENT_EMAIL
   delete process.env.GSC_PRIVATE_KEY
-  delete process.env.UMAMI_API_KEY
-  delete process.env.UMAMI_WEBSITE_ID
-  delete process.env.UMAMI_API_BASE
 })
 
 describe('GET /api/usage', () => {
@@ -183,7 +180,6 @@ describe('GET /api/usage', () => {
     expect(panel(res, 'OpenAI')?.status).toBe('unconfigured')
     expect(panel(res, 'Polar')?.status).toBe('unconfigured')
     expect(panel(res, 'Finance')?.status).toBe('unconfigured')
-    expect(panel(res, 'Traffic')?.status).toBe('unconfigured')
     expect(panel(res, 'Search Console')?.status).toBe('unconfigured')
 
     const rateLimits = panel(res, 'Rate limits')
@@ -309,52 +305,12 @@ describe('GET /api/usage', () => {
     expect(openai?.metrics.find((m) => m.label === 'Credits remaining')?.value).toBe('≈$80.00')
   })
 
-  it('shows Search Console and Traffic metrics when GSC and Umami creds are set', async () => {
+  it('shows Search Console metrics when GSC creds are set', async () => {
     process.env.GSC_CLIENT_EMAIL = 'sa@x.iam.gserviceaccount.com'
     process.env.GSC_PRIVATE_KEY = 'key'
-    process.env.UMAMI_API_KEY = 'umami-key'
-    process.env.UMAMI_WEBSITE_ID = 'site-1'
-    mocks.fetch.mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('api.umami.is')) {
-        if (url.includes('/pageviews')) {
-          return {
-            ok: true,
-            json: async () => ({
-              uniques: [
-                { x: '2026-10-24', y: 10 },
-                { x: '2026-10-25', y: 14 }
-              ],
-              pageviews: [
-                { x: '2026-10-24', y: 60 },
-                { x: '2026-10-25', y: 72 }
-              ]
-            })
-          } as Response
-        }
-        return {
-          ok: true,
-          json: async () => ({
-            pageviews: { value: 4400, prev: 4000 },
-            visitors: { value: 312, prev: 260 },
-            visits: { value: 768, prev: 700 },
-            bounces: { value: 468, prev: 420 },
-            totaltime: { value: 174566, prev: 0 }
-          })
-        } as Response
-      }
-      return { ok: true, json: async () => ({}) } as Response
-    })
 
     const res = makeRes()
     await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
-
-    const traffic = panel(res, 'Traffic')
-    expect(traffic?.status).toBe('ok')
-    expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.value).toBe('312')
-    expect(traffic?.metrics.find((m) => m.label === 'Visitors (30d)')?.hint).toContain('+20%')
-    expect(traffic?.metrics.find((m) => m.label === 'Bounce (30d)')?.value).toBe('61%')
-    expect(traffic?.series?.find((s) => s.label === 'Visitors /day')?.points).toEqual([10, 14])
 
     const gsc = panel(res, 'Search Console')
     expect(gsc?.status).toBe('ok')

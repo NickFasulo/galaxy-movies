@@ -672,67 +672,6 @@ async function aiUsagePanel(): Promise<UsagePanel> {
 const pctDelta = (cur: number, prev: number | undefined) =>
   prev ? ` ${cur >= prev ? '+' : '-'}${Math.abs(Math.round(((cur - prev) / prev) * 100))}% vs prior` : ''
 
-// Umami cloud /v1 returns {value, prev} buckets; self-hosted v1 used raw
-// numbers and 'uniques' instead of 'visitors' — handle both.
-type UmamiBucket = { value?: number; prev?: number } | number
-const umamiVal = (b: UmamiBucket | undefined) => (typeof b === 'number' ? b : b?.value ?? 0)
-const umamiPrev = (b: UmamiBucket | undefined) => (typeof b === 'number' ? undefined : b?.prev)
-
-async function umamiPanel(): Promise<UsagePanel> {
-  const link = 'https://cloud.umami.is'
-  const apiKey = process.env.UMAMI_API_KEY
-  const websiteId = process.env.UMAMI_WEBSITE_ID || process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID
-  if (!apiKey || !websiteId) return unconfigured('Traffic', ['UMAMI_API_KEY'], link)
-
-  const base = (process.env.UMAMI_API_BASE || 'https://api.umami.is/v1').replace(/\/$/, '')
-  const stats = async (days: number): Promise<Record<string, UmamiBucket>> => {
-    const end = Date.now()
-    const resp = await fetch(`${base}/websites/${websiteId}/stats?startAt=${end - days * 86400000}&endAt=${end}`, {
-      headers: { 'x-umami-api-key': apiKey }
-    })
-    if (!resp.ok) throw new Error(`stats → HTTP ${resp.status}`)
-    return (await resp.json()) as Record<string, UmamiBucket>
-  }
-  // Older self-hosted Umami lacks /pageviews — graph is nice-to-have, not a
-  // panel failure.
-  const dailyVisitors = fetch(
-    `${base}/websites/${websiteId}/pageviews?startAt=${Date.now() - 30 * 86400000}&endAt=${Date.now()}&unit=day&timezone=UTC`,
-    { headers: { 'x-umami-api-key': apiKey } }
-  )
-    .then(async (r) => {
-      if (!r.ok) return [] as number[]
-      const body = (await r.json()) as Record<string, { x: string; y: number }[]>
-      const rows = body.uniques ?? body.visitors ?? body.sessions
-      return Array.isArray(rows) ? rows.map((p) => p.y) : []
-    })
-    .catch(() => [] as number[])
-
-  const [month, day, visitorSeries] = await Promise.all([stats(30), stats(1), dailyVisitors])
-  const visitors = umamiVal(month.visitors ?? month.uniques)
-  const prevVisitors = umamiPrev(month.visitors ?? month.uniques)
-  const pageviews = umamiVal(month.pageviews)
-  const prevPageviews = umamiPrev(month.pageviews)
-  const visits = umamiVal(month.visits) || 1
-  const bounceRate = Math.round((100 * umamiVal(month.bounces)) / visits)
-  const avgSec = umamiVal(month.totaltime) / visits
-  const visitorDelta = pctDelta(visitors, prevVisitors).trim()
-
-  return {
-    name: 'Traffic',
-    status: 'ok',
-    link,
-    metrics: [
-      { label: 'Visitors (30d)', value: fmt(visitors), hint: `${visitorDelta ? `${visitorDelta} · ` : ''}goal 800/mo` },
-      { label: 'Visitors (24h)', value: fmt(umamiVal(day.visitors ?? day.uniques)) },
-      { label: 'Pageviews (30d)', value: fmt(pageviews), hint: pctDelta(pageviews, prevPageviews).trim() || undefined },
-      { label: 'Bounce (30d)', value: `${bounceRate}%`, hint: `avg visit ${Math.floor(avgSec / 60)}m${Math.round(avgSec % 60)}s` }
-    ],
-    ...(visitorSeries.length > 1
-      ? { series: [{ label: 'Visitors /day', points: visitorSeries, format: 'count' as const }] }
-      : {})
-  }
-}
-
 async function searchConsolePanel(): Promise<UsagePanel> {
   const link = 'https://search.google.com/search-console'
   if (!hasGscCredentials()) return unconfigured('Search Console', ['GSC_CLIENT_EMAIL', 'GSC_PRIVATE_KEY'], link)
@@ -828,7 +767,6 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     : Promise.resolve(null)
 
   const panels = await Promise.all([
-    guarded('Traffic', umamiPanel),
     guarded('Search Console', searchConsolePanel),
     guarded('Finance', () => financePanel(costBucketsPromise)),
     guarded('Cloudflare Workers', cloudflarePanel),
