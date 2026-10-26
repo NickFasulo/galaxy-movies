@@ -48,6 +48,8 @@ describe('emailLayout', () => {
     expect(html).toContain('u + .body')
     expect(html).toContain('class="gmail-blend-screen"')
     expect(html).toContain('class="gmail-blend-difference"')
+    expect(html).toContain('html,body,.body{margin:0;padding:0}')
+    expect(html).toContain('role="presentation" width="100%"')
   })
 })
 
