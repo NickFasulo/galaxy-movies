@@ -11,7 +11,7 @@ export default function CastSection({ cast }: { cast?: CastEntry[] }) {
   return (
     <Box mb={4}>
       <Text
-        color='gray.400'
+        color='gray.300'
         fontSize='xs'
         fontWeight='bold'
         textTransform='uppercase'

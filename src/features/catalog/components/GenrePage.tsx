@@ -95,7 +95,7 @@ export default function GenrePage({ media, genre, title, titles, totalPages, pag
       />
       <PageShell title={title} description={description} withBackButton>
         {dataError ? (
-          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.300'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : (
           <PaginatedGrid
             initialTitles={titles}

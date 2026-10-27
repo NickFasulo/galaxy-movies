@@ -42,7 +42,7 @@ export default function PushAlerts({ creds }: { creds: AlertsCredentials }) {
 
   return (
     <>
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Push alerts</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Push alerts</Text>
       {support === 'ios-install' ? (
         <Text color='gray.400' fontSize='sm'>
           On iPhone/iPad, alerts need the app installed first: tap Share → &quot;Add to Home Screen&quot;, then come back here to enable them.

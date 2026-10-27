@@ -220,7 +220,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         </a>
       </Text>
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Export</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Export</Text>
       <Text color='gray.400' fontSize='sm'>
         <button type='button' disabled={busy} onClick={exportJson} style={linkStyle}>JSON</button>
         {' · '}
@@ -229,7 +229,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         <button type='button' disabled={busy} onClick={() => exportLetterboxd('ratings')} style={linkStyle}>Letterboxd ratings CSV</button>
       </Text>
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Import</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Import</Text>
       <Text color='gray.400' fontSize='sm'>
         <input
           ref={fileRef}
@@ -248,7 +248,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         {' '}— select your watchlist.csv and/or ratings.csv exports; matched titles merge into your list.
       </Text>
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Trakt</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Trakt</Text>
       {features?.traktConnected ? (
         <Text color='gray.400' fontSize='sm'>
           Connected.{' '}
@@ -271,7 +271,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         <Text color='green.300' fontSize='xs' mt={1}>Trakt connected: hit Sync now to push your list.</Text>
       )}
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Calendar feed</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Calendar feed</Text>
       <Flex gap={2}>
         <Input
           readOnly
@@ -288,9 +288,9 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           Copy
         </Button>
       </Flex>
-      <Text color='gray.500' fontSize='xs' mt={1}>Paste it into Google/Apple Calendar: watchlist releases appear as all-day events.</Text>
+      <Text color='gray.300' fontSize='xs' mt={1}>Paste it into Google/Apple Calendar: watchlist releases appear as all-day events.</Text>
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Discord alerts</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Discord alerts</Text>
       <Flex gap={2}>
         <Input
           value={webhook}
@@ -307,11 +307,11 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           {webhook.trim() ? 'Save' : 'Clear'}
         </Button>
       </Flex>
-      <Text color='gray.500' fontSize='xs' mt={1}>
+      <Text color='gray.300' fontSize='xs' mt={1}>
         Paste a Discord webhook URL (channel → Edit Channel → Integrations → Webhooks) and alerts post to that channel instead of email. Save an empty field to switch back to email.
       </Text>
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Telegram alerts</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Telegram alerts</Text>
       {features?.telegramConnected ? (
         <Text color='gray.400' fontSize='sm'>
           Connected: alerts arrive as Telegram DMs instead of email.{' '}
@@ -324,7 +324,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         </Text>
       )}
 
-      <Text color='gray.500' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Share your list</Text>
+      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Share your list</Text>
       {shareUrl ? (
         <Flex gap={2} align='center'>
           <Input

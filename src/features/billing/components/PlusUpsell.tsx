@@ -59,7 +59,7 @@ export default function PlusUpsell() {
             <Button size='sm' variant='outline' loading={busy === 'yearly'} onClick={() => checkout('yearly')}>
               $20 / year
             </Button>
-            <Link asChild color='gray.500' fontSize='xs' alignSelf='center' _hover={{ color: 'white' }}>
+            <Link asChild color='gray.300' fontSize='xs' alignSelf='center' _hover={{ color: 'white' }}>
               <NextLink href='/plus'>What&apos;s included</NextLink>
             </Link>
           </Flex>

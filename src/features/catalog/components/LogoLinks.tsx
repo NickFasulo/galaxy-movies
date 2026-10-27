@@ -18,7 +18,7 @@ export function ActorAvatar({ profilePath, name }: { profilePath?: string | null
       color='white'
       fontSize='10px'>
       <Avatar.Fallback name={name} />
-      <Avatar.Image src={imageSrc} />
+      <Avatar.Image src={imageSrc} alt='' />
     </Avatar.Root>
   );
 }

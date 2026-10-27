@@ -157,7 +157,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         ]}
       />
       <PageShell title={pageTitle} description={description} withBackButton>
-        <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
+        <Text maxW='42rem' mt={2} color='gray.300' fontSize='sm'>
           Looking for {media === 'tv' ? 'movies' : 'shows'} instead? Browse{' '}
           <Link href={`${otherBasePath}/${provider}`} style={{ textDecoration: 'underline' }}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
           {PROVIDER_NAME_MATCH[provider] && (
@@ -216,7 +216,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
                       href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
                       data-umami-event='leaving-click'
                       style={{ textDecoration: 'none' }}>
-                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.100' color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>
+                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.100' color='gray.300' fontSize='xs' _hover={{ color: 'white' }}>
                         {item.title}
                       </Badge>
                     </Link>
@@ -228,7 +228,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         )}
 
         {PROVIDER_NAME_MATCH[provider] && (
-          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+          <Text mt={6} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
             See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel} this month</Link> or{' '}
             <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s leaving</Link>.
           </Text>
@@ -248,17 +248,17 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
           </LinkTile>
         </SimpleGrid>
         {!isIndexable && indexabilityReason && (
-          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+          <Text mt={6} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
             This page is available for browsing but held out of search indexing for now: {indexabilityReason}
           </Text>
         )}
-        <Text textAlign={{ base: 'center', md: 'left' }} mt={8} color='gray.500' fontSize='sm'>
+        <Text textAlign={{ base: 'center', md: 'left' }} mt={8} color='gray.300' fontSize='sm'>
           Availability changes by region and over time. Check the {itemWord} page for current provider information.
         </Text>
         {dataError ? (
-          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.300'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
-          <Text mt={10} color='gray.500'>No {plural} currently found for this service in your region.</Text>
+          <Text mt={10} color='gray.300'>No {plural} currently found for this service in your region.</Text>
         ) : (
           <PaginatedGrid
             initialTitles={titles}

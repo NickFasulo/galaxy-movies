@@ -26,10 +26,10 @@ export default function ProviderBar({ catalog }: { catalog: Map<number, WatchPro
   return (
     <Box mx={{ base: '1.5rem', md: '3rem', xl: 'auto' }} maxW={{ xl: '80rem' }} mt='1.75rem'>
       <Flex align='baseline' justify='space-between' gap={3}>
-        <Text fontSize='xs' fontWeight='bold' letterSpacing='0.12em' textTransform='uppercase' color='gray.400'>
+        <Text fontSize='xs' fontWeight='bold' letterSpacing='0.12em' textTransform='uppercase' color='gray.300'>
           My services
         </Text>
-        <Link color='gray.400' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
+        <Link color='gray.300' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
           <NextLink href='/streaming'>Browse all services</NextLink>
         </Link>
       </Flex>

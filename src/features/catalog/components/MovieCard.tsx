@@ -25,7 +25,7 @@ function MovieCard({ movie, priority = false, badge = null, posterFallback }: { 
         borderRadius='0.5rem'
         overflow='hidden'
       >
-        <Link href={isTv ? `/tv/${movie.id}` : `/movies/${movie.id}`}>
+        <Link href={isTv ? `/tv/${movie.id}` : `/movies/${movie.id}`} aria-label={title}>
           <Box position='relative' w='100%' aspectRatio='2/3' bg='gray.800'>
             <Skeleton
               loading={!(isLoaded || !posterUrl)}
@@ -57,7 +57,7 @@ function MovieCard({ movie, priority = false, badge = null, posterFallback }: { 
                   backgroundPosition='center'
                 >
                   <Text
-                    color={posterFallback ? 'gray.100' : 'gray.400'}
+                    color={posterFallback ? 'gray.100' : 'gray.300'}
                     textAlign='center'
                     fontSize='sm'
                     textShadow={posterFallback ? '0 1px 6px rgba(0,0,0,0.9)' : undefined}

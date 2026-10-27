@@ -14,7 +14,7 @@ export default function SimilarMovies({ movies, listRef }: { movies?: SimilarTit
   return (
     <Box mb={4}>
       <Text
-        color='gray.400'
+        color='gray.300'
         fontSize='xs'
         fontWeight='bold'
         textTransform='uppercase'
@@ -37,7 +37,7 @@ export default function SimilarMovies({ movies, listRef }: { movies?: SimilarTit
             data-umami-event='similar-list-click'
             style={{ textDecoration: 'none' }}
           >
-            <Text color='gray.400' fontSize='xs' _hover={{ color: 'white' }}>Full list: {listRef.title} →</Text>
+            <Text color='gray.300' fontSize='xs' _hover={{ color: 'white' }}>Full list: {listRef.title} →</Text>
           </Link>
         </Flex>
       )}

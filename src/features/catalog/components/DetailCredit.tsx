@@ -15,7 +15,7 @@ export function DetailCreditLine({
     <Text
       as={as}
       fontSize='sm'
-      color='gray.400'
+      color='gray.300'
       textShadow='0 0 4px black'
       mt={mt}
       textAlign={{ base: 'center', md: 'left' }}
