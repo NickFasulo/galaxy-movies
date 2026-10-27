@@ -97,7 +97,7 @@ export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescrip
 
   return (
     <>
-      {!hideDescription && <Text color='gray.400' fontSize='sm' mb={3}>
+      {!hideDescription && <Text color='gray.300' fontSize='sm' mb={3}>
         {hasEvents
           ? 'Get an email when this title lands on or leaves a tracked service. No newsletter, just this title.'
           : 'Not streaming anywhere we track? Leave your email and we\u2019ll tell you the day it lands. No newsletter, just this title.'}
@@ -115,7 +115,7 @@ export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescrip
             bg='blackAlpha.400'
             borderColor='border.subtle'
             color='white'
-            _placeholder={{ color: 'gray.500' }}
+            _placeholder={{ color: 'gray.400' }}
           />
           <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}
             data-umami-event='title-alert-submit' data-umami-event-title={title}>

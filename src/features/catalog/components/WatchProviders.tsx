@@ -51,7 +51,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, buck
         />
       </Box>
       {caption && (
-        <Text fontSize='2xs' color='gray.400' mt={0.5} lineHeight={1} lineClamp={1}>
+        <Text fontSize='2xs' color='gray.300' mt={0.5} lineHeight={1} lineClamp={1}>
           {caption}
         </Text>
       )}
@@ -116,12 +116,12 @@ function CatalogLinks({ providerIds, region, mediaType }: { providerIds?: number
   if (!keys.length) return null
   const base = mediaType === 'tv' ? '/tv/streaming' : '/streaming'
   return (
-    <Text color='gray.500' fontSize='2xs' mt={2}>
+    <Text color='gray.300' fontSize='2xs' mt={2}>
       Browse:{' '}
       {keys.map((key, i) => (
         <span key={key}>
           {i > 0 && ' · '}
-          <Link asChild color='gray.400' _hover={{ color: 'white', textDecoration: 'underline' }}>
+          <Link asChild color='gray.300' _hover={{ color: 'white', textDecoration: 'underline' }}>
             <NextLink href={`${base}/${key}`}>{streamingProviders[key].title.replace(/ Movies$/, '')}</NextLink>
           </Link>
         </span>
@@ -225,7 +225,7 @@ export default function WatchProviders({
               href={streamLink}
               data-umami-event='justwatch-click'
               fontSize='2xs'
-              color='gray.500'
+              color='gray.300'
               display='inline-flex'
               alignItems='center'
               gap={0.5}
@@ -252,7 +252,7 @@ export default function WatchProviders({
                 </Flex>
                 <CatalogLinks providerIds={flatrate.map((p) => p.provider_id)} region={activeRegion} mediaType={mediaType} />
                 {seasonNotes.length > 0 && (
-                  <Text color='gray.500' fontSize='2xs' mt={1.5}>
+                  <Text color='gray.300' fontSize='2xs' mt={1.5}>
                     {seasonNotes.join(' · ')}
                   </Text>
                 )}
@@ -283,7 +283,7 @@ export default function WatchProviders({
                     ))}
                 </Flex>
                 <Flex align='center' justify='space-between' gap={2} mt={1.5} wrap='wrap'>
-                  <Text color='gray.500' fontSize='2xs'>
+                  <Text color='gray.300' fontSize='2xs'>
                     {[
                       cheapestRent && `Rent from ${formatPrice(cheapestRent)}`,
                       cheapestBuy && `Buy from ${formatPrice(cheapestBuy)}`

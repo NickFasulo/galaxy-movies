@@ -177,7 +177,7 @@ export default function ProviderGenrePage({
         ]}
       />
       <PageShell title={target.title} description={description} withBackButton>
-        <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm'>
+        <Text maxW='42rem' mt={2} color='gray.300' fontSize='sm'>
           Browse all{' '}
           <Link href={`${basePath}/${provider}`} style={{ textDecoration: 'underline' }}>{target.providerLabel} {plural}</Link>
           {' '}or all{' '}
@@ -185,18 +185,18 @@ export default function ProviderGenrePage({
         </Text>
 
         {!isIndexable && indexabilityReason && (
-          <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+          <Text mt={6} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
             This page is available for browsing but held out of search indexing for now: {indexabilityReason}
           </Text>
         )}
-        <Text mt={6} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+        <Text mt={6} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
           Availability changes by region and over time. Check the {itemWord} page for current provider information.
         </Text>
 
         {dataError ? (
-          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.300'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : titles.length === 0 ? (
-          <Text mt={10} color='gray.500'>No {plural} currently match this streaming collection.</Text>
+          <Text mt={10} color='gray.300'>No {plural} currently match this streaming collection.</Text>
         ) : (
           <PaginatedGrid
             initialTitles={titles}

@@ -215,7 +215,7 @@ function OrgContent({ kind, org, titles, totalPages, page }: { kind: OrgKind; or
                     </Badge>
                   )}
                   {org.headquarters && (
-                    <Text fontSize='sm' color='gray.400'>
+                    <Text fontSize='sm' color='gray.300'>
                       📍 {org.headquarters}
                     </Text>
                   )}
@@ -256,7 +256,7 @@ function OrgContent({ kind, org, titles, totalPages, page }: { kind: OrgKind; or
           </Flex>
 
           {titles.length === 0 ? (
-            <Text color='gray.400' textAlign='center'>{emptyText}</Text>
+            <Text color='gray.300' textAlign='center'>{emptyText}</Text>
           ) : (
             <PaginatedGrid
               initialTitles={titles}

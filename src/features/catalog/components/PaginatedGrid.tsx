@@ -130,23 +130,23 @@ export function InfiniteTitleGrid({
         </VisuallyHidden>
       )}
       {visibleTitles.length === 0 && emptyMessage ? (
-        <Text textAlign='center' color='gray.500' py={16}>{emptyMessage}</Text>
+        <Text textAlign='center' color='gray.300' py={16}>{emptyMessage}</Text>
       ) : (
         <InfiniteScroll
           next={fetchNextPage}
           hasMore={hasNextPage && !isFetchingNextPage}
           dataLength={visibleTitles.length}
           scrollThreshold={0.95}
-          loader={<Text textAlign='center' color='gray.500' p='1rem'>Loading more titles...</Text>}
+          loader={<Text textAlign='center' color='gray.300' p='1rem'>Loading more titles...</Text>}
         >
           <MovieGrid movies={visibleTitles} posterFallback={posterFallback} {...gridProps} />
         </InfiniteScroll>
       )}
       {status === 'error' && (
-        <Text textAlign='center' color='gray.500' mb={4}>Couldn&rsquo;t load titles. Try again.</Text>
+        <Text textAlign='center' color='gray.300' mb={4}>Couldn&rsquo;t load titles. Try again.</Text>
       )}
       {!hasNextPage && loadedPages > 1 && (
-        <Text textAlign='center' color='gray.500' p='1rem' mb='2rem'>You&rsquo;ve reached the end.</Text>
+        <Text textAlign='center' color='gray.300' p='1rem' mb='2rem'>You&rsquo;ve reached the end.</Text>
       )}
     </Box>
     </>

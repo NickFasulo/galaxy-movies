@@ -121,11 +121,11 @@ export default function CategoryPage({ media, category, title, description, titl
         ]}
       />
       <PageShell title={title} description={description} withBackButton>
-        <Text maxW='42rem' mt={2} color='gray.500' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
+        <Text maxW='42rem' mt={2} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
           {FOOTER_LINKS[media]}
         </Text>
         {dataError ? (
-          <Text mt={10} color='gray.400'>{noun} data is temporarily unavailable. Please try again later.</Text>
+          <Text mt={10} color='gray.300'>{noun} data is temporarily unavailable. Please try again later.</Text>
         ) : (
           <PaginatedGrid
             initialTitles={titles}

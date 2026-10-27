@@ -48,7 +48,7 @@ export default function ServicesPicker() {
           ))}
         </Flex>
       </Flex>
-      <Text color='gray.500' fontSize='xs' mb='0.75rem'>
+      <Text color='gray.300' fontSize='xs' mb='0.75rem'>
         Pick your subscriptions to see which saved movies are streaming for you.
       </Text>
       <SimpleGrid columns={{ base: 2, md: 4 }} rowGap={{ base: 3, md: 2 }} columnGap={2}>

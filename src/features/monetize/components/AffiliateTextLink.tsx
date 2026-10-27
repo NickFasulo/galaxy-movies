@@ -9,7 +9,7 @@ export default function AffiliateTextLink({ href, pixel, text, event }: { href: 
         rel='sponsored nofollow noopener'
         data-umami-event={event}
         fontSize='2xs'
-        color='gray.500'
+        color='gray.300'
         display='inline-flex'
         alignItems='center'
         gap={0.5}

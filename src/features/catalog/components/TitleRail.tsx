@@ -20,7 +20,7 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
       <Flex align='baseline' justify='space-between' mb={4} gap={3}>
         <Heading as='h2' size='md'>{title}</Heading>
         {href && (
-          <Link color='gray.400' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
+          <Link color='gray.300' fontSize='xs' whiteSpace='nowrap' transition='color 0.15s' _hover={{ color: 'white' }} asChild>
             <NextLink href={href}>See all →</NextLink>
           </Link>
         )}

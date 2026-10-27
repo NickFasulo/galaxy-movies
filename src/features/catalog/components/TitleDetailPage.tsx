@@ -506,7 +506,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                         as='summary'
                         display='inline'
                         cursor='pointer'
-                        color='gray.500'
+                        color='gray.300'
                         _hover={{ color: 'white' }}
                         css={{ listStyle: 'none', '&::-webkit-details-marker': { display: 'none' } }}
                       >
