@@ -1,6 +1,9 @@
 import NextLink from 'next/link'
 import { Fragment } from 'react'
-import { Box, Link, Text } from '@chakra-ui/react'
+import type { IconType } from 'react-icons'
+import { FaBluesky, FaDiscord, FaFacebookF, FaMastodon, FaRedditAlien, FaTelegram } from 'react-icons/fa6'
+import { Box, Flex, Link, Text } from '@chakra-ui/react'
+import { SOCIAL_PROFILES } from '../lib/site'
 
 const ITEMS = [
   { href: '/privacy', label: 'Privacy' },
@@ -22,6 +25,42 @@ export function LegalLinks() {
       ))}
     </>
   );
+}
+
+const SOCIAL_ICONS: Record<string, IconType> = {
+  Facebook: FaFacebookF,
+  Bluesky: FaBluesky,
+  Mastodon: FaMastodon,
+  Reddit: FaRedditAlien,
+  Telegram: FaTelegram,
+  Discord: FaDiscord
+}
+
+export function SocialLinks() {
+  return (
+    <>
+      {SOCIAL_PROFILES.map((p) => {
+        const Icon = SOCIAL_ICONS[p.name]
+        if (!Icon) return null
+        return (
+          <Link
+            key={p.name}
+            href={p.href}
+            target='_blank'
+            rel={p.relMe ? 'me noopener noreferrer' : 'noopener noreferrer'}
+            aria-label={`Galaxy Movies on ${p.name}`}
+            title={p.name}
+            color='gray.500'
+            lineHeight={1}
+            transition='color 0.15s'
+            _hover={{ color: 'white' }}
+          >
+            <Icon size={14} />
+          </Link>
+        )
+      })}
+    </>
+  )
 }
 
 // Floating legal-links pill for infinite-scroll pages — an in-flow footer
@@ -59,7 +98,10 @@ export default function Footer({ isDark = false }) {
 
   return (
     <Box as='footer' bg={bg} mt='auto'>
-      <Text textAlign='center' py={4}>
+      <Flex justify='center' gap={5} pt={4}>
+        <SocialLinks />
+      </Flex>
+      <Text textAlign='center' pb={4} pt={2}>
         <LegalLinks />
       </Text>
     </Box>

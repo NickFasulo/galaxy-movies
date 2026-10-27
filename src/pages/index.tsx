@@ -19,7 +19,7 @@ import { getProviderCatalog } from '../features/catalog/providerCatalog'
 import { detectRegion } from '../lib/region'
 import { ratingEntries, setServices } from '../lib/userData'
 import { setSwrCache } from '../lib/http'
-import { SITE_URL } from '../lib/site'
+import { SITE_URL, SOCIAL_PROFILES } from '../lib/site'
 import type { TitleSummary, TmdbMovie, TmdbPaged, WatchProvider, WatchProvidersResponse } from '../types/tmdb'
 
 interface Props {
@@ -303,6 +303,15 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Galaxy Movies',
+    url: SITE_URL,
+    logo: `${SITE_URL}/icons/icon-512.png`,
+    sameAs: SOCIAL_PROFILES.map((p) => p.href)
+  }
+
   return (
     <>
       <PageHead
@@ -312,7 +321,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         canonicalUrl={SITE_URL}
         ogTitle='Galaxy Movies'
         ogSubtitle='Discover Popular & New Films'
-        structuredData={[websiteSchema, webApplicationSchema]}
+        structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
         <link rel='icon' href='/favicon.ico' />
         {/* Impact's verifier requires a `value` attribute, which React's meta typings don't include. */}

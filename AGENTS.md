@@ -66,3 +66,13 @@ For OpenAI spend/usage reporting, run `OPENAI_ADMIN_KEY=... node scripts/openai-
 ## Search Console
 
 GSC is reachable through the `openseo` MCP — project `Galaxy Movies` (id `13219778-f63d-4914-8350-47122b2c3a4a`), connected property `https://www.galaxymovies.app/` (URL-prefix; `galaxymovies.app` is also verified as a domain property). `inspect_urls` gives per-URL index verdicts (≤10/call), `get_search_console_performance` pulls Search Analytics. Every apex path 308-redirects to `www` via a `has: host` rule at the top of `redirects()` in `next.config.ts` — the worker serves both custom domains, so without it apex would serve duplicate content under a canonical tag. Google has no API for the Coverage report's aggregate buckets or request-indexing — batch-inspect sitemap URLs for the former; the only programmatic nudge available is IndexNow (Bing/Yandex, not Google), which `updateStreamingChanges` calls at the end of each diff run with every changed detail URL plus the affected `/streaming/{p}`, `/leaving/{p}`, and `/new-on-streaming` pages (`src/lib/indexnow.ts`; the verification key is a public file `public/{key}.txt`). The sitemap only emits URLs the pages themselves won't noindex: region-locked provider×genre combos are filtered to `DEFAULT_REGION` availability and overview-less titles are skipped (see `sitemap.xml.ts`). Listing pages (`ProviderPage`, `ProviderGenrePage`, `OrgPage`) noindex via `getContentIndexability` when the detected region's catalog is thin.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
