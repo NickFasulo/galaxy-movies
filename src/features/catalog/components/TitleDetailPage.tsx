@@ -573,14 +573,14 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <DetailActions videoKey={videoKey} item={listItem} />
 
-            {!hasStreaming && hasAnyProviders && displayTitle && (
+            {/* {!hasStreaming && hasAnyProviders && displayTitle && (
               <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
                 <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={2}>
                   Rent/buy only right now
                 </Text>
                 <StreamingAlertCta tmdbId={title.id} tmdbType={media} title={displayTitle} />
               </Box>
-            )}
+            )} */}
 
             <CastSection cast={topCast} />
 
