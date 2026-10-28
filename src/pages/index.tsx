@@ -344,7 +344,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             <Heading as='h1' textAlign='center' mt='2rem'>
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed movie discovery</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed streaming discovery</Text>
           </HomeHero>
         )}
 
