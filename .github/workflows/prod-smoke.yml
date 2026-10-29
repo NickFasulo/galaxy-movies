@@ -15,12 +15,15 @@ concurrency:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - name: Test smoke probe locally
+        run: python3 scripts/test_smoke.py
       - name: Run production smoke
         run: bash scripts/smoke.sh
         env:
           SMOKE_BASE: https://www.galaxymovies.app
           SMOKE_LEVEL: full
+
