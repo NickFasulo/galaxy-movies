@@ -42,15 +42,15 @@ function gatherItems(changes: Record<string, ProviderChanges>): DigestItems {
 }
 
 const sectionHead = (label: string) =>
-  `<div style="font-size: 15px; font-weight: 700; color: #ffffff; margin: 20px 0 6px;">${label}</div>`
+  `<div style="font-size: 15px; font-weight: 700; color: #111827; margin: 20px 0 6px;">${label}</div>`
 
 function itemList(items: DigestItem[], showDate: boolean) {
   if (!items.length) return ''
-  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #e2e8f0;">${items
+  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #1f2937;">${items
     .map(
       (t) =>
-        `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
-        `<div style="color: #718096; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
+        `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
+        `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
     )
     .join('')}</ul>`
 }
@@ -61,12 +61,12 @@ function buildEmail(items: DigestItems, email: string, token: string, leaving: D
     heading: 'This week on streaming',
     preheader: "New arrivals and what's coming to your services",
     body: `
-      <p style="margin: 0 0 6px; color: #a0aec0; line-height: 1.6;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
+      <p style="margin: 0 0 6px; color: #4b5563; line-height: 1.6;">New arrivals and what's coming to the services you follow on Galaxy Movies.</p>
       ${items.added.length ? `${sectionHead('Just added')}${itemList(items.added, false)}` : ''}
       ${items.coming.length ? `${sectionHead('Coming soon')}${itemList(items.coming, true)}` : ''}
       ${leaving.length ? `${sectionHead('Leaving this month')}${itemList(leaving, true)}` : ''}
-      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See everything new on streaming →</a></p>
-      ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See everything new on streaming →</a></p>
+      ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',
     unsubUrl: unsub
   })

@@ -10,7 +10,7 @@ const { ImageResponse } = require('next/og')
 const sharp = require('sharp')
 
 const FONT = path.join(__dirname, '..', 'public', 'fonts', 'SpaceRangerLaserItalic-J7an.otf')
-const OUT = path.join(__dirname, '..', 'public', 'email-logo.png')
+const OUT = path.join(__dirname, '..', 'public', 'email-logo-light.png')
 
 async function main() {
   const res = new ImageResponse(
@@ -20,10 +20,10 @@ async function main() {
         style: {
           fontFamily: 'SpaceRangerLaserItalic',
           fontSize: '96px',
-          color: '#ffffff',
+          color: '#172554',
           letterSpacing: '0.04em',
           lineHeight: 1,
-          textShadow: '0 0 32px rgba(125, 175, 255, 0.35)',
+          backgroundColor: '#ffffff',
           padding: '48px 56px',
           display: 'flex'
         },
@@ -39,7 +39,7 @@ async function main() {
   const png = Buffer.from(await res.arrayBuffer())
   await sharp(png).trim({ threshold: 8 }).png().toFile(OUT)
   const meta = await sharp(OUT).metadata()
-  console.log(`email-logo.png: ${meta.width}x${meta.height}`)
+  console.log(`email-logo-light.png: ${meta.width}x${meta.height}`)
 }
 
 main().catch((err) => {

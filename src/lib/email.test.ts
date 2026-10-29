@@ -13,7 +13,7 @@ describe('emailLayout', () => {
     const html = emailLayout({ heading: 'Hello', body: '<p>Body</p>' })
     expect(html).toContain('Hello')
     expect(html).toContain('<p>Body</p>')
-    expect(html).toContain('/email-logo.png')
+    expect(html).toContain('/email-logo-light.png')
     expect(html).toContain(MAILING_ADDRESS)
   })
 
@@ -40,15 +40,12 @@ describe('emailLayout', () => {
     expect(html).not.toContain('<b>sneaky</b>')
   })
 
-  it('carries the Gmail dark-mode-inversion defenses', () => {
+  it('uses an explicit light canvas without color inversion workarounds', () => {
     const html = emailLayout({ heading: 'H', body: '' })
-    expect(html).toContain('supported-color-schemes" content="light only"')
-    expect(html).toContain('bgcolor="#14181c"')
-    expect(html).toContain('linear-gradient(#14181c,#14181c)')
-    expect(html).toContain('u + .body')
-    expect(html).toContain('class="gmail-blend-screen"')
-    expect(html).toContain('class="gmail-blend-difference"')
-    expect(html).toContain('html,body,.body{margin:0;padding:0}')
+    expect(html).toContain('bgcolor="#ffffff"')
+    expect(html).toContain('color:#1f2937')
+    expect(html).not.toContain('mix-blend-mode')
+    expect(html).not.toContain('linear-gradient')
     expect(html).toContain('role="presentation" width="100%"')
   })
 })
@@ -67,6 +64,6 @@ describe('emailCallout', () => {
   it('wraps inner html in the inset panel', () => {
     const html = emailCallout('<a href="/plus">Plus</a>')
     expect(html).toContain('<a href="/plus">Plus</a>')
-    expect(html).toContain('background-color:#14181c')
+    expect(html).toContain('background-color:#ffffff')
   })
 })
