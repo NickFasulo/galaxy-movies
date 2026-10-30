@@ -260,7 +260,7 @@ describe('buildEmail', () => {
 
   it('renders the branded footer with logo and mailing address', () => {
     const { html } = buildEmail([item], 'a@b.com', 'tok')
-    expect(html).toContain('/email-logo.png')
+    expect(html).toContain('/email-logo-light.png')
     expect(html).toContain('921 S Beacon St, Los Angeles, CA 90731')
   })
 

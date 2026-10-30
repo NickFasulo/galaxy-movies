@@ -108,8 +108,8 @@ export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken:
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
-      `<li style="margin: 8px 0;"><a href="${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}" style="color: #9ec1ff; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
-      `<div style="color: #718096; font-size: 13px; margin-top: 1px;">${titleStatusLine(item)}</div></li>`
+      `<li style="margin: 8px 0;"><a href="${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
+      `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${titleStatusLine(item)}</div></li>`
     )
     .join('')
 
@@ -117,9 +117,9 @@ export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken:
     heading: "A title you're tracking just moved",
     preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles you're tracking`,
     body: `
-      <p style="margin: 0 0 14px; color: #a0aec0; line-height: 1.6;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
-      <ul style="list-style: none; padding: 0; margin: 0; color: #e2e8f0;">${rows}</ul>
-      <p style="margin: 22px 0 0;"><a href="${SITE_URL}" style="color: #9ec1ff; font-weight: 600; text-decoration: none;">Track another title →</a></p>`,
+      <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
+      <ul style="list-style: none; padding: 0; margin: 0; color: #1f2937;">${rows}</ul>
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Track another title →</a></p>`,
     reason: 'You asked Galaxy Movies to notify you about these titles.',
     unsubUrl: unsub
   })

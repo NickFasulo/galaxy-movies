@@ -10,6 +10,7 @@ BASE="${SMOKE_BASE:-https://www.galaxymovies.app}"
 # dev` in CI, where secrets are deliberately absent. full = production probe.
 LEVEL="${SMOKE_LEVEL:-full}"
 FAIL=0
+SKIP=0
 
 # check <path> [substring expected in the body]
 check() {
@@ -66,15 +67,28 @@ fi
 
 if [ "$LEVEL" = "full" ]; then
   # Apex must 30x to the canonical www host — a broken redirect splits indexing.
-  APEX=$(curl -sS -m 15 -o /dev/null -w '%{http_code} %{redirect_url}' "https://galaxymovies.app/" 2>/dev/null)
-  case "$APEX" in
-    30*https://www.galaxymovies.app/*) echo "ok   apex -> www redirect" ;;
-    *) echo "FAIL apex redirect -> $APEX"; FAIL=1 ;;
-  esac
+  APEX=$(curl -sS -m 15 -D - -o /dev/null -w $'\n%{http_code} %{redirect_url}' "https://galaxymovies.app/" 2>&1)
+  APEX_EXIT=$?
+  APEX_RESULT="${APEX##*$'\n'}"
+  APEX_HEADERS="${APEX%$'\n'*}"
+  if [ "$APEX_EXIT" -ne 0 ]; then
+    echo "FAIL apex redirect (curl: $APEX)"
+    FAIL=1
+  elif [[ "$APEX_RESULT" == "403 " ]] &&
+    printf '%s\n' "$APEX_HEADERS" | grep -qiE $'^cf-mitigated:[[:blank:]]*challenge[[:blank:]]*\r?$'; then
+    echo "SKIP apex -> managed challenge (www redirect not verified)"
+    SKIP=$((SKIP + 1))
+  else
+    case "$APEX_RESULT" in
+      301\ https://www.galaxymovies.app/*|302\ https://www.galaxymovies.app/*|303\ https://www.galaxymovies.app/*|307\ https://www.galaxymovies.app/*|308\ https://www.galaxymovies.app/*)
+        echo "ok   apex -> www redirect" ;;
+      *) echo "FAIL apex redirect -> $APEX_RESULT"; FAIL=1 ;;
+    esac
+  fi
 fi
 
 if [ "$FAIL" -ne 0 ]; then
   echo "smoke: failures against $BASE"
   exit 1
 fi
-echo "smoke: all checks passed against $BASE"
+echo "smoke: checks passed against $BASE ($SKIP skipped)"
