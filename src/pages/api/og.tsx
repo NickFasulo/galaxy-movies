@@ -146,10 +146,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         >
           {isHero ? (
             <>
-              <div style={{ fontFamily: 'SpaceRangerLaserItalic', fontSize: '66px', color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1, textShadow: '0 0 14px rgba(125, 175, 255, 0.28)', display: 'flex', marginBottom: '24px' }}>
+              <div style={{ fontFamily: 'SpaceRangerLaserItalic', fontSize: '60px', color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1, textShadow: '0 0 14px rgba(125, 175, 255, 0.28)', display: 'flex', marginBottom: '24px' }}>
                 Galaxy Movies
               </div>
-              <div style={{ fontSize: '23px', fontFamily: 'Inter', fontWeight: 400, color: 'rgba(220,230,245,0.92)', lineHeight: 1.4, letterSpacing: '0.22em', textTransform: 'uppercase', display: 'flex' }}>
+              <div style={{ fontSize: '16px', fontFamily: 'Inter', fontWeight: 400, color: 'rgba(220,230,245,0.92)', lineHeight: 1.4, letterSpacing: '0.28em', textTransform: 'uppercase', display: 'flex' }}>
                 Warp speed streaming discovery
               </div>
             </>
