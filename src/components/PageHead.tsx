@@ -68,6 +68,7 @@ export default function PageHead({
   ogLocale = 'en_US',
   ogImage,
   ogTitle,
+  socialTitle,
   ogSubtitle,
   posterPath,
   noindex = false,
@@ -84,6 +85,7 @@ export default function PageHead({
   ogLocale?: string
   ogImage?: string
   ogTitle?: string
+  socialTitle?: string
   ogSubtitle?: string
   posterPath?: string | null
   noindex?: boolean
@@ -93,6 +95,7 @@ export default function PageHead({
   children?: ReactNode
 }) {
   const pageTitle = titleSuffix ? `${title} | Galaxy Movies` : title
+  const previewTitle = socialTitle || pageTitle
   const image = ogImage || buildOgImageUrl({
     siteUrl: SITE_URL,
     title: ogTitle || title,
@@ -113,7 +116,7 @@ export default function PageHead({
       <meta property='og:type' content={ogType} />
       <meta property='og:site_name' content='Galaxy Movies' />
       <meta property='og:locale' content={ogLocale} />
-      <meta property='og:title' content={pageTitle} />
+      <meta property='og:title' content={previewTitle} />
       <meta property='og:description' content={description} />
       {canonicalUrl && <meta property='og:url' content={canonicalUrl} />}
       <meta property='og:image' content={image} />
@@ -121,7 +124,7 @@ export default function PageHead({
       <meta property='og:image:height' content='630' />
 
       <meta name='twitter:card' content='summary_large_image' />
-      <meta name='twitter:title' content={pageTitle} />
+      <meta name='twitter:title' content={previewTitle} />
       <meta name='twitter:description' content={description} />
       <meta name='twitter:image' content={image} />
 
