@@ -71,6 +71,7 @@ export default function PageHead({
   socialTitle,
   ogSubtitle,
   posterPath,
+  backdropPath,
   noindex = false,
   hreflang = true,
   structuredData,
@@ -88,6 +89,7 @@ export default function PageHead({
   socialTitle?: string
   ogSubtitle?: string
   posterPath?: string | null
+  backdropPath?: string | null
   noindex?: boolean
   hreflang?: boolean
   structuredData?: StructuredData | StructuredData[]
@@ -100,7 +102,8 @@ export default function PageHead({
     siteUrl: SITE_URL,
     title: ogTitle || title,
     subtitle: ogSubtitle || description,
-    posterPath: posterPath || null
+    posterPath: posterPath || null,
+    backdropPath: backdropPath || null
   })
   const schemas = (Array.isArray(structuredData) ? structuredData : [structuredData])
     .filter((data): data is Record<string, unknown> => Boolean(data))
