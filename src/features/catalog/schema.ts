@@ -30,20 +30,22 @@ export function buildOgImageUrl({
   title,
   subtitle,
   posterPath,
-  backdropPath
+  backdropPath,
+  hero = false
 }: {
   siteUrl: string
   title: string
   subtitle: string
   posterPath: string | null
   backdropPath?: string | null
+  hero?: boolean
 }): string {
   return `${siteUrl}/api/og?${new URLSearchParams({
     title,
     subtitle,
     ...(posterPath ? { poster: tmdbImage(posterPath)! } : {}),
     ...(backdropPath ? { backdrop: tmdbImage(backdropPath, 'original')! } : {}),
-    hero: '1'
+    ...(hero ? { hero: '1' } : {})
   }).toString()}`
 }
 
