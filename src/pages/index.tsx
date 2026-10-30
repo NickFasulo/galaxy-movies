@@ -323,6 +323,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         socialTitle='Discover Popular & New Films'
         ogSubtitle='Warp speed streaming discovery'
         backdropPath={featured?.backdrop_path || null}
+        ogHero
         structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
         <link rel='icon' href='/favicon.ico' />
