@@ -25,8 +25,7 @@ async function toJpegDataUri(url: string): Promise<string | null> {
   }
 }
 
-// Only TMDB image URLs are fetched server-side, so image query params cannot be used as an open proxy.
-const TMDB_BACKDROP_PATTERN = new RegExp('^https://image\\.tmdb\\.org/t/p/(w\\d+|original)/[\\w-]+\\.(jpg|jpeg|png|webp)$')
+// Only TMDB poster URLs are fetched server-side, so ?poster= can't be used for SSRF or as an open image proxy.
 const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -51,9 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const subtitle = (firstParam(req.query.subtitle) || 'Discover Popular & New Films').slice(0, 300)
   const posterParam = firstParam(req.query.poster)
   const poster = posterParam && TMDB_POSTER_PATTERN.test(posterParam) ? posterParam : null
-  const isHero = firstParam(req.query.hero) === '1'
-  const backdropParam = firstParam(req.query.backdrop)
-  const heroBackdrop = backdropParam && TMDB_BACKDROP_PATTERN.test(backdropParam) ? backdropParam : null
 
   const subtitleTrimmed =
     subtitle.length > 110 ? subtitle.slice(0, 107).trimEnd() + '…' : subtitle
@@ -72,8 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       poster ? toJpegDataUri(poster) : Promise.resolve(null),
     ])
   const backdropDataUri = `data:image/jpeg;base64,${backdropBuf.toString('base64')}`
-  const heroBackdropDataUri = heroBackdrop ? await toJpegDataUri(heroBackdrop) : null
-  const backgroundDataUri = isHero ? (heroBackdropDataUri || backdropDataUri) : backdropDataUri
 
   // OpenNext forces NEXT_RUNTIME="nodejs" at bundle time, so next/og always picks
   // the node entry — which readFileSync's Geist and runs WebAssembly.instantiate,
@@ -89,18 +83,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           width: '1200px',
           height: '630px',
           display: 'flex',
-          flexDirection: isHero ? 'column' : 'row',
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: isHero ? 'center' : 'space-between',
+          justifyContent: 'space-between',
           backgroundColor: '#0a0f14',
           position: 'relative',
           overflow: 'hidden',
-          padding: isHero ? '60px' : '60px 72px',
+          padding: '60px 72px',
         }}
       >
         {backdropDataUri && (
           <img
-            src={backgroundDataUri}
+            src={backdropDataUri}
             width={1200}
             height={630}
             style={{
@@ -110,8 +104,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               width: '1200px',
               height: '630px',
               objectFit: 'cover',
-              objectPosition: isHero ? 'center 25%' : 'center center',
-              opacity: isHero ? 1 : 0.22,
+              objectPosition: 'center center',
+              opacity: 0.22,
             }}
           />
         )}
@@ -120,16 +114,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           style={{
             position: 'absolute',
             inset: 0,
-            background: isHero
-              ? 'linear-gradient(to bottom, rgba(20,24,28,0.35) 0%, rgba(20,24,28,0.55) 55%, #14181c 100%), radial-gradient(ellipse 120% 100% at 50% 0%, transparent 40%, rgba(20,24,28,0.9) 100%)'
-              : 'radial-gradient(ellipse at 38% 50%, rgba(0,18,32,0.0) 0%, rgba(0,18,32,0.55) 60%, rgba(0,18,32,0.92) 100%)',
+            background:
+              'radial-gradient(ellipse at 38% 50%, rgba(0,18,32,0.0) 0%, rgba(0,18,32,0.55) 60%, rgba(0,18,32,0.92) 100%)',
           }}
         />
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: isHero ? 'none' : 'linear-gradient(to right, rgba(0,10,18,0.96) 0%, rgba(0,10,18,0.70) 55%, rgba(0,10,18,0.10) 100%)',
+            background:
+              'linear-gradient(to right, rgba(0,10,18,0.96) 0%, rgba(0,10,18,0.70) 55%, rgba(0,10,18,0.10) 100%)',
           }}
         />
 
@@ -138,23 +132,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: isHero ? 'center' : 'flex-start',
-            textAlign: isHero ? 'center' : 'left',
-            maxWidth: isHero ? '1050px' : (posterDataUri ? '720px' : '1050px'),
+            alignItems: 'flex-start',
+            maxWidth: posterDataUri ? '720px' : '1050px',
             zIndex: 10,
           }}
         >
-          {isHero ? (
-            <>
-              <div style={{ fontFamily: 'SpaceRangerLaserItalic', fontSize: '60px', color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1, textShadow: '0 0 14px rgba(125, 175, 255, 0.28)', display: 'flex', marginBottom: '24px' }}>
-                Galaxy Movies
-              </div>
-              <div style={{ fontSize: '16px', fontFamily: 'Inter', fontWeight: 400, color: 'rgba(220,230,245,0.92)', lineHeight: 1.4, letterSpacing: '0.28em', textTransform: 'uppercase', display: 'flex' }}>
-                Warp speed streaming discovery
-              </div>
-            </>
-          ) : (
-          <>
           <div
             style={{
               fontFamily: 'SpaceRangerLaserItalic',
@@ -208,11 +190,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           >
             {subtitleTrimmed}
           </div>
-          </>
-          )}
         </div>
 
-        {!isHero && posterDataUri && (
+        {posterDataUri && (
           <div
             style={{
               display: 'flex',
@@ -237,7 +217,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           </div>
         )}
 
-        {!isHero && <div
+        <div
           style={{
             position: 'absolute',
             bottom: 0,
@@ -247,7 +227,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             background:
               'linear-gradient(90deg, transparent 0%, rgba(80,140,255,0.6) 20%, rgba(140,190,255,1) 50%, rgba(80,140,255,0.6) 80%, transparent 100%)',
           }}
-        />}
+        />
       </div>
     ),
     {
