@@ -1,9 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Text } from '@chakra-ui/react'
 import type { AlertsCredentials } from '../alertsSync'
-import { getPushSubscription, pushSupport, subscribePush, unsubscribePush, type PushSupport } from '../push'
+import { getPushSubscription, isIOS, isStandalone, pushSupport, subscribePush, unsubscribePush, type PushSupport } from '../push'
 
 const linkStyle = { textDecoration: 'underline', cursor: 'pointer' } as const
+
+// iOS Safari delivers push only to installed PWAs — surfaced pre-signup too,
+// so visitors know the install path before they ever hold credentials.
+export function PushInstallHint() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    let live = true
+    void (async () => {
+      const iosInstall = isIOS() && !isStandalone()
+      if (live) setShow(iosInstall)
+    })()
+    return () => { live = false }
+  }, [])
+  if (!show) return null
+  return (
+    <Text color='gray.400' fontSize='sm' mt={3}>
+      On iPhone/iPad? Install via Share → &quot;Add to Home Screen&quot; — that unlocks push alerts on this device.
+    </Text>
+  )
+}
 
 // Per-device push toggle — subscriptions live server-side keyed by endpoint,
 // so this reflects whether THIS browser is registered, not other devices.

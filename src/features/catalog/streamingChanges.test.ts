@@ -8,8 +8,11 @@ import {
   getProviderChanges,
   getTitleChangeIndex,
   getTitleChanges,
+  mergeYearlyDiff,
   updateStreamingChanges,
-  type MonthlyChanges
+  yearlyFromMonthly,
+  type MonthlyChanges,
+  type YearlyChanges
 } from './streamingChanges'
 import { createFakeRedis } from '../../__tests__/helpers/mockApi'
 
@@ -102,6 +105,50 @@ describe('buildTitleIndex', () => {
     ])
     expect(index['movie:7']?.leaving).toEqual([{ p: 'netflix', date: '2026-10-20' }])
     expect(Object.keys(index)).toHaveLength(1)
+  })
+})
+
+describe('yearly rollup helpers', () => {
+  it('yearlyFromMonthly keeps arrivals/departures and drops forward-looking lists', () => {
+    const yearly = yearlyFromMonthly(monthly({
+      arrived: [{ tmdbId: 1, tmdbType: 'movie', title: 'A', date: '2026-10-05', season: null }],
+      coming: [{ tmdbId: 2, tmdbType: 'movie', title: 'B', date: '2026-10-30', season: null }],
+      departed: [{ tmdbId: 3, tmdbType: 'movie', title: 'C', year: 2010, date: '2026-10-12' }],
+      leavingSoon: [{ tmdbId: 4, tmdbType: 'movie', title: 'D', date: '2026-10-29', season: null }]
+    }))
+    expect(yearly.arrived.map((t) => t.tmdbId)).toEqual([1])
+    expect(yearly.departed.map((t) => t.tmdbId)).toEqual([3])
+    expect('coming' in yearly).toBe(false)
+    expect('leavingSoon' in yearly).toBe(false)
+  })
+
+  it('yearlyFromMonthly caps long lists at 150', () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ tmdbId: i, tmdbType: 'movie' as const, title: `T${i}`, date: today, season: null }))
+    expect(yearlyFromMonthly(monthly({ arrived: many })).arrived).toHaveLength(150)
+  })
+
+  it('mergeYearlyDiff applies arrive-then-depart semantics onto the stored entry', () => {
+    const existing: YearlyChanges = {
+      source: 'Netflix',
+      month: thisMonth,
+      updatedAt: 1,
+      arrived: [{ tmdbId: 1, tmdbType: 'movie', title: 'A', date: '2026-10-01', season: null }],
+      departed: [{ tmdbId: 2, tmdbType: 'movie', title: 'B', year: 2010, date: '2026-10-03' }]
+    }
+    const merged = mergeYearlyDiff(
+      existing,
+      'Netflix',
+      thisMonth,
+      [catalogTitle(2, 'B', 60), catalogTitle(3, 'C', 90)],
+      [catalogTitle(1, 'A', 80), catalogTitle(9, 'I', 40)],
+      today
+    )
+    // Title 2 returning clears its departure; title 1 leaving clears its arrival.
+    // Entries sort by popularity, not arrival order.
+    expect(merged.arrived.map((t) => t.tmdbId)).toEqual([3, 2])
+    expect(merged.departed.map((t) => t.tmdbId)).toEqual([1, 9])
+    expect(merged.arrived.find((t) => t.tmdbId === 3)?.date).toBe(today)
+    expect(merged.departed.find((t) => t.tmdbId === 1)?.date).toBe(today)
   })
 })
 
@@ -375,6 +422,10 @@ describe('updateStreamingChanges', () => {
     expect(monthlyStored.departed.map((t) => t.tmdbId)).toEqual([1])
     expect(monthlyStored.departed[0].date).toBe(today)
 
+    const yearStored = (fake.map.get(`changes:year:US:${today.slice(0, 4)}`) as Record<string, YearlyChanges>)[`netflix:${thisMonth}`]
+    expect(yearStored.arrived.map((t) => t.tmdbId)).toEqual([3])
+    expect(yearStored.departed.map((t) => t.tmdbId)).toEqual([1])
+
     const urls = mocks.pingIndexNow.mock.calls[0][0]
     expect(urls).toEqual(expect.arrayContaining([
       expect.stringContaining('/movies/3'),
@@ -519,6 +570,19 @@ describe('updateStreamingChanges', () => {
     expect(inDiff.coming).toEqual([]) // IN diffs never carry coming data
     expect(inDiff.added).toEqual([])  // no baseline -> seed only
     expect(fake.map.has('changes:catalog:IN:netflix')).toBe(true)
+  })
+
+  it('writes an IN year rollup from the namespaced diff', async () => {
+    fake.map.set('changes:catalog:IN:netflix', snapshot([catalogTitle(1)]))
+    mocks.fetchDiscoverMovies.mockImplementation(async (opts) => {
+      if (opts?.providerId === '8' && opts.region === 'IN') return { results: [tmdbMovie(2)], total_pages: 1 }
+      return { results: [], total_pages: 1 }
+    })
+    await updateStreamingChanges()
+
+    const year = (fake.map.get(`changes:year:IN:${today.slice(0, 4)}`) as Record<string, YearlyChanges>)[`netflix:${thisMonth}`]
+    expect(year.arrived.map((t) => t.tmdbId)).toEqual([2])
+    expect(year.departed.map((t) => t.tmdbId)).toEqual([1])
   })
 
   it('feeds trending titles into IndexNow and the warm set', async () => {

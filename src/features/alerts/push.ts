@@ -8,7 +8,7 @@ export type PushSupport =
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY || ''
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   if (typeof navigator === 'undefined') return false
   return /iP(hone|ad|od)/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)

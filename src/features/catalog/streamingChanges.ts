@@ -184,6 +184,68 @@ const catalogKey = (providerKey: string, region = 'US') =>
 const changesKey = (providerKey: string, region = 'US') =>
   region === 'US' ? `changes:diff:${providerKey}` : `changes:diff:${region}:${providerKey}`
 const monthlyKey = (providerKey: string, month: string) => `changes:monthly:${providerKey}:${month}`
+const yearHashKey = (region: 'US' | 'IN', year: string) => `changes:year:${region}:${year}`
+
+const YEAR_TTL_SECONDS = 60 * 60 * 24 * 400
+const YEAR_LIST_LIMIT = 150
+
+const byPopularity = <T extends { popularity?: number }>(a: T, b: T) => (b.popularity ?? 0) - (a.popularity ?? 0)
+
+// Monthly diffs expire after MONTHLY_TTL_SECONDS (~2 months) — the year hash
+// keeps a durable per-provider/month rollup so a recap can exist at all.
+export interface YearlyChanges {
+  source: string
+  month: string
+  updatedAt: number
+  arrived: ComingTitle[]
+  departed: DatedCatalogTitle[]
+}
+
+// coming/leavingSoon go stale within weeks — a recap only needs what moved.
+export function yearlyFromMonthly(monthly: MonthlyChanges): YearlyChanges {
+  return {
+    source: monthly.source,
+    month: monthly.month,
+    updatedAt: monthly.updatedAt,
+    arrived: monthly.arrived.slice(0, YEAR_LIST_LIMIT),
+    departed: monthly.departed.slice(0, YEAR_LIST_LIMIT)
+  }
+}
+
+// IN providers accumulate no monthly diff — their year entry merges each run's
+// diff directly, with the same arrive-then-depart semantics as the US monthly.
+export function mergeYearlyDiff(
+  existing: YearlyChanges | null,
+  source: string,
+  month: string,
+  added: CatalogTitle[],
+  left: CatalogTitle[],
+  today: string
+): YearlyChanges {
+  const arrived = new Map<number, ComingTitle>()
+  for (const t of existing?.arrived || []) arrived.set(t.tmdbId, t)
+  const departed = new Map<number, DatedCatalogTitle>()
+  for (const t of existing?.departed || []) if (t.tmdbId) departed.set(t.tmdbId, t)
+  for (const t of added) {
+    if (!t.tmdbId) continue
+    departed.delete(t.tmdbId)
+    if (!arrived.has(t.tmdbId)) {
+      arrived.set(t.tmdbId, { tmdbId: t.tmdbId, tmdbType: t.tmdbType, title: t.title, date: today, season: null, popularity: t.popularity })
+    }
+  }
+  for (const t of left) {
+    if (!t.tmdbId) continue
+    arrived.delete(t.tmdbId)
+    departed.set(t.tmdbId, { ...t, date: today })
+  }
+  return {
+    source,
+    month,
+    updatedAt: Date.now(),
+    arrived: [...arrived.values()].sort(byPopularity).slice(0, YEAR_LIST_LIMIT),
+    departed: [...departed.values()].sort(byPopularity).slice(0, YEAR_LIST_LIMIT)
+  }
+}
 
 async function fetchWatchmode<T>(path: string): Promise<T | null> {
   const apiKey = process.env.WATCHMODE_API_KEY
@@ -359,8 +421,7 @@ export async function updateStreamingChanges() {
     summary.error = 'No Watchmode sources resolved'
   }
   const monthliesForIndex: [string, MonthlyChanges][] = []
-
-  const byPopularity = <T extends { popularity?: number }>(a: T, b: T) => (b.popularity ?? 0) - (a.popularity ?? 0)
+  const yearlyUs: Record<string, YearlyChanges> = {}
 
   if (Object.keys(sourceMap).length > 0) {
     const [upcoming, leavingRaw] = await Promise.all([
@@ -394,7 +455,10 @@ export async function updateStreamingChanges() {
         // Keep the skipped provider's last monthly in the title index so its
         // entries don't vanish until it fetches successfully again.
         const stored = await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
-        if (stored) monthliesForIndex.push([key, stored])
+        if (stored) {
+          monthliesForIndex.push([key, stored])
+          yearlyUs[`${key}:${month}`] = yearlyFromMonthly(stored)
+        }
         continue
       }
       const [previous, prevChanges] = await Promise.all([
@@ -481,12 +545,22 @@ export async function updateStreamingChanges() {
       await kv.set(changesKey(key), payload)
       await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
       monthliesForIndex.push([key, monthly])
+      yearlyUs[`${key}:${month}`] = yearlyFromMonthly(monthly)
       pushTitleUrls([...payload.added, ...payload.coming, ...payload.left, ...leavingSoon])
       if (payload.added.length || payload.left.length || payload.coming.length || leavingSoon.length) {
         indexNowUrls.add(`${SITE_URL}/streaming/${key}`)
         indexNowUrls.add(`${SITE_URL}/leaving/${key}`)
       }
       summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
+    }
+
+    if (Object.keys(yearlyUs).length) {
+      try {
+        await kv.hset(yearHashKey('US', month.slice(0, 4)), yearlyUs)
+        await kv.expire(yearHashKey('US', month.slice(0, 4)), YEAR_TTL_SECONDS)
+      } catch (error) {
+        console.error('year rollup write failed:', error)
+      }
     }
   }
 
@@ -498,6 +572,11 @@ export async function updateStreamingChanges() {
       console.error('title index write failed:', error)
     }
   }
+
+  const inToday = new Date().toISOString().split('T')[0]
+  const inMonth = inToday.slice(0, 7)
+  const inYear = inToday.slice(0, 4)
+  const yearlyIn: Record<string, YearlyChanges> = {}
 
   for (const key of IN_TRACKED_PROVIDERS) {
     try {
@@ -523,10 +602,22 @@ export async function updateStreamingChanges() {
 
       await kv.set(catalogKey(key, 'IN'), { titles: catalog, updatedAt: Date.now(), src: 'tmdb' })
       await kv.set(changesKey(key, 'IN'), payload)
+      const yearField = `${key}:${inMonth}`
+      const priorYear = await kv.hget<YearlyChanges>(yearHashKey('IN', inYear), yearField).catch(() => null)
+      yearlyIn[yearField] = mergeYearlyDiff(priorYear, payload.source, inMonth, added, left, inToday)
       pushTitleUrls([...payload.added, ...payload.left])
       summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: catalog.length }
     } catch (error) {
       console.error(`in catalog update failed for ${key}:`, error)
+    }
+  }
+
+  if (Object.keys(yearlyIn).length) {
+    try {
+      await kv.hset(yearHashKey('IN', inYear), yearlyIn)
+      await kv.expire(yearHashKey('IN', inYear), YEAR_TTL_SECONDS)
+    } catch (error) {
+      console.error('IN year rollup write failed:', error)
     }
   }
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import type { InferGetStaticPropsType } from 'next'
 import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import MovieGrid from '../features/catalog/components/MovieGrid'
 import MovieCard from '../features/catalog/components/MovieCard'
@@ -10,14 +11,35 @@ import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import PlusTools from '../features/alerts/components/PlusTools'
-import PushAlerts from '../features/alerts/components/PushAlerts'
+import PushAlerts, { PushInstallHint } from '../features/alerts/components/PushAlerts'
 import { useUserData } from '../features/alerts/hooks/useUserData'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
+import { fetchTmdb } from '../features/catalog/tmdb'
 import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../lib/userData'
 import { firstParam } from '../lib/http'
-import type { MediaType, TitleSummary } from '../types/tmdb'
+import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
 
-export default function Watchlist() {
+type TrendingItem = TitleSummary & { media_type?: string }
+
+// Build-time trending rail for the empty state — degrades to no rail on a
+// keyless build (same fallback contract as other SSG pages).
+export async function getStaticProps(): Promise<{ props: { trending: TitleSummary[] }; revalidate: number }> {
+  try {
+    const data = await fetchTmdb<TmdbPaged<TrendingItem>>('/trending/all/week', { page: 1 })
+    const trending = (data?.results || [])
+      .filter((item) => item?.poster_path && (item.media_type === 'movie' || item.media_type === 'tv'))
+      .map((item) => item.media_type === 'tv'
+        ? { ...item, title: item.name, release_date: item.first_air_date, mediaType: 'tv' as const }
+        : { ...item, mediaType: 'movie' as const })
+      .slice(0, 20)
+    return { props: { trending }, revalidate: 21600 }
+  } catch (error) {
+    console.error(error)
+    return { props: { trending: [] }, revalidate: 3600 }
+  }
+}
+
+export default function Watchlist({ trending }: InferGetStaticPropsType<typeof getStaticProps>) {
   const data = useUserData()
   const { watchlist } = data
   const { loading: plusLoading, creds, plus, features, refresh } = usePlusStatus()
@@ -121,13 +143,36 @@ export default function Watchlist() {
         </Box>
 
         {watchlist.length === 0 ? (
-          <Text mt={10} color='gray.400' textAlign='center'>
-            Nothing saved yet.{' '}
-            <Link href='/' style={{ textDecoration: 'underline' }}>
-              Find something to watch
-            </Link>{' '}
-            and hit the bookmark to save it here.
-          </Text>
+          <>
+            <Text mt={10} color='gray.400' textAlign='center'>
+              Nothing saved yet.{' '}
+              <Link href='/' style={{ textDecoration: 'underline' }}>
+                Find something to watch
+              </Link>{' '}
+              and hit the bookmark to save it here.
+            </Text>
+            {trending.length > 0 && (
+              <Box as='section' mt={8}>
+                <Heading as='h2' size='md' mb={2}>Start here</Heading>
+                <Text color='gray.400' fontSize='sm' mb={4}>
+                  Trending this week — tap the bookmark to save one.
+                </Text>
+                <ScrollRail
+                  gap={4}
+                  pb={2}
+                  mx='-1.5rem'
+                  px='1.5rem'
+                  css={{ scrollSnapType: 'x proximity' }}
+                >
+                  {trending.map((movie) => (
+                    <Box key={`${movie.mediaType || 'movie'}:${movie.id}`} w={{ base: '8.5rem', md: '10.5rem' }} flexShrink={0} scrollSnapAlign='start'>
+                      <MovieCard movie={movie} posterFallback='/poster_fallback_galaxy.webp' />
+                    </Box>
+                  ))}
+                </ScrollRail>
+              </Box>
+            )}
+          </>
         ) : (
           <MovieGrid movies={watchlist} />
         )}
@@ -201,7 +246,7 @@ export default function Watchlist() {
                 </Text>
               </>
             )}
-            {creds && <PushAlerts creds={creds} />}
+            {creds ? <PushAlerts creds={creds} /> : <PushInstallHint />}
           </Box>
         )}
       </PageShell>
