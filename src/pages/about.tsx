@@ -19,6 +19,10 @@ export default function About() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://www.shipnlaunch.com/badges/featured-dark.svg" alt="Featured on ShipNLaunch" width="240" height="56" />
         </a>
+        <a href="https://openhunts.com" target="_blank" title="OpenHunts Club">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="OpenHunts Club Member" src="https://cdn.openhunts.com/badges/club.webp" width="195" height="auto" />
+        </a>
       </Flex>
     </InfoPage>
   )
