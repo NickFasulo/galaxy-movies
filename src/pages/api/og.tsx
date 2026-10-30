@@ -26,7 +26,7 @@ async function toJpegDataUri(url: string): Promise<string | null> {
 }
 
 // Only TMDB image URLs are fetched server-side, so image query params cannot be used as an open proxy.
-const TMDB_BACKDROP_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
+const TMDB_BACKDROP_PATTERN = new RegExp('^https://image\\.tmdb\\.org/t/p/(w\\d+|original)/[\\w-]+\\.(jpg|jpeg|png|webp)$')
 const TMDB_POSTER_PATTERN = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d+|original)\/[\w-]+\.(jpg|jpeg|png|webp)$/
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
