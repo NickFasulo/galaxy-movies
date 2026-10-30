@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { Badge, Box, Button, Flex, Heading, Input, SimpleGrid, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import {
   LuArrowLeftRight,
   LuBell,
@@ -16,6 +16,7 @@ import {
   LuSparkles,
   LuTv
 } from 'react-icons/lu'
+import DarkInput from '../components/DarkInput'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import Backdrop, { BACKDROP_OVERLAYS } from '../components/Backdrop'
@@ -302,17 +303,13 @@ function RecoverAccess() {
     <Box mt={3}>
       <Flex gap={2} direction={{ base: 'column', md: 'row' }} asChild>
         <form onSubmit={submit}>
-          <Input
+          <DarkInput
             type='email'
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder='you@example.com'
             size='sm'
-            fontSize={{ base: '16px', md: 'sm' }}
-            bg='blackAlpha.400'
-            borderColor='border.subtle'
-            color='white'
             _placeholder={{ color: 'gray.500' }}
           />
           <Button type='submit' size='sm' colorPalette='blue' loading={state === 'sending'} flexShrink={0}>

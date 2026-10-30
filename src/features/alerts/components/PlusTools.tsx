@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Badge, Box, Button, Flex, Input, Text } from '@chakra-ui/react'
+import { Badge, Box, Button, Flex, Text } from '@chakra-ui/react'
+import DarkInput from '../../../components/DarkInput'
 import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../alertsSync'
 import { letterboxdCsvs } from '../../../lib/format/exportCsv'
 import { parseLetterboxdCsv, type LetterboxdItem } from '../../../lib/format/importLetterboxd'
@@ -273,13 +274,11 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
 
       <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Calendar feed</Text>
       <Flex gap={2}>
-        <Input
+        <DarkInput
           readOnly
           value={calendarUrl}
           size='xs'
           fontSize={{ base: '16px', md: 'xs' }}
-          bg='blackAlpha.400'
-          borderColor='border.subtle'
           color='gray.300'
           onFocus={(e) => e.target.select()}
         />
@@ -292,15 +291,12 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
 
       <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Discord alerts</Text>
       <Flex gap={2}>
-        <Input
+        <DarkInput
           value={webhook}
           onChange={(e) => setWebhook(e.target.value)}
           placeholder='https://discord.com/api/webhooks/…'
           size='xs'
           fontSize={{ base: '16px', md: 'xs' }}
-          bg='blackAlpha.400'
-          borderColor='border.subtle'
-          color='white'
           _placeholder={{ color: 'gray.500' }}
         />
         <Button size='xs' colorPalette='yellow' loading={busy} onClick={saveWebhook} flexShrink={0}>
@@ -327,13 +323,11 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Share your list</Text>
       {shareUrl ? (
         <Flex gap={2} align='center'>
-          <Input
+          <DarkInput
             readOnly
             value={shareUrl}
             size='xs'
             fontSize={{ base: '16px', md: 'xs' }}
-            bg='blackAlpha.400'
-            borderColor='border.subtle'
             color='gray.300'
             onFocus={(e) => e.target.select()}
           />

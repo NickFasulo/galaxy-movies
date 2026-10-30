@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Link, Text } from '@chakra-ui/react'
+import DarkInput from '../../../components/DarkInput'
+import Panel from '../../../components/Panel'
 import { streamingProviders } from '../tmdb'
 import { shortDate } from '../../../lib/format/formatters'
 import type { MediaType } from '../../../types/tmdb'
@@ -32,10 +34,7 @@ export default function TitleAvailability({ events, tmdbId, tmdbType, title }: P
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
-      <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
-        Catalog changes
-      </Text>
+    <Panel title='Catalog changes'>
       {rows.map((row, i) => (
         <Text key={i} fontSize='sm' color='gray.300' mb={i === rows.length - 1 ? 3 : 1}>
           <Link href={row.href} color='gray.300' textDecoration='underline' _hover={{ color: 'white' }}>
@@ -44,7 +43,7 @@ export default function TitleAvailability({ events, tmdbId, tmdbType, title }: P
         </Text>
       ))}
       <TitleAlertForm tmdbId={tmdbId} tmdbType={tmdbType} title={title} hasEvents={rows.length > 0} />
-    </Box>
+    </Panel>
   )
 }
 
@@ -103,18 +102,13 @@ export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescrip
           : 'Not streaming anywhere we track? Leave your email and we\u2019ll tell you the day it lands. No newsletter, just this title.'}
       </Text>}
       <Flex gap={2} direction='column' asChild><form onSubmit={submit}>
-          <Input
+          <DarkInput
             type='email'
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder='you@example.com'
             size='sm'
-            // iOS Safari auto-zooms inputs under 16px on focus
-            fontSize={{ base: '16px', md: 'sm' }}
-            bg='blackAlpha.400'
-            borderColor='border.subtle'
-            color='white'
             _placeholder={{ color: 'gray.400' }}
           />
           <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}

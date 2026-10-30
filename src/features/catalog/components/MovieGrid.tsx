@@ -1,13 +1,14 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { Badge, Box, SimpleGrid } from '@chakra-ui/react'
+import { Box, SimpleGrid } from '@chakra-ui/react'
+import CardBadge from './CardBadge'
 import MovieCard from './MovieCard'
 import { useStreamingBadges } from '../hooks/useStreamingBadges'
 import type { TitleSummary } from '../../../types/tmdb'
 
 const nowStreamingBadge = (
-  <Badge colorPalette='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
+  <CardBadge colorPalette='green'>
     Now streaming
-  </Badge>
+  </CardBadge>
 )
 
 type MovieGridProps = {

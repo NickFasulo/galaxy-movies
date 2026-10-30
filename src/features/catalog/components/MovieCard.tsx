@@ -2,7 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, memo, type ReactNode } from 'react'
 import { ChakraBox } from '../../../components/ChakraBox'
-import { Box, Badge, Skeleton, Text } from '@chakra-ui/react'
+import { Box, Skeleton, Text } from '@chakra-ui/react'
+import CardBadge from './CardBadge'
 import WatchlistButton from '../../alerts/components/WatchlistButton'
 import type { TitleSummary } from '../../../types/tmdb'
 
@@ -70,19 +71,15 @@ function MovieCard({ movie, priority = false, badge = null, posterFallback }: { 
           </Box>
         </Link>
         {isTv && (
-          <Badge
+          <CardBadge
             position='absolute'
             top={2}
             left={2}
             zIndex={2}
             colorPalette='purple'
-            fontSize='2xs'
-            px={1.5}
-            py={0.5}
-            borderRadius='md'
           >
             TV
-          </Badge>
+          </CardBadge>
         )}
         <Box position='absolute' top={2} right={2} zIndex={2}>
           <WatchlistButton movie={movie} size='xs' />

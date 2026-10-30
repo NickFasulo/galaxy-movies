@@ -4,7 +4,6 @@ import {
   Box,
   IconButton,
   Flex,
-  Input,
   Text,
   VStack,
   Button,
@@ -14,6 +13,7 @@ import {
   HStack,
   Presence
 } from '@chakra-ui/react'
+import DarkInput from '../../../components/DarkInput'
 import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../../../lib/userData'
 import { getAlertsCredentials } from '../../alerts/alertsSync'
@@ -599,7 +599,7 @@ export default function ChatWidget() {
             </Box>
 
             <Flex p="3" bg='surface.raised' borderTop="1px solid var(--chakra-colors-border-subtle)">
-              <Input
+              <DarkInput
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -607,10 +607,7 @@ export default function ChatWidget() {
                 mr="2"
                 disabled={isLoading}
                 size="sm"
-                fontSize={{ base: '16px', md: 'sm' }}
                 bg='surface.canvas'
-                color="white"
-                borderColor='border.subtle'
                 _placeholder={{ color: 'gray.400' }}
               />
               <Button

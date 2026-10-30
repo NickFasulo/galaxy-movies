@@ -1,8 +1,8 @@
 import type { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, Heading, Text } from '@chakra-ui/react'
+import CardBadge from '../../features/catalog/components/CardBadge'
 import MovieGrid from '../../features/catalog/components/MovieGrid'
-import MovieCard from '../../features/catalog/components/MovieCard'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
 import { getRedis, SHARE_LOOKUP_KEY, ALERTS_PREFS_KEY } from '../../features/alerts/waitlistStore'
@@ -61,6 +61,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params }) 
 }
 
 export default function SharedList({ watchlist, ratings }: Props) {
+  const ratingByKey = new Map(ratings.map((r) => [`${r.movie.mediaType || 'movie'}:${r.movie.id}`, r.rating]))
   return (
     <>
       <PageHead
@@ -85,24 +86,14 @@ export default function SharedList({ watchlist, ratings }: Props) {
             {ratings.length > 0 && (
               <Box as='section' mt={8}>
                 <Heading as='h2' size='md' mb={2}>Ratings</Heading>
-                <SimpleGrid
-                  my={{ base: '2rem', md: '3rem' }}
-                  gap={{ base: 8, md: 10 }}
-                  gridTemplateColumns={{ base: 'repeat(auto-fill, minmax(45%, 1fr))', md: 'repeat(auto-fill, minmax(12rem, 1fr))' }}
-                >
-                  {ratings.map(({ rating, movie }) => (
-                    <MovieCard
-                      key={`${movie.mediaType || 'movie'}:${movie.id}`}
-                      movie={movie}
-                      posterFallback='/poster_fallback_galaxy.webp'
-                      badge={
-                        <Badge colorPalette='yellow' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
-                          ★ {rating}/10
-                        </Badge>
-                      }
-                    />
-                  ))}
-                </SimpleGrid>
+                <MovieGrid
+                  movies={ratings.map((r) => r.movie)}
+                  posterFallback='/poster_fallback_galaxy.webp'
+                  badgeFor={(movie) => {
+                    const rating = ratingByKey.get(`${movie.mediaType || 'movie'}:${movie.id}`)
+                    return rating != null ? <CardBadge colorPalette='yellow'>★ {rating}/10</CardBadge> : null
+                  }}
+                />
               </Box>
             )}
           </>

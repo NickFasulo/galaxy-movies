@@ -1,4 +1,5 @@
-import { Box, Button, Checkbox, Flex, SimpleGrid, Text } from '@chakra-ui/react'
+import { Button, Checkbox, Flex, SimpleGrid, Text } from '@chakra-ui/react'
+import Panel from '../../../components/Panel'
 import { useUserData } from '../hooks/useUserData'
 import { setServices } from '../../../lib/userData'
 import { streamingProviders, isProviderAvailableInRegion } from '../../catalog/tmdb'
@@ -29,7 +30,7 @@ export default function ServicesPicker() {
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
+    <Panel>
       <Flex align='center' justify='space-between' wrap='wrap' gap={3}>
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>
           My streaming services
@@ -64,6 +65,6 @@ export default function ServicesPicker() {
           </Checkbox.Label></Checkbox.Root>
         ))}
       </SimpleGrid>
-    </Box>
+    </Panel>
   );
 }

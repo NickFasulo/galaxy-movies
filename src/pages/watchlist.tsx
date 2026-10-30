@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import type { InferGetStaticPropsType } from 'next'
-import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, Heading, Text } from '@chakra-ui/react'
+import CardBadge from '../features/catalog/components/CardBadge'
 import MovieGrid from '../features/catalog/components/MovieGrid'
-import MovieCard from '../features/catalog/components/MovieCard'
 import CardRail from '../features/catalog/components/CardRail'
+import Panel from '../components/Panel'
 import ServicesPicker from '../features/alerts/components/ServicesPicker'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import PageHead from '../components/PageHead'
@@ -126,6 +127,9 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
         } as TitleSummary
       })), [data.ratings])
 
+  const ratingByKey = useMemo(() =>
+    new Map(rated.map(({ entry, movie }) => [`${movie.mediaType || 'movie'}:${movie.id}`, entry.rating])), [rated])
+
   return (
     <>
       <PageHead
@@ -176,24 +180,14 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
             <Text color='gray.400' fontSize='sm'>
               Ratings shape Galaxy Bot&apos;s picks: the more you rate, the sharper they get.
             </Text>
-            <SimpleGrid
-              my={{ base: '2rem', md: '3rem' }}
-              gap={{ base: 8, md: 10 }}
-              gridTemplateColumns={{ base: 'repeat(auto-fill, minmax(45%, 1fr))', md: 'repeat(auto-fill, minmax(12rem, 1fr))' }}
-            >
-              {rated.map(({ entry, movie }) => (
-                <MovieCard
-                  key={`${movie.mediaType || 'movie'}:${movie.id}`}
-                  movie={movie}
-                  posterFallback='/poster_fallback_galaxy.webp'
-                  badge={
-                    <Badge colorPalette='yellow' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
-                      ★ {entry.rating}/10
-                    </Badge>
-                  }
-                />
-              ))}
-            </SimpleGrid>
+            <MovieGrid
+              movies={rated.map((r) => r.movie)}
+              posterFallback='/poster_fallback_galaxy.webp'
+              badgeFor={(movie) => {
+                const rating = ratingByKey.get(`${movie.mediaType || 'movie'}:${movie.id}`)
+                return rating != null ? <CardBadge colorPalette='yellow'>★ {rating}/10</CardBadge> : null
+              }}
+            />
           </Box>
         )}
 
@@ -217,7 +211,7 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
         </Box>
 
         {!plusLoading && (
-          <Box mt={6} maxW='36rem' bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
+          <Panel mt={6} maxW='36rem'>
             {plus && creds ? (
               <PlusTools creds={creds} features={features} refresh={refresh} traktStatus={traktStatus} />
             ) : (
@@ -233,7 +227,7 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
               </>
             )}
             {creds ? <PushAlerts creds={creds} /> : <PushInstallHint />}
-          </Box>
+          </Panel>
         )}
       </PageShell>
     </>

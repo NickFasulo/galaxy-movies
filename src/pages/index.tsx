@@ -1,7 +1,8 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
-import { Badge, Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
+import CardBadge from '../features/catalog/components/CardBadge'
 import SearchBar from '../components/SearchBar'
 import { InfiniteTitleGrid, usePaginatedFeed, type FeedPage } from '../features/catalog/components/PaginatedGrid'
 import Wordmark from '../components/Wordmark'
@@ -34,9 +35,9 @@ interface Props {
 }
 
 const nowStreamingBadge = (
-  <Badge colorPalette='green' fontSize='2xs' px={1.5} py={0.5} borderRadius='md'>
+  <CardBadge colorPalette='green'>
     Now streaming
-  </Badge>
+  </CardBadge>
 )
 
 // Feed values that route to non-movie TMDB media via the `media` query param.

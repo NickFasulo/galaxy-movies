@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Box, Button, Flex, Input, Text } from '@chakra-ui/react'
+import { Button, Flex, Text } from '@chakra-ui/react'
+import DarkInput from '../../../components/DarkInput'
+import Panel from '../../../components/Panel'
 import { setAlertsCredentials } from '../alertsSync'
 import { trackEvent } from '../../../lib/umami'
 
@@ -39,10 +41,7 @@ export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purp
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
-      <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase' mb={1}>
-        {login ? 'Confirm your email' : 'Streaming alerts'}
-      </Text>
+    <Panel title={login ? 'Confirm your email' : 'Streaming alerts'}>
       {status === 'done' || status === 'pending' ? (
         <Text color='green.300' fontSize='sm'>
           {status === 'pending'
@@ -61,18 +60,13 @@ export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purp
               : 'Leave your email and we\u2019ll alert you the moment a saved movie or show lands on one of your streaming services. Confirming also syncs your list and ratings across devices.'}
           </Text>
           <Flex gap={2} direction={{ base: 'column', md: 'row' }} asChild><form onSubmit={submit}>
-              <Input
+              <DarkInput
                 type='email'
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder='you@example.com'
                 size='sm'
-                // iOS Safari auto-zooms inputs under 16px on focus
-                fontSize={{ base: '16px', md: 'sm' }}
-                bg='blackAlpha.400'
-                borderColor='border.subtle'
-                color='white'
                 _placeholder={{ color: 'gray.500' }}
               />
               <Button type='submit' size='sm' colorPalette='blue' loading={status === 'submitting'} flexShrink={0}>
@@ -82,6 +76,6 @@ export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purp
           {error && <Text color='red.300' fontSize='xs' mt={2}>{error}</Text>}
         </>
       )}
-    </Box>
+    </Panel>
   );
 }

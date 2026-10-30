@@ -1,10 +1,8 @@
-import { SITE_URL } from '../../lib/site'
+import { SITE_URL, titlePath } from '../../lib/site'
 import { shortDate } from '../../lib/format/formatters'
 import type { MatchedItem } from './watchlistAlerts'
 
 const prettyDate = shortDate
-
-const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
 
 // Legacy Markdown (not MarkdownV2) — only these four characters need escaping.
 const escapeMd = (s: string) => s.replace(/([_*[`])/g, '\\$1')
@@ -26,7 +24,7 @@ function statusLine(item: MatchedItem): string {
 
 export function buildTelegramText(items: MatchedItem[]): string {
   const rows = items
-    .map((item) => `• [${escapeMd(item.title)}](${SITE_URL}${titlePath(item)}) - ${escapeMd(statusLine(item))}`)
+    .map((item) => `• [${escapeMd(item.title)}](${SITE_URL}${titlePath(item.tmdbType, item.tmdbId)}) - ${escapeMd(statusLine(item))}`)
     .join('\n')
   return `*Something on your list just moved*\n\n${rows}`.slice(0, 4000)
 }

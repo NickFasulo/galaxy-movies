@@ -2,6 +2,7 @@ import Image from 'next/image'
 import NextLink from 'next/link'
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
+import Panel from '../../../components/Panel'
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink, tagAmazonUrl } from '../../monetize/affiliates'
 import { providerKeyForId, streamingProviders, isProviderAvailableInRegion } from '../tmdb'
@@ -197,7 +198,7 @@ export default function WatchProviders({
 
   return (
     <>
-      <Box p={4} bg='blackAlpha.500' borderRadius='lg' border='1px solid var(--chakra-colors-border-subtle)' backdropFilter='blur(10px)'>
+      <Panel backdropFilter='blur(10px)'>
         <Flex align='center' justify='space-between' mb={2} gap={2}>
           <Text color='gray.100' fontWeight='semibold' fontSize='xs' letterSpacing='0.08em' textTransform='uppercase' flexShrink={0}>
             Where to Watch
@@ -315,7 +316,7 @@ export default function WatchProviders({
             {hasProviders && <VpnLink />}
           </Flex>
         )}
-      </Box>
+      </Panel>
     </>
   );
 }

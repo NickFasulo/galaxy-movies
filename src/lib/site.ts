@@ -1,4 +1,10 @@
+import type { MediaType } from '../types/tmdb'
+
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.galaxymovies.app'
+
+export function titlePath(tmdbType: MediaType, tmdbId: number): string {
+  return `/${tmdbType === 'tv' ? 'tv' : 'movies'}/${tmdbId}`
+}
 
 export interface SocialProfile {
   name: string

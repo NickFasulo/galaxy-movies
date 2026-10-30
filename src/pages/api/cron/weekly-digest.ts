@@ -7,7 +7,7 @@ import { isPlusActive, parseBillingRecord, plusLink } from '../../../features/bi
 import { isCronAuthorized } from '../../../lib/auth'
 import { shortDate } from '../../../lib/format/formatters'
 import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
-import { SITE_URL } from '../../../lib/site'
+import { SITE_URL, titlePath } from '../../../lib/site'
 
 export const config = { maxDuration: 60 }
 
@@ -22,7 +22,7 @@ interface DigestItems {
 
 const prettyDate = shortDate
 
-const titlePath = (t: DigestItem) => `/${t.tmdbType === 'tv' ? 'tv' : 'movies'}/${t.tmdbId}`
+const itemPath = (t: DigestItem) => titlePath(t.tmdbType, t.tmdbId ?? 0)
 
 function gatherItems(changes: Record<string, ProviderChanges>): DigestItems {
   const seen = new Set<string>()
@@ -49,7 +49,7 @@ function itemList(items: DigestItem[], showDate: boolean) {
   return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #1f2937;">${items
     .map(
       (t) =>
-        `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(t)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
+        `<li style="margin: 8px 0;"><a href="${SITE_URL}${itemPath(t)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
         `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
     )
     .join('')}</ul>`

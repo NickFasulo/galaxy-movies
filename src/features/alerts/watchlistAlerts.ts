@@ -9,7 +9,7 @@ import { isPlusActive, parseBillingRecord, plusLink } from '../billing/billing'
 import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from '../catalog/tmdb'
 import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { shortDate } from '../../lib/format/formatters'
-import { SITE_URL } from '../../lib/site'
+import { SITE_URL, titlePath } from '../../lib/site'
 import type { MediaType, TmdbTvDetails } from '../../types/tmdb'
 
 const TRACKED_PROVIDERS = ['netflix', 'amazon-prime-video', 'hulu', 'disney-plus', 'apple-tv', 'max']
@@ -189,8 +189,6 @@ export function matchItems(prefs: AlertPrefs, changes: Record<string, ProviderCh
 
 const prettyDate = shortDate
 
-const titlePath = (item: MatchedItem) => `/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`
-
 const episodeLine = (item: MatchedItem) =>
   `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
 
@@ -213,7 +211,7 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
-      `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(item)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
+      `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(item.tmdbType, item.tmdbId)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
       `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${statusLine(item)}</div></li>`
     )
     .join('')
@@ -250,7 +248,7 @@ function discordStatusLine(item: MatchedItem): string {
 
 export function buildDiscordMessage(items: MatchedItem[]) {
   const description = items
-    .map((item) => `• [${item.title}](${SITE_URL}${titlePath(item)}) - ${discordStatusLine(item)}`)
+    .map((item) => `• [${item.title}](${SITE_URL}${titlePath(item.tmdbType, item.tmdbId)}) - ${discordStatusLine(item)}`)
     .join('\n')
     .slice(0, 4000)
   return {

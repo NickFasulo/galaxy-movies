@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import NextLink from 'next/link'
-import { Badge, Box, Button, Flex, Link, Text } from '@chakra-ui/react'
+import { Badge, Button, Flex, Link, Text } from '@chakra-ui/react'
+import Panel from '../../../components/Panel'
 import { usePlusStatus } from '../hooks/usePlus'
 import type { AlertsCredentials } from '../../alerts/alertsSync'
 
@@ -42,7 +43,7 @@ export default function PlusUpsell() {
   }
 
   return (
-    <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
+    <Panel>
       <Flex align='center' gap={2} mb={1}>
         <Badge colorPalette='yellow'>Plus</Badge>
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>Galaxy Plus</Text>
@@ -70,6 +71,6 @@ export default function PlusUpsell() {
           <NextLink href='/plus'>See Plus</NextLink>
         </Button>
       )}
-    </Box>
+    </Panel>
   )
 }
