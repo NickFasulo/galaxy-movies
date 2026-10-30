@@ -321,9 +321,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         canonicalUrl={SITE_URL}
         ogTitle='Galaxy Movies'
         socialTitle='Discover Popular & New Films'
-        ogSubtitle='Warp speed streaming discovery'
-        backdropPath={featured?.backdrop_path || null}
-        ogHero
+        ogSubtitle='Discover Popular & New Films'
         structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
         <link rel='icon' href='/favicon.ico' />
