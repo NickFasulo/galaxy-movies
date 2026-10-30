@@ -1,7 +1,7 @@
 import type { GetServerSidePropsContext } from 'next'
-import type { TmdbMovieDetails, TmdbTvDetails, TmdbMovie, TmdbTvShow, TmdbPaged, Credits, AggregateCredits } from '../types/tmdb'
+import type { TmdbMovie, TmdbTvShow, TmdbPaged } from '../types/tmdb'
 import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../features/catalog/tmdb'
-import { getTitleChangeIndex } from '../features/catalog/streamingChanges'
+import { getMonthlyChanges, getTitleChangeIndex } from '../features/catalog/streamingChanges'
 import { DEFAULT_REGION } from '../lib/region'
 import { curatedLists } from '../features/catalog/curatedLists'
 import { getGeneratedLists } from '../features/catalog/generatedLists'
@@ -39,8 +39,6 @@ function urlEntry(loc: string, lastmod?: string | null) {
 }
 
 const PAGES_PER_LIST = 2
-const CREDITS_SAMPLE_SIZE = 60
-const TV_CREDITS_SAMPLE_SIZE = 30
 
 // TMDB allows ~50 req/s — one unbounded Promise.all over ~75 discovers could
 // 429, rejecting the whole block and silently emitting a sitemap with no
@@ -55,7 +53,11 @@ async function runBatched<R>(tasks: (() => Promise<R>)[], size = 10): Promise<R[
 
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
-  const [generatedLists, titleChangeIndex] = await Promise.all([getGeneratedLists(), getTitleChangeIndex()])
+  const [generatedLists, titleChangeIndex, monthlyChanges] = await Promise.all([
+    getGeneratedLists(),
+    getTitleChangeIndex(),
+    getMonthlyChanges(Object.keys(PROVIDER_NAME_MATCH))
+  ])
 
   // Provider-diff events are real page-content changes ("leaves Netflix Oct 20")
   // and often postdate release_date — the newest wins as lastmod.
@@ -70,6 +72,15 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     return latest
   }
   const newest = (...dates: (string | null)[]) => dates.filter(Boolean).sort().pop() || null
+
+  // The provider-diff pages get their real content-change date as lastmod —
+  // it's the signal that moves these URLs up the crawl queue (they otherwise
+  // sit at "Discovered - currently not indexed" behind the detail-page flood).
+  const diffLastmod = (provider: string): string | null => {
+    const updatedAt = monthlyChanges[provider]?.updatedAt
+    return updatedAt ? formatDate(new Date(updatedAt).toISOString()) : null
+  }
+  const anyProviderLastmod = newest(...Object.keys(PROVIDER_NAME_MATCH).map(diffLastmod))
 
   // lastmod is only emitted where a real change date exists — emitting
   // "today" everywhere taught Google the field was meaningless.
@@ -86,13 +97,13 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/anime`),
     urlEntry(`${siteUrl}/streaming-in-india`),
     urlEntry(`${siteUrl}/justwatch-alternative`),
-    urlEntry(`${siteUrl}/new-on-streaming`),
-    urlEntry(`${siteUrl}/leaving`),
-    urlEntry(`${siteUrl}/this-month`),
+    urlEntry(`${siteUrl}/new-on-streaming`, anyProviderLastmod),
+    urlEntry(`${siteUrl}/leaving`, anyProviderLastmod),
+    urlEntry(`${siteUrl}/this-month`, anyProviderLastmod),
     urlEntry(`${siteUrl}/widgets`),
-    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`)),
-    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/this-month/${provider}`)),
-    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/new-on-streaming/${provider}`)),
+    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`, diffLastmod(provider))),
+    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/this-month/${provider}`, diffLastmod(provider))),
+    ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/new-on-streaming/${provider}`, diffLastmod(provider))),
     urlEntry(`${siteUrl}/free`),
     urlEntry(`${siteUrl}/collections`),
     urlEntry(`${siteUrl}/lists`),
@@ -147,9 +158,6 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 
   const movieEntries = new Map<number, string>()
   const showEntries = new Map<number, string>()
-  const personIds = new Set<number>()
-  const companyIds = new Set<number>()
-  const networkIds = new Set<number>()
 
   try {
     const pageRange = Array.from({ length: PAGES_PER_LIST }, (_, i) => i + 1)
@@ -236,57 +244,6 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
         showEntries.set(show.id, lastmod)
       }
     }
-
-    const creditsSampleMovies = Array.from(movieEntries.keys())
-      .slice(0, CREDITS_SAMPLE_SIZE)
-      .map(id => allMovies.find(movie => movie.id === id))
-      .filter((movie): movie is (typeof allMovies)[number] => Boolean(movie))
-    const detailResults = await runBatched(
-      creditsSampleMovies.map(movie => () =>
-        fetchTmdb<TmdbMovieDetails & { credits?: Credits }>(`/movie/${movie.id}`, { append_to_response: 'credits' })
-          .catch((): null => null)
-      )
-    )
-
-    const KEY_CREW_JOBS = new Set(['Director', 'Writer', 'Screenplay', 'Story', 'Producer'])
-
-    for (const result of detailResults) {
-      if (!result) continue
-      const { credits, production_companies = [] } = result
-      const { cast = [], crew = [] } = credits || {}
-      const keyCrew = crew.filter(person => KEY_CREW_JOBS.has(person.job))
-
-      for (const person of [...cast.slice(0, 10), ...keyCrew]) {
-        if (person?.id) personIds.add(person.id)
-      }
-      for (const company of production_companies) {
-        if (company?.id) companyIds.add(company.id)
-      }
-    }
-
-    const creditsSampleShows = Array.from(showEntries.keys())
-      .slice(0, TV_CREDITS_SAMPLE_SIZE)
-      .map(id => allShows.find(show => show.id === id))
-      .filter((show): show is (typeof allShows)[number] => Boolean(show))
-    const tvDetailResults = await runBatched(
-      creditsSampleShows.map(show => () =>
-        fetchTmdb<TmdbTvDetails & { aggregate_credits?: AggregateCredits }>(`/tv/${show.id}`, { append_to_response: 'aggregate_credits' })
-          .catch((): null => null)
-      )
-    )
-
-    for (const result of tvDetailResults) {
-      if (!result) continue
-      const { aggregate_credits, networks = [], created_by = [] } = result
-      const { cast = [] } = aggregate_credits || {}
-
-      for (const person of [...cast.slice(0, 10), ...created_by]) {
-        if (person?.id) personIds.add(person.id)
-      }
-      for (const network of networks) {
-        if (network?.id) networkIds.add(network.id)
-      }
-    }
   } catch (error) {
     console.error('Error fetching data for sitemap:', error)
   }
@@ -299,26 +256,15 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/tv/${id}`, lastmod)
   )
 
-  const dynamicPersonEntries = Array.from(personIds, id =>
-    urlEntry(`${siteUrl}/person/${id}`)
-  )
-
-  const dynamicCompanyEntries = Array.from(companyIds, id =>
-    urlEntry(`${siteUrl}/company/${id}`)
-  )
-
-  const dynamicNetworkEntries = Array.from(networkIds, id =>
-    urlEntry(`${siteUrl}/network/${id}`)
-  )
-
+  // person/company/network URLs are deliberately absent: they were 42% of the
+  // sitemap yet ~1.5% of search clicks, and their queue presence starved the
+  // provider-diff pages Google never crawled. The pages still exist for users
+  // via internal links — they're just no longer submitted for crawl.
   const allEntries = [
     ...staticEntries,
     ...listingEntries,
     ...dynamicMovieEntries,
     ...dynamicShowEntries,
-    ...dynamicPersonEntries,
-    ...dynamicCompanyEntries,
-    ...dynamicNetworkEntries,
   ]
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
