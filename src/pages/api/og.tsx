@@ -56,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const titleFontSize =
     title.length > 40 ? '48px' : title.length > 24 ? '60px' : '76px'
+  const isBrandTitle = title.trim().toLowerCase() === 'galaxy movies'
 
   // Read bundled assets from disk — a self-fetch to the site origin is an
   // unverified client to the edge and gets the bot-checkpoint HTML, not bytes.
@@ -140,7 +141,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           <div
             style={{
               fontFamily: 'SpaceRangerLaserItalic',
-              fontSize: '36px',
+              fontSize: isBrandTitle ? '92px' : '36px',
               color: '#ffffff',
               letterSpacing: '0.04em',
               lineHeight: 1,
@@ -152,19 +153,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             Galaxy Movies
           </div>
 
-          <div
-            style={{
-              fontFamily: 'Inter',
-              fontWeight: 700,
-              fontSize: titleFontSize,
-              color: '#ffffff',
-              lineHeight: 1.08,
-              letterSpacing: '-0.03em',
-              marginBottom: '18px',
-            }}
-          >
-            {title}
-          </div>
+          {!isBrandTitle && (
+            <div
+              style={{
+                fontFamily: 'Inter',
+                fontWeight: 700,
+                fontSize: titleFontSize,
+                color: '#ffffff',
+                lineHeight: 1.08,
+                letterSpacing: '-0.03em',
+                marginBottom: '18px',
+              }}
+            >
+              {title}
+            </div>
+          )}
 
           <div
             style={{
@@ -203,11 +206,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           >
             <img
               src={posterDataUri}
-              width={210}
-              height={315}
+              width={300}
+              height={450}
               style={{
-                width: '210px',
-                height: '315px',
+                width: '300px',
+                height: '450px',
                 objectFit: 'cover',
                 borderRadius: '10px',
                 boxShadow:
