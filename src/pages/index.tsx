@@ -320,6 +320,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         description={pageDescription}
         canonicalUrl={SITE_URL}
         ogTitle='Galaxy Movies'
+        socialTitle='Discover Popular & New Films'
         ogSubtitle='Discover Popular & New Films'
         structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
