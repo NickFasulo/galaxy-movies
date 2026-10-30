@@ -222,13 +222,18 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   const badgeTitles = useMemo(() => [...moviesList, ...trendingRail, ...newOn.movies], [moviesList, trendingRail, newOn.movies])
   const { isStreaming, providersFor, myProviderIds, isReady: providersReady } = useStreamingBadges(badgeTitles)
 
-  // Provider-filtered search results wait for the badge lookups to land —
-  // hiding on an empty providersFor would flash an empty grid first.
+  // Provider-filtered search: a title absent from providersByKey has a pending
+  // lookup and stays hidden so unfiltered results never flash; while every
+  // lookup is pending the grid keeps its spinner so the empty state can't
+  // flash either.
   const filterForServices = useCallback((list: TitleSummary[]) =>
-    activeSearch && myProviderIds.size > 0 && providersReady
+    activeSearch && myProviderIds.size > 0
       ? list.filter((movie) => providersFor(movie).some((id) => myProviderIds.has(id)))
       : list,
-  [activeSearch, myProviderIds, providersReady, providersFor])
+  [activeSearch, myProviderIds, providersFor])
+  const providerFilterPending =
+    Boolean(activeSearch) && myProviderIds.size > 0 && moviesList.length > 0 && !providersReady
+  const visibleMovies = filterForServices(moviesList)
 
   const clearServices = useCallback(() => setServices(services.region, []), [services.region])
 
@@ -401,14 +406,13 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         )}
 
         <InfiniteTitleGrid
-          titles={moviesList}
-          hasData={Boolean(feed.data)}
+          titles={visibleMovies}
+          hasData={Boolean(feed.data) && !(providerFilterPending && visibleMovies.length === 0)}
           status={feed.status}
           loadedPages={feed.data?.pages.length ?? 1}
           fetchNextPage={feed.fetchNextPage}
           hasNextPage={Boolean(feed.hasNextPage)}
           isFetchingNextPage={feed.isFetchingNextPage}
-          filterTitles={filterForServices}
           emptyMessage={
             providerKeys.length > 0
               ? `Nothing on your services matches${activeSearch ? ` “${debouncedSearch}”` : ' this feed'}.`
