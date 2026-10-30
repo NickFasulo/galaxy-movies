@@ -1,0 +1,43 @@
+name: e2e
+
+# Daily Playwright run against the real production artifact: cf:build output
+# under `wrangler dev`, same philosophy as smoke:workerd in ci.yml. Scheduled
+# (not per-push) — failures surface as a failed workflow like prod-smoke.yml.
+on:
+  schedule:
+    - cron: '30 16 * * *' # 16:30 UTC, after prod-smoke's 15:00 slot
+  workflow_dispatch:
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # matches ci.yml
+          cache: npm
+      - run: npm ci
+      # Same build CI runs — exercises the opennext adapter + postbuild so the
+      # worker under test is the exact prod artifact.
+      - run: npm run cf:build
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-playwright-
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:workerd
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

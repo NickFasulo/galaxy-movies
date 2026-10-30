@@ -57,7 +57,7 @@ const CF_QUERY = `query ($accountTag: string!, $script: string!, $start: string!
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       workersInvocationsAdaptive(limit: 100, filter: { scriptName: $script, datetime_geq: $start, datetime_leq: $end }) {
-        sum { requests errors subrequests }
+        sum { requests errors subrequests cpuTimeUs }
         quantiles { cpuTimeP50 cpuTimeP99 }
       }
     }
@@ -65,7 +65,7 @@ const CF_QUERY = `query ($accountTag: string!, $script: string!, $start: string!
 }`
 
 interface CfRow {
-  sum?: { requests?: number; errors?: number; subrequests?: number }
+  sum?: { requests?: number; errors?: number; subrequests?: number; cpuTimeUs?: number }
   quantiles?: { cpuTimeP50?: number; cpuTimeP99?: number }
 }
 
@@ -114,21 +114,23 @@ async function cloudflarePanel(): Promise<UsagePanel> {
           requests: acc.requests + requests,
           errors: acc.errors + (r.sum?.errors ?? 0),
           subrequests: acc.subrequests + (r.sum?.subrequests ?? 0),
-          // No CPU sum in the dataset — requests×p50 is a floor estimate only.
-          estCpuMs: acc.estCpuMs + (requests * (r.quantiles?.cpuTimeP50 ?? 0)) / 1000,
+          cpuMs: acc.cpuMs + (r.sum?.cpuTimeUs ?? 0) / 1000,
           p50: Math.max(acc.p50, r.quantiles?.cpuTimeP50 ?? 0),
           p99: Math.max(acc.p99, r.quantiles?.cpuTimeP99 ?? 0)
         }
       },
-      { requests: 0, errors: 0, subrequests: 0, estCpuMs: 0, p50: 0, p99: 0 }
+      { requests: 0, errors: 0, subrequests: 0, cpuMs: 0, p50: 0, p99: 0 }
     )
   }
 
   const [today, month] = await Promise.all([totalsFor(todayStart), totalsFor(monthStart)])
   const ms = (us: number) => `${(us / 1000).toFixed(2)}ms`
-  const paceRequests = (month.requests / now.getUTCDate()) * daysInMonth
+  // Fractional elapsed days keeps the pace sane early in the month — dividing
+  // by 1 on the morning of the 1st projects ~30x.
+  const elapsedDays = Math.max((now.getTime() - monthStart.getTime()) / 86_400_000, 1 / 24)
+  const paceRequests = (month.requests / elapsedDays) * daysInMonth
   const overRequests = month.requests - CF_INCLUDED_REQUESTS
-  const overCpu = month.estCpuMs - CF_INCLUDED_CPU_MS
+  const overCpu = month.cpuMs - CF_INCLUDED_CPU_MS
 
   return {
     name: 'Cloudflare Workers',
@@ -150,12 +152,12 @@ async function cloudflarePanel(): Promise<UsagePanel> {
         tone: overRequests > 0 ? 'warn' : undefined
       },
       {
-        label: 'Est. CPU (billing month)',
-        value: `≥${fmtM(month.estCpuMs)} ms`,
+        label: 'CPU (billing month)',
+        value: `${fmtM(month.cpuMs)} ms`,
         hint:
           overCpu > 0
-            ? `~$${((overCpu / 1e6) * 0.02).toFixed(2)}+ over ${fmtM(CF_INCLUDED_CPU_MS)} ms — p50 floor, Billing has exact`
-            : `of ${fmtM(CF_INCLUDED_CPU_MS)} ms included · p50 floor — Billing has exact`,
+            ? `~$${((overCpu / 1e6) * 0.02).toFixed(2)}+ over ${fmtM(CF_INCLUDED_CPU_MS)} ms included`
+            : `of ${fmtM(CF_INCLUDED_CPU_MS)} ms included`,
         tone: overCpu > 0 ? 'warn' : undefined
       },
       { label: 'CPU per request', value: `${ms(today.p50)} p50`, hint: `${ms(today.p99)} p99` }
@@ -357,14 +359,27 @@ interface PolarSub {
 
 const polarApiBase = () => (process.env.POLAR_API_BASE || 'https://api.polar.sh').replace(/\/$/, '')
 
+// Pages through every subscription: MRR, active counts, and Finance's billed
+// total are computed over `subs`, so stopping at page 1 underreports once the
+// account grows past 100 subs.
 async function fetchPolarSubs(): Promise<{ subs: PolarSub[]; total: number }> {
   const token = process.env.POLAR_USAGE_TOKEN || process.env.POLAR_ACCESS_TOKEN
-  const resp = await fetch(`${polarApiBase()}/v1/subscriptions/?limit=100`, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  if (!resp.ok) throw new Error(`subscriptions → HTTP ${resp.status}`)
-  const body = (await resp.json()) as { items?: PolarSub[]; pagination?: { total_count?: number } }
-  return { subs: body.items || [], total: body.pagination?.total_count ?? (body.items || []).length }
+  const headers = { Authorization: `Bearer ${token}` }
+  const subs: PolarSub[] = []
+  let total = 0
+  for (let page = 1; page <= 10; page++) {
+    const resp = await fetch(`${polarApiBase()}/v1/subscriptions/?limit=100&page=${page}`, { headers })
+    if (!resp.ok) throw new Error(`subscriptions → HTTP ${resp.status}`)
+    const body = (await resp.json()) as {
+      items?: PolarSub[]
+      pagination?: { total_count?: number; max_page?: number }
+    }
+    subs.push(...(body.items || []))
+    total = body.pagination?.total_count ?? subs.length
+    const maxPage = body.pagination?.max_page ?? Math.ceil(total / 100)
+    if (page >= maxPage || (body.items || []).length < 100) break
+  }
+  return { subs, total }
 }
 
 async function polarPanel(): Promise<UsagePanel> {
@@ -536,10 +551,12 @@ async function financePanel(costsPromise: Promise<CostBucket[] | null>): Promise
 
 // Per-bucket caps mirror the checkGlobalBudget call sites — duplicated here
 // (rather than exported) so a cap change can't silently shift the display only.
+// The ai_* crawler-family caps mirror CRAWLER_BUDGET_MAX in crawlerThrottle.ts.
 const BUDGET_WINDOWS = [
   { key: 'chat', label: 'Chat calls', cap: 1000, per: 'day' },
   { key: 'watchmode', label: 'Watchmode lookups', cap: Number(process.env.WATCHMODE_DAILY_LOOKUP_BUDGET) || 150, per: 'day' },
   { key: 'waitlist', label: 'Waitlist submissions', cap: 500, per: 'day' },
+  { key: 'watch', label: 'Watch alert submissions', cap: 500, per: 'day' },
   { key: 'billing_recover', label: 'Recovery emails', cap: 500, per: 'day' },
   { key: 'ai_review', label: 'AI reviews', cap: 5, per: 'min' },
   { key: 'ai_warm', label: 'AI cache warm', cap: 200, per: 'hour' },
@@ -547,7 +564,15 @@ const BUDGET_WINDOWS = [
   { key: 'ai_list_intro', label: 'AI list intros', cap: 10, per: 'min' },
   { key: 'wp_lookup', label: 'Uncached provider lookups', cap: 5000, per: 'hour' },
   { key: 'discover', label: 'Discover calls', cap: 2000, per: 'hour' },
-  { key: 'price', label: 'Uncached price lookups', cap: 100, per: 'hour' }
+  { key: 'allmovies', label: 'All-movies calls', cap: 5000, per: 'hour' },
+  { key: 'recs', label: 'Recommendations calls', cap: 2000, per: 'hour' },
+  { key: 'poster', label: 'Poster path lookups', cap: 2000, per: 'hour' },
+  { key: 'price', label: 'Uncached price lookups', cap: 100, per: 'hour' },
+  { key: 'ai_claude', label: 'Crawler: Claude', cap: 600, per: 'hour' },
+  { key: 'ai_openai', label: 'Crawler: OpenAI', cap: 600, per: 'hour' },
+  { key: 'ai_perplexity', label: 'Crawler: Perplexity', cap: 600, per: 'hour' },
+  { key: 'ai_amazon', label: 'Crawler: Amazon', cap: 600, per: 'hour' },
+  { key: 'ai_exa', label: 'Crawler: Exa', cap: 600, per: 'hour' }
 ]
 
 // /status is the zero-credit quota probe; the recorded response headers are the
@@ -569,8 +594,12 @@ async function watchmodePanel(): Promise<UsagePanel> {
         hint: `${Math.round(usedPct)}% used`,
         tone: usedPct >= 99 ? 'bad' : usedPct >= 90 ? 'warn' : undefined
       })
+    } else {
+      metrics.push({ label: 'Live probe', value: 'no quota data', hint: `/status → HTTP ${resp.status}`, tone: 'warn' })
     }
-  } catch {}
+  } catch (err) {
+    metrics.push({ label: 'Live probe', value: 'failed', hint: err instanceof Error ? err.message : String(err), tone: 'warn' })
+  }
 
   const seen = await getWatchmodeQuota()
   if (seen) {
@@ -722,7 +751,7 @@ async function aiUsagePanel(): Promise<UsagePanel> {
     status: 'ok',
     metrics: [
       { label: 'Chat sessions', value: fmt(stats.totalSessions), hint: `${fmt(stats.totalMessages)} messages${stats.avgRating ? `, ${stats.avgRating}★ avg` : ''}` },
-      { label: 'Est. AI spend', value: `$${costs.estimatedCost}`, hint: costs.source === 'actual_usage' ? 'from recorded tokens' : 'rough estimate' },
+      { label: 'Est. AI spend', value: `$${costs.estimatedCost}`, hint: costs.source === 'actual_usage' ? 'all-time, from recorded tokens' : 'all-time, rough estimate' },
       ...costBreakdown
     ]
   }
@@ -739,7 +768,7 @@ async function searchConsolePanel(): Promise<UsagePanel> {
   const [totals, prevTotals, listsRows, dateRows, sitemap] = await Promise.all([
     queryAnalytics(cur.start, cur.end, { dimensions: [] }),
     queryAnalytics(prev.start, prev.end, { dimensions: [] }),
-    queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 250, pageContains: '/lists/' }),
+    queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 1000, pageContains: '/lists/' }),
     queryAnalytics(month.start, month.end, { dimensions: ['date'], rowLimit: 60 }),
     sitemapStatus().catch(() => null)
   ])

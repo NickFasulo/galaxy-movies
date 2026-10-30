@@ -6,7 +6,7 @@ import { shortDate } from './formatters'
 
 describe('dateFormatter', () => {
   it('formats a date as "Mon d, yyyy"', () => {
-    expect(dateFormatter(new Date(2024, 5, 15))).toBe('Jun 15, 2024')
+    expect(dateFormatter('2024-06-15')).toBe('Jun 15, 2024')
   })
 })
 

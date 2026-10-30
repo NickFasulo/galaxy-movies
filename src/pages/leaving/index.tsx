@@ -58,7 +58,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
 
 export default function LeavingIndex({ soon }: Props) {
   const canonicalUrl = `${SITE_URL}/leaving`
-  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `What's Leaving Streaming Services (${monthLabel})`
   const description = `Dated lists of movies and shows leaving each major streaming service in ${monthLabel}: tracked daily from US catalogs.`
 

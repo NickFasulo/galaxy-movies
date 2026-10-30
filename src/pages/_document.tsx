@@ -2,7 +2,10 @@ import { Html, Head, Main, NextScript } from 'next/document'
 
 export default function Document() {
   return (
-    <Html lang='en'>
+    // Static instead of a runtime theme script: the app is dark-only, and
+    // next-themes' stringified-function script crashes under the OpenNext
+    // esbuild bundle (keepNames injects __name refs that don't stringify).
+    <Html lang='en' className='dark' style={{ colorScheme: 'dark' }}>
       <Head>
         {/* Inlined so the font faces + stack exist in the first HTML — otherwise dev-mode CSS/JS delivery lets body paint in the UA default font first (a flicker font-display can't prevent). */}
         <style dangerouslySetInnerHTML={{ __html: `

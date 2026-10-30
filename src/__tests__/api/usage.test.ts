@@ -164,7 +164,13 @@ describe('GET /api/usage', () => {
 
   it('returns panels with unconfigured sources marked and Redis counters populated', async () => {
     mocks.kv.mget.mockImplementation(async (...keys: unknown[]) =>
-      keys.map((k) => (k === 'global_rl:chat:all' ? 123 : k === 'global_rl:watchmode:all' ? 45 : null))
+      keys.map((k) =>
+        k === 'global_rl:chat:all' ? 123
+        : k === 'global_rl:watchmode:all' ? 45
+        : k === 'global_rl:recs:all' ? 42
+        : k === 'global_rl:ai_perplexity:all' ? 700
+        : null
+      )
     )
     mocks.kv.hlen.mockImplementation(async (key: unknown) => (key === 'gm:waitlist:confirmed' ? 7 : 0))
     mocks.kv.hgetall.mockImplementation(async (key: unknown) =>
@@ -193,6 +199,10 @@ describe('GET /api/usage', () => {
       p?.metrics.find((m) => m.label === label)?.value
     expect(metric(rateLimits, 'Chat calls')).toBe('123')
     expect(metric(rateLimits, 'Watchmode lookups')).toBe('45')
+    expect(metric(rateLimits, 'Recommendations calls')).toBe('42')
+    const crawlerRow = rateLimits?.metrics.find((m) => m.label === 'Crawler: Perplexity')
+    expect(crawlerRow?.value).toBe('700')
+    expect(crawlerRow?.tone).toBe('bad')
     expect(metric(subscribers, 'Confirmed subscribers')).toBe('7')
     expect(metric(subscribers, 'Plus (entitled)')).toBe('1')
     expect(metric(subscribers, 'DB keys')).toBe('999')
@@ -260,8 +270,14 @@ describe('GET /api/usage', () => {
                 accounts: [
                   {
                     workersInvocationsAdaptive: [
-                      { sum: { requests: 5_000_000, errors: 3, subrequests: 9 }, quantiles: { cpuTimeP50: 1000, cpuTimeP99: 5000 } },
-                      { sum: { requests: 6_000_000, errors: 0, subrequests: 0 }, quantiles: { cpuTimeP50: 2000, cpuTimeP99: 9000 } }
+                      {
+                        sum: { requests: 5_000_000, errors: 3, subrequests: 9, cpuTimeUs: 10_000_000_000 },
+                        quantiles: { cpuTimeP50: 1000, cpuTimeP99: 5000 }
+                      },
+                      {
+                        sum: { requests: 6_000_000, errors: 0, subrequests: 0, cpuTimeUs: 7_000_000_000 },
+                        quantiles: { cpuTimeP50: 2000, cpuTimeP99: 9000 }
+                      }
                     ]
                   }
                 ]
@@ -278,8 +294,8 @@ describe('GET /api/usage', () => {
     const metric = (label: string) => cf?.metrics.find((m) => m.label === label)
     expect(metric('Requests (billing month)')?.value).toBe('11,000,000 / 10.0M')
     expect(metric('Requests (billing month)')?.hint).toContain('over included')
-    expect(metric('Est. CPU (billing month)')?.value).toBe('≥17.0M ms')
-    expect(metric('Est. CPU (billing month)')?.hint).toContain('30.0M ms included')
+    expect(metric('CPU (billing month)')?.value).toBe('17.0M ms')
+    expect(metric('CPU (billing month)')?.hint).toContain('30.0M ms included')
   })
 
   it('shows OpenAI credit burn-down from the baseline env vars', async () => {

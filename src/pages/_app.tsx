@@ -23,7 +23,7 @@ function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: Dehydrated
   // third-party contexts) — just the Chakra provider so theming still works.
   if (router.pathname.startsWith('/embed/')) {
     return (
-      <Provider forcedTheme='dark'>
+      <Provider>
         <Head>
           <meta name='viewport' content='width=device-width, initial-scale=1' />
         </Head>
@@ -53,7 +53,7 @@ function MainApp({ Component, pageProps }: Pick<AppProps<{ dehydratedState?: Deh
   return (
     <QueryClientProvider client={queryClient}>
       <HydrationBoundary state={pageProps.dehydratedState}>
-        <Provider forcedTheme='dark'>
+        <Provider>
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>

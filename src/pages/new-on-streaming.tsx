@@ -117,7 +117,7 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
 
 export default function NewOnStreaming({ sections, changes = {}, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/new-on-streaming`
-  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `New Releases Streaming Now (${monthLabel})`
   const description = `Recently released movies currently streaming by service, updated regularly: including Netflix, Amazon Prime Video, and more.`
 

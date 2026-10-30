@@ -38,7 +38,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext): Pr
 
 export default function ThisMonthIndex({ providers }: { providers: ProviderStat[] }) {
   const canonicalUrl = `${SITE_URL}/this-month`
-  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `Which Streaming Service Is Worth It in ${monthLabel}?`
   const description = `Arrivals vs departures for every major US streaming service in ${monthLabel}: see which subscription earns its month before you pay for it.`
 

@@ -8,6 +8,8 @@ import { defineConfig } from 'vitest/config'
 // hiding behind the imported-files-only denominator.
 export default defineConfig({
   test: {
+    // Scoped so Playwright specs in e2e/ (also *.spec.ts) never get collected.
+    include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       all: true,

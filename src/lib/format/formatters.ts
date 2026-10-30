@@ -1,8 +1,12 @@
+// UTC-pinned: callers pass 'YYYY-MM-DD' calendar dates (parsed as UTC
+// midnight), so rendering in local time shows a day behind west of UTC and
+// disagrees with workerd/UTC SSR output → hydration mismatch.
 export function dateFormatter(date: string | number | Date): string {
   return new Date(date).toLocaleDateString('en-us', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'UTC'
   })
 }
 

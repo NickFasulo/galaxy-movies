@@ -36,7 +36,9 @@ function Sparkline({ points, color }: { points: number[]; color?: UsageSeries['c
   const w = 100
   const h = 22
   const pad = 1.5
-  const min = Math.min(...points)
+  // Baseline at 0 for non-negative series — scaling to the data minimum makes
+  // near-flat spend/clicks look wildly volatile.
+  const min = Math.min(0, ...points)
   const max = Math.max(...points)
   const span = max - min || 1
   const x = (i: number) => pad + (i * (w - pad * 2)) / (points.length - 1)
@@ -187,6 +189,14 @@ export default function Usage() {
     }, 0)
     return () => clearTimeout(id)
   }, [load])
+
+  useEffect(() => {
+    if (generatedAt == null) return
+    const id = setInterval(() => {
+      setFetchedAgo(Math.max(0, Math.round((Date.now() - generatedAt) / 1000)))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [generatedAt])
 
   // 1px implicit rows + measured per-card row spans pack panels into a dense
   // masonry; ResizeObserver re-runs when metric content or column width shifts.
