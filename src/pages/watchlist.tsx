@@ -159,7 +159,9 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
                 </Text>
                 <ScrollRail
                   gap={4}
-                  pb={2}
+                  // Same scrollport padding as TitleRail — pad for the card
+                  // shadow + hover scale, pull it back with negative margins.
+                  mt={-2} mb={-4} pt={2} pb={6}
                   mx='-1.5rem'
                   px='1.5rem'
                   css={{ scrollSnapType: 'x proximity' }}
@@ -212,7 +214,7 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
             </Text>
             <ScrollRail
               gap={4}
-              pb={2}
+              mt={-2} mb={-4} pt={2} pb={6}
               mx='-1.5rem'
               px='1.5rem'
               css={{ scrollSnapType: 'x proximity' }}
