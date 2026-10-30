@@ -13,6 +13,7 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import { FooterPill } from '../components/Footer'
 import { TopBackdrop } from '../components/Backdrop'
+import RouteProgressBar from '../components/RouteProgressBar'
 import '../styles/globals.css'
 
 function MyApp({ Component, pageProps }: AppProps<{ dehydratedState?: DehydratedState }>) {
@@ -56,6 +57,7 @@ function MainApp({ Component, pageProps }: Pick<AppProps<{ dehydratedState?: Deh
           <Head>
             <meta name='viewport' content='width=device-width, initial-scale=1' />
           </Head>
+          <RouteProgressBar />
           <Flex direction='column' minH='100dvh' position='relative' bg={isDark ? 'surface.canvas' : undefined}>
             {showTopBackdrop && <TopBackdrop />}
             <Header isHome={isHome} isDark={isDark} hideSearch={router.pathname === '/search'} />
