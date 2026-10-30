@@ -5,7 +5,7 @@ import type { InferGetStaticPropsType } from 'next'
 import { Badge, Box, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import MovieGrid from '../features/catalog/components/MovieGrid'
 import MovieCard from '../features/catalog/components/MovieCard'
-import ScrollRail from '../features/catalog/components/ScrollRail'
+import CardRail from '../features/catalog/components/CardRail'
 import ServicesPicker from '../features/alerts/components/ServicesPicker'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import PageHead from '../components/PageHead'
@@ -157,21 +157,12 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
                 <Text color='gray.400' fontSize='sm' mb={4}>
                   Trending this week — tap the bookmark to save one.
                 </Text>
-                <ScrollRail
-                  gap={4}
-                  // Same scrollport padding as TitleRail — pad for the card
-                  // shadow + hover scale, pull it back with negative margins.
-                  mt={-2} mb={-4} pt={2} pb={6}
+                <CardRail
+                  movies={trending}
+                  posterFallback='/poster_fallback_galaxy.webp'
                   mx='-1.5rem'
                   px='1.5rem'
-                  css={{ scrollSnapType: 'x proximity' }}
-                >
-                  {trending.map((movie) => (
-                    <Box key={`${movie.mediaType || 'movie'}:${movie.id}`} w={{ base: '8.5rem', md: '10.5rem' }} flexShrink={0} scrollSnapAlign='start'>
-                      <MovieCard movie={movie} posterFallback='/poster_fallback_galaxy.webp' />
-                    </Box>
-                  ))}
-                </ScrollRail>
+                />
               </Box>
             )}
           </>
@@ -212,19 +203,12 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
             <Text color='gray.400' fontSize='sm' mb={4}>
               Because of what you rated highly, refreshed daily.
             </Text>
-            <ScrollRail
-              gap={4}
-              mt={-2} mb={-4} pt={2} pb={6}
+            <CardRail
+              movies={picks}
+              posterFallback='/poster_fallback_galaxy.webp'
               mx='-1.5rem'
               px='1.5rem'
-              css={{ scrollSnapType: 'x proximity' }}
-            >
-              {picks.map((movie) => (
-                <Box key={`${movie.mediaType || 'movie'}:${movie.id}`} w={{ base: '8.5rem', md: '10.5rem' }} flexShrink={0} scrollSnapAlign='start'>
-                  <MovieCard movie={movie} posterFallback='/poster_fallback_galaxy.webp' />
-                </Box>
-              ))}
-            </ScrollRail>
+            />
           </Box>
         )}
 

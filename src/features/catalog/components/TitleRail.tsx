@@ -1,8 +1,7 @@
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 import { Box, Flex, Heading, Link } from '@chakra-ui/react'
-import MovieCard from './MovieCard'
-import ScrollRail from './ScrollRail'
+import CardRail from './CardRail'
 import type { TitleSummary } from '../../../types/tmdb'
 
 export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, onCardLeave }: {
@@ -25,30 +24,14 @@ export default function TitleRail({ title, href, movies, badgeFor, onCardEnter, 
           </Link>
         )}
       </Flex>
-      <ScrollRail
-        gap={4}
-        // Scroll containers clip at the padding box — the card shadow needs
-        // ~20px below and the hover scale a few px all around, so pad the
-        // scrollport and pull it back with negative margins to keep the
-        // cards' visual position unchanged.
-        mt={-2} mb={-4} pt={2} pb={6}
+      <CardRail
+        movies={movies}
+        badgeFor={badgeFor}
+        onCardEnter={onCardEnter}
+        onCardLeave={onCardLeave}
         mx={{ base: '-1.5rem', md: '-3rem', xl: '-0.5rem' }}
         px={{ base: '1.5rem', md: '3rem', xl: '0.5rem' }}
-        css={{ scrollSnapType: 'x proximity' }}
-      >
-        {movies.map((movie) => (
-          <Box
-            key={`${movie.mediaType || 'movie'}:${movie.id}`}
-            w={{ base: '8.5rem', md: '10.5rem' }}
-            flexShrink={0}
-            scrollSnapAlign='start'
-            onMouseEnter={() => onCardEnter?.(movie.backdrop_path)}
-            onMouseLeave={onCardLeave}
-          >
-            <MovieCard movie={movie} badge={badgeFor?.(movie)} />
-          </Box>
-        ))}
-      </ScrollRail>
+      />
     </Box>
   )
 }
