@@ -3,6 +3,7 @@ import type { ImageResponse as ImageResponseType } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
+import { edgeCacheGet, edgeCacheKey, edgeCachePut } from '../../lib/edgeCache'
 import { getMonthlyChanges } from '../../features/catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
 import { shortDate } from '../../lib/format/formatters'
@@ -13,6 +14,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD')
     return res.status(405).send('Method Not Allowed')
+  }
+
+  const cacheKey = edgeCacheKey(req.url || '/api/og-leaving')
+  const cached = await edgeCacheGet(cacheKey)
+  if (cached) {
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', cached.headers.get('cache-control') || 'public, max-age=86400')
+    return res.send(Buffer.from(await cached.arrayBuffer()))
   }
 
   const allowed = await checkDistributedRateLimit(getClientIP(req), {
@@ -180,8 +189,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   )
 
+  const png = await imageResponse.arrayBuffer()
+  await edgeCachePut(cacheKey, png, 'image/png', 86400)
+
   res.setHeader('Content-Type', 'image/png')
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
   res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=172800')
-  return res.send(Buffer.from(await imageResponse.arrayBuffer()))
+  return res.send(Buffer.from(png))
 }

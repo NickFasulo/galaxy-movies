@@ -7,7 +7,7 @@ const eslintConfig = [
   ...typescript,
   {
     // next/og renders raw HTML to an image — next/image and alt text don't apply.
-    files: ['src/pages/api/og.tsx'],
+    files: ['src/pages/api/og.tsx', 'src/pages/api/og-leaving.tsx'],
     rules: {
       '@next/next/no-img-element': 'off',
       'jsx-a11y/alt-text': 'off'

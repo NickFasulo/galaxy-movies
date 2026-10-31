@@ -235,16 +235,17 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         withTimeout(getTitleChanges(media, Number(id)), 2000, null)
       ])
 
-      // Bot renders skip AI generation, so a page whose generated slots came
-      // back empty differs from the human version — keep those out of the
-      // shared CDN cache. When both slots are already filled the bot render is
-      // identical to a human's, and caching it lets the edge absorb repeat
+      // Renders with empty generated slots differ from the full version — keep
+      // every AI-incomplete render out of the shared CDN cache (not just
+      // preview bots: referer-less humans and tripped gen budgets produce the
+      // same partial page). When both slots are already filled the bot render
+      // is identical to a human's, and caching it lets the edge absorb repeat
       // scraper crawls instead of paying SSR + Redis + TMDB for every hit.
       const aiContentComplete =
         (title.overview ? aiSynopsis !== null : true) &&
         (recommendationCandidates.length > 0 ? similarTitles.length > 0 : true)
       if (context.res) {
-        if (skipAi && !aiContentComplete) context.res.setHeader('Cache-Control', 'private, no-store')
+        if (!aiContentComplete) context.res.setHeader('Cache-Control', 'private, no-store')
         else setSwrCache(context.res)
       }
 
