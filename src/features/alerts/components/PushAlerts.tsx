@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Text } from '@chakra-ui/react'
+import { Flex, Switch, Text } from '@chakra-ui/react'
 import type { AlertsCredentials } from '../alertsSync'
 import { getPushSubscription, isIOS, isStandalone, pushSupport, subscribePush, unsubscribePush, type PushSupport } from '../push'
-
-const linkStyle = { textDecoration: 'underline', cursor: 'pointer' } as const
 
 // iOS Safari delivers push only to installed PWAs — surfaced pre-signup too,
 // so visitors know the install path before they ever hold credentials.
@@ -72,19 +70,25 @@ export default function PushAlerts({ creds }: { creds: AlertsCredentials }) {
           Notifications are blocked for this site: enable them in your browser&apos;s site settings to get alerts on this device.
         </Text>
       ) : (
-        <Text color='gray.400' fontSize='sm'>
-          {on ? (
-            <>
-              On for this device: alerts arrive here instead of email.{' '}
-              <button type='button' disabled={busy} onClick={toggle} style={linkStyle}>Turn off</button>
-            </>
-          ) : (
-            <>
-              <button type='button' disabled={busy} onClick={toggle} style={linkStyle}>Enable push alerts</button>
-              {' '}— new arrivals and coming-soon dates land on this device, free.
-            </>
-          )}
-        </Text>
+        <Flex align='center' gap={3}>
+          <Switch.Root
+            checked={on}
+            onCheckedChange={toggle}
+            disabled={busy}
+            colorPalette='green'
+            size='sm'
+          >
+            <Switch.HiddenInput />
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+          </Switch.Root>
+          <Text color='gray.400' fontSize='sm'>
+            {on
+              ? 'On for this device: alerts arrive here instead of email.'
+              : 'New arrivals and coming-soon dates land on this device, free.'}
+          </Text>
+        </Flex>
       )}
     </>
   )

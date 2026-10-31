@@ -70,7 +70,7 @@ export function authorizeUrl(redirectUri: string, state: string, challenge: stri
 }
 
 async function tokenRequest(body: Record<string, string>): Promise<TraktTokens | null> {
-  const resp = await fetch(`${TRAKT_API}/oauth/token`, {
+  const resp = await fetch(`${TRAKT_AUTH}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'User-Agent': TRAKT_UA },
     body: JSON.stringify({
@@ -95,6 +95,18 @@ export function exchangeCode(code: string, redirectUri: string, verifier: string
 
 export function refreshTokens(refreshToken: string, redirectUri: string): Promise<TraktTokens | null> {
   return tokenRequest({ refresh_token: refreshToken, redirect_uri: redirectUri, grant_type: 'refresh_token' })
+}
+
+// Revoking the access token drops the whole grant on Trakt's side — without
+// this, disconnect only forgets our refresh token and a re-connect is silently
+// auto-approved instead of showing the authorize page.
+export async function revokeAccessToken(accessToken: string): Promise<boolean> {
+  const resp = await fetch(`${TRAKT_AUTH}/oauth/revoke`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': TRAKT_UA },
+    body: JSON.stringify({ token: accessToken, client_id: process.env.TRAKT_CLIENT_ID })
+  }).catch(() => null)
+  return Boolean(resp?.ok)
 }
 
 // Shared by sync and import: a denied refresh means the grant is dead — the

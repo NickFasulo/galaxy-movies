@@ -93,7 +93,7 @@ test.describe('plus tools — trakt', () => {
     const account = await stubAccountApi(page)
 
     await page.goto('/watchlist?trakt=connected')
-    await expect(page.getByText('Trakt connected: hit Sync now to push your list.')).toBeVisible()
+    await expect(page.getByText('Hit Sync now to push your list.')).toBeVisible()
 
     account.traktConnected = false
     await page.goto('/watchlist?trakt=error')

@@ -16,7 +16,20 @@ interface ResolvedTitle {
   poster_path: string | null
 }
 
-const linkStyle = { textDecoration: 'underline', cursor: 'pointer' } as const
+const actionBtn = {
+  size: 'xs',
+  bg: 'whiteAlpha.300',
+  color: 'white',
+  _hover: { bg: 'whiteAlpha.400' }
+} as const
+
+const dangerBtn = {
+  size: 'xs',
+  colorPalette: 'red',
+  color: 'white'
+} as const
+
+const sectionTitle = { color: 'gray.300', fontSize: 'xs', mt: 4, mb: 2, fontWeight: 'bold' } as const
 
 function download(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }))
@@ -34,7 +47,10 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
   traktStatus?: string
 }) {
   const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState('')
+  const [webhookSaving, setWebhookSaving] = useState(false)
+  type NoteKey = 'import' | 'trakt' | 'discord' | 'telegram' | 'share'
+  const [notes, setNotes] = useState<Partial<Record<NoteKey, string>>>({})
+  const setNote = (key: NoteKey, msg: string) => setNotes((n) => ({ ...n, [key]: msg }))
   const fileRef = useRef<HTMLInputElement>(null)
   const [webhook, setWebhook] = useState(features?.discordWebhook ?? '')
   const [shareUrl, setShareUrl] = useState(
@@ -42,19 +58,26 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
   )
 
   const authed = { email: creds.email, key: creds.key }
+  // The abort timeout matters: a hung fetch leaves busy=true forever and
+  // dead-disables every tool button until the tab reloads.
   const post = async (url: string, body: Record<string, unknown> = {}) => {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...authed, ...body })
-    })
-    const data = await resp.json().catch(() => ({}))
-    return { ok: resp.ok, data }
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...authed, ...body }),
+        signal: AbortSignal.timeout(30_000)
+      })
+      const data = await resp.json().catch(() => ({}))
+      return { ok: resp.ok, data }
+    } catch {
+      return { ok: false, data: {} }
+    }
   }
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
-    setNote('')
+    setNotes({})
     try {
       await fn()
     } finally {
@@ -78,11 +101,11 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
   const syncTrakt = () => run(async () => {
     const { ok, data } = await post('/api/trakt/sync')
     if (ok) {
-      setNote(`Synced ${data.synced?.watchlist ?? 0} watchlist + ${data.synced?.ratings ?? 0} ratings to Trakt.`)
+      setNote('trakt', `Synced ${data.synced?.watchlist ?? 0} watchlist + ${data.synced?.ratings ?? 0} ratings to Trakt.`)
     } else if (data?.code === 'not_connected') {
       refresh()
     } else {
-      setNote(data?.error || 'Trakt sync failed.')
+      setNote('trakt', data?.error || 'Trakt sync failed.')
     }
   })
 
@@ -93,11 +116,11 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
     if (ok) {
       const prefs = await fetchSyncedPrefs(creds)
       if (prefs) mergeSyncedPrefs(prefs)
-      setNote(`Imported ${data.imported?.watchlist ?? 0} watchlist + ${data.imported?.ratings ?? 0} ratings from Trakt.`)
+      setNote('trakt', `Imported ${data.imported?.watchlist ?? 0} watchlist + ${data.imported?.ratings ?? 0} ratings from Trakt.`)
     } else if (data?.code === 'not_connected') {
       refresh()
     } else {
-      setNote(data?.error || 'Trakt import failed.')
+      setNote('trakt', data?.error || 'Trakt import failed.')
     }
   })
 
@@ -112,7 +135,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         else watchlistItems.push(...items)
       }
       if (!watchlistItems.length && !ratingItems.length) {
-        setNote('No Letterboxd rows found: use watchlist.csv or ratings.csv exports.')
+        setNote('import', 'No Letterboxd rows found: use watchlist.csv or ratings.csv exports.')
         return
       }
 
@@ -145,7 +168,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       const skipped = watchlistItems.length + ratingItems.length - prefs.watchlist!.length - prefs.ratings!.length
       mergeSyncedPrefs(prefs)
       scheduleAlertsSync(getUserData())
-      setNote(
+      setNote('import',
         `Imported ${prefs.watchlist!.length} watchlist + ${prefs.ratings!.length} ratings` +
           (skipped ? `: ${skipped} titles couldn't be matched` : '') +
           '.'
@@ -158,18 +181,23 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
   })
 
   const saveWebhook = () => run(async () => {
-    const { ok, data } = await post('/api/alerts-prefs', { discordWebhook: webhook.trim() })
-    setNote(ok ? 'Discord webhook saved.' : data?.error || 'Could not save webhook.')
-    if (ok) refresh()
+    setWebhookSaving(true)
+    try {
+      const { ok, data } = await post('/api/alerts-prefs', { discordWebhook: webhook.trim() })
+      setNote('discord', ok ? 'Discord webhook saved.' : data?.error || 'Could not save webhook.')
+      if (ok) refresh()
+    } finally {
+      setWebhookSaving(false)
+    }
   })
 
   const connectTelegram = () => run(async () => {
     const { ok, data } = await post('/api/telegram/link')
     if (ok && data?.url) {
       window.open(data.url, '_blank', 'noopener')
-      setNote('Telegram opened: press Start there to finish connecting.')
+      setNote('telegram', 'Telegram opened: press Start there to finish connecting.')
     } else {
-      setNote(data?.error || 'Telegram is not available right now.')
+      setNote('telegram', data?.error || 'Telegram is not available right now.')
     }
   })
 
@@ -187,7 +215,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
     if (ok && data?.share) {
       setShareUrl(data.share)
       void navigator.clipboard?.writeText(data.share).catch(() => {})
-      setNote('Share link copied.')
+      setNote('share', 'Share link copied.')
       refresh()
     }
   })
@@ -208,30 +236,27 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
 
   return (
     <Box>
-      <Flex align='center' gap={2} mb={1}>
+      <Flex align='center' gap={2} mb={2}>
         <Badge colorPalette='yellow'>Plus</Badge>
         <Text color='white' fontWeight='bold' fontSize='sm'>Galaxy Plus is active</Text>
       </Flex>
-      <Text color='gray.400' fontSize='sm'>
-        <a
-          href={`/api/billing/portal?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`}
-          style={linkStyle}
-        >
-          Manage subscription
-        </a>
-      </Text>
+      {features?.manageable && (
+        <Button asChild {...actionBtn}>
+          <a href={`/api/billing/portal?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`}>
+            Manage subscription
+          </a>
+        </Button>
+      )}
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Export</Text>
-      <Text color='gray.400' fontSize='sm'>
-        <button type='button' disabled={busy} onClick={exportJson} style={linkStyle}>JSON</button>
-        {' · '}
-        <button type='button' disabled={busy} onClick={() => exportLetterboxd('watchlist')} style={linkStyle}>Letterboxd watchlist CSV</button>
-        {' · '}
-        <button type='button' disabled={busy} onClick={() => exportLetterboxd('ratings')} style={linkStyle}>Letterboxd ratings CSV</button>
-      </Text>
+      <Text {...sectionTitle}>Export</Text>
+      <Flex gap={2} wrap='wrap'>
+        <Button {...actionBtn} disabled={busy} onClick={exportJson}>JSON</Button>
+        <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('watchlist')}>Letterboxd watchlist CSV</Button>
+        <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('ratings')}>Letterboxd ratings CSV</Button>
+      </Flex>
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Import</Text>
-      <Text color='gray.400' fontSize='sm'>
+      <Text {...sectionTitle}>Import</Text>
+      <Flex gap={2} align='center' wrap='wrap'>
         <input
           ref={fileRef}
           type='file'
@@ -243,37 +268,40 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
             e.target.value = ''
           }}
         />
-        <button type='button' disabled={busy} onClick={() => fileRef.current?.click()} style={linkStyle}>
+        <Button {...actionBtn} disabled={busy} onClick={() => fileRef.current?.click()}>
           Letterboxd CSV
-        </button>
-        {' '}— select your watchlist.csv and/or ratings.csv exports; matched titles merge into your list.
-      </Text>
+        </Button>
+        <Text color='gray.400' fontSize='xs'>watchlist.csv and/or ratings.csv exports merge into your list.</Text>
+      </Flex>
+      {notes.import && <Text color='gray.300' fontSize='xs' mt={2}>{notes.import}</Text>}
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Trakt</Text>
+      <Flex align='center' gap={2} {...sectionTitle}>
+        <Text>Trakt</Text>
+        {features?.traktConnected && <Badge colorPalette='green'>Connected</Badge>}
+        {traktStatus === 'connected' && features?.traktConnected && (
+          <Text color='green.300' fontWeight='normal'>Hit Sync now to push your list.</Text>
+        )}
+      </Flex>
       {features?.traktConnected ? (
-        <Text color='gray.400' fontSize='sm'>
-          Connected.{' '}
-          <button type='button' disabled={busy} onClick={syncTrakt} style={linkStyle}>Sync now</button>
-          {' · '}
-          <button type='button' disabled={busy} onClick={importTrakt} style={linkStyle}>Import from Trakt</button>
-          {' · '}
-          <button type='button' disabled={busy} onClick={disconnectTrakt} style={linkStyle}>Disconnect</button>
-        </Text>
+        <Flex align='center' gap={2} wrap='wrap'>
+          <Button {...actionBtn} disabled={busy} onClick={syncTrakt}>Sync now</Button>
+          <Button {...actionBtn} disabled={busy} onClick={importTrakt}>Import from Trakt</Button>
+          <Button {...dangerBtn} disabled={busy} onClick={disconnectTrakt}>Disconnect</Button>
+        </Flex>
       ) : (
-        <Text color='gray.400' fontSize='sm'>
-          {traktStatus === 'error' && <Text as='span' color='red.300'>Connection failed: try again. </Text>}
-          <a href={`/api/trakt/connect?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`} style={linkStyle}>
-            Connect Trakt
-          </a>
-          {' '}to push your list and ratings straight to your Trakt profile (shows included).
-        </Text>
+        <Flex align='center' gap={2} wrap='wrap'>
+          {traktStatus === 'error' && <Text color='red.300' fontSize='xs'>Connection failed: try again.</Text>}
+          <Button asChild {...actionBtn}>
+            <a href={`/api/trakt/connect?email=${encodeURIComponent(creds.email)}&key=${encodeURIComponent(creds.key)}`}>
+              Connect Trakt
+            </a>
+          </Button>
+          <Text color='gray.400' fontSize='xs'>push your list and ratings to your Trakt profile (shows included).</Text>
+        </Flex>
       )}
-      {traktStatus === 'connected' && features?.traktConnected && (
-        <Text color='green.300' fontSize='xs' mt={1}>Trakt connected: hit Sync now to push your list.</Text>
-      )}
-
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Calendar feed</Text>
-      <Flex gap={2}>
+      {notes.trakt && <Text color='gray.300' fontSize='xs' mt={2}>{notes.trakt}</Text>}
+      <Text {...sectionTitle}>Calendar feed</Text>
+      <Flex gap={2} align='center' wrap='wrap'>
         <DarkInput
           readOnly
           value={calendarUrl}
@@ -282,14 +310,21 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           color='gray.300'
           onFocus={(e) => e.target.select()}
         />
-        <Button size='xs' variant='outline' color='white' borderColor='border.subtle' _hover={{ bg: 'surface.overlay' }}
-          onClick={() => void navigator.clipboard?.writeText(calendarUrl).catch(() => {})}>
+        <Button {...actionBtn} onClick={() => void navigator.clipboard?.writeText(calendarUrl).catch(() => {})}>
           Copy
         </Button>
+        <Button asChild {...actionBtn}>
+          <a href={calendarUrl.replace(/^https?:/, 'webcal:')}>Subscribe</a>
+        </Button>
+        <Button asChild {...actionBtn}>
+          <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(calendarUrl)}`} target='_blank' rel='noopener'>
+            Google Calendar
+          </a>
+        </Button>
       </Flex>
-      <Text color='gray.300' fontSize='xs' mt={1}>Paste it into Google/Apple Calendar: watchlist releases appear as all-day events.</Text>
+      <Text color='gray.300' fontSize='xs' mt={1}>Subscribe opens your calendar app; watchlist releases appear as all-day events.</Text>
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Discord alerts</Text>
+      <Text {...sectionTitle}>Discord alerts</Text>
       <Flex gap={2}>
         <DarkInput
           value={webhook}
@@ -299,28 +334,33 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
           fontSize={{ base: '16px', md: 'xs' }}
           _placeholder={{ color: 'gray.500' }}
         />
-        <Button size='xs' colorPalette='yellow' loading={busy} onClick={saveWebhook} flexShrink={0}>
+        <Button size='xs' colorPalette='yellow' loading={webhookSaving} onClick={saveWebhook} flexShrink={0}>
           {webhook.trim() ? 'Save' : 'Clear'}
         </Button>
       </Flex>
+      {notes.discord && <Text color='gray.300' fontSize='xs' mt={2}>{notes.discord}</Text>}
       <Text color='gray.300' fontSize='xs' mt={1}>
         Paste a Discord webhook URL (channel → Edit Channel → Integrations → Webhooks) and alerts post to that channel instead of email. Save an empty field to switch back to email.
       </Text>
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Telegram alerts</Text>
+      <Flex align='center' gap={2} {...sectionTitle}>
+        <Text>Telegram alerts</Text>
+        {features?.telegramConnected && <Badge colorPalette='green'>Connected</Badge>}
+      </Flex>
       {features?.telegramConnected ? (
-        <Text color='gray.400' fontSize='sm'>
-          Connected: alerts arrive as Telegram DMs instead of email.{' '}
-          <button type='button' disabled={busy} onClick={disconnectTelegram} style={linkStyle}>Disconnect</button>
-        </Text>
+        <Flex align='center' gap={2} wrap='wrap'>
+          <Text color='gray.400' fontSize='xs'>alerts arrive as Telegram DMs instead of email.</Text>
+          <Button {...dangerBtn} disabled={busy} onClick={disconnectTelegram}>Disconnect</Button>
+        </Flex>
       ) : (
-        <Text color='gray.400' fontSize='sm'>
-          <button type='button' disabled={busy} onClick={connectTelegram} style={linkStyle}>Connect Telegram</button>
-          {' '}— alerts arrive as Telegram DMs instead of email.
-        </Text>
+        <Flex align='center' gap={2} wrap='wrap'>
+          <Button {...actionBtn} disabled={busy} onClick={connectTelegram}>Connect Telegram</Button>
+          <Text color='gray.400' fontSize='xs'>alerts arrive as Telegram DMs instead of email.</Text>
+        </Flex>
       )}
+      {notes.telegram && <Text color='gray.300' fontSize='xs' mt={2}>{notes.telegram}</Text>}
 
-      <Text color='gray.300' fontSize='xs' mt={4} mb={1} fontWeight='bold'>Share your list</Text>
+      <Text {...sectionTitle}>Share your list</Text>
       {shareUrl ? (
         <Flex gap={2} align='center'>
           <DarkInput
@@ -331,22 +371,20 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
             color='gray.300'
             onFocus={(e) => e.target.select()}
           />
-          <Button size='xs' variant='outline' color='white' borderColor='border.subtle' _hover={{ bg: 'surface.overlay' }}
-            onClick={() => void navigator.clipboard?.writeText(shareUrl).catch(() => {})}>
+          <Button {...actionBtn} onClick={() => void navigator.clipboard?.writeText(shareUrl).catch(() => {})}>
             Copy
           </Button>
-          <Button size='xs' variant='ghost' color='gray.400' _hover={{ color: 'red.300' }} disabled={busy} onClick={disableShare}>
+          <Button {...dangerBtn} disabled={busy} onClick={disableShare}>
             Disable
           </Button>
         </Flex>
       ) : (
-        <Text color='gray.400' fontSize='sm'>
-          <button type='button' disabled={busy} onClick={enableShare} style={linkStyle}>Create a public link</button>
-          {' '}— a read-only page of your watchlist and ratings you can send to friends.
-        </Text>
+        <Flex align='center' gap={2} wrap='wrap'>
+          <Button {...actionBtn} disabled={busy} onClick={enableShare}>Create a public link</Button>
+          <Text color='gray.400' fontSize='xs'>a read-only page of your watchlist and ratings you can send to friends.</Text>
+        </Flex>
       )}
-
-      {note && <Text color='gray.300' fontSize='xs' mt={3}>{note}</Text>}
+      {notes.share && <Text color='gray.300' fontSize='xs' mt={2}>{notes.share}</Text>}
     </Box>
   )
 }
