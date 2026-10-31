@@ -1,8 +1,16 @@
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { getRedis, TRAKT_KEY } from '../alerts/waitlistStore'
 import type { MediaType } from '../../types/tmdb'
 
 const TRAKT_API = 'https://api.trakt.tv'
+// New Trakt apps are PKCE-only (no client secret) and logins must move off
+// trakt.tv/api.trakt.tv to auth.trakt.tv by Feb 2027.
+const TRAKT_AUTH = 'https://auth.trakt.tv'
+// api.trakt.tv sits behind Cloudflare bot rules that 403 the bare node/undici
+// fetch UA — every server call needs an explicit app UA to reach the API.
+const TRAKT_UA = 'Galaxy Movies (+https://www.galaxymovies.app)'
+export const TRAKT_PKCE_PREFIX = 'gm:alerts:trakt:pkce:'
+const PKCE_TTL_SECONDS = 600
 
 export interface TraktTokens {
   access_token: string
@@ -12,61 +20,77 @@ export interface TraktTokens {
 }
 
 export function traktConfigured(): boolean {
-  return Boolean(process.env.TRAKT_CLIENT_ID && process.env.TRAKT_CLIENT_SECRET)
+  return Boolean(process.env.TRAKT_CLIENT_ID)
 }
 
-// state = base64url(email.key).hmac — stateless CSRF proof carrying the sync
-// credentials so the callback doesn't need a server-side nonce store.
-export function signState(email: string, key: string): string {
-  const payload = Buffer.from(JSON.stringify({ email, key })).toString('base64url')
-  const sig = createHmac('sha256', process.env.TRAKT_CLIENT_SECRET!).update(payload).digest('base64url')
-  return `${payload}.${sig}`
+function generatePkcePair(): { verifier: string; challenge: string } {
+  const verifier = randomBytes(32).toString('base64url')
+  return { verifier, challenge: createHash('sha256').update(verifier).digest('base64url') }
 }
 
-export function verifyState(state: string): { email: string; key: string } | null {
-  const secret = process.env.TRAKT_CLIENT_SECRET
-  if (!secret) return null
-  const dot = state.lastIndexOf('.')
-  if (dot <= 0) return null
-  const payload = state.slice(0, dot)
-  const expected = createHmac('sha256', secret).update(payload).digest('base64url')
-  const a = Buffer.from(state.slice(dot + 1))
-  const b = Buffer.from(expected)
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString())
-    return typeof parsed?.email === 'string' && typeof parsed?.key === 'string' ? parsed : null
-  } catch {
-    return null
-  }
+interface PkceSession {
+  email: string
+  key: string
+  verifier: string
 }
 
-export function authorizeUrl(redirectUri: string, state: string): string {
+// state is a random nonce whose Redis value carries the sync creds + PKCE
+// verifier — single-use, 10-minute TTL. Replaces the old HMAC-signed state:
+// with no client secret there's nothing to sign with, and keeping the
+// verifier out of URLs is what makes PKCE work.
+export async function createPkceSession(email: string, key: string): Promise<{ state: string; challenge: string } | null> {
+  const kv = getRedis()
+  if (!kv) return null
+  const { verifier, challenge } = generatePkcePair()
+  const state = randomBytes(16).toString('base64url')
+  await kv.set(`${TRAKT_PKCE_PREFIX}${state}`, { email, key, verifier } satisfies PkceSession, { ex: PKCE_TTL_SECONDS })
+  return { state, challenge }
+}
+
+export async function consumePkceSession(state: string): Promise<PkceSession | null> {
+  const kv = getRedis()
+  if (!kv || !state) return null
+  const key = `${TRAKT_PKCE_PREFIX}${state}`
+  const session = await kv.get<PkceSession>(key)
+  await kv.del(key)
+  if (typeof session?.email !== 'string' || typeof session?.key !== 'string' || typeof session?.verifier !== 'string') return null
+  return session
+}
+
+export function authorizeUrl(redirectUri: string, state: string, challenge: string): string {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: process.env.TRAKT_CLIENT_ID!,
     redirect_uri: redirectUri,
-    state
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
   })
-  return `https://trakt.tv/oauth/authorize?${params}`
+  return `${TRAKT_AUTH}/oauth/authorize?${params}`
 }
 
 async function tokenRequest(body: Record<string, string>): Promise<TraktTokens | null> {
   const resp = await fetch(`${TRAKT_API}/oauth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'User-Agent': TRAKT_UA },
     body: JSON.stringify({
       client_id: process.env.TRAKT_CLIENT_ID,
-      client_secret: process.env.TRAKT_CLIENT_SECRET,
       ...body
     })
-  }).catch(() => null)
-  if (!resp?.ok) return null
+  }).catch((err) => {
+    console.error('Trakt token request threw:', err)
+    return null
+  })
+  if (!resp) return null
+  if (!resp.ok) {
+    console.error('Trakt token request failed:', resp.status, await resp.text().catch(() => '<unreadable>'))
+    return null
+  }
   return resp.json().catch(() => null)
 }
 
-export function exchangeCode(code: string, redirectUri: string): Promise<TraktTokens | null> {
-  return tokenRequest({ code, redirect_uri: redirectUri, grant_type: 'authorization_code' })
+export function exchangeCode(code: string, redirectUri: string, verifier: string): Promise<TraktTokens | null> {
+  return tokenRequest({ code, redirect_uri: redirectUri, grant_type: 'authorization_code', code_verifier: verifier })
 }
 
 export function refreshTokens(refreshToken: string, redirectUri: string): Promise<TraktTokens | null> {
@@ -112,6 +136,7 @@ async function postSync(accessToken: string, path: string, body: object): Promis
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'User-Agent': TRAKT_UA,
       'trakt-api-version': '2',
       'trakt-api-key': process.env.TRAKT_CLIENT_ID!,
       Authorization: `Bearer ${accessToken}`
@@ -157,6 +182,7 @@ export interface TraktPull {
 async function getSync(accessToken: string, path: string): Promise<TraktSyncEntry[] | null> {
   const resp = await fetch(`${TRAKT_API}/${path}`, {
     headers: {
+      'User-Agent': TRAKT_UA,
       'trakt-api-version': '2',
       'trakt-api-key': process.env.TRAKT_CLIENT_ID!,
       Authorization: `Bearer ${accessToken}`

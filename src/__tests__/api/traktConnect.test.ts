@@ -5,15 +5,17 @@ import { SITE_URL } from '../../lib/site'
 const mocks = vi.hoisted(() => ({
   getLinkedEmail: vi.fn<() => Promise<string | null>>(async () => null),
   traktConfigured: vi.fn<() => boolean>(() => true),
-  authorizeUrl: vi.fn<(redirectUri: string, state: string) => string>(
-    (redirectUri, state) => `https://trakt.tv/oauth/authorize?redirect=${encodeURIComponent(redirectUri)}&state=${state}`),
-  signState: vi.fn<(email: string, key: string) => string>((email, key) => `sig:${email}:${key}`)
+  authorizeUrl: vi.fn<(redirectUri: string, state: string, challenge: string) => string>(
+    (redirectUri, state, challenge) =>
+      `https://auth.trakt.tv/oauth/authorize?redirect=${encodeURIComponent(redirectUri)}&state=${state}&code_challenge=${challenge}`),
+  createPkceSession: vi.fn<(email: string, key: string) => Promise<{ state: string; challenge: string } | null>>(
+    async () => ({ state: 'nonce', challenge: 'chal' }))
 }))
 
 vi.mock('../../features/billing/billing', () => ({ getLinkedEmail: mocks.getLinkedEmail }))
 vi.mock('../../features/billing/trakt', () => ({
   authorizeUrl: mocks.authorizeUrl,
-  signState: mocks.signState,
+  createPkceSession: mocks.createPkceSession,
   traktConfigured: mocks.traktConfigured
 }))
 vi.mock('../../lib/redis', () => ({ getRedis: () => fakeRedis.kv }))
@@ -24,6 +26,7 @@ beforeEach(() => {
   resetFakeRedis()
   mocks.traktConfigured.mockReturnValue(true)
   mocks.getLinkedEmail.mockResolvedValue('user@example.com')
+  mocks.createPkceSession.mockResolvedValue({ state: 'nonce', challenge: 'chal' })
 })
 
 describe('GET /api/trakt/connect', () => {
@@ -53,19 +56,28 @@ describe('GET /api/trakt/connect', () => {
     expect(mocks.authorizeUrl).not.toHaveBeenCalled()
   })
 
-  it('redirects to the Trakt authorize URL with a signed state', async () => {
+  it('503s when the PKCE session cannot be stored (no Redis)', async () => {
+    mocks.createPkceSession.mockResolvedValue(null)
     const res = makeRes()
     await handler(makeReq({ query: { key: 'synckey' } }), res)
-    expect(mocks.signState).toHaveBeenCalledWith('user@example.com', 'synckey')
-    expect(mocks.authorizeUrl).toHaveBeenCalledWith(`${SITE_URL}/api/trakt/callback`, 'sig:user@example.com:synckey')
-    expect(res.redirectTo?.url).toContain('trakt.tv/oauth/authorize')
+    expect(res.statusCode).toBe(503)
+    expect(mocks.authorizeUrl).not.toHaveBeenCalled()
+  })
+
+  it('redirects to the Trakt authorize URL with state and code challenge', async () => {
+    const res = makeRes()
+    await handler(makeReq({ query: { key: 'synckey' } }), res)
+    expect(mocks.createPkceSession).toHaveBeenCalledWith('user@example.com', 'synckey')
+    expect(mocks.authorizeUrl).toHaveBeenCalledWith(`${SITE_URL}/api/trakt/callback`, 'nonce', 'chal')
+    expect(res.redirectTo?.url).toContain('auth.trakt.tv/oauth/authorize')
+    expect(res.redirectTo?.url).toContain('code_challenge=chal')
     expect(res.redirectTo?.url).toContain(encodeURIComponent(`${SITE_URL}/api/trakt/callback`))
   })
 
   it('defaults the key to an empty string when omitted', async () => {
     const res = makeRes()
     await handler(makeReq(), res)
-    expect(mocks.signState).toHaveBeenCalledWith('user@example.com', '')
+    expect(mocks.createPkceSession).toHaveBeenCalledWith('user@example.com', '')
   })
 
   it('per-IP rate limit trips at 30 attempts per hour', async () => {

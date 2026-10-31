@@ -79,6 +79,7 @@ export async function stubAccountApi(page: Page, state?: Partial<AccountState>):
     page.route('**/api/billing/status*', (route) =>
       fulfillJson(route, {
         entitlement: account.entitlement,
+        manageable: true,
         traktConnected: account.traktConnected,
         shareId: account.shareId,
         discordWebhook: account.discordWebhook,

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireMethod, rejectBot } from '../../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../../lib/rateLimiter'
 import { getLinkedEmail } from '../../../features/billing/billing'
-import { authorizeUrl, signState, traktConfigured } from '../../../features/billing/trakt'
+import { authorizeUrl, createPkceSession, traktConfigured } from '../../../features/billing/trakt'
 import { SITE_URL } from '../../../lib/site'
 
 export const traktRedirectUri = `${SITE_URL}/api/trakt/callback`
@@ -30,5 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const key = String(req.query.key || '')
-  res.redirect(authorizeUrl(traktRedirectUri, signState(email, key)))
+  const session = await createPkceSession(email, key)
+  if (!session) {
+    return res.status(503).json({ error: 'Trakt sync is temporarily unavailable.' })
+  }
+  res.redirect(authorizeUrl(traktRedirectUri, session.state, session.challenge))
 }

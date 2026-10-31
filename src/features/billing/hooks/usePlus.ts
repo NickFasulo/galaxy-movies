@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getAlertsCredentials, type AlertsCredentials } from '../../alerts/alertsSync'
 
 export interface PlusFeatures {
+  manageable: boolean
   traktConnected: boolean
   shareId: string | null
   discordWebhook: string | null
@@ -34,7 +35,7 @@ export function usePlusStatus(): PlusState {
         creds,
         plus: d?.entitlement === 'plus',
         features: d?.entitlement === 'plus'
-          ? { traktConnected: Boolean(d.traktConnected), shareId: d.shareId || null, discordWebhook: d.discordWebhook || null, telegramConnected: Boolean(d.telegramConnected) }
+          ? { manageable: Boolean(d.manageable), traktConnected: Boolean(d.traktConnected), shareId: d.shareId || null, discordWebhook: d.discordWebhook || null, telegramConnected: Boolean(d.telegramConnected) }
           : null
       }))
       .catch(() => setState({ loading: false, creds, plus: false, features: null }))

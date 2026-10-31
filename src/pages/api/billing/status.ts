@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(200).json({
     entitlement: 'plus',
+    manageable: Boolean(record?.customerId),
     traktConnected: Boolean(trakt),
     shareId: share || null,
     discordWebhook: discordWebhook || null,

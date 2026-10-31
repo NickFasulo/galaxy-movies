@@ -51,9 +51,10 @@ const cardProps = {
 
 export default function Plus() {
   const { query } = useRouter()
-  const { loading, creds, plus, refresh } = usePlusStatus()
+  const { loading, creds, plus, features, refresh } = usePlusStatus()
   const [busy, setBusy] = useState<'monthly' | 'yearly' | null>(null)
   const [error, setError] = useState('')
+  const [justConfirmed, setJustConfirmed] = useState(false)
   const status = firstParam(query.status)
   const success = status === 'success'
   const confirmed = status === 'confirmed'
@@ -132,10 +133,12 @@ export default function Plus() {
             </Text>
           </Box>
         )}
-        {confirmed && !loading && !plus && (
+        {(confirmed || justConfirmed) && !loading && (
           <Box mt={8} mx='auto' bg='green.900' border='1px solid var(--chakra-colors-green-700)' borderRadius='lg' p={4} maxW='36rem'>
             <Text color='green.200' fontSize='sm'>
-              You&apos;re confirmed. Pick a plan below to finish signing up for Plus.
+              {plus
+                ? 'You\u2019re confirmed — Galaxy Plus is already active on this account.'
+                : 'You\u2019re confirmed. Pick a plan below to finish signing up for Plus.'}
             </Text>
           </Box>
         )}
@@ -175,13 +178,18 @@ export default function Plus() {
                 <Text color='white' fontWeight='bold' fontSize='sm'>Galaxy Plus is active</Text>
               </Flex>
               <Text color='gray.400' fontSize='sm'>
-                Thanks for supporting the site.{' '}
-                <a
-                  href={`/api/billing/portal?email=${encodeURIComponent(creds!.email)}&key=${encodeURIComponent(creds!.key)}`}
-                  style={{ textDecoration: 'underline' }}
-                >
-                  Manage your subscription
-                </a>
+                Thanks for supporting the site.
+                {features?.manageable && (
+                  <>
+                    {' '}
+                    <a
+                      href={`/api/billing/portal?email=${encodeURIComponent(creds!.email)}&key=${encodeURIComponent(creds!.key)}`}
+                      style={{ textDecoration: 'underline' }}
+                    >
+                      Manage your subscription
+                    </a>
+                  </>
+                )}
               </Text>
             </Box>
           ) : creds ? (
@@ -227,7 +235,7 @@ export default function Plus() {
             </>
           ) : (
             <Box maxW='36rem' mx={{ base: 'auto', md: 0 }}>
-              <WaitlistForm purpose='login' onConfirmed={refresh} />
+              <WaitlistForm purpose='login' onConfirmed={() => { setJustConfirmed(true); refresh() }} />
               <RecoverAccess />
             </Box>
           )}
