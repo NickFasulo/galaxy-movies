@@ -1,6 +1,6 @@
 # Galaxy Movies
 
-**Galaxy Movies** is an ultra-fast, mobile-friendly discovery platform for film and TV. Track what's coming to and leaving every major streaming service, find where anything is streaming right now, get alerted when something you care about arrives, and ask an AI assistant what to watch next.
+**Galaxy Movies** is an ultra-fast, mobile-friendly discovery platform for film and TV streaming. Track what's coming to and leaving every major streaming service, find where anything is streaming right now, get alerted when something you care about arrives, and ask an AI assistant what to watch next.
 
 Live at [galaxymovies.app](https://galaxymovies.app).
 
