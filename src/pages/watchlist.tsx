@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import type { InferGetStaticPropsType } from 'next'
-import { Box, Heading, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../theme'
 import CardBadge from '../features/catalog/components/CardBadge'
 import MovieGrid from '../features/catalog/components/MovieGrid'
 import CardRail from '../features/catalog/components/CardRail'
@@ -149,12 +150,13 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
         {watchlist.length === 0 ? (
           <>
             <Text mt={10} color='gray.400' textAlign='center'>
-              Nothing saved yet.{' '}
-              <Link href='/' style={{ textDecoration: 'underline' }}>
-                Find something to watch
-              </Link>{' '}
-              and hit the bookmark to save it here.
+              Nothing saved yet. Find something to watch and hit the bookmark to save it here.
             </Text>
+            <Flex justify='center' mt={4}>
+              <Button asChild size='sm' {...secondaryButton}>
+                <Link href='/'>Find something to watch</Link>
+              </Button>
+            </Flex>
             {trending.length > 0 && (
               <Box as='section' mt={8}>
                 <Heading as='h2' size='md' mb={2}>Start here</Heading>
@@ -221,9 +223,10 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
                   {creds
                     ? 'Your list and ratings already sync. Plus adds taste-matched alerts, leaving-soon warnings, and more Galaxy Bot. '
                     : 'Taste-matched alerts, leaving-soon warnings, more Galaxy Bot, and sync across devices. Confirm your email above to get started. '}
-                  <br />
-                  <Link href='/plus' style={{ textDecoration: 'underline' }}>See Plus →</Link>
                 </Text>
+                <Button asChild size='xs' {...secondaryButton} mt={2}>
+                  <Link href='/plus'>See Plus</Link>
+                </Button>
               </>
             )}
             {creds ? <PushAlerts creds={creds} /> : <PushInstallHint />}

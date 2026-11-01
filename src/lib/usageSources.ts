@@ -1,5 +1,5 @@
 import { getRedis } from './redis'
-import { getWatchmodeQuota } from '../features/catalog/watchmodeQuota'
+import { getWatchmodeLastStatus, getWatchmodeQuota, recordWatchmodeResponse } from '../features/catalog/watchmodeQuota'
 import { getCostEstimate, getUsageStats } from '../features/ai/aiUsage'
 import { isPlusActive, parseBillingRecord } from '../features/billing/billing'
 import { hasGscCredentials } from '../features/indexing/indexCheck'
@@ -585,6 +585,7 @@ async function watchmodePanel(): Promise<UsagePanel> {
   const metrics: UsageMetric[] = []
   try {
     const resp = await fetch('https://api.watchmode.com/v1/status/', { headers: { 'X-API-Key': apiKey } })
+    recordWatchmodeResponse(resp)
     const live = resp.ok ? ((await resp.json()) as { quota?: number; quotaUsed?: number }) : null
     if (live?.quota && live.quotaUsed != null) {
       const usedPct = (100 * live.quotaUsed) / live.quota
@@ -607,6 +608,15 @@ async function watchmodePanel(): Promise<UsagePanel> {
       label: 'Last seen via headers',
       value: `${fmt(seen.used)} / ${fmt(seen.quota)}`,
       hint: `${Math.max(0, Math.round((Date.now() - seen.at) / 60000))}m ago`
+    })
+  }
+  const last = await getWatchmodeLastStatus()
+  if (last) {
+    metrics.push({
+      label: 'Last upstream response',
+      value: `HTTP ${last.status}`,
+      hint: `${last.path || 'unknown endpoint'} · ${Math.max(0, Math.round((Date.now() - last.at) / 60000))}m ago`,
+      tone: last.status >= 400 ? 'warn' : undefined
     })
   }
 

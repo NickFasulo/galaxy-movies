@@ -75,6 +75,13 @@ export function plusLink(email: string, key?: string | null): string {
     : `${SITE_URL}/plus`
 }
 
+// Same fragment handoff as plusLink — the synckey never travels server-side.
+export function manageLink(email: string, key?: string | null): string {
+  return key
+    ? `${SITE_URL}/alerts#email=${encodeURIComponent(email)}&key=${encodeURIComponent(key)}`
+    : `${SITE_URL}/alerts`
+}
+
 export async function isPlusSubscriber(email: string, key: string): Promise<boolean> {
   const kv = getRedis()
   if (!kv) return false

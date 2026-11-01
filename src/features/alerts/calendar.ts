@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-import type { ProviderChanges } from '../catalog/streamingChanges'
+import type { MonthlyChanges, ProviderChanges } from '../catalog/streamingChanges'
 import type { AlertPrefs, EpisodeAir } from './watchlistAlerts'
 import { fetchNextEpisode } from './watchlistAlerts'
 import { fetchTmdb } from '../catalog/tmdb'
@@ -163,13 +163,45 @@ export async function loadUpcomingPremieres(ids: number[], region: string): Prom
   return index
 }
 
-export function buildIcs(events: CalendarEvent[]): string {
+// Public per-provider feed events (unauthenticated /api/cal/[provider]):
+// announced comings + scheduled departures from the live diff, plus this
+// month's dated arrivals/departures for history context.
+export function publicProviderEvents(
+  providerKey: string,
+  change: ProviderChanges | null | undefined,
+  monthly: MonthlyChanges | null | undefined
+): CalendarEvent[] {
+  const source = change?.source || monthly?.source || providerKey
+  const seen = new Set<string>()
+  const push = (events: CalendarEvent[], kind: string, item: { tmdbId: number | null; tmdbType: 'movie' | 'tv'; title: string; date?: string | null; season?: number | null }, verb: string, stamp?: number) => {
+    if (!item.tmdbId || !item.date) return
+    const uid = `pub:${providerKey}:${item.tmdbType}:${item.tmdbId}:${kind}:${item.date}@galaxymovies.app`
+    if (seen.has(uid)) return
+    seen.add(uid)
+    events.push({
+      uid,
+      date: item.date,
+      summary: `${item.title}${item.season ? ` season ${item.season}` : ''} ${verb} ${source}`,
+      url: `${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`,
+      stamp: stamp || change?.updatedAt || monthly?.updatedAt || Date.now()
+    })
+  }
+
+  const events: CalendarEvent[] = []
+  for (const t of change?.coming || []) push(events, 'coming', t, 'comes to')
+  for (const t of change?.leavingSoon || []) push(events, 'leaving', t, 'leaves')
+  for (const t of monthly?.arrived || []) push(events, 'arrived', t, 'arrived on')
+  for (const t of monthly?.departed || []) push(events, 'departed', t, 'left')
+  return events
+}
+
+export function buildIcs(events: CalendarEvent[], calName = 'Galaxy Movies watchlist'): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Galaxy Movies//Watchlist Calendar//EN',
+    'PRODID:-//Galaxy Movies//Streaming Calendars//EN',
     'CALSCALE:GREGORIAN',
-    'X-WR-CALNAME:Galaxy Movies watchlist'
+    `X-WR-CALNAME:${escapeText(calName)}`
   ]
   for (const e of events) {
     const start = toIcsDate(e.date)

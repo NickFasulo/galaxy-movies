@@ -21,7 +21,7 @@ export default function GenreBadges({ genres, mediaType = 'movie', isAnime = fal
         <WrapItem>
           <Link asChild data-umami-event='genre-click' data-umami-event-genre='anime' _hover={{ textDecoration: 'none' }}>
             <NextLink href={`${basePath}/anime`}>
-              <Badge as='span' cursor='pointer' _hover={{ bg: 'whiteAlpha.300' }}>Anime</Badge>
+              <Badge as='span' cursor='pointer' bg='surface.raised' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Anime</Badge>
             </NextLink>
           </Link>
         </WrapItem>
@@ -33,7 +33,7 @@ export default function GenreBadges({ genres, mediaType = 'movie', isAnime = fal
             {slug ? (
               <Link asChild data-umami-event='genre-click' data-umami-event-genre={slug} _hover={{ textDecoration: 'none' }}>
                 <NextLink href={`${basePath}/${slug}`}>
-                  <Badge as='span' cursor='pointer' _hover={{ bg: 'whiteAlpha.300' }}>{genre.name}</Badge>
+                  <Badge as='span' cursor='pointer' bg='surface.raised' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>{genre.name}</Badge>
                 </NextLink>
               </Link>
             ) : (

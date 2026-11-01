@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getRedis } from '../../lib/redis'
-import { getWatchmodeQuota, recordWatchmodeQuota, watchmodeQuotaExceeded } from './watchmodeQuota'
+import { getWatchmodeLastStatus, getWatchmodeQuota, recordWatchmodeResponse, watchmodeQuotaExceeded } from './watchmodeQuota'
 
 vi.mock('../../lib/redis', () => ({ getRedis: vi.fn(() => null) }))
 const mockGetRedis = vi.mocked(getRedis)
@@ -17,11 +17,11 @@ const respWithHeaders = (quota: string | null, used: string | null) =>
     }
   })
 
-describe('recordWatchmodeQuota', () => {
+describe('recordWatchmodeResponse', () => {
   it('persists quota headers to Redis', async () => {
     const set = vi.fn(async () => 'OK')
     mockGetRedis.mockReturnValue({ set } as unknown as ReturnType<typeof getRedis>)
-    recordWatchmodeQuota(respWithHeaders('2500', '2442'))
+    recordWatchmodeResponse(respWithHeaders('2500', '2442'))
     expect(set).toHaveBeenCalledWith(
       'wm:quota',
       expect.objectContaining({ quota: 2500, used: 2442 }),
@@ -30,14 +30,41 @@ describe('recordWatchmodeQuota', () => {
   })
 
   it.each([['2500', null], [null, '100'], ['abc', '100']])(
-    'ignores missing or malformed headers (quota=%s used=%s)',
+    'records status but not quota when headers are missing or malformed (quota=%s used=%s)',
     (quota, used) => {
-      const set = vi.fn(async () => 'OK')
+      const set = vi.fn<(...args: unknown[]) => Promise<string>>(async () => 'OK')
       mockGetRedis.mockReturnValue({ set } as unknown as ReturnType<typeof getRedis>)
-      recordWatchmodeQuota(respWithHeaders(quota, used))
-      expect(set).not.toHaveBeenCalled()
+      recordWatchmodeResponse(respWithHeaders(quota, used))
+      expect(set).toHaveBeenCalledWith(
+        'wm:last-status',
+        expect.objectContaining({ status: 200 }),
+        expect.objectContaining({ ex: expect.any(Number) })
+      )
+      expect(set.mock.calls.some((call) => call[0] === 'wm:quota')).toBe(false)
     }
   )
+
+  it('records rejected responses so upstream outages are visible', async () => {
+    const set = vi.fn<(...args: unknown[]) => Promise<string>>(async () => 'OK')
+    mockGetRedis.mockReturnValue({ set } as unknown as ReturnType<typeof getRedis>)
+    const resp = new Response('{}', { status: 429 })
+    recordWatchmodeResponse(resp)
+    expect(set).toHaveBeenCalledWith('wm:last-status', expect.objectContaining({ status: 429 }), expect.anything())
+    expect(set.mock.calls.some((call) => call[0] === 'wm:quota')).toBe(false)
+  })
+})
+
+describe('getWatchmodeLastStatus', () => {
+  it('returns the stored status', async () => {
+    const s = { status: 429, path: '/title-leaving-dates/', at: 123 }
+    mockGetRedis.mockReturnValue({ get: async () => s } as unknown as ReturnType<typeof getRedis>)
+    await expect(getWatchmodeLastStatus()).resolves.toEqual(s)
+  })
+
+  it('returns null when nothing is recorded', async () => {
+    mockGetRedis.mockReturnValue({ get: async () => null } as unknown as ReturnType<typeof getRedis>)
+    await expect(getWatchmodeLastStatus()).resolves.toBeNull()
+  })
 })
 
 describe('watchmodeQuotaExceeded', () => {

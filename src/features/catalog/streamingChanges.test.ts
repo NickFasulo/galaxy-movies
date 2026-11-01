@@ -6,6 +6,7 @@ import {
   getMonthlyChanges,
   getProviderCatalog,
   getProviderChanges,
+  getSourceIdMap,
   getTitleChangeIndex,
   getTitleChanges,
   mergeYearlyDiff,
@@ -22,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   fetchTmdb: vi.fn<(path?: string, params?: Record<string, unknown>) => Promise<{ results: unknown[] }>>(async () => ({ results: [] })),
   fetchDiscoverMovies: vi.fn<(opts?: DiscoverOpts) => Promise<{ results: unknown[]; total_pages: number }>>(async () => ({ results: [], total_pages: 1 })),
   fetchDiscoverTv: vi.fn<(opts?: DiscoverOpts) => Promise<{ results: unknown[]; total_pages: number }>>(async () => ({ results: [], total_pages: 1 })),
-  recordWatchmodeQuota: vi.fn(),
+  recordWatchmodeResponse: vi.fn(),
   watchmodeQuotaExceeded: vi.fn<() => Promise<boolean>>(async () => false),
   warmAiTitleCache: vi.fn<(candidates?: { id: number; title?: string }[]) => Promise<number>>(async () => 0),
   pingIndexNow: vi.fn<(urls?: string[]) => Promise<boolean>>(async () => true)
@@ -39,7 +40,7 @@ vi.mock('./tmdb', async (importOriginal) => {
   }
 })
 vi.mock('./watchmodeQuota', () => ({
-  recordWatchmodeQuota: mocks.recordWatchmodeQuota,
+  recordWatchmodeResponse: mocks.recordWatchmodeResponse,
   watchmodeQuotaExceeded: mocks.watchmodeQuotaExceeded
 }))
 vi.mock('../ai/warmCache', () => ({ warmAiTitleCache: mocks.warmAiTitleCache }))
@@ -556,6 +557,24 @@ describe('updateStreamingChanges', () => {
     const summary = await updateStreamingChanges()
     expect(summary.error).toBe('No Watchmode sources resolved')
     expect(summary.netflix).toBeUndefined()
+  })
+
+  it('serves the stale source map when /sources fails', async () => {
+    fake.map.delete('changes:sources')
+    fake.map.set('changes:sources:stale', { netflix: { id: 203, name: 'Netflix' } })
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({}, false)))
+    netflixCatalog([1, 2])
+    const summary = await updateStreamingChanges()
+    expect(summary.error).toBeUndefined()
+    expect((summary.netflix as { catalog: number }).catalog).toBe(2)
+  })
+
+  it('persists a no-TTL stale copy after a successful /sources fetch', async () => {
+    fake.map.delete('changes:sources')
+    vi.stubGlobal('fetch', fetchStub({ sources: [{ id: 203, name: 'Netflix', type: 'sub' }] }))
+    await getSourceIdMap()
+    expect(fake.map.get('changes:sources')).toEqual({ netflix: { id: 203, name: 'Netflix' } })
+    expect(fake.map.get('changes:sources:stale')).toEqual({ netflix: { id: 203, name: 'Netflix' } })
   })
 
   it('writes a namespaced IN diff for IN-available providers', async () => {

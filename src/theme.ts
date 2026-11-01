@@ -38,3 +38,12 @@ const config = defineConfig({
 })
 
 export const system = createSystem(defaultConfig, config)
+
+// Shared grey "secondary" button — BackButton is the canonical instance;
+// spread this into any Button/Link that should render as a neutral action.
+export const secondaryButton = {
+  bg: 'surface.raised',
+  color: 'white',
+  border: '1px solid var(--chakra-colors-border-subtle)',
+  _hover: { bg: 'surface.overlay' }
+} as const

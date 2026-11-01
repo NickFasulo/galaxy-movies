@@ -3,6 +3,7 @@ import NextLink from 'next/link'
 import { Badge, Button, Flex, Link, Text } from '@chakra-ui/react'
 import Panel from '../../../components/Panel'
 import { usePlusStatus } from '../hooks/usePlus'
+import { secondaryButton } from '../../../theme'
 import type { AlertsCredentials } from '../../alerts/alertsSync'
 
 export async function startPlusCheckout(creds: AlertsCredentials, plan: 'monthly' | 'yearly'): Promise<{ url?: string; error?: string }> {
@@ -57,7 +58,7 @@ export default function PlusUpsell() {
             <Button size='sm' colorPalette='yellow' loading={busy === 'monthly'} onClick={() => checkout('monthly')}>
               $3 / month
             </Button>
-            <Button size='sm' variant='outline' loading={busy === 'yearly'} onClick={() => checkout('yearly')}>
+            <Button size='sm' {...secondaryButton} loading={busy === 'yearly'} onClick={() => checkout('yearly')}>
               $20 / year
             </Button>
             <Link asChild color='gray.300' fontSize='xs' alignSelf='center' _hover={{ color: 'white' }}>
@@ -67,7 +68,7 @@ export default function PlusUpsell() {
           {error && <Text color='red.300' fontSize='xs' mt={2}>{error}</Text>}
         </>
       ) : (
-        <Button asChild size='sm' variant='outline'>
+        <Button asChild size='sm' {...secondaryButton}>
           <NextLink href='/plus'>See Plus</NextLink>
         </Button>
       )}

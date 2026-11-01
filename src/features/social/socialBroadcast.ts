@@ -1,5 +1,5 @@
 import { getRedis } from '../../lib/redis'
-import { getProviderChanges } from '../catalog/streamingChanges'
+import { getMonthlyChanges, getProviderChanges, type MonthlyChanges } from '../catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../catalog/tmdb'
 import { SOCIAL_CHANNELS } from './socialChannels'
 import { SITE_URL } from '../../lib/site'
@@ -202,8 +202,55 @@ export function buildDeparturesPost(
   return text
 }
 
+// Churn-first variant: the month's net adds/losses per service is the headline,
+// dated departures trail it. Links the report page — the stat table is the
+// shareable asset, the leaving list is context.
+export function buildMonthlyChurnPost(
+  changes: Record<string, { leavingSoon?: { title: string; date?: string | null }[] }>,
+  monthly: Record<string, MonthlyChanges | null | undefined>,
+  maxLen = 300
+): string {
+  const monthLabel = new Date().toLocaleString('en-US', { month: 'long' })
+  const churnLines = BROADCAST_PROVIDERS
+    .map((key) => {
+      const m = monthly[key]
+      if (!m || (!m.arrived.length && !m.departed.length)) return null
+      const net = m.arrived.length - m.departed.length
+      return `${providerLabel(key)} +${m.arrived.length}/−${m.departed.length}${net !== 0 ? ` (net ${net > 0 ? '+' : ''}${net})` : ''}`
+    })
+    .filter((l): l is string => Boolean(l))
+
+  const leavingLines: string[] = []
+  for (const key of BROADCAST_PROVIDERS) {
+    for (const t of changes[key]?.leavingSoon?.slice(0, 2) || []) {
+      leavingLines.push(`− ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} ← ${providerLabel(key)}`)
+    }
+  }
+
+  const lines = [`Streaming in ${monthLabel}:`, ...churnLines.slice(0, 6)]
+  if (leavingLines.length) lines.push('', 'Leaving soon:', ...leavingLines.slice(0, 3))
+  if (lines.length === 1) return ''
+
+  const footer = `Full report: ${SITE_URL}/reports/streaming-churn`
+  let text = `${lines.join('\n')}\n\n${footer}`
+  while (text.length > maxLen && lines.length > 1) {
+    lines.pop()
+    while (lines.length > 1 && (lines[lines.length - 1] === '' || lines[lines.length - 1] === 'Leaving soon:')) lines.pop()
+    text = `${lines.join('\n')}\n\n${footer}`
+  }
+  return text
+}
+
 export async function broadcastMonthlyDepartures(): Promise<Record<string, ChannelResult>> {
-  const changes = await getProviderChanges(BROADCAST_PROVIDERS)
-  if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
-  return broadcastToChannels((maxLen) => buildDeparturesPost(changes, maxLen), { scope: 'monthly', ttlDays: 35 })
+  const [changes, monthly] = await Promise.all([
+    getProviderChanges(BROADCAST_PROVIDERS),
+    getMonthlyChanges(BROADCAST_PROVIDERS)
+  ])
+  if (!Object.keys(changes).length && !Object.keys(monthly).length) {
+    return { bsky: { status: 'failed', reason: 'no changes data' } }
+  }
+  return broadcastToChannels(
+    (maxLen) => buildMonthlyChurnPost(changes, monthly, maxLen) || buildDeparturesPost(changes, maxLen),
+    { scope: 'monthly', ttlDays: 35 }
+  )
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Badge, Box, Button, Flex, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../../../theme'
 import DarkInput from '../../../components/DarkInput'
 import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../alertsSync'
 import { letterboxdCsvs } from '../../../lib/format/exportCsv'
@@ -18,9 +19,7 @@ interface ResolvedTitle {
 
 const actionBtn = {
   size: 'xs',
-  bg: 'whiteAlpha.300',
-  color: 'white',
-  _hover: { bg: 'whiteAlpha.400' }
+  ...secondaryButton
 } as const
 
 const dangerBtn = {

@@ -1,6 +1,7 @@
 import type { GetServerSidePropsContext } from 'next'
 import Link from 'next/link'
-import { Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../../theme'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
 import { getMonthlyChanges } from '../../features/catalog/streamingChanges'
 import { setSwrCache } from '../../lib/http'
@@ -133,10 +134,19 @@ export default function LeavingIndex({ soon }: Props) {
           US catalogs, updated daily. Departure dates mark when a title was detected leaving the service.
         </Text>
         <Text textAlign='center' mt={4} color='gray.500' fontSize='sm'>
-          Write about streaming?{' '}
-          <Link href='/widgets' style={{ textDecoration: 'underline' }}>Embed these lists on your site (free)</Link>.
-          {' '}Or subscribe to the <Link href='/leaving.xml' style={{ textDecoration: 'underline' }}>RSS feed</Link>.
+          Write about streaming? Embed these lists on your site (free), or subscribe to the RSS feed:
         </Text>
+        <Flex wrap='wrap' gap={2} mt={4} justify='center'>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href='/reports/streaming-churn'>Churn report</Link>
+          </Button>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href='/widgets'>Embed these lists</Link>
+          </Button>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href='/leaving.xml'>RSS feed</Link>
+          </Button>
+        </Flex>
       </PageShell>
     </>
   );

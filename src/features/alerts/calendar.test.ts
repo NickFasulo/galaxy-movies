@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildIcs, comingEvents, episodeEvents, loadUpcomingEpisodes, loadUpcomingPremieres, premiereEvents, toIcsDate } from './calendar'
+import { buildIcs, comingEvents, episodeEvents, loadUpcomingEpisodes, loadUpcomingPremieres, premiereEvents, publicProviderEvents, toIcsDate } from './calendar'
 
 const nextEp = vi.hoisted(() => vi.fn())
 vi.mock('./watchlistAlerts', async (importOriginal) => ({
@@ -12,7 +12,7 @@ vi.mock('../catalog/tmdb', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../catalog/tmdb')>()),
   fetchTmdb
 }))
-import type { ProviderChanges } from '../catalog/streamingChanges'
+import type { MonthlyChanges, ProviderChanges } from '../catalog/streamingChanges'
 import type { AlertPrefs } from './watchlistAlerts'
 
 const prefs = (overrides: Partial<AlertPrefs> = {}): AlertPrefs => ({
@@ -130,6 +130,59 @@ describe('buildIcs', () => {
     expect(ics).toContain('DTEND;VALUE=DATE:20260202')
     expect(ics).toContain('SUMMARY:Film\\, "One" comes to Netflix')
     expect(ics).toMatch(/END:VCALENDAR\r\n$/)
+  })
+
+  it('overrides the calendar name for public feeds', () => {
+    const ics = buildIcs([], 'Netflix arrivals & departures — Galaxy Movies')
+    expect(ics).toContain('X-WR-CALNAME:Netflix arrivals & departures — Galaxy Movies')
+  })
+})
+
+const monthly = (overrides: Partial<MonthlyChanges> = {}): MonthlyChanges => ({
+  source: 'Netflix',
+  month: '2026-01',
+  updatedAt: 1700000000000,
+  arrived: [],
+  coming: [],
+  departed: [],
+  ...overrides
+})
+
+describe('publicProviderEvents', () => {
+  it('emits announced comings and departures plus dated monthly history', () => {
+    const events = publicProviderEvents('netflix',
+      changes({
+        coming: [{ tmdbId: 1, tmdbType: 'movie', title: 'Soon', date: '2026-03-01', season: null }],
+        leavingSoon: [{ tmdbId: 2, tmdbType: 'tv', title: 'Going', date: '2026-03-15', season: 1 }]
+      }),
+      monthly({
+        arrived: [{ tmdbId: 3, tmdbType: 'movie', title: 'New', date: '2026-01-05', season: null, popularity: 10 }],
+        departed: [{ tmdbId: 4, tmdbType: 'movie', title: 'Old', date: '2026-01-20', year: 2000, popularity: 5 }]
+      })
+    )
+    expect(events).toHaveLength(4)
+    expect(events.map((e) => e.summary)).toEqual([
+      'Soon comes to Netflix',
+      'Going season 1 leaves Netflix',
+      'New arrived on Netflix',
+      'Old left Netflix'
+    ])
+    expect(new Set(events.map((e) => e.uid)).size).toBe(4)
+  })
+
+  it('skips entries without ids or dates and dedupes repeats', () => {
+    const dup = { tmdbId: 1, tmdbType: 'movie' as const, title: 'Twice', date: '2026-03-01', season: null }
+    const events = publicProviderEvents('netflix',
+      changes({ coming: [dup, dup], leavingSoon: [{ tmdbId: null, tmdbType: 'movie', title: 'Ghost', date: '2026-03-01', season: null }] }),
+      monthly({ departed: [{ tmdbId: 9, tmdbType: 'movie', title: 'NoDate', date: '', year: 2000, popularity: 1 }] })
+    )
+    expect(events).toHaveLength(1)
+    expect(events[0]!.summary).toBe('Twice comes to Netflix')
+  })
+
+  it('falls back to the monthly source name when no live change exists', () => {
+    const events = publicProviderEvents('netflix', null, monthly({ source: 'Netflix' }))
+    expect(events).toHaveLength(0)
   })
 })
 

@@ -1,5 +1,6 @@
 import { Flex, Text, Link, Image } from '@chakra-ui/react'
 import { VPN_DEAL_LINK, VPN_DEAL_PIXEL, VPN_CTA_TEXT } from '../affiliates'
+import { secondaryButton } from '../../../theme'
 
 export default function VpnBanner({ message }: { message: string }) {
   return (
@@ -19,16 +20,14 @@ export default function VpnBanner({ message }: { message: string }) {
       <Link
         href={VPN_DEAL_LINK}
         rel='sponsored nofollow noopener'
-        color='white'
         fontWeight='medium'
         fontSize='sm'
         whiteSpace='nowrap'
         px={4}
         py={2}
-        bg='whiteAlpha.100'
         borderRadius='md'
         transition='background 0.15s'
-        _hover={{ bg: 'whiteAlpha.200' }}
+        {...secondaryButton}
         target='_blank'
       >
         {VPN_CTA_TEXT}

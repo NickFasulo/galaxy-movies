@@ -7,7 +7,6 @@ import {
   Text,
   VStack,
   Button,
-  Link,
   useDisclosure,
   Spinner,
   HStack,
@@ -16,13 +15,14 @@ import {
 import DarkInput from '../../../components/DarkInput'
 import { TbMessageX } from 'react-icons/tb'
 import { buildTasteProfile } from '../../../lib/userData'
+import { renderMessageContent } from '../chatRender'
 import { getAlertsCredentials } from '../../alerts/alertsSync'
 import type { ResolvedMention } from '../movieSearch'
 import { feedSseChunk, flushSseCarry, parseSseFrame } from '../chatStream'
 import { getProviderIds } from '../../catalog/tmdb'
+import { secondaryButton } from '../../../theme'
 import { useUserData } from '../../alerts/hooks/useUserData'
 import { useProviderCatalog } from '../../catalog/hooks/useProviderCatalog'
-import WatchlistButton from '../../alerts/components/WatchlistButton'
 import CardProviderIcons from '../../catalog/components/CardProviderIcons'
 import type { WatchProvider } from '../../../types/tmdb'
 import { LuMessageCircle, LuX } from 'react-icons/lu';
@@ -34,43 +34,8 @@ interface ChatMessage {
   content: string
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function renderMessageContent(content: string, links: ResolvedMention[] | undefined) {
-  if (!links || links.length === 0) {
-    return content
-  }
-
-  const escaped = links.map((link) => escapeRegExp(link.match)).sort((a, b) => b.length - a.length)
-  const pattern = new RegExp(`(${escaped.join('|')})`, 'g')
-  const parts = content.split(pattern)
-
-  return parts.map((part, index) => {
-    const link = links.find((l) => l.match === part)
-    if (!link) return part
-
-    return (
-      <Box as='span' key={index}>
-        <Link
-          color="blue.300"
-          fontWeight="semibold"
-          _hover={{ textDecoration: 'underline' }}
-          asChild><NextLink
-            href={link.mediaType === 'tv' ? `/tv/${link.movieId}` : `/movies/${link.movieId}`}>
-            {part}
-          </NextLink></Link>
-        <WatchlistButton
-          movie={{ id: link.movieId, mediaType: link.mediaType === 'tv' ? 'tv' : 'movie', title: link.title, release_date: link.releaseDate || link.year, poster_path: link.poster_path }}
-          size='2xs'
-          ml={1}
-          variant='ghost'
-        />
-      </Box>
-    );
-  });
-}
+// renderMessageContent lives in ../chatRender so /movie-night can reuse the
+// same title-link + watchlist treatment for streamed replies.
 
 // Provider logos for titles linkified in an assistant reply — reuses the
 // watchProviders endpoint's LRU/budgets and the shared catalog for logos.
@@ -204,8 +169,8 @@ export default function ChatWidget() {
 
   const quickActions = [
     { label: 'What should I watch tonight?', query: 'What should I watch tonight?' },
-    { label: 'Comedy recommendations', query: 'Suggest some good comedy movies' },
-    { label: 'Recent releases', query: 'What are the best recent movies?' }
+    { label: 'What’s leaving my services?', query: 'What is leaving my streaming services this month?' },
+    { label: 'Movie night for two', href: '/movie-night' }
   ]
 
   useEffect(() => {
@@ -541,20 +506,29 @@ export default function ChatWidget() {
                   </Text>
                   <VStack gap="2" align="stretch">
                     {quickActions.map((action, index) => (
-                      <Button
-                        key={index}
-                        size="sm"
-                        variant="outline"
-                        bg='surface.raised'
-                        color='white'
-                        borderColor='border.subtle'
-                        _hover={{ bg: 'surface.overlay' }}
-                        onClick={() => handleQuickAction(action.query)}
-                        textAlign="left"
-                        justifyContent="flex-start"
-                      >
-                        {action.label}
-                      </Button>
+                      'href' in action ? (
+                        <Button
+                          key={index}
+                          size="sm"
+                          {...secondaryButton}
+                          asChild
+                          textAlign="left"
+                          justifyContent="flex-start"
+                        >
+                          <NextLink href={action.href!}>{action.label}</NextLink>
+                        </Button>
+                      ) : (
+                        <Button
+                          key={index}
+                          size="sm"
+                          {...secondaryButton}
+                          onClick={() => handleQuickAction(action.query!)}
+                          textAlign="left"
+                          justifyContent="flex-start"
+                        >
+                          {action.label}
+                        </Button>
+                      )
                     ))}
                   </VStack>
                 </VStack>

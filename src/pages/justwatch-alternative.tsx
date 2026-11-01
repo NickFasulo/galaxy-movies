@@ -8,6 +8,7 @@ import {
 } from '@chakra-ui/react'
 import { fetchDiscoverMovies } from '../features/catalog/tmdb'
 import MovieGrid from '../features/catalog/components/MovieGrid'
+import ComparisonLinks from '../components/ComparisonLinks'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import { SITE_URL } from '../lib/site'
@@ -149,6 +150,8 @@ export default function JustWatchAlternative({ movies, dataError }: InferGetStat
             <Link href='/free' style={{ textDecoration: 'underline' }}>streaming free with ads</Link>, or open the{' '}
             <Link href='/streaming-in-india' style={{ textDecoration: 'underline' }}>India streaming guide</Link> for Bollywood, Tamil and Telugu coverage.
           </Text>
+
+          <ComparisonLinks exclude='/justwatch-alternative' />
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Frequently asked questions</Heading>
           {FAQ_ITEMS.map(({ question, answer }) => (

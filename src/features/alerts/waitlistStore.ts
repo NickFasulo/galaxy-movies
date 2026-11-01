@@ -41,6 +41,10 @@ export const CHAT_HISTORY_KEY = 'gm:alerts:chat'
 // single-title tracking. Separate from CONFIRMED_KEY on purpose: these
 // subscribers asked for title alerts only, not the weekly digest.
 export const WATCH_KEY = 'gm:alerts:watch'
+// email => JSON { targets: [{tmdbId, tmdbType, title, addedAt, prevMin, minSeen}] } —
+// Plus-only rental/purchase price-drop tracking. Each weekly check costs
+// Watchmode quota, which is why this stays behind the paid tier.
+export const PRICE_DROPS_KEY = 'gm:alerts:pricedrops'
 // email => JSON { token, titles: [...] } — pending confirmation.
 export const WATCH_PENDING_KEY = 'gm:alerts:watch-pending'
 

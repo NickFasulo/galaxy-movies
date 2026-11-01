@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, WATCH_KEY, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
+import { getOrCreateSyncKey, getRedis, WATCH_KEY, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
 import { mergeWatchTitles, parseWatchEntry, type WatchTitle } from '../../features/alerts/titleAlerts'
 import { safeEqual } from '../../lib/auth'
 import { requireMethod } from '../../lib/http'
@@ -10,6 +10,7 @@ const TOKEN_PATTERN = /^[0-9a-f-]{36}$/i
 interface WatchPending {
   token: string
   titles: WatchTitle[]
+  services?: string[]
 }
 
 // Same shape as waitlist-confirm: no bot check or rate limit because mail
@@ -34,9 +35,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (const t of pending.titles || []) {
       titles = mergeWatchTitles(titles, t)
     }
+    const services = pending.services !== undefined ? pending.services : existing?.services
 
-    await kv.hset(WATCH_KEY, { [email]: { unsub: existing?.unsub || randomUUID(), titles } })
+    await kv.hset(WATCH_KEY, { [email]: { unsub: existing?.unsub || randomUUID(), titles, services } })
     await kv.hdel(WATCH_PENDING_KEY, email)
+    // Synckey here is what later lets the "manage alerts" email link work for
+    // title-only subscribers who never went through the digest confirm flow.
+    await getOrCreateSyncKey(kv, email)
     return redirect('watch-confirmed')
   } catch (err) {
     console.error('Title watch confirm error:', err)

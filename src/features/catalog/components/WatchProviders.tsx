@@ -1,7 +1,8 @@
 import Image from 'next/image'
 import NextLink from 'next/link'
 import { useMemo, useState } from 'react'
-import { Box, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
+import { Box, Button, Flex, Text, Link, NativeSelect } from '@chakra-ui/react';
+import { secondaryButton } from '../../../theme'
 import Panel from '../../../components/Panel'
 import { Tooltip } from '@/components/ui/tooltip';
 import { isAmazonProvider, buildAmazonAffiliateLink, tagAmazonUrl } from '../../monetize/affiliates'
@@ -10,6 +11,8 @@ import { StreamingAlertCta } from './TitleAvailability'
 import { sameStore, type PriceOffer } from '../prices'
 import { usePrices } from '../hooks/usePrices'
 import { useUserData } from '../../alerts/hooks/useUserData'
+import { usePlusStatus } from '../../billing/hooks/usePlus'
+import { getAlertsCredentials } from '../../alerts/alertsSync'
 import { VPN_AFFILIATE_LINK, VPN_AFFILIATE_PIXEL, VPN_LINK_TEXT } from '../../monetize/affiliates'
 import { GRUV_AFFILIATE_PIXEL, GRUV_LINK_TEXT, buildGruvLink } from '../../monetize/affiliates'
 import AffiliateTextLink from '../../monetize/components/AffiliateTextLink'
@@ -106,6 +109,46 @@ function bestOfferFor(providerName: string, offers: PriceOffer[]): PriceOffer | 
 
 const formatPrice = (offer: PriceOffer | null | undefined) =>
   offer ? `$${(offer.price ?? 0).toFixed(2)} on ${offer.provider}` : null
+
+// Plus-gated price-drop signup. The credential check is optimistic — the API
+// enforces entitlement server-side, so a stale Plus flag just gets a 403.
+function PriceDropCta({ tmdbId, mediaType, movieTitle }: { tmdbId: number; mediaType: MediaType; movieTitle: string }) {
+  const { creds, plus, loading } = usePlusStatus()
+  const [state, setState] = useState<'idle' | 'adding' | 'added'>('idle')
+
+  const add = async () => {
+    const c = creds || getAlertsCredentials()
+    if (!c) return
+    setState('adding')
+    try {
+      const resp = await fetch('/api/price-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: c.email, key: c.key, action: 'add', tmdbId, tmdbType: mediaType, title: movieTitle })
+      })
+      setState(resp.ok ? 'added' : 'idle')
+    } catch {
+      setState('idle')
+    }
+  }
+
+  if (loading) return null
+  if (!plus) {
+    return (
+      <Text fontSize='2xs' color='gray.500'>
+        <NextLink href='/plus' style={{ textDecoration: 'underline' }}>Plus</NextLink> members get price-drop alerts on rentals.
+      </Text>
+    )
+  }
+  if (state === 'added') {
+    return <Text fontSize='2xs' color='green.300'>Watching for a price drop — we&apos;ll email you.</Text>
+  }
+  return (
+    <Button size='2xs' {...secondaryButton} loading={state === 'adding'} onClick={add}>
+      Alert me if the price drops
+    </Button>
+  )
+}
 
 // Internal links from detail pages (the site's ranking surface) to the
 // provider catalog pages — "browse Netflix" is also the natural next click
@@ -290,7 +333,10 @@ export default function WatchProviders({
                       cheapestBuy && `Buy from ${formatPrice(cheapestBuy)}`
                     ].filter(Boolean).join(' · ')}
                   </Text>
-                  <GruvLink product={gruv} />
+                  <Flex align='center' gap={3}>
+                    {movieTitle && <PriceDropCta tmdbId={tmdbId} mediaType={mediaType} movieTitle={movieTitle} />}
+                    <GruvLink product={gruv} />
+                  </Flex>
                 </Flex>
               </Box>
             )}

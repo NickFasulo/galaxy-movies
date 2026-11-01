@@ -1,6 +1,6 @@
 import { getRedis } from '../../lib/redis'
 import { checkGlobalBudget } from '../../lib/rateLimiter'
-import { recordWatchmodeQuota, watchmodeQuotaExceeded } from './watchmodeQuota'
+import { recordWatchmodeResponse, watchmodeQuotaExceeded } from './watchmodeQuota'
 import { resolveGruvProduct, type GruvProduct } from '../monetize/gruv'
 import type { MediaType } from '../../types/tmdb'
 
@@ -88,7 +88,7 @@ async function resolveWatchmodeId(tmdbId: string | number, mediaType: MediaType)
   try {
     const url = `${WATCHMODE_BASE}/search/?search_field=${SEARCH_FIELD[mediaType] || SEARCH_FIELD.movie}&search_value=${tmdbId}`
     const resp = await fetch(url, { headers: { 'X-API-Key': apiKey } })
-    recordWatchmodeQuota(resp)
+    recordWatchmodeResponse(resp)
     if (!resp.ok) return null
     const data: { title_results?: { id: number }[] } = await resp.json()
     const wmId = data.title_results?.[0]?.id || null
@@ -108,7 +108,7 @@ async function fetchWatchmodeJson<T>(path: string): Promise<T | null> {
   if (!apiKey) return null
   try {
     const resp = await fetch(`${WATCHMODE_BASE}${path}`, { headers: { 'X-API-Key': apiKey } })
-    recordWatchmodeQuota(resp)
+    recordWatchmodeResponse(resp)
     if (!resp.ok) return null
     return await resp.json()
   } catch {

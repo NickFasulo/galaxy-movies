@@ -1,4 +1,5 @@
 import { Button, Checkbox, Flex, SimpleGrid, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../../../theme'
 import Panel from '../../../components/Panel'
 import { useUserData } from '../hooks/useUserData'
 import { setServices } from '../../../lib/userData'
@@ -40,8 +41,7 @@ export default function ServicesPicker() {
             <Button
               key={r.code}
               size='xs'
-              variant={region === r.code ? 'solid' : 'outline'}
-              colorPalette={region === r.code ? 'blue' : 'whiteAlpha'}
+              {...(region === r.code ? { variant: 'solid' as const, colorPalette: 'blue' as const } : secondaryButton)}
               onClick={() => changeRegion(r.code)}
             >
               {r.label}

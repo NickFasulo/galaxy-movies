@@ -1,7 +1,10 @@
 import { Fragment } from 'react'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
-import { Box, Flex, Heading, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../../theme'
+import { getProviderLogosByKey } from '../../features/catalog/providerCatalog'
+import ProviderLinkButtons from '../../features/catalog/components/ProviderLinkButtons'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
@@ -29,7 +32,7 @@ interface Props {
   topArrived: TitleRef[]
   topDeparted: TitleRef[]
   topComing: TitleRef[]
-  trackedProviders: { key: string; label: string }[]
+  trackedProviders: { key: string; label: string; logo: string | null }[]
   dataError?: boolean
 }
 
@@ -48,9 +51,10 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
   if (!provider || !PROVIDER_NAME_MATCH[slug]) return { notFound: true }
 
   const providerLabel = provider.title.replace(' Movies', '')
+  const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
   const trackedProviders = Object.keys(PROVIDER_NAME_MATCH)
     .filter((key) => streamingProviders[key])
-    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', '') }))
+    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
   const today = new Date().toISOString().split('T')[0]
   const monthLabel = `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`
   const base = { provider: slug, providerLabel, trackedProviders, monthLabel }
@@ -177,23 +181,22 @@ export default function ThisMonthProvider({ provider, providerLabel, monthLabel,
               </Box>
             )}
 
-            <Text mt={8} color='gray.500' fontSize='sm'>
-              See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel}</Link>,{' '}
-              <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what left</Link>, or{' '}
-              <Link href={`/streaming/${provider}`} style={{ textDecoration: 'underline' }}>browse the whole catalog</Link>.
-            </Text>
+            <Flex wrap='wrap' gap={2} mt={8}>
+              <Button asChild size='xs' {...secondaryButton}>
+                <Link href={`/new-on-streaming/${provider}`}>Everything new on {providerLabel}</Link>
+              </Button>
+              <Button asChild size='xs' {...secondaryButton}>
+                <Link href={`/leaving/${provider}`}>What left</Link>
+              </Button>
+              <Button asChild size='xs' {...secondaryButton}>
+                <Link href={`/streaming/${provider}`}>Browse the whole catalog</Link>
+              </Button>
+            </Flex>
           </>
         )}
 
         <Heading as='h2' size='sm' mt={12} mb={3}>Compare other services</Heading>
-        <Flex wrap='wrap' columnGap={2} rowGap={1} fontSize='sm'>
-          {trackedProviders.filter((p) => p.key !== provider).map((p, i) => (
-            <Fragment key={p.key}>
-              {i > 0 && <Text as='span' color='gray.600'>·</Text>}
-              <Link href={`/this-month/${p.key}`} style={{ textDecoration: 'underline' }}>{p.label}</Link>
-            </Fragment>
-          ))}
-        </Flex>
+        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `/this-month/${p.key}` }))} />
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
           Counts cover the tracked US catalog and update daily. A pickup month makes sense when the arrivals you want

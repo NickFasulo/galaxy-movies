@@ -1,7 +1,8 @@
 import { LRUCache } from 'lru-cache'
 import { getRedis } from '../../lib/redis'
 import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders, PROVIDER_NAME_MATCH } from './tmdb'
-import { recordWatchmodeQuota, watchmodeQuotaExceeded } from './watchmodeQuota'
+import { recordWatchmodeResponse, watchmodeQuotaExceeded } from './watchmodeQuota'
+import { recordProviderMoves } from './tenure'
 import { warmAiTitleCache, type WarmCandidate } from '../ai/warmCache'
 import { pingIndexNow } from '../../lib/indexnow'
 import { SITE_URL } from '../../lib/site'
@@ -9,6 +10,8 @@ import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const SOURCES_TTL_SECONDS = 60 * 60 * 24 * 30
+// No-TTL shadow of changes:sources, written on every successful /sources fetch.
+const SOURCES_STALE_KEY = 'changes:sources:stale'
 const CATALOG_LIMIT = 250
 const CHANGE_LIST_LIMIT = 40
 const COMING_DAYS = 21
@@ -257,7 +260,7 @@ async function fetchWatchmode<T>(path: string): Promise<T | null> {
     const resp = await fetch(`${WATCHMODE_BASE}${path}`, {
       headers: { 'X-API-Key': apiKey }
     })
-    recordWatchmodeQuota(resp)
+    recordWatchmodeResponse(resp)
     if (!resp.ok) return null
     return await resp.json()
   } catch {
@@ -275,7 +278,17 @@ export async function getSourceIdMap(): Promise<Record<string, WatchmodeSourceIn
   }
 
   const sources = await fetchWatchmode<(WatchmodeSourceInfo & { type: string })[]>('/sources?regions=US')
-  if (!Array.isArray(sources)) return {}
+  if (!Array.isArray(sources)) {
+    // Dead upstream shouldn't take the diff pipeline down with it — serve the
+    // last good map until /sources recovers.
+    if (kv) {
+      try {
+        const stale = await kv.get<Record<string, WatchmodeSourceInfo>>(SOURCES_STALE_KEY)
+        if (stale) return stale
+      } catch {}
+    }
+    return {}
+  }
 
   const map: Record<string, WatchmodeSourceInfo> = {}
   for (const [key, pattern] of Object.entries(PROVIDER_NAME_MATCH)) {
@@ -293,6 +306,7 @@ export async function getSourceIdMap(): Promise<Record<string, WatchmodeSourceIn
   if (kv && Object.keys(map).length > 0) {
     try {
       await kv.set('changes:sources', map, { ex: SOURCES_TTL_SECONDS })
+      await kv.set(SOURCES_STALE_KEY, map)
     } catch {}
   }
   return map
@@ -544,6 +558,7 @@ export async function updateStreamingChanges() {
       await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now(), src: 'tmdb' })
       await kv.set(changesKey(key), payload)
       await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
+      await recordProviderMoves('US', key, added, left, today, scheduledDeparture)
       monthliesForIndex.push([key, monthly])
       yearlyUs[`${key}:${month}`] = yearlyFromMonthly(monthly)
       pushTitleUrls([...payload.added, ...payload.coming, ...payload.left, ...leavingSoon])
@@ -602,6 +617,7 @@ export async function updateStreamingChanges() {
 
       await kv.set(catalogKey(key, 'IN'), { titles: catalog, updatedAt: Date.now(), src: 'tmdb' })
       await kv.set(changesKey(key, 'IN'), payload)
+      await recordProviderMoves('IN', key, added, left, inToday)
       const yearField = `${key}:${inMonth}`
       const priorYear = await kv.hget<YearlyChanges>(yearHashKey('IN', inYear), yearField).catch(() => null)
       yearlyIn[yearField] = mergeYearlyDiff(priorYear, payload.source, inMonth, added, left, inToday)
@@ -673,6 +689,7 @@ export async function updateStreamingChanges() {
 
   if (indexNowUrls.size) {
     indexNowUrls.add(`${SITE_URL}/new-on-streaming`)
+    indexNowUrls.add(`${SITE_URL}/reports/streaming-churn`)
     await pingIndexNow([...indexNowUrls])
   }
 
@@ -740,6 +757,47 @@ export async function getProviderCatalog(providerKey: string, region = 'US'): Pr
 }
 
 const monthlyMemo = new LRUCache<string, Record<string, MonthlyChanges>>({ max: 64, ttl: CHANGES_MEMO_MS })
+
+export interface ChurnProviderRow {
+  key: string
+  label: string
+  // 'YYYY-MM' -> movement that month
+  months: Record<string, { arrived: number; departed: number; net: number }>
+  totals: { arrived: number; departed: number; net: number }
+}
+
+// Year-hash fields are '{providerKey}:{YYYY-MM}' — provider keys carry no colon.
+export function buildChurnRows(yearly: Record<string, YearlyChanges>): ChurnProviderRow[] {
+  const rows = new Map<string, ChurnProviderRow>()
+  for (const [field, y] of Object.entries(yearly)) {
+    const sep = field.lastIndexOf(':')
+    const key = field.slice(0, sep)
+    const month = field.slice(sep + 1)
+    if (!key || !/^\d{4}-\d{2}$/.test(month)) continue
+    const row = rows.get(key) || { key, label: y.source || key, months: {}, totals: { arrived: 0, departed: 0, net: 0 } }
+    const arrived = y.arrived?.length || 0
+    const departed = y.departed?.length || 0
+    row.months[month] = { arrived, departed, net: arrived - departed }
+    row.totals.arrived += arrived
+    row.totals.departed += departed
+    row.totals.net += arrived - departed
+    row.label = y.source || row.label
+    rows.set(key, row)
+  }
+  return [...rows.values()].sort((a, b) => (b.totals.arrived + b.totals.departed) - (a.totals.arrived + a.totals.departed))
+}
+
+// One HGETALL backs the whole churn report — ~providers×months fields.
+export async function getYearlyChanges(region: 'US' | 'IN' = 'US', year?: string): Promise<Record<string, YearlyChanges>> {
+  const kv = getRedis()
+  if (!kv) return {}
+  const y = year || new Date().toISOString().slice(0, 4)
+  try {
+    return (await kv.hgetall<Record<string, YearlyChanges>>(yearHashKey(region, y))) ?? {}
+  } catch {
+    return {}
+  }
+}
 
 export async function getMonthlyChanges(providerKeys: string[] = []): Promise<Record<string, MonthlyChanges>> {
   const kv = getRedis()

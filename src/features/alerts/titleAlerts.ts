@@ -1,5 +1,6 @@
 import { getRedis } from '../../lib/redis'
-import { ALERTS_NOTIFIED_KEY, WATCH_KEY } from './waitlistStore'
+import { ALERTS_NOTIFIED_KEY, WATCH_KEY, getOrCreateSyncKey } from './waitlistStore'
+import { manageLink } from '../billing/billing'
 import { emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { shortDate } from '../../lib/format/formatters'
 import { SITE_URL } from '../../lib/site'
@@ -20,6 +21,9 @@ export interface WatchTitle {
 export interface WatchEntry {
   unsub: string
   titles: WatchTitle[]
+  // Provider keys the subscriber said they have — captured at signup. Absent
+  // on pre-filter entries: those keep matching every tracked provider.
+  services?: string[]
 }
 
 export const MAX_WATCH_TITLES = 25
@@ -34,7 +38,10 @@ export function parseWatchEntry(raw: unknown): WatchEntry | null {
       typeof (t as WatchTitle)?.title === 'string' &&
       ((t as WatchTitle)?.tmdbType === 'movie' || (t as WatchTitle)?.tmdbType === 'tv')
   )
-  return { unsub: obj.unsub, titles }
+  const services = Array.isArray(obj.services)
+    ? obj.services.filter((s): s is string => typeof s === 'string').slice(0, 20)
+    : undefined
+  return { unsub: obj.unsub, titles, services }
 }
 
 export function mergeWatchTitles(existing: WatchTitle[], incoming: WatchTitle): WatchTitle[] {
@@ -54,10 +61,12 @@ export function matchWatchEntry(
   notified: Set<string>
 ): { matches: MatchedItem[]; arrived: Set<string> } {
   const wanted = new Map(entry.titles.map((t) => [`${t.tmdbType}:${t.tmdbId}`, t]))
+  const wantedServices = entry.services?.length ? new Set(entry.services) : null
   const matches: MatchedItem[] = []
   const arrived = new Set<string>()
 
   for (const [providerKey, change] of Object.entries(changes)) {
+    if (wantedServices && !wantedServices.has(providerKey)) continue
     const scan: [(CatalogTitle | ComingTitle)[], 'added' | 'coming' | 'leaving'][] = [
       [change.added, 'added'],
       [change.coming, 'coming'],
@@ -104,7 +113,7 @@ const titleStatusLine = (item: MatchedItem): string => {
   }
 }
 
-export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken: string) {
+export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken: string, manageUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
   const rows = items
     .map((item) =>
@@ -119,15 +128,15 @@ export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken:
     body: `
       <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
       <ul style="list-style: none; padding: 0; margin: 0; color: #1f2937;">${rows}</ul>
-      <p style="margin: 22px 0 0;"><a href="${SITE_URL}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Track another title →</a></p>`,
+      <p style="margin: 22px 0 0;"><a href="${manageUrl || SITE_URL}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">${manageUrl ? 'Manage your alerts →' : 'Track another title →'}</a></p>`,
     reason: 'You asked Galaxy Movies to notify you about these titles.',
     unsubUrl: unsub
   })
   return { html, headers: { 'List-Unsubscribe': `<${unsub}>` } }
 }
 
-async function sendWatchEmail(items: MatchedItem[], email: string, unsubToken: string): Promise<boolean> {
-  const { html, headers } = buildWatchEmail(items, email, unsubToken)
+async function sendWatchEmail(items: MatchedItem[], email: string, unsubToken: string, manageUrl?: string | null): Promise<boolean> {
+  const { html, headers } = buildWatchEmail(items, email, unsubToken, manageUrl)
   const ok = await sendEmail({
     to: email,
     subject: items.length === 1 ? `${items[0].title}: ${titleStatusLine(items[0])}` : "A title you're tracking just moved",
@@ -162,7 +171,10 @@ export async function sendTitleWatchAlerts(
     const { matches, arrived } = matchWatchEntry(entry, usChanges, notified)
     if (!matches.length) continue
 
-    const ok = await sendWatchEmail(matches, email, entry.unsub)
+    // Minting a synckey per watcher gives the manage page a credential — the
+    // link lands in the same email that reports the match.
+    const syncKey = await getOrCreateSyncKey(kv, email).catch(() => null)
+    const ok = await sendWatchEmail(matches, email, entry.unsub, syncKey ? manageLink(email, syncKey) : null)
     if (!ok) {
       failed++
       continue

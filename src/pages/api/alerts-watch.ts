@@ -3,6 +3,7 @@ import { getClientIP, checkDistributedRateLimit, checkGlobalBudget } from '../..
 import { requireMethod, rejectBot } from '../../lib/http'
 import { getRedis, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
 import { mergeWatchTitles, type WatchTitle } from '../../features/alerts/titleAlerts'
+import { streamingProviders } from '../../features/catalog/tmdb'
 import { emailCta, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
 import { SITE_URL } from '../../lib/site'
 import { randomUUID, createHash } from 'crypto'
@@ -12,6 +13,7 @@ const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]
 interface WatchPending {
   token: string
   titles: WatchTitle[]
+  services?: string[]
 }
 
 async function sendConfirmEmail(email: string, token: string, title: string): Promise<boolean> {
@@ -64,6 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Alerts are temporarily unavailable.' })
   }
 
+  // Optional "my services" filter — the client sends the user's picked
+  // providers; unknown keys are dropped rather than rejecting the request.
+  const services = Array.isArray(req.body?.services)
+    ? [...new Set((req.body.services as unknown[]).filter((s): s is string => typeof s === 'string' && s in streamingProviders))].slice(0, 20)
+    : undefined
+
   const watchTitle: WatchTitle = { tmdbId, tmdbType, title }
 
   try {
@@ -72,14 +80,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = await kv.hget<WatchPending>(WATCH_PENDING_KEY, email)
     const token = existing?.token || randomUUID()
     const titles = mergeWatchTitles(existing?.titles || [], watchTitle)
-    await kv.hset(WATCH_PENDING_KEY, { [email]: { token, titles } })
+    // Latest submission wins on services — a picker change re-arms the filter.
+    const pendingServices = services !== undefined ? services : existing?.services
+    await kv.hset(WATCH_PENDING_KEY, { [email]: { token, titles, services: pendingServices } })
 
     if (!process.env.RESEND_API_KEY) {
       console.warn('RESEND_API_KEY not set — confirming title watch directly (dev/local fallback)')
       const { WATCH_KEY } = await import('../../features/alerts/waitlistStore')
-      const current = await kv.hget<{ unsub: string; titles: WatchTitle[] }>(WATCH_KEY, email)
+      const current = await kv.hget<{ unsub: string; titles: WatchTitle[]; services?: string[] }>(WATCH_KEY, email)
       await kv.hset(WATCH_KEY, {
-        [email]: { unsub: current?.unsub || randomUUID(), titles: mergeWatchTitles(current?.titles || [], watchTitle) }
+        [email]: {
+          unsub: current?.unsub || randomUUID(),
+          titles: mergeWatchTitles(current?.titles || [], watchTitle),
+          services: services !== undefined ? services : current?.services
+        }
       })
       await kv.hdel(WATCH_PENDING_KEY, email)
       return res.status(200).json({ ok: true, confirmed: true })

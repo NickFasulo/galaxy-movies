@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Badge, Box, Button, Flex, Input, Link, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../theme'
 import { LuExternalLink, LuRefreshCw } from 'react-icons/lu'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
@@ -261,10 +262,7 @@ export default function Usage() {
             <Flex align='center' gap={3} mt={4} mb={4}>
               <Button
                 size='xs'
-                variant='outline'
-                color='white'
-                borderColor='border.subtle'
-                _hover={{ bg: 'surface.overlay' }}
+                {...secondaryButton}
                 loading={loading}
                 onClick={() => void load(token)}
               >
@@ -272,9 +270,7 @@ export default function Usage() {
               </Button>
               <Button
                 size='xs'
-                variant='ghost'
-                color='gray.500'
-                _hover={{ color: 'white' }}
+                {...secondaryButton}
                 onClick={() => {
                   sessionStorage.removeItem(TOKEN_KEY)
                   setToken('')

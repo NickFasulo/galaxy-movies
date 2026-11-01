@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
 import { Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../theme'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
 import { embeddableProviders, providerLabel } from '../features/catalog/embed'
@@ -123,12 +124,42 @@ export default function Widgets({ initialProvider }: Props) {
         >
           {snippet}
         </Box>
-        <Button mt={3} size='sm' variant='outline' borderColor='border.subtle' onClick={copy}>
+        <Button mt={3} size='sm' {...secondaryButton} onClick={copy}>
           {copied ? 'Copied' : 'Copy embed code'}
         </Button>
         <Text mt={3} fontSize='sm' color='gray.500' maxW='42rem'>
           Adjust <Text as='code'>height</Text> to fit your layout. Add <Text as='code'>?theme=light</Text> to the widget URL for light backgrounds.
         </Text>
+
+        <Heading as='h2' size='md' mt={12} mb={4}>Churn report card</Heading>
+        <Text maxW='42rem' color='gray.400' fontSize='sm'>
+          A compact monthly stat card — arrivals, departures and net change per service, straight from
+          the <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>streaming churn report</Link>.
+        </Text>
+        <Box borderRadius='xl' overflow='hidden' border='1px solid' borderColor='border.subtle' maxW='30rem' mt={4}>
+          <iframe
+            src='/embed/churn'
+            width='100%'
+            height='330'
+            style={{ border: 0, display: 'block' }}
+            title='Streaming churn report - Galaxy Movies'
+          />
+        </Box>
+        <Box
+          as='pre'
+          mt={4}
+          p={4}
+          borderRadius='lg'
+          bg='surface.overlay'
+          border='1px solid'
+          borderColor='border.subtle'
+          fontSize='xs'
+          whiteSpace='pre-wrap'
+          wordBreak='break-all'
+          maxW='42rem'
+        >
+          {`<iframe src="${SITE_URL}/embed/churn" width="100%" height="330" style="border:0;border-radius:12px" loading="lazy" title="Streaming churn report - Galaxy Movies"></iframe>`}
+        </Box>
 
         <Heading as='h2' size='md' mt={12} mb={4}>JSON feed</Heading>
         <Text maxW='42rem' color='gray.400' fontSize='sm'>

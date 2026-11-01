@@ -10,6 +10,19 @@ export interface AlertsCredentials {
   key: string
 }
 
+export const ALERTS_CREDS_EVENT = 'gm:alerts-creds'
+
+// Raw storage string so useSyncExternalStore gets a stable snapshot — the
+// parsed object would be a fresh reference on every read and loop forever.
+export function getAlertsCredentialsJson(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(CREDS_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function getAlertsCredentials(): AlertsCredentials | null {
   if (typeof window === 'undefined') return null
   try {

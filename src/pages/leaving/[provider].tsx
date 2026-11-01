@@ -1,11 +1,14 @@
 import { Fragment } from 'react'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import Link from 'next/link'
-import { Box, Flex, Heading, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react'
+import { secondaryButton } from '../../theme'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
 import { getMonthlyChanges, getProviderChanges } from '../../features/catalog/streamingChanges'
+import { getProviderLogosByKey } from '../../features/catalog/providerCatalog'
+import ProviderLinkButtons from '../../features/catalog/components/ProviderLinkButtons'
 import { setSwrCache } from '../../lib/http'
 import { shortDate } from '../../lib/format/formatters'
 import { itemListSchema } from '../../features/catalog/schema'
@@ -36,7 +39,7 @@ interface Props {
   updatedLabel: string | null
   departed: DayGroup[]
   leavingSoon: DayGroup[]
-  trackedProviders: { key: string; label: string }[]
+  trackedProviders: { key: string; label: string; logo: string | null }[]
   dataError?: boolean
 }
 
@@ -65,9 +68,10 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
   if (!provider || !PROVIDER_NAME_MATCH[slug]) return { notFound: true }
 
   const providerLabel = provider.title.replace(' Movies', '')
+  const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
   const trackedProviders = Object.keys(PROVIDER_NAME_MATCH)
     .filter((key) => streamingProviders[key])
-    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', '') }))
+    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
 
   const today = new Date().toISOString().split('T')[0]
   const base: Pick<Props, 'provider' | 'providerLabel' | 'trackedProviders'> = {
@@ -196,11 +200,17 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         {updatedLabel && (
           <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} US catalog.</Text>
         )}
-        <Text mt={2} color='gray.500' fontSize='sm'>
-          See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s new on {providerLabel}</Link>, browse{' '}
-          <Link href={`/streaming/${provider}`} style={{ textDecoration: 'underline' }}>the full catalog</Link>, or check{' '}
-          <Link href={`/this-month/${provider}`} style={{ textDecoration: 'underline' }}>whether it&apos;s worth it this month</Link>.
-        </Text>
+        <Flex wrap='wrap' gap={2} mt={4}>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href={`/new-on-streaming/${provider}`}>What&apos;s new on {providerLabel}</Link>
+          </Button>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href={`/streaming/${provider}`}>Full catalog</Link>
+          </Button>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href={`/this-month/${provider}`}>Worth it this month?</Link>
+          </Button>
+        </Flex>
 
         {dataError ? (
           <Text mt={10}>Streaming data is temporarily unavailable. Please try again later.</Text>
@@ -212,22 +222,20 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         )}
 
         <Heading as='h2' size='sm' mt={12} mb={3}>Leaving other services</Heading>
-        <Flex wrap='wrap' columnGap={2} rowGap={1} fontSize='sm'>
-          {trackedProviders.filter((p) => p.key !== provider).map((p, i) => (
-            <Fragment key={p.key}>
-              {i > 0 && <Text as='span' color='gray.600'>·</Text>}
-              <Link href={`/leaving/${p.key}`} style={{ textDecoration: 'underline' }}>{p.label}</Link>
-            </Fragment>
-          ))}
-        </Flex>
+        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `/leaving/${p.key}` }))} />
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
           &quot;Leaving soon&quot; dates come from the service&apos;s announced schedule and can shift; &quot;left&quot; dates mark the day a
           title was detected out of the tracked catalog. List covers the US catalog and updates daily.
         </Text>
-        <Text mt={4} color='gray.500' fontSize='sm'>
-          <Link href={`/widgets?provider=${provider}`} style={{ textDecoration: 'underline' }}>Embed this list on your site</Link>: free, updates daily.
-        </Text>
+        <Flex wrap='wrap' gap={2} mt={4}>
+          <Button asChild size='xs' {...secondaryButton}>
+            <Link href={`/widgets?provider=${provider}`}>Embed this list on your site</Link>
+          </Button>
+          <Button asChild size='xs' {...secondaryButton}>
+            <a href={`/api/cal/${provider}`}>Subscribe to the calendar feed</a>
+          </Button>
+        </Flex>
       </PageShell>
     </>
   );

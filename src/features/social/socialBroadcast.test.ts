@@ -10,7 +10,8 @@ vi.mock('../catalog/streamingChanges', () => ({
         coming: [],
         leavingSoon: [{ title: 'Gone Soon', date: '2026-10-31' }]
       }
-    })
+    }),
+  getMonthlyChanges: () => Promise.resolve({})
 }))
 
 import {

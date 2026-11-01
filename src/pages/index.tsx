@@ -2,6 +2,7 @@ import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
+import { secondaryButton } from '../theme'
 import CardBadge from '../features/catalog/components/CardBadge'
 import SearchBar from '../components/SearchBar'
 import { InfiniteTitleGrid, usePaginatedFeed, type FeedPage } from '../features/catalog/components/PaginatedGrid'
@@ -272,8 +273,8 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
     }
   }, [moviesList.length])
 
-  const pageTitle = 'Galaxy Movies - Discover Popular & New Films'
-  const pageDescription = 'Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.'
+  const pageTitle = 'Galaxy Movies - Decide What to Watch Tonight'
+  const pageDescription = 'Pick something to watch on the services you already have, get free email alerts when titles arrive or leave, and track real rental prices — no account needed.'
 
   const websiteSchema = {
     '@context': 'https://schema.org',
@@ -351,7 +352,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             <Heading as='h1' textAlign='center' mt='2rem'>
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.28em' textTransform='uppercase' mt={3} mb='1.5rem'>Warp speed streaming discovery</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3} mb='1.5rem'>What to watch tonight · alerts before it leaves your services</Text>
           </HomeHero>
         )}
 
@@ -370,7 +371,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
               <Text fontSize='xs' color='gray.300'>
                 Showing {activeSearch ? 'results' : 'titles'} on your services
               </Text>
-              <Button size='2xs' variant='ghost' color='gray.300' onClick={clearServices} _hover={{ color: 'white' }}>
+              <Button size='2xs' {...secondaryButton} onClick={clearServices}>
                 Clear
               </Button>
             </Flex>

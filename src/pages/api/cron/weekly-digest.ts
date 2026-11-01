@@ -3,7 +3,7 @@ import { getRedis } from '../../../lib/redis'
 import { getProviderChanges, getMonthlyChanges, IN_TRACKED_PROVIDERS, type CatalogTitle, type ComingTitle, type ProviderChanges } from '../../../features/catalog/streamingChanges'
 import { ALERTS_PREFS_KEY, BILLING_KEY, CONFIRMED_KEY, SYNCKEY_KEY } from '../../../features/alerts/waitlistStore'
 import { parsePrefs } from '../../../features/alerts/watchlistAlerts'
-import { isPlusActive, parseBillingRecord, plusLink } from '../../../features/billing/billing'
+import { isPlusActive, manageLink, parseBillingRecord, plusLink } from '../../../features/billing/billing'
 import { isCronAuthorized } from '../../../lib/auth'
 import { shortDate } from '../../../lib/format/formatters'
 import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
@@ -55,7 +55,7 @@ function itemList(items: DigestItem[], showDate: boolean) {
     .join('')}</ul>`
 }
 
-function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = [], plusUrl?: string | null) {
+function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = [], plusUrl?: string | null, manageUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${token}`
   const html = emailLayout({
     heading: 'This week on streaming',
@@ -65,7 +65,7 @@ function buildEmail(items: DigestItems, email: string, token: string, leaving: D
       ${items.added.length ? `${sectionHead('Just added')}${itemList(items.added, false)}` : ''}
       ${items.coming.length ? `${sectionHead('Coming soon')}${itemList(items.coming, true)}` : ''}
       ${leaving.length ? `${sectionHead('Leaving this month')}${itemList(leaving, true)}` : ''}
-      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See everything new on streaming →</a></p>
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/new-on-streaming" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See everything new on streaming →</a>${manageUrl ? ` · <a href="${manageUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Manage alerts →</a>` : ''}</p>
       ${plusUrl ? emailCallout(`Plus members also see what's leaving their services each month and get matched on every provider we track.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',
     unsubUrl: unsub
@@ -136,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           leaving.length = Math.min(leaving.length, MAX_ITEMS)
         }
 
-        const { html, headers } = buildEmail(items, email, token, leaving, isPlus ? null : plusLink(email, syncKeys?.[email]))
+        const { html, headers } = buildEmail(items, email, token, leaving, isPlus ? null : plusLink(email, syncKeys?.[email]), manageLink(email, syncKeys?.[email]))
         return sendEmail({ to: email, subject: 'New this week on streaming', html, headers })
       })
     )

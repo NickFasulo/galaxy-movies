@@ -8,6 +8,8 @@ import { streamingProviders, getProviderIds, isProviderAvailableInRegion, fetchL
 import { detectRegion } from '../lib/region'
 import { withTimeout } from '../lib/withTimeout'
 import { getProviderChanges, type ProviderChanges } from '../features/catalog/streamingChanges'
+import { getProviderLogosByKey } from '../features/catalog/providerCatalog'
+import ProviderLinkButtons, { type ProviderLinkItem } from '../features/catalog/components/ProviderLinkButtons'
 import { setSwrCache } from '../lib/http'
 import { shortDate } from '../lib/format/formatters'
 import { itemListSchema, titleItem } from '../features/catalog/schema'
@@ -23,6 +25,7 @@ interface Section {
 interface Props {
   region: string
   sections: Section[]
+  arrivalProviders: ProviderLinkItem[]
   changes?: Record<string, ProviderChanges>
   dataError?: boolean
 }
@@ -72,13 +75,22 @@ export async function getServerSideProps({ req, res }: GetServerSidePropsContext
       2000,
       {}
     )) || {}
+    const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
+    const arrivalProviders: ProviderLinkItem[] = Object.keys(PROVIDER_NAME_MATCH)
+      .filter((key) => streamingProviders[key])
+      .map((key) => ({
+        key,
+        label: streamingProviders[key].title.replace(' Movies', ''),
+        href: `/new-on-streaming/${key}`,
+        logo: logos.get(key) ?? null
+      }))
 
     setSwrCache(res, 21600)
-    return { props: { region, sections, changes } }
+    return { props: { region, sections, arrivalProviders, changes } }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { region, sections: [], dataError: true } }
+    return { props: { region, sections: [], arrivalProviders: [], dataError: true } }
   }
 }
 
@@ -115,7 +127,7 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
   )
 }
 
-export default function NewOnStreaming({ sections, changes = {}, dataError }: Props) {
+export default function NewOnStreaming({ sections, arrivalProviders, changes = {}, dataError }: Props) {
   const canonicalUrl = `${SITE_URL}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const title = `New Releases Streaming Now (${monthLabel})`
@@ -144,18 +156,9 @@ export default function NewOnStreaming({ sections, changes = {}, dataError }: Pr
         <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
-          <Flex wrap='wrap' columnGap={2} rowGap={1} mt={2} fontSize='sm' align='center'>
-            <Text color='gray.500'>Dated arrivals by service:</Text>
-            {Object.keys(PROVIDER_NAME_MATCH)
-              .filter((key) => streamingProviders[key])
-              .map((key, i, arr) => (
-                <Text key={key} as='span'>
-                  <Link href={`/new-on-streaming/${key}`} style={{ textDecoration: 'underline' }}>
-                    {streamingProviders[key].title.replace(' Movies', '')}
-                  </Link>
-                  {i < arr.length - 1 && <Text as='span' color='gray.600'> ·</Text>}
-                </Text>
-              ))}
+          <Flex wrap='wrap' gap={2} mt={2} align='center'>
+            <Text color='gray.500' fontSize='sm'>Dated arrivals by service:</Text>
+            <ProviderLinkButtons providers={arrivalProviders} />
           </Flex>
           {dataError ? (
             <Text mt={10} color='gray.400'>Movie data is temporarily unavailable. Please try again later.</Text>

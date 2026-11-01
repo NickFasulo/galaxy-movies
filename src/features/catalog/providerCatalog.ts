@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache'
-import { fetchTmdb } from './tmdb'
+import { fetchTmdb, getProviderId, streamingProviders } from './tmdb'
 import type { WatchProvider } from '../../types/tmdb'
 
 interface WatchProviderCatalogResponse {
@@ -21,4 +21,18 @@ export async function getProviderCatalog(region: string): Promise<WatchProvider[
 
   catalogMemo.set(region, providers)
   return providers
+}
+
+// Provider key → TMDB logo_path for rendering service buttons — logo_path is
+// the path next/image resolves through the shared TMDB imageLoader.
+export async function getProviderLogosByKey(region: string): Promise<Map<string, string>> {
+  const catalog = await getProviderCatalog(region)
+  const logoById = new Map(catalog.map((p) => [p.provider_id, p.logo_path]))
+  const logos = new Map<string, string>()
+  for (const key of Object.keys(streamingProviders)) {
+    const id = getProviderId(key, region)
+    const logo = id != null ? logoById.get(id) : null
+    if (logo) logos.set(key, logo)
+  }
+  return logos
 }

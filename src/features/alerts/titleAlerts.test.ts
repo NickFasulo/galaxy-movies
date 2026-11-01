@@ -16,7 +16,12 @@ const entry = (titles: WatchEntry['titles']): WatchEntry => ({ unsub: 'u1', titl
 describe('parseWatchEntry', () => {
   it('accepts a stored entry and drops malformed titles', () => {
     expect(parseWatchEntry({ unsub: 'u', titles: [{ tmdbId: 5, tmdbType: 'movie', title: 'X' }, { title: 'bad' }] }))
-      .toEqual({ unsub: 'u', titles: [{ tmdbId: 5, tmdbType: 'movie', title: 'X' }] })
+      .toEqual({ unsub: 'u', titles: [{ tmdbId: 5, tmdbType: 'movie', title: 'X' }], services: undefined })
+  })
+
+  it('keeps string services and drops malformed ones', () => {
+    expect(parseWatchEntry({ unsub: 'u', titles: [], services: ['netflix', 5, 'hulu'] }))
+      .toEqual({ unsub: 'u', titles: [], services: ['netflix', 'hulu'] })
   })
   it('rejects non-entry shapes', () => {
     expect(parseWatchEntry(null)).toBeNull()
@@ -71,6 +76,40 @@ describe('matchWatchEntry', () => {
       new Set(['watch:added:movie:10@netflix', 'watch:added:movie:10@hulu'])
     )
     expect(matches).toHaveLength(0)
+  })
+
+  it('filters matches to the subscriber services when set', () => {
+    const { matches, arrived } = matchWatchEntry(
+      { unsub: 'u1', titles: [{ tmdbId: 10, tmdbType: 'movie', title: 'Dune' }], services: ['netflix'] },
+      usChanges,
+      new Set()
+    )
+    expect(matches.map((m) => `${m.kind}:${m.tmdbId}@${m.provider}`)).toEqual(['added:10@Netflix'])
+    expect([...arrived]).toEqual(['movie:10'])
+  })
+
+  it('keeps matching everything when services is absent or empty', () => {
+    const { matches: noServices } = matchWatchEntry(
+      entry([{ tmdbId: 10, tmdbType: 'movie', title: 'Dune' }]),
+      usChanges,
+      new Set()
+    )
+    const { matches: emptyServices } = matchWatchEntry(
+      { unsub: 'u1', titles: [{ tmdbId: 10, tmdbType: 'movie', title: 'Dune' }], services: [] },
+      usChanges,
+      new Set()
+    )
+    expect(noServices).toHaveLength(2)
+    expect(emptyServices).toHaveLength(2)
+  })
+
+  it('does not mark arrival when the matched provider is filtered out', () => {
+    const { arrived } = matchWatchEntry(
+      { unsub: 'u1', titles: [{ tmdbId: 10, tmdbType: 'movie', title: 'Dune' }], services: ['hbo'] },
+      usChanges,
+      new Set()
+    )
+    expect(arrived.size).toBe(0)
   })
 
   it('does not mark coming/leaving as arrival', () => {
@@ -203,6 +242,18 @@ describe('sendTitleWatchAlerts', () => {
     expect(result).toEqual({ sent: 0, failed: 1, tracked: 1 })
     expect(fake.map.get('gm:alerts:watch')).toEqual({ 'u@e.com': entry })
     expect(fake.map.has('gm:alerts:notified')).toBe(false)
+  })
+
+  it('does not send when the matched provider is outside the subscriber services', async () => {
+    fake.map.set('gm:alerts:watch', {
+      'u@e.com': { unsub: 'tok123', titles: [{ tmdbId: 10, tmdbType: 'movie', title: 'Dune' }], services: ['hulu'] }
+    })
+    const usChanges = {
+      netflix: providerChanges({ added: [{ tmdbId: 10, tmdbType: 'movie' as const, title: 'Dune', year: 2024 }] })
+    }
+    const result = await sendTitleWatchAlerts(usChanges, {})
+    expect(result).toEqual({ sent: 0, failed: 0, tracked: 1 })
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 
   it('skips entries already notified for the same event', async () => {

@@ -1,4 +1,5 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
+import Link from 'next/link'
 import { Flex } from '@chakra-ui/react'
 
 export default function About() {
@@ -9,6 +10,13 @@ export default function About() {
       </InfoParagraph>
       <InfoParagraph>
         Movie, TV information, and watch-provider availability are supplied by The Movie Database (TMDB). Rental and purchase prices, provider deep links, and streaming catalog changes are supplied by Watchmode. Availability may vary by country and can change over time.
+      </InfoParagraph>
+      <InfoParagraph>
+        See the data we track in the <Link href='/reports' style={{ textDecoration: 'underline' }}>streaming reports</Link>, or compare us to{' '}
+        <Link href='/justwatch-alternative' style={{ textDecoration: 'underline' }}>JustWatch</Link>,{' '}
+        <Link href='/reelgood-alternative' style={{ textDecoration: 'underline' }}>Reelgood</Link>,{' '}
+        <Link href='/trakt-alternative' style={{ textDecoration: 'underline' }}>Trakt</Link>, or{' '}
+        <Link href='/whats-on-netflix-alternative' style={{ textDecoration: 'underline' }}>What&apos;s on Netflix</Link>.
       </InfoParagraph>
       <Flex wrap="wrap" gap="1.5rem" alignItems="center" justify={{ base: 'center', md: 'flex-start' }} my='2rem'>
         <a href="https://launchaf.com/" target="_blank" rel="noopener" data-launchaf-badge="true">

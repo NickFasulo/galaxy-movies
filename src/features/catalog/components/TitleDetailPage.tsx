@@ -31,6 +31,7 @@ import { getRedis } from '../../../lib/redis'
 import { isBot, isPreviewBot, isSearchEngine } from '../../../lib/rateLimiter'
 import { getProviderAffiliateLinks } from '../../monetize/takeads'
 import { getTitleChanges, type TitleChangeEvents } from '../streamingChanges'
+import { getTitleTenure, getProviderTenureStats, type TenureStint, type TenureStats } from '../tenure'
 import { withTimeout } from '../../../lib/withTimeout'
 import { setSwrCache } from '../../../lib/http'
 import { absoluteImageUrl, aggregateRatingSchema, personSchema } from '../schema'
@@ -70,6 +71,8 @@ interface CommonProps {
   similarListRef: SimilarListRef | null
   providerAffiliateLinks: Record<string, string | null>
   titleChanges: TitleChangeEvents | null
+  titleTenure: Record<string, TenureStint> | null
+  tenureStats: Record<string, TenureStats | null>
 }
 
 export type TitleDetailProps =
@@ -114,7 +117,9 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           similarTitles: [],
           similarListRef: null,
           providerAffiliateLinks: {},
-          titleChanges: null
+          titleChanges: null,
+          titleTenure: null,
+          tenureStats: {}
         }
         return media === 'movie'
           ? { props: { ...thin, media, title, director: null, topCast: [] } }
@@ -205,7 +210,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         }
       }
 
-      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef, titleChanges] = await Promise.all([
+      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef, titleChanges, titleTenure] = await Promise.all([
         withTimeout(getFirstPlayableKey(title.videos?.results), 3000, null),
         title.overview
           ? withTimeout(getOrGenerateMovieReview({
@@ -232,8 +237,25 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           : [],
         getProviderAffiliateLinks(providerNames),
         withTimeout(findSimilarListRef(media, title.id), 2000, null),
-        withTimeout(getTitleChanges(media, Number(id)), 2000, null)
+        withTimeout(getTitleChanges(media, Number(id)), 2000, null),
+        withTimeout(getTitleTenure(media, Number(id)), 2000, null)
       ])
+
+      // Stay stats only matter where the title is on-service now — departed
+      // stints are history rows, not predictions.
+      const tenureStats: Record<string, TenureStats | null> = {}
+      if (titleTenure) {
+        const onProviders = Object.entries(titleTenure)
+          .filter(([, s]) => s && !s.left)
+          .sort(([, a], [, b]) => (b.on || '').localeCompare(a.on || ''))
+          .slice(0, 4)
+          .map(([key]) => key)
+        await Promise.all(
+          onProviders.map(async (key) => {
+            tenureStats[key] = await getProviderTenureStats(key).catch(() => null)
+          })
+        )
+      }
 
       // Renders with empty generated slots differ from the full version — keep
       // every AI-incomplete render out of the shared CDN cache (not just
@@ -259,7 +281,9 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         similarTitles: similarTitles || [],
         similarListRef,
         providerAffiliateLinks,
-        titleChanges
+        titleChanges,
+        titleTenure,
+        tenureStats
       }
 
       return media === 'movie'
@@ -282,7 +306,7 @@ export default function TitleDetailPage(props: TitleDetailProps) {
 function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>) {
   const { media, title } = props
   const isTv = media === 'tv'
-  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, topCast } = props
+  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
   const releaseDate = isTv ? (title as TmdbTvDetails).first_air_date : (title as TmdbMovieDetails).release_date
@@ -440,6 +464,8 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
               <Box w='20rem' maxW='100%'>
                 <TitleAvailability
                   events={titleChanges}
+                  tenure={titleTenure}
+                  tenureStats={tenureStats}
                   tmdbId={title.id}
                   tmdbType={media}
                   title={displayTitle || ''}

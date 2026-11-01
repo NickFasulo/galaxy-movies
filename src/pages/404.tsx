@@ -3,6 +3,7 @@ import { Heading, Text, Flex, Button } from '@chakra-ui/react'
 import BackButton from '../components/BackButton'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
+import { secondaryButton } from '../theme'
 
 export default function NotFoundPage() {
   return (
@@ -20,13 +21,13 @@ export default function NotFoundPage() {
           </Text>
           <Flex wrap='wrap' gap={4} justify='center' align='center'>
             <Link href='/'>
-              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Go Home</Button>
+              <Button as='span' {...secondaryButton}>Go Home</Button>
             </Link>
             <Link href='/browse/popular'>
-              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Browse Movies</Button>
+              <Button as='span' {...secondaryButton}>Browse Movies</Button>
             </Link>
             <Link href='/streaming'>
-              <Button as='span' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}>Streaming Guide</Button>
+              <Button as='span' {...secondaryButton}>Streaming Guide</Button>
             </Link>
             <BackButton />
           </Flex>

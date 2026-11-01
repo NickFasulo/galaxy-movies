@@ -25,6 +25,7 @@ import { startPlusCheckout } from '../features/billing/components/PlusUpsell'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
 import { setAlertsCredentials } from '../features/alerts/alertsSync'
 import { firstParam } from '../lib/http'
+import { secondaryButton } from '../theme'
 import { trackEvent } from '../lib/umami'
 
 const FEATURES = [
@@ -179,18 +180,14 @@ export default function Plus() {
               </Flex>
               <Text color='gray.400' fontSize='sm'>
                 Thanks for supporting the site.
-                {features?.manageable && (
-                  <>
-                    {' '}
-                    <a
-                      href={`/api/billing/portal?email=${encodeURIComponent(creds!.email)}&key=${encodeURIComponent(creds!.key)}`}
-                      style={{ textDecoration: 'underline' }}
-                    >
-                      Manage your subscription
-                    </a>
-                  </>
-                )}
               </Text>
+              {features?.manageable && (
+                <Button asChild size='xs' {...secondaryButton} mt={3}>
+                  <a href={`/api/billing/portal?email=${encodeURIComponent(creds!.email)}&key=${encodeURIComponent(creds!.key)}`}>
+                    Manage your subscription
+                  </a>
+                </Button>
+              )}
             </Box>
           ) : creds ? (
             <>
@@ -205,7 +202,7 @@ export default function Plus() {
                     <Text color='gray.400' fontSize='sm'>/ month</Text>
                   </Flex>
                   <Text color='gray.500' fontSize='xs' mt={1} mb={5}>Cancel anytime</Text>
-                  <Button mt='auto' variant='outline' color='white' borderColor='border.subtle' _hover={{ bg: 'surface.overlay' }}
+                  <Button mt='auto' {...secondaryButton}
                     loading={busy === 'monthly'} onClick={() => checkout('monthly')} w='100%'>
                     Go monthly
                   </Button>
@@ -290,12 +287,12 @@ function RecoverAccess() {
 
   if (!open) {
     return (
-      <Text color='gray.500' fontSize='xs' mt={3}>
-        Paid already?{' '}
-        <button type='button' onClick={() => setOpen(true)} style={{ textDecoration: 'underline' }}>
+      <Flex align='center' gap={2} mt={3}>
+        <Text color='gray.500' fontSize='xs'>Paid already?</Text>
+        <Button size='xs' {...secondaryButton} onClick={() => setOpen(true)}>
           Email me my access link
-        </button>
-      </Text>
+        </Button>
+      </Flex>
     )
   }
 

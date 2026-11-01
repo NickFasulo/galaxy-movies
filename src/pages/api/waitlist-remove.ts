@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, TRAKT_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY, SHARE_KEY, SHARE_LOOKUP_KEY, CHAT_HISTORY_KEY, WATCH_KEY, WATCH_PENDING_KEY } from '../../features/alerts/waitlistStore'
+import { getRedis, PENDING_KEY, CONFIRMED_KEY, SYNCKEY_KEY, ALERTS_PREFS_KEY, ALERTS_NOTIFIED_KEY, TRAKT_KEY, DISCORD_KEY, TELEGRAM_KEY, PUSH_KEY, SHARE_KEY, SHARE_LOOKUP_KEY, CHAT_HISTORY_KEY, WATCH_KEY, WATCH_PENDING_KEY, PRICE_DROPS_KEY } from '../../features/alerts/waitlistStore'
 import { safeEqual } from '../../lib/auth'
 import { requireMethod } from '../../lib/http'
 
@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!watch?.unsub || !safeEqual(watch.unsub, token)) return redirect('error')
       await kv.hdel(WATCH_KEY, email)
       await kv.hdel(WATCH_PENDING_KEY, email)
+      await kv.hdel(PRICE_DROPS_KEY, email)
       return redirect('unsubscribed')
     }
 
@@ -41,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await kv.hdel(CHAT_HISTORY_KEY, email)
     await kv.hdel(WATCH_KEY, email)
     await kv.hdel(WATCH_PENDING_KEY, email)
+    await kv.hdel(PRICE_DROPS_KEY, email)
     const shareId = await kv.hget<string>(SHARE_KEY, email)
     if (shareId) {
       await kv.hdel(SHARE_KEY, email)

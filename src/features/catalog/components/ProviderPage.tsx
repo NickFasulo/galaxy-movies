@@ -196,7 +196,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
                       href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
                       data-umami-event='coming-soon-click'
                       style={{ textDecoration: 'none' }}>
-                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.200' color='white' fontSize='xs' _hover={{ bg: 'whiteAlpha.300' }}>
+                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' fontSize='xs' _hover={{ bg: 'surface.overlay' }}>
                         {item.title}{item.date ? ` · ${item.date}` : ''}
                       </Badge>
                     </Link>
@@ -216,7 +216,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
                       href={`/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`}
                       data-umami-event='leaving-click'
                       style={{ textDecoration: 'none' }}>
-                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='whiteAlpha.100' color='gray.300' fontSize='xs' _hover={{ color: 'white' }}>
+                      <Badge cursor='pointer' px={3} py={1.5} borderRadius='md' bg='surface.raised' color='gray.300' border='1px solid var(--chakra-colors-border-subtle)' fontSize='xs' _hover={{ color: 'white', bg: 'surface.overlay' }}>
                         {item.title}
                       </Badge>
                     </Link>

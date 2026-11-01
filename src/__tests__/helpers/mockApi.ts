@@ -127,6 +127,13 @@ export function createFakeRedis() {
       }
       return n
     }),
+    hmget: vi.fn(async (key: string, ...fields: string[]) => {
+      const cur = map.get(key) as Record<string, unknown> | undefined
+      if (!cur) return null
+      const out: Record<string, unknown> = {}
+      for (const f of fields) out[f] = cur[f] ?? null
+      return out
+    }),
     hgetall: vi.fn(async (key: string) => (map.get(key) as Record<string, unknown>) ?? null),
     mget: vi.fn(async (...keys: string[]) => keys.map((k) => map.get(k) ?? null)),
     eval: vi.fn(async (...[, keys, args]: [string, string[], (string | number)[]]) => {
