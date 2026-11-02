@@ -217,6 +217,27 @@ export async function getWeeklySlate(week = weekKey()): Promise<SlateRecord | nu
   return record
 }
 
+// Digest-style markdown for the app's weekly prediction post — same
+// bold-header + dash-bullets + footer-link layout as buildRedditDigest so
+// the slate reads like every other Still Streaming? post.
+export function buildSlateText(record: SlateRecord, maxLen = 10000): string {
+  const footer = `Full lists updated daily: ${SITE_URL}/leaving/${record.provider}`
+  const build = (n: number) =>
+    [
+      `Predict which titles leave **${providerLabel(record.provider)}** this week:`,
+      '',
+      ...record.slate.slice(0, n).map((s) => `- ${s.title}`),
+      '',
+      'Answers lock Sunday; results post when the week\u2019s departures land.',
+      '',
+      footer
+    ].join('\n')
+  let n = record.slate.length
+  let text = build(n)
+  while (text.length > maxLen && n > 1) text = build(--n)
+  return text
+}
+
 export async function resolveWeeklySlate(week: string) {
   const kv = getRedis()
   const record = kv ? await kv.get<SlateRecord>(slateKey(week)).catch(() => null) : null

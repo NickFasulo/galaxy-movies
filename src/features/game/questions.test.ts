@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDailyQuestions } from './questions'
+import { buildDailyQuestions, buildSlateText } from './questions'
 import type { CatalogTitle, ProviderChanges } from '../catalog/streamingChanges'
 
 const catalog = (provider: string, prefix = ''): CatalogTitle[] =>
@@ -67,5 +67,33 @@ describe('buildDailyQuestions', () => {
     const a = buildDailyQuestions(FIXTURE.changes, FIXTURE.catalogs, '2026-10-19')
     const b = buildDailyQuestions(FIXTURE.changes, FIXTURE.catalogs, '2026-10-20')
     expect(JSON.stringify(a)).not.toBe(JSON.stringify(b))
+  })
+})
+
+describe('buildSlateText', () => {
+  const record = {
+    week: '2026-W45',
+    provider: 'netflix',
+    slate: Array.from({ length: 8 }, (_, i) => ({
+      tmdbId: i + 1,
+      tmdbType: 'movie',
+      title: `Slate Title ${i + 1}`
+    }))
+  }
+
+  it('renders the provider header, bulleted slate, and provider link', () => {
+    const text = buildSlateText(record)
+    expect(text).toContain('**Netflix**')
+    expect(text).toContain('- Slate Title 1')
+    expect(text).toContain('- Slate Title 8')
+    expect(text).toContain('Answers lock Sunday')
+    expect(text).toContain('galaxymovies.app/leaving/netflix')
+  })
+
+  it('drops slate entries until the post fits the cap', () => {
+    const text = buildSlateText(record, 220)
+    expect(text.length).toBeLessThanOrEqual(220)
+    expect(text).toContain('- Slate Title 1')
+    expect(text).not.toContain('- Slate Title 8')
   })
 })
