@@ -1,16 +1,23 @@
-import { Flex, Button, Icon, AspectRatio, useDisclosure, Dialog, Portal } from '@chakra-ui/react';
+import { Box, Button, Icon, useDisclosure, Dialog, Portal, chakra } from '@chakra-ui/react';
 import { BsCaretRightFill } from 'react-icons/bs'
-import dynamic from 'next/dynamic'
+import Head from 'next/head'
+import { useState } from 'react'
 
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
+const Img = chakra('img')
+const Iframe = chakra('iframe')
 
 export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
   const { open, onOpen, onClose } = useDisclosure()
+  const [loaded, setLoaded] = useState(false)
 
   if (!videoKey || videoKey === 'null') return null
 
   return (
     <>
+      <Head>
+        <link rel="preconnect" href="https://www.youtube-nocookie.com" />
+        <link rel="preconnect" href="https://i.ytimg.com" />
+      </Head>
       <Button
         size={{ base: 'md', md: 'sm' }}
         width={{ base: '8rem', md: '7rem' }}
@@ -29,11 +36,12 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
         onOpenChange={e => {
           if (!e.open) {
             onClose();
+            setLoaded(false)
           }
         }}>
         <Portal>
 
-          <Dialog.Backdrop bg="blackAlpha.900" />
+          <Dialog.Backdrop bg="black" />
           <Dialog.Positioner>
             <Dialog.Content
               backgroundColor="black"
@@ -58,35 +66,40 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
                 borderRadius="full"
                 _hover={{ bg: 'whiteAlpha.400' }}
               />
-              <Flex
-                width="100%"
-                height="100%"
-                justify="center"
-                align="center"
-                overflow="hidden"
-                p={{ base: 2, md: 6 }}
-                onClick={onClose}
-              >
-                <Flex
+              {/* Landscape/desktop cover-fit fills the viewport edge-to-edge;
+                  portrait keeps the full-width 16:9 box with black above/below
+                  since a cover crop would lose most of the frame. */}
+              <Box
+                position="absolute"
+                inset={0}
+                margin="auto"
+                width={{ _portrait: '100vw', _landscape: 'max(100vw, 177.78dvh)' }}
+                aspectRatio={16 / 9}
+                overflow="hidden">
+                {!loaded && (
+                  <Img
+                    src={`https://i.ytimg.com/vi/${videoKey}/hqdefault.jpg`}
+                    alt=""
+                    position="absolute"
+                    inset={0}
+                    width="100%"
+                    height="100%"
+                    objectFit="cover"
+                  />
+                )}
+                <Iframe
+                  src={`https://www.youtube-nocookie.com/embed/${videoKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3`}
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  title="Trailer"
+                  onLoad={() => setLoaded(true)}
+                  position="absolute"
+                  inset={0}
                   width="100%"
-                  maxWidth={{ base: '100%', md: '90vw' }}
-                  maxHeight={{ base: '80dvh', md: '90dvh' }}
-                  align="center"
-                  justify="center"
-                  overflow="hidden"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <AspectRatio ratio={16 / 9} width="100%" maxHeight="100%">
-                    <ReactPlayer
-                      width="100%"
-                      height="100%"
-                      playing={open}
-                      controls
-                      src={`https://www.youtube-nocookie.com/watch?v=${videoKey}`}
-                    />
-                  </AspectRatio>
-                </Flex>
-              </Flex>
+                  height="100%"
+                  border={0}
+                />
+              </Box>
             </Dialog.Content>
           </Dialog.Positioner>
 
