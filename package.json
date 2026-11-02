@@ -31,10 +31,10 @@
     "@chakra-ui/react": "^3.37.0",
     "@tanstack/react-query": "^5.105.0",
     "@upstash/redis": "1.40.0",
-    "framer-motion": "^14.6.0",
+    "framer-motion": "^14.8.0",
     "lru-cache": "^11.5.2",
     "next": "^16.4.3",
-    "openai": "^7.45.0",
+    "openai": "^7.45.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-icons": "^5.7.0",
@@ -46,9 +46,9 @@
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^16.4.3",
-    "@opennextjs/cloudflare": "^1.20.13",
+    "@opennextjs/cloudflare": "^1.20.14",
     "@playwright/test": "^1.64.1",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/web-push": "^3.6.4",
@@ -62,7 +62,7 @@
     "patch-package": "^8.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.3",
-    "wrangler": "^4.153.0"
+    "wrangler": "^4.156.0"
   },
   "overrides": {
     "tar": "^7.4.3",
