@@ -8,8 +8,11 @@ export interface SocialChannel {
   name: string
   // Post character cap — Bluesky 300, X 280, the rest effectively unbounded.
   maxLen: number
+  // 'markdown' channels (Reddit) get the rich multi-line digest; everything
+  // else gets the compact +/- format tuned for short posts.
+  format?: 'markdown'
   ready(): boolean
-  post(text: string, linkUrl: string): Promise<string | null>
+  post(text: string, linkUrl: string, title?: string): Promise<string | null>
 }
 
 const postJson = async (url: string, init: RequestInit): Promise<string | null> => {
@@ -176,22 +179,25 @@ const x: SocialChannel = {
   }
 }
 
-// ---------- Reddit (script app → own subreddit link post) ----------
+// ---------- Reddit (script app → own subreddit self post) ----------
+// Self post, not a link post: the digest body IS the content the sub exists
+// for, so the markdown goes in `text` and the site link rides in the footer.
 
 const reddit: SocialChannel = {
   name: 'reddit',
   maxLen: 10000,
+  format: 'markdown',
   ready: () =>
     Boolean(
       process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET && process.env.REDDIT_USERNAME && process.env.REDDIT_PASSWORD
     ),
-  async post(text, linkUrl) {
+  async post(text, linkUrl, title) {
     const tokenResp = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Basic ${btoa(`${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`)}`,
-        'User-Agent': 'galaxymovies-bot/1.0'
+        'User-Agent': 'galaxymovies-bot/1.0 (by /u/galaxymovies)'
       },
       body: `grant_type=password&username=${encodeURIComponent(process.env.REDDIT_USERNAME!)}&password=${encodeURIComponent(process.env.REDDIT_PASSWORD!)}`
     }).catch(() => null)
@@ -204,13 +210,13 @@ const reddit: SocialChannel = {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Bearer ${token}`,
-        'User-Agent': 'galaxymovies-bot/1.0'
+        'User-Agent': 'galaxymovies-bot/1.0 (by /u/galaxymovies)'
       },
       body: new URLSearchParams({
         sr: process.env.REDDIT_SUBREDDIT || 'galaxymovies',
-        title: text.split('\n')[0].slice(0, 280),
-        kind: 'link',
-        url: linkUrl,
+        title: (title || text.split('\n')[0].replace(/:$/, '')).slice(0, 280),
+        kind: 'self',
+        text,
         resubmit: 'true',
         api_type: 'json'
       }).toString()

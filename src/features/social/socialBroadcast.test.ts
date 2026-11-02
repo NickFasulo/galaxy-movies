@@ -25,6 +25,15 @@ import {
 
 const items = (titles: string[]) => titles.map((title) => ({ title }))
 
+const SOCIAL_ENVS = [
+  'BSKY_HANDLE', 'BSKY_APP_PASSWORD', 'SOCIAL_DISCORD_WEBHOOK', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHANNEL',
+  'MASTODON_INSTANCE', 'MASTODON_TOKEN', 'X_API_KEY', 'X_API_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET',
+  'REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'REDDIT_USERNAME', 'REDDIT_PASSWORD', 'REDDIT_SUBREDDIT',
+  'TUMBLR_BLOG', 'TUMBLR_ACCESS_TOKEN', 'PINTEREST_BOARD', 'PINTEREST_ACCESS_TOKEN',
+  'FB_PAGE_ID', 'FB_PAGE_ACCESS_TOKEN', 'SOCIAL_FACEBOOK_WEBHOOK'
+]
+const clearSocialEnv = () => SOCIAL_ENVS.forEach((k) => delete process.env[k])
+
 // One shared spy for every describe — nested spyOn()s wrap each other and let
 // calls fall through to the real network once the inner spy is restored.
 const fetchSpy = vi.spyOn(globalThis, 'fetch')
@@ -37,10 +46,9 @@ describe('buildBroadcastPost', () => {
       hulu: { added: items(['Hulu Movie']), left: items([]), coming: items([]) },
       max: { added: items([]), left: items(['Max Movie']), coming: items([]) }
     })
-    expect(text).toContain('+ Frankenstein → Netflix')
-    expect(text).toContain('− Old Show ← Netflix')
-    expect(text).toContain('+ Hulu Movie → Hulu')
-    expect(text).toContain('− Max Movie ← Max')
+    expect(text).toContain('Netflix: + Frankenstein + The Rip − Old Show')
+    expect(text).toContain('Hulu: + Hulu Movie')
+    expect(text).toContain('Max: − Max Movie')
     expect(text).toContain('galaxymovies.app/leaving')
     expect(text.length).toBeLessThanOrEqual(300)
   })
@@ -177,11 +185,7 @@ describe('buildDeparturesPost', () => {
 describe('broadcastWeeklyDigest', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
-    delete process.env.BSKY_HANDLE
-    delete process.env.BSKY_APP_PASSWORD
-    delete process.env.FB_PAGE_ID
-    delete process.env.FB_PAGE_ACCESS_TOKEN
-    delete process.env.SOCIAL_FACEBOOK_WEBHOOK
+    clearSocialEnv()
   })
 
   it('skips every channel when no credentials are set', async () => {
@@ -256,12 +260,7 @@ describe('broadcastWeeklyDigest', () => {
 describe('broadcastMonthlyDepartures', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
-    delete process.env.BSKY_HANDLE
-    delete process.env.BSKY_APP_PASSWORD
-    delete process.env.SOCIAL_DISCORD_WEBHOOK
-    delete process.env.FB_PAGE_ID
-    delete process.env.FB_PAGE_ACCESS_TOKEN
-    delete process.env.SOCIAL_FACEBOOK_WEBHOOK
+    clearSocialEnv()
   })
 
   it('posts the leaving-soon post to configured channels', async () => {
@@ -281,5 +280,57 @@ describe('broadcastMonthlyDepartures', () => {
     const results = await broadcastMonthlyDepartures()
     for (const r of Object.values(results)) expect(r.status).toBe('skipped')
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('reddit channel', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+    process.env.REDDIT_CLIENT_ID = 'id'
+    process.env.REDDIT_CLIENT_SECRET = 'secret'
+    process.env.REDDIT_USERNAME = 'bot'
+    process.env.REDDIT_PASSWORD = 'pass'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('access_token')
+        ? new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 })
+        : new Response('{}', { status: 200 })
+    )
+  })
+
+  const submitBody = () =>
+    new URLSearchParams(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('oauth.reddit.com/api/submit'))![1]?.body)
+    )
+
+  it('posts the weekly digest as a markdown self post to the subreddit', async () => {
+    const results = await broadcastWeeklyDigest()
+    expect(results.reddit.status).toBe('posted')
+
+    const body = submitBody()
+    expect(body.get('sr')).toBe('galaxymovies')
+    expect(body.get('kind')).toBe('self')
+    expect(body.get('title')).toBe("This week's streaming moves: new arrivals & departures")
+    expect(body.get('text')).toContain('**Netflix**')
+    expect(body.get('text')).toContain('- Added: Frankenstein')
+    expect(body.get('text')).toContain('- Leaving soon: Gone Soon (Oct 31)')
+    expect(body.get('text')).toContain('galaxymovies.app/leaving')
+    expect(body.get('url')).toBeNull()
+  })
+
+  it('honors REDDIT_SUBREDDIT override', async () => {
+    process.env.REDDIT_SUBREDDIT = 'testsub'
+    await broadcastWeeklyDigest()
+    expect(submitBody().get('sr')).toBe('testsub')
+  })
+
+  it('posts the monthly departures digest with a dated title', async () => {
+    const results = await broadcastMonthlyDepartures()
+    expect(results.reddit.status).toBe('posted')
+
+    const body = submitBody()
+    expect(body.get('kind')).toBe('self')
+    expect(body.get('title')).toBe("Leaving soon on streaming: this month's departures")
+    expect(body.get('text')).toContain('- Leaving soon: Gone Soon (Oct 31)')
   })
 })

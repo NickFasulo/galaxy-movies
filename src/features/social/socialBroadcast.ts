@@ -1,7 +1,7 @@
 import { getRedis } from '../../lib/redis'
 import { getMonthlyChanges, getProviderChanges, type MonthlyChanges } from '../catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../catalog/tmdb'
-import { SOCIAL_CHANNELS } from './socialChannels'
+import { SOCIAL_CHANNELS, type SocialChannel } from './socialChannels'
 import { SITE_URL } from '../../lib/site'
 
 // Highlights for the weekly social post: the biggest-name services, in the
@@ -28,17 +28,19 @@ export function buildBroadcastPost(
   maxLen = 300
 ): string {
   const lines: string[] = [`This week's streaming moves:`]
-  const adds: string[] = []
-  const leaves: string[] = []
 
+  // One line per provider — "+ added, − left" reads cleanly and spends fewer
+  // characters than repeating the service name on every title.
   for (const key of BROADCAST_PROVIDERS) {
     const change = changes[key]
     if (!change) continue
-    for (const t of change.added.slice(0, 2)) adds.push(`+ ${t.title} → ${providerLabel(key)}`)
-    for (const t of change.left.slice(0, 2)) leaves.push(`− ${t.title} ← ${providerLabel(key)}`)
+    const parts = [
+      ...change.added.slice(0, 2).map((t) => `+ ${t.title}`),
+      ...change.left.slice(0, 2).map((t) => `− ${t.title}`)
+    ]
+    if (parts.length) lines.push(`${providerLabel(key)}: ${parts.join(' ')}`)
   }
 
-  lines.push(...adds.slice(0, 4), ...leaves.slice(0, 3))
   let text = `${lines.join('\n')}\n\nFull lists updated daily: ${BROADCAST_LINK}`
 
   // Drop lines from the end until the post fits the channel's cap.
@@ -137,7 +139,7 @@ export interface ChannelResult {
 }
 
 async function broadcastToChannels(
-  textFor: (maxLen: number) => string,
+  textFor: (channel: SocialChannel) => { text: string; title?: string },
   opts: { scope?: string; ttlDays: number }
 ): Promise<Record<string, ChannelResult>> {
   const kv = getRedis()
@@ -149,7 +151,7 @@ async function broadcastToChannels(
       continue
     }
 
-    const text = textFor(channel.maxLen)
+    const { text, title } = textFor(channel)
     if (text.length < 40) {
       results[channel.name] = { status: 'skipped', reason: 'nothing to post' }
       continue
@@ -162,7 +164,7 @@ async function broadcastToChannels(
       continue
     }
 
-    const failure = await channel.post(text, BROADCAST_LINK)
+    const failure = await channel.post(text, BROADCAST_LINK, title)
     if (failure) {
       results[channel.name] = { status: 'failed', reason: failure }
       continue
@@ -177,7 +179,16 @@ async function broadcastToChannels(
 export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelResult>> {
   const changes = await getProviderChanges(BROADCAST_PROVIDERS)
   if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
-  return broadcastToChannels((maxLen) => buildBroadcastPost(changes, maxLen), { ttlDays: 8 })
+  return broadcastToChannels(
+    (channel) =>
+      channel.format === 'markdown'
+        ? {
+            text: buildRedditDigest(changes, BROADCAST_PROVIDERS, channel.maxLen),
+            title: "This week's streaming moves: new arrivals & departures"
+          }
+        : { text: buildBroadcastPost(changes, channel.maxLen) },
+    { ttlDays: 8 }
+  )
 }
 
 // Month-end post: the dated departures Watchmode's leavingSoon says are about
@@ -216,7 +227,7 @@ export function buildMonthlyChurnPost(
       const m = monthly[key]
       if (!m || (!m.arrived.length && !m.departed.length)) return null
       const net = m.arrived.length - m.departed.length
-      return `${providerLabel(key)} +${m.arrived.length}/−${m.departed.length}${net !== 0 ? ` (net ${net > 0 ? '+' : ''}${net})` : ''}`
+      return `${providerLabel(key)}: ${m.arrived.length} added, ${m.departed.length} left${net !== 0 ? ` (net ${net > 0 ? '+' : ''}${net})` : ''}`
     })
     .filter((l): l is string => Boolean(l))
 
@@ -250,7 +261,13 @@ export async function broadcastMonthlyDepartures(): Promise<Record<string, Chann
     return { bsky: { status: 'failed', reason: 'no changes data' } }
   }
   return broadcastToChannels(
-    (maxLen) => buildMonthlyChurnPost(changes, monthly, maxLen) || buildDeparturesPost(changes, maxLen),
+    (channel) =>
+      channel.format === 'markdown'
+        ? {
+            text: buildDeparturesDigest(changes, BROADCAST_PROVIDERS, channel.maxLen),
+            title: "Leaving soon on streaming: this month's departures"
+          }
+        : { text: buildMonthlyChurnPost(changes, monthly, channel.maxLen) || buildDeparturesPost(changes, channel.maxLen) },
     { scope: 'monthly', ttlDays: 35 }
   )
 }
