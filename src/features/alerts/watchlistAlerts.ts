@@ -7,7 +7,7 @@ import { sendTelegramAlert } from './telegram'
 import { sendPushAlert, parseStoredSubs } from './webpush'
 import { isPlusActive, manageLink, parseBillingRecord, plusLink } from '../billing/billing'
 import { fetchRecommendedMovies, fetchRecommendedTv, fetchTmdb } from '../catalog/tmdb'
-import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../lib/email'
+import { emailCallout, emailLayout, emailListRows, escapeHtml, sendEmail } from '../../lib/email'
 import { shortDate } from '../../lib/format/formatters'
 import { SITE_URL, titlePath } from '../../lib/site'
 import type { MediaType, TmdbTvDetails } from '../../types/tmdb'
@@ -209,19 +209,20 @@ export function statusLine(item: MatchedItem): string {
 
 export function buildEmail(items: MatchedItem[], email: string, unsubToken: string, plusUrl?: string | null, manageUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
-  const rows = items
-    .map((item) =>
-      `<li style="margin: 8px 0;"><a href="${SITE_URL}${titlePath(item.tmdbType, item.tmdbId)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
-      `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${statusLine(item)}</div></li>`
-    )
-    .join('')
+  const rows = emailListRows(
+    items.map((item) => ({
+      href: `${SITE_URL}${titlePath(item.tmdbType, item.tmdbId)}`,
+      title: escapeHtml(item.title),
+      line: statusLine(item)
+    }))
+  )
 
   const html = emailLayout({
     heading: 'Something on your list just moved',
     preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles on your watchlist`,
     body: `
       <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
-      <ul style="list-style: none; padding: 0; margin: 0; color: #1f2937;">${rows}</ul>
+      ${rows}
       <p style="margin: 22px 0 0;"><a href="${SITE_URL}/watchlist" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">View your list →</a>${manageUrl ? ` · <a href="${manageUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Manage alerts →</a>` : ''}</p>
       ${plusUrl ? emailCallout(`Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',

@@ -1,7 +1,7 @@
 import { getRedis } from '../../lib/redis'
 import { ALERTS_NOTIFIED_KEY, WATCH_KEY, getOrCreateSyncKey } from './waitlistStore'
 import { manageLink } from '../billing/billing'
-import { emailLayout, escapeHtml, sendEmail } from '../../lib/email'
+import { emailLayout, emailListRows, escapeHtml, sendEmail } from '../../lib/email'
 import { shortDate } from '../../lib/format/formatters'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType } from '../../types/tmdb'
@@ -101,33 +101,35 @@ export function matchWatchEntry(
 const prettyDate = shortDate
 
 // Mirrors statusLine in watchlistAlerts for the three kinds title alerts use
-// — kept local so this module never has to import its caller.
-const titleStatusLine = (item: MatchedItem): string => {
+// — kept local so this module never has to import its caller. `esc` defaults to
+// escapeHtml for HTML bodies; the email subject passes an identity function.
+const titleStatusLine = (item: MatchedItem, esc: (s: string) => string = escapeHtml): string => {
   switch (item.kind) {
     case 'coming':
-      return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
+      return `Coming to ${esc(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`
     case 'leaving':
-      return `Left ${escapeHtml(item.provider)}`
+      return `Left ${esc(item.provider)}`
     default:
-      return `Now streaming on ${escapeHtml(item.provider)}`
+      return `Now streaming on ${esc(item.provider)}`
   }
 }
 
 export function buildWatchEmail(items: MatchedItem[], email: string, unsubToken: string, manageUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
-  const rows = items
-    .map((item) =>
-      `<li style="margin: 8px 0;"><a href="${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(item.title)}</a>` +
-      `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${titleStatusLine(item)}</div></li>`
-    )
-    .join('')
+  const rows = emailListRows(
+    items.map((item) => ({
+      href: `${SITE_URL}/${item.tmdbType === 'tv' ? 'tv' : 'movies'}/${item.tmdbId}`,
+      title: escapeHtml(item.title),
+      line: titleStatusLine(item)
+    }))
+  )
 
   const html = emailLayout({
     heading: "A title you're tracking just moved",
     preheader: `${items.length} update${items.length === 1 ? '' : 's'} for titles you're tracking`,
     body: `
       <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">Here's the latest for titles you asked Galaxy Movies to watch.</p>
-      <ul style="list-style: none; padding: 0; margin: 0; color: #1f2937;">${rows}</ul>
+      ${rows}
       <p style="margin: 22px 0 0;"><a href="${manageUrl || SITE_URL}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">${manageUrl ? 'Manage your alerts →' : 'Track another title →'}</a></p>`,
     reason: 'You asked Galaxy Movies to notify you about these titles.',
     unsubUrl: unsub
@@ -139,7 +141,7 @@ async function sendWatchEmail(items: MatchedItem[], email: string, unsubToken: s
   const { html, headers } = buildWatchEmail(items, email, unsubToken, manageUrl)
   const ok = await sendEmail({
     to: email,
-    subject: items.length === 1 ? `${items[0].title}: ${titleStatusLine(items[0])}` : "A title you're tracking just moved",
+    subject: items.length === 1 ? `${items[0].title}: ${titleStatusLine(items[0], (s) => s)}` : "A title you're tracking just moved",
     html,
     headers
   })

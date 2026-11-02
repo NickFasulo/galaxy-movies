@@ -1,5 +1,5 @@
 import { getRedis } from '../../lib/redis'
-import { sendEmail, emailLayout, escapeHtml } from '../../lib/email'
+import { sendEmail, emailLayout, emailListRows, escapeHtml } from '../../lib/email'
 import { getPriceOffers, type PricePayload } from '../catalog/prices'
 import { getOrCreateSyncKey, PRICE_DROPS_KEY, WATCH_KEY } from './waitlistStore'
 import { manageLink } from '../billing/billing'
@@ -80,19 +80,20 @@ const money = (n: number) => `$${n.toFixed(2)}`
 
 export function buildPriceDropEmail(items: { target: PriceDropTarget; prev: number; now: number; rent: string | null; buy: string | null }[], email: string, unsubToken: string, manageUrl?: string | null) {
   const unsub = `${SITE_URL}/api/waitlist-remove?email=${encodeURIComponent(email)}&token=${unsubToken}`
-  const rows = items
-    .map(({ target, prev, now, rent, buy }) =>
-      `<li style="margin: 8px 0;"><a href="${SITE_URL}/${target.tmdbType === 'tv' ? 'tv' : 'movies'}/${target.tmdbId}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">${escapeHtml(target.title)}</a>` +
-      `<div style="color: #596579; font-size: 13px; margin-top: 1px;">Lowest price yet: <b>${money(now)}</b> (was ${money(prev)})${rent ? ` · rent ${rent}` : ''}${buy ? ` · buy ${buy}` : ''}</div></li>`
-    )
-    .join('')
+  const rows = emailListRows(
+    items.map(({ target, prev, now, rent, buy }) => ({
+      href: `${SITE_URL}/${target.tmdbType === 'tv' ? 'tv' : 'movies'}/${target.tmdbId}`,
+      title: escapeHtml(target.title),
+      line: `Lowest price yet: <b>${money(now)}</b> (was ${money(prev)})${rent ? ` · rent ${rent}` : ''}${buy ? ` · buy ${buy}` : ''}`
+    }))
+  )
 
   const html = emailLayout({
     heading: 'A tracked title just dropped in price',
     preheader: `${items.length} price drop${items.length === 1 ? '' : 's'} on titles you're tracking`,
     body: `
       <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">These rentals or purchases hit a new low since your last check.</p>
-      <ul style="list-style: none; padding: 0; margin: 0; color: #1f2937;">${rows}</ul>
+      ${rows}
       <p style="margin: 22px 0 0;"><a href="${manageUrl || SITE_URL}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">${manageUrl ? 'Manage your alerts →' : 'Track another title →'}</a></p>`,
     reason: 'You asked Galaxy Movies to watch rental and purchase prices.',
     unsubUrl: unsub

@@ -220,10 +220,10 @@ export default function Plus() {
                     <Badge colorPalette='yellow' fontSize='2xs'>Best value</Badge>
                   </Flex>
                   <Flex align='baseline' gap={1} mt={2}>
-                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$20</Text>
+                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$30</Text>
                     <Text color='gray.400' fontSize='sm'>/ year</Text>
                   </Flex>
-                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $1.67 a month (save 44%)</Text>
+                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $2.50 a month (save 17%)</Text>
                   <Button mt='auto' colorPalette='yellow' loading={busy === 'yearly'} onClick={() => checkout('yearly')} w='100%'>
                     Go yearly
                   </Button>

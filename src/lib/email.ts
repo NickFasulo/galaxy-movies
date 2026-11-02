@@ -21,13 +21,14 @@ export interface EmailLayoutOptions {
 
 export function emailLayout({ heading, body, preheader, reason, unsubUrl }: EmailLayoutOptions): string {
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><meta name="x-apple-disable-message-reformatting"></head>
-<body class="body" bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff;">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><meta name="x-apple-disable-message-reformatting"></head>
+<body bgcolor="#ffffff" style="margin:0; padding:0; background-color:#ffffff;">
 ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${escapeHtml(preheader)}</div>` : ''}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%; background-color:#ffffff;">
   <tr>
     <td bgcolor="#ffffff" style="padding:36px 16px 28px; font-family:${FONT}; color:#1f2937;">
-      <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:540px;"><tr><td bgcolor="#ffffff" style="font-family:${FONT}; color:#1f2937;">
+      <!-- width attribute is for Outlook's Word engine, which ignores max-width -->
+      <table role="presentation" align="center" width="540" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:540px;"><tr><td bgcolor="#ffffff" style="font-family:${FONT}; color:#1f2937;">
         <div style="text-align:center; padding-bottom:22px;">
           <a href="${SITE_URL}" style="text-decoration:none;"><img src="${SITE_URL}/email-logo-light.png" width="264" alt="Galaxy Movies" style="display:inline-block; border:0; width:264px; max-width:100%; height:auto; color:#111827; font-size:20px; font-weight:700;" /></a>
         </div>
@@ -48,15 +49,30 @@ ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide
 </body></html>`
 }
 
+// Table-based button: the <td> carries the fill and the <a> the padding —
+// Outlook's Word engine doesn't render padding or border-radius on anchors.
 export function emailCta(url: string, label: string, showRawLink = false): string {
-  const button = `<p style="margin:22px 0 6px; text-align:center;"><a href="${url}" style="display:inline-block; background-color:#2b6cb0; color:#ffffff; padding:11px 22px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">${label}</a></p>`
+  const button = `<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:22px auto 6px;"><tr><td align="center" bgcolor="#2b6cb0" style="border-radius:8px;"><a href="${url}" style="display:inline-block; color:#ffffff; padding:11px 22px; text-decoration:none; font-weight:600; font-size:14px;">${label}</a></td></tr></table>`
   if (!showRawLink) return button
   return button + `<p style="margin:14px 0 0; color:#596579; font-size:12px; word-break:break-all; text-align:center;">Or paste this link: ${url}</p>`
 }
 
-// Inset panel for the Plus upsell inside the raised card.
+// Inset panel for the Plus upsell inside the raised card. A <p> can't carry
+// box styling in Outlook, so the panel is a bordered table cell.
 export function emailCallout(innerHtml: string): string {
-  return `<p style="margin:18px 0 0; padding:12px 14px; background-color:#ffffff; border:1px solid #d1d5db; border-radius:8px; font-size:13px; line-height:1.55; color:#4b5563;">${innerHtml}</p>`
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;"><tr><td style="padding:12px 14px; background-color:#ffffff; border:1px solid #d1d5db; border-radius:8px; font-size:13px; line-height:1.55; color:#4b5563;">${innerHtml}</td></tr></table>`
+}
+
+// Digest rows: linked title over a muted status line. <div>s, not <ul>/<li> —
+// Outlook ignores list-style:none and renders stray bullets + indentation.
+// `title` and `line` are inserted verbatim; escape dynamic text at the call site.
+export function emailListRows(rows: { href: string; title: string; line: string }[]): string {
+  return rows
+    .map(
+      ({ href, title, line }) =>
+        `<div style="margin:8px 0;"><a href="${href}" style="color:#1d4ed8; text-decoration:none; font-weight:600;">${title}</a><div style="color:#596579; font-size:13px; margin-top:1px;">${line}</div></div>`
+    )
+    .join('')
 }
 
 export async function sendEmail(opts: { to: string; subject: string; html: string; headers?: Record<string, string> }): Promise<boolean> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emailCallout, emailCta, emailLayout, escapeHtml, MAILING_ADDRESS } from './email'
+import { emailCallout, emailCta, emailLayout, emailListRows, escapeHtml, MAILING_ADDRESS } from './email'
 
 describe('escapeHtml', () => {
   it('escapes markup-significant characters', () => {
@@ -48,6 +48,11 @@ describe('emailLayout', () => {
     expect(html).not.toContain('linear-gradient')
     expect(html).toContain('role="presentation" width="100%"')
   })
+
+  it('fixes the content width for clients that ignore max-width', () => {
+    const html = emailLayout({ heading: 'H', body: '' })
+    expect(html).toContain('width="540"')
+  })
 })
 
 describe('emailCta', () => {
@@ -65,5 +70,17 @@ describe('emailCallout', () => {
     const html = emailCallout('<a href="/plus">Plus</a>')
     expect(html).toContain('<a href="/plus">Plus</a>')
     expect(html).toContain('background-color:#ffffff')
+  })
+})
+
+describe('emailListRows', () => {
+  it('renders div rows with the linked title over the status line', () => {
+    const html = emailListRows([{ href: 'https://x/movies/1', title: 'Dune', line: 'Now on <b>Netflix</b>' }])
+    expect(html).not.toContain('<ul')
+    expect(html).not.toContain('<li')
+    expect(html).toContain('href="https://x/movies/1"')
+    expect(html).toContain('>Dune</a>')
+    expect(html).toContain('Now on <b>Netflix</b>')
+    expect(emailListRows([])).toBe('')
   })
 })

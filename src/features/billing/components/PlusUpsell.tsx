@@ -50,7 +50,7 @@ export default function PlusUpsell() {
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>Galaxy Plus</Text>
       </Flex>
       <Text color='gray.400' fontSize='sm' mb={3}>
-        Leaving-soon warnings, next-episode alerts, and every provider we track — $3/mo or $20/yr.
+        Leaving-soon warnings, next-episode alerts, and every provider we track — $3/mo or $30/yr.
       </Text>
       {creds ? (
         <>
@@ -59,7 +59,7 @@ export default function PlusUpsell() {
               $3 / month
             </Button>
             <Button size='sm' {...secondaryButton} loading={busy === 'yearly'} onClick={() => checkout('yearly')}>
-              $20 / year
+              $30 / year
             </Button>
             <Link asChild color='gray.300' fontSize='xs' alignSelf='center' _hover={{ color: 'white' }}>
               <NextLink href='/plus'>What&apos;s included</NextLink>

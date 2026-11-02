@@ -6,7 +6,7 @@ import { parsePrefs } from '../../../features/alerts/watchlistAlerts'
 import { isPlusActive, manageLink, parseBillingRecord, plusLink } from '../../../features/billing/billing'
 import { isCronAuthorized } from '../../../lib/auth'
 import { shortDate } from '../../../lib/format/formatters'
-import { emailCallout, emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
+import { emailCallout, emailLayout, emailListRows, escapeHtml, sendEmail } from '../../../lib/email'
 import { SITE_URL, titlePath } from '../../../lib/site'
 
 export const config = { maxDuration: 60 }
@@ -45,14 +45,13 @@ const sectionHead = (label: string) =>
   `<div style="font-size: 15px; font-weight: 700; color: #111827; margin: 20px 0 6px;">${label}</div>`
 
 function itemList(items: DigestItem[], showDate: boolean) {
-  if (!items.length) return ''
-  return `<ul style="list-style: none; padding: 0; margin: 0 0 6px; color: #1f2937;">${items
-    .map(
-      (t) =>
-        `<li style="margin: 8px 0;"><a href="${SITE_URL}${itemPath(t)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${escapeHtml(t.title)}</a>` +
-        `<div style="color: #596579; font-size: 13px; margin-top: 1px;">${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}</div></li>`
-    )
-    .join('')}</ul>`
+  return emailListRows(
+    items.map((t) => ({
+      href: `${SITE_URL}${itemPath(t)}`,
+      title: escapeHtml(t.title),
+      line: `${escapeHtml(t.provider)}${showDate && 'date' in t && t.date ? `, ${prettyDate(t.date)}` : ''}${'season' in t && t.season ? `, season ${t.season}` : ''}`
+    }))
+  )
 }
 
 function buildEmail(items: DigestItems, email: string, token: string, leaving: DigestItem[] = [], plusUrl?: string | null, manageUrl?: string | null) {
