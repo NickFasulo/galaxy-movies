@@ -79,8 +79,11 @@ export default function TitleAvailability({ events, tenure, tenureStats, tmdbId,
     .map(([key, s]) => predictionLine(key, s, tenureStats?.[key]))
     .filter((line): line is string => Boolean(line))
 
+  // Form-only panels get a CTA title — "Catalog changes" describes rows/stints
+  // that aren't there on unreleased or rent/buy-only titles.
+  const hasContent = rows.length > 0 || stints.length > 0
   return (
-    <Panel title='Catalog changes'>
+    <Panel title={hasContent ? 'Catalog changes' : 'Get notified'}>
       {rows.map((row, i) => (
         <Text key={i} fontSize='sm' color='gray.300' mb={i === rows.length - 1 ? 3 : 1}>
           <Link href={row.href} color='gray.300' textDecoration='underline' _hover={{ color: 'white' }}>

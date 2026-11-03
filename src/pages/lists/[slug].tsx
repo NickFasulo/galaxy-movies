@@ -8,6 +8,7 @@ import PageShell from '../../components/PageShell'
 import { fetchListMovies, fetchListTv, fetchRecommendedMovies, fetchRecommendedTv } from '../../features/catalog/tmdb'
 import { getCuratedList, type EditorialSection } from '../../features/catalog/curatedLists'
 import { getGeneratedList } from '../../features/catalog/generatedLists'
+import { listEditorials, type ListEditorial } from '../../features/catalog/listEditorials'
 import { getOrGenerateListIntro } from '../../features/ai/listIntro'
 import { setSwrCache } from '../../lib/http'
 import { itemListSchema, titleListSchema } from '../../features/catalog/schema'
@@ -22,6 +23,7 @@ interface Props {
   dataError?: boolean
   intro: string | null
   sections: EditorialSection[] | null
+  extras: ListEditorial | null
   relatedHeading: string | null
 }
 
@@ -58,17 +60,50 @@ export async function getServerSideProps({ params, res }: GetServerSidePropsCont
         movies,
         intro,
         sections: isEditorial ? list.sections : null,
+        extras: isEditorial ? null : (listEditorials[slug] ?? null),
         relatedHeading: isEditorial ? list.relatedHeading || null : null
       }
     }
   } catch (error) {
     console.error(error)
     res.statusCode = 502
-    return { props: { slug, title: list.title, tagline: list.tagline, movies: [], dataError: true, intro: null, sections: null, relatedHeading: null } }
+    return { props: { slug, title: list.title, tagline: list.tagline, movies: [], dataError: true, intro: null, sections: null, extras: null, relatedHeading: null } }
   }
 }
 
-export default function CuratedListPage({ slug, title, tagline, movies, dataError, intro, sections, relatedHeading }: Props) {
+const renderSection = (section: EditorialSection, sectionIndex: number) => (
+  <Box key={sectionIndex} mt={sectionIndex === 0 ? 8 : 10}>
+    {section.heading && (
+      <Heading as='h2' size='md' mb={4} textAlign={{ base: 'center', md: 'left' }}>{section.heading}</Heading>
+    )}
+    {section.paragraphs?.map((paragraph, paragraphIndex) => (
+      <Text key={paragraphIndex} maxW='60rem' mt={paragraphIndex === 0 ? 0 : 4}>{paragraph}</Text>
+    ))}
+    {section.items && (
+      <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={6}>
+        {section.items.map((item) => (
+          <Box key={item.name} p={4} borderRadius='0.5rem' border='1px solid var(--chakra-colors-border-subtle)'>
+            {item.url ? (
+              <ChakraLink href={item.url} target='_blank' rel='noopener noreferrer' fontWeight='semibold' color='blue.300'>
+                {item.name} <Icon mx='2px' asChild><LuExternalLink /></Icon>
+              </ChakraLink>
+            ) : (
+              <Text fontWeight='semibold'>{item.name}</Text>
+            )}
+            <Text fontSize='sm' color='gray.400' mt={1}>{item.description}</Text>
+            {item.path && (
+              <Text fontSize='sm' color='blue.300' mt={2}>
+                <Link href={item.path} style={{ textDecoration: 'underline' }}>{item.pathLabel || 'Read more'} →</Link>
+              </Text>
+            )}
+          </Box>
+        ))}
+      </SimpleGrid>
+    )}
+  </Box>
+)
+
+export default function CuratedListPage({ slug, title, tagline, movies, dataError, intro, sections, extras, relatedHeading }: Props) {
   const canonicalUrl = `${SITE_URL}/lists/${slug}`
 
   const structuredData = sections
@@ -102,37 +137,8 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
         {intro && (
           <Text maxW='42rem' mt={4} color='gray.300'>{intro}</Text>
         )}
-        {sections?.map((section, sectionIndex) => (
-          <Box key={sectionIndex} mt={sectionIndex === 0 ? 8 : 10}>
-            {section.heading && (
-              <Heading as='h2' size='md' mb={4} textAlign={{ base: 'center', md: 'left' }}>{section.heading}</Heading>
-            )}
-            {section.paragraphs?.map((paragraph, paragraphIndex) => (
-              <Text key={paragraphIndex} maxW='60rem' mt={paragraphIndex === 0 ? 0 : 4}>{paragraph}</Text>
-            ))}
-            {section.items && (
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={6}>
-                {section.items.map((item) => (
-                  <Box key={item.name} p={4} borderRadius='0.5rem' border='1px solid var(--chakra-colors-border-subtle)'>
-                    {item.url ? (
-                      <ChakraLink href={item.url} target='_blank' rel='noopener noreferrer' fontWeight='semibold' color='blue.300'>
-                        {item.name} <Icon mx='2px' asChild><LuExternalLink /></Icon>
-                      </ChakraLink>
-                    ) : (
-                      <Text fontWeight='semibold'>{item.name}</Text>
-                    )}
-                    <Text fontSize='sm' color='gray.400' mt={1}>{item.description}</Text>
-                    {item.path && (
-                      <Text fontSize='sm' color='blue.300' mt={2}>
-                        <Link href={item.path} style={{ textDecoration: 'underline' }}>{item.pathLabel || 'Read more'} →</Link>
-                      </Text>
-                    )}
-                  </Box>
-                ))}
-              </SimpleGrid>
-            )}
-          </Box>
-        ))}
+        {sections?.map(renderSection)}
+        {extras?.sections.map(renderSection)}
         {sections ? (
           movies.length > 0 && (
             <>
@@ -147,7 +153,14 @@ export default function CuratedListPage({ slug, title, tagline, movies, dataErro
         ) : movies.length === 0 ? (
           <Text mt={10} color='gray.500'>No movies currently match this collection.</Text>
         ) : (
-          <MovieGrid movies={movies} />
+          <>
+            {extras && (
+              <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>
+                {extras.gridHeading || 'The picks'}
+              </Heading>
+            )}
+            <MovieGrid movies={movies} />
+          </>
         )}
       </PageShell>
     </>
