@@ -1,0 +1,106 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Galaxy Movies Streaming Changes API",
+    "description": "Free, keyless JSON feed of daily US streaming-catalog changes. Each provider object lists titles that arrived, titles that left, and upcoming releases detected by daily catalog diffs. Rate limit: 120 requests/hour per IP. Attribution is included in every response; please keep it when republishing.",
+    "version": "1.0.0",
+    "contact": { "url": "https://galaxymovies.app" },
+    "license": { "name": "Attribution required", "url": "https://galaxymovies.app" }
+  },
+  "servers": [{ "url": "https://galaxymovies.app" }],
+  "paths": {
+    "/api/streaming-changes": {
+      "get": {
+        "operationId": "getStreamingChanges",
+        "summary": "Daily catalog diffs per streaming provider",
+        "description": "Returns titles added and removed from a provider's tracked US catalog, plus scheduled upcoming releases. Use `provider=all` for every tracked provider in one call.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": true,
+            "description": "Provider key, or `all` for every tracked provider.",
+            "schema": {
+              "type": "string",
+              "enum": ["netflix", "amazon-prime-video", "hulu", "disney-plus", "apple-tv", "max", "peacock", "paramount-plus", "tubi", "pluto-tv", "roku-channel", "starz", "amc-plus", "mgm-plus", "crunchyroll", "discovery-plus", "plex", "kanopy", "shudder", "criterion", "all"]
+            },
+            "example": "netflix"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catalog changes for the provider (or a `providers` map when `provider=all`).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProviderChanges" },
+                "examples": {
+                  "single": {
+                    "value": {
+                      "label": "Netflix",
+                      "provider": "netflix",
+                      "source": "Netflix",
+                      "updatedAt": 1793687443716,
+                      "coming": [],
+                      "added": [{ "tmdbId": 244786, "tmdbType": "movie", "title": "Whiplash", "year": 2014, "popularity": 32.1546 }],
+                      "left": [{ "tmdbId": 79242, "tmdbType": "tv", "title": "Chilling Adventures of Sabrina", "year": 2018, "popularity": 28.4194 }],
+                      "attribution": { "text": "Powered by Galaxy Movies", "url": "https://galaxymovies.app/leaving/netflix" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing `provider` query param. Response lists valid provider keys." },
+          "404": { "description": "Unknown provider key. Response lists valid provider keys." },
+          "429": { "description": "Rate limit exceeded (120/hour per IP). `Retry-After` header present." },
+          "503": { "description": "Change data temporarily unavailable." }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CatalogTitle": {
+        "type": "object",
+        "properties": {
+          "tmdbId": { "type": "integer" },
+          "tmdbType": { "type": "string", "enum": ["movie", "tv"] },
+          "title": { "type": "string" },
+          "year": { "type": "integer" },
+          "popularity": { "type": "number" }
+        }
+      },
+      "ComingTitle": {
+        "allOf": [
+          { "$ref": "#/components/schemas/CatalogTitle" },
+          {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date", "description": "Scheduled release date (YYYY-MM-DD)." },
+              "season": { "type": ["integer", "null"] }
+            }
+          }
+        ]
+      },
+      "ProviderChanges": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "description": "Display name of the provider." },
+          "provider": { "type": "string" },
+          "source": { "type": "string" },
+          "updatedAt": { "type": "integer", "format": "int64", "description": "Unix ms timestamp of the last diff." },
+          "coming": { "type": "array", "items": { "$ref": "#/components/schemas/ComingTitle" } },
+          "added": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogTitle" } },
+          "left": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogTitle" } },
+          "attribution": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

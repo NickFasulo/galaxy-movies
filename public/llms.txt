@@ -19,7 +19,7 @@
 
 ## Open data & feeds
 
-- GET /api/streaming-changes?provider={key|all} — daily catalog diffs as JSON (CORS *, 120 req/hr, no key)
+- GET /api/streaming-changes?provider={key|all} — daily catalog diffs as JSON (CORS *, 120 req/hr, no key); OpenAPI spec at /openapi.json
 - /embed/{provider} — iframe widget of arrivals/departures (?theme=light)
 - /embed/churn — iframe monthly churn stat card
 - /api/cal/{provider} — public ICS calendar of announced arrivals and departures per service
