@@ -4,6 +4,7 @@ declare namespace NodeJS {
     OPENAI_API_KEY?: string
     WATCHMODE_API_KEY?: string
     WATCHMODE_DAILY_LOOKUP_BUDGET?: string
+    CATALOG_PAGES?: string
     UPSTASH_REDIS_KV_REST_API_URL?: string
     UPSTASH_REDIS_KV_REST_API_TOKEN?: string
     RESEND_API_KEY?: string

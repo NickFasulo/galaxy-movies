@@ -32,6 +32,21 @@ export default function ReportsIndex() {
           </Text>
         </Box>
         <Box mt={8}>
+          <Heading as='h2' size='md' mb={3}>Data feeds</Heading>
+          <Flex wrap='wrap' gap={2}>
+            <Button asChild size='xs' {...secondaryButton}>
+              <Link href='/api/digital-releases'>Digital release dates</Link>
+            </Button>
+            <Button asChild size='xs' {...secondaryButton}>
+              <Link href='/api/charts'>Demand charts (Netflix, Trakt, Apple)</Link>
+            </Button>
+          </Flex>
+          <Text color='gray.500' fontSize='sm' mt={3} maxW='42rem'>
+            JSON feeds updated daily/weekly. Digital releases are confirmed US VOD dates; demand charts
+            combine Netflix Top 10 viewership, Trakt watch activity, and Apple store rankings.
+          </Text>
+        </Box>
+        <Box mt={8}>
           <Heading as='h2' size='md' mb={3}>Related live lists</Heading>
           <Flex wrap='wrap' gap={2}>
             <Button asChild size='xs' {...secondaryButton}>

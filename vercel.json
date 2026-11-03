@@ -12,6 +12,14 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/cron/digital-releases",
+      "schedule": "45 6 * * *"
+    },
+    {
+      "path": "/api/cron/charts",
+      "schedule": "30 13 * * 3"
+    },
+    {
       "path": "/api/cron/watchlist-alerts",
       "schedule": "0 7 * * *"
     },

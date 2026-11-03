@@ -6,13 +6,13 @@ import { recordProviderMoves } from './tenure'
 import { warmAiTitleCache, type WarmCandidate } from '../ai/warmCache'
 import { pingIndexNow } from '../../lib/indexnow'
 import { SITE_URL } from '../../lib/site'
-import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
+import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow, WatchProvidersResponse } from '../../types/tmdb'
 
 const WATCHMODE_BASE = 'https://api.watchmode.com/v1'
 const SOURCES_TTL_SECONDS = 60 * 60 * 24 * 30
 // No-TTL shadow of changes:sources, written on every successful /sources fetch.
 const SOURCES_STALE_KEY = 'changes:sources:stale'
-const CATALOG_LIMIT = 250
+const CATALOG_LIMIT = 1600
 const CHANGE_LIST_LIMIT = 40
 const COMING_DAYS = 21
 const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62
@@ -50,6 +50,9 @@ export interface CatalogTitle {
   title: string
   year: number | null
   popularity?: number
+  // Snapshot bookkeeping: first-seen date while an add is probationary —
+  // promotes (or vanishes) on its next sighting. Absent on confirmed titles.
+  pending?: string
 }
 
 export interface ComingTitle {
@@ -94,12 +97,23 @@ export interface MonthlyChanges {
   leavingSoon?: LeavingSoonTitle[]
 }
 
+interface PendingDeparture {
+  // First-miss date — the departure date once promoted.
+  d: string
+  // Last date a watch/providers check still showed the provider attached.
+  v?: string
+  title: CatalogTitle
+}
+
 interface CatalogSnapshot {
   titles?: CatalogTitle[]
   updatedAt?: number
   // Snapshots built before catalogs moved to TMDB lack this marker — they're
   // not valid baselines for the new composition and reseed quietly once.
   src?: string
+  // Titles absent from consecutive snapshots, awaiting confirmation before
+  // they publish as "left" — kills discover/metadata flapping at the boundary.
+  pendingLeft?: Record<string, PendingDeparture>
 }
 
 // Per-title view of the monthly diffs: powers "arrives on X / left Y" notices
@@ -188,6 +202,7 @@ const changesKey = (providerKey: string, region = 'US') =>
   region === 'US' ? `changes:diff:${providerKey}` : `changes:diff:${region}:${providerKey}`
 const monthlyKey = (providerKey: string, month: string) => `changes:monthly:${providerKey}:${month}`
 const yearHashKey = (region: 'US' | 'IN', year: string) => `changes:year:${region}:${year}`
+const sizeHashKey = (region: 'US' | 'IN', year: string) => `catalog:size:${region}:${year}`
 
 const YEAR_TTL_SECONDS = 60 * 60 * 24 * 400
 const YEAR_LIST_LIMIT = 150
@@ -318,25 +333,42 @@ export const IN_TRACKED_PROVIDERS = Object.keys(streamingProviders).filter((key)
 // provider + region + subscription/free/ads monetization — so no Watchmode
 // credits are burned on snapshots. TMDB only exposes current availability;
 // dated arrivals/departures still come from Watchmode releases/leaving feeds.
-const TMDB_CATALOG_PAGES = 13 // ~250 titles per media type at 20/page
 const TMDB_MONETIZATION_TYPES = 'flatrate|free|ads'
+// Snapshot composition/version marker — pending/verified diff state makes
+// 'tmdb:v1' snapshots invalid baselines, so they reseed quietly once.
+const SNAPSHOT_SRC = 'tmdb:v2'
+// ~800 titles per media type at 20/page. A deeper snapshot moves the diff
+// boundary from rank ~250 — where popularity churn fakes adds/lefts — into a
+// tail that barely moves.
+const CATALOG_PAGES = Number(process.env.CATALOG_PAGES) || 40
+const PAGE_BATCH = 10
+const PROVIDER_CHUNK = 3
+const LEFT_VERIFY_BUDGET = 20
+const LEFT_REVERIFY_DAYS = 3
 
-async function fetchTmdbCatalog(providerKey: string, region: string): Promise<CatalogTitle[]> {
+async function fetchTmdbCatalog(providerKey: string, region: string): Promise<{ titles: CatalogTitle[]; size: { m: number; t: number } }> {
   const providerId = getProviderIds(providerKey, region).join('|')
-  if (!providerId) return []
+  if (!providerId) return { titles: [], size: { m: 0, t: 0 } }
   const seen = new Map<string, CatalogTitle>()
+  const size = { m: 0, t: 0 }
 
   const fetchType = async (tmdbType: 'movie' | 'tv') => {
-    const base = { providerId, region, monetizationTypes: TMDB_MONETIZATION_TYPES }
+    // voteFloor 1 vs the 10 used elsewhere: regional catalogs carry plenty of
+    // titles TMDB barely tracks votes for, and they're still real members.
+    const base = { providerId, region, monetizationTypes: TMDB_MONETIZATION_TYPES, voteFloor: 1 }
     const call = (page: number) =>
       tmdbType === 'movie' ? fetchDiscoverMovies({ ...base, page }) : fetchDiscoverTv({ ...base, page })
     const first = await call(1)
-    const rest = await Promise.all(
-      Array.from({ length: TMDB_CATALOG_PAGES - 1 }, (_, i) => i + 2)
-        .filter((page) => page <= (first.total_pages || 1))
-        .map(call)
-    )
-    for (const data of [first, ...rest]) {
+    size[tmdbType === 'movie' ? 'm' : 't'] += first.total_results || 0
+    const last = Math.min(first.total_pages || 1, CATALOG_PAGES)
+    const pages = [first]
+    for (let i = 2; i <= last; i += PAGE_BATCH) {
+      const batch = await Promise.all(
+        Array.from({ length: Math.min(PAGE_BATCH, last - i + 1) }, (_, k) => call(i + k))
+      )
+      pages.push(...batch)
+    }
+    for (const data of pages) {
       for (const t of (data.results || []) as TitleSummary[]) {
         const year = (t.release_date || t.first_air_date || '').slice(0, 4)
         seen.set(`${tmdbType}:${t.id}`, {
@@ -353,9 +385,159 @@ async function fetchTmdbCatalog(providerKey: string, region: string): Promise<Ca
   await Promise.all([fetchType('movie'), fetchType('tv')])
   // Merged cap must rank across types — otherwise a large movie catalog could
   // evict every TV title by insertion order.
-  return [...seen.values()]
-    .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
-    .slice(0, CATALOG_LIMIT)
+  return {
+    titles: [...seen.values()]
+      .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+      .slice(0, CATALOG_LIMIT),
+    size
+  }
+}
+
+async function mapChunked<T>(items: T[], size: number, fn: (item: T) => Promise<void>): Promise<void> {
+  for (let i = 0; i < items.length; i += size) {
+    await Promise.all(items.slice(i, i + size).map(fn))
+  }
+}
+
+const fieldKey = (t: { tmdbType: MediaType; tmdbId: number | null }) => `${t.tmdbType}:${t.tmdbId}`
+
+const dayAge = (date: string, today: string) => Math.round((Date.parse(today) - Date.parse(date)) / 86400000)
+
+// Per-title watch/providers is the availability ground truth that the discover
+// provider filter lags behind — a departure that still shows the provider
+// attached is a catalog-snapshot anomaly, not a real "left".
+async function stillOnProvider(t: CatalogTitle, providerKey: string, region: string): Promise<boolean | null> {
+  try {
+    const data = await fetchTmdb<WatchProvidersResponse>(`/${t.tmdbType}/${t.tmdbId}/watch/providers`)
+    const offers = data.results?.[region]
+    if (!offers) return false
+    const ids = new Set(getProviderIds(providerKey, region))
+    return [...(offers.flatrate || []), ...(offers.ads || []), ...(offers.free || [])]
+      .some((p) => ids.has(p.provider_id))
+  } catch {
+    return null
+  }
+}
+
+interface CatalogDiff {
+  added: CatalogTitle[]
+  left: CatalogTitle[]
+  // Snapshot.titles replacement: current members plus still-pending adds.
+  confirmed: CatalogTitle[]
+  pendingLeft: Record<string, PendingDeparture>
+  // First-seen / first-miss dates for promoted items — truer than stamping
+  // publish day, since promotion lands a run after detection.
+  arriveDate: Map<number, string>
+  departDate: Map<number, string>
+  pendingCount: number
+}
+
+async function diffCatalogs(opts: {
+  catalog: CatalogTitle[]
+  previous: CatalogSnapshot | null
+  today: string
+  feedIds?: Set<string>
+  scheduledDeparture?: Map<number, string>
+  stillOn?: (t: CatalogTitle) => Promise<boolean | null>
+  verifyBudget?: number
+}): Promise<CatalogDiff> {
+  const { catalog, previous, today } = opts
+  const feedIds = opts.feedIds ?? new Set<string>()
+  const scheduledDeparture = opts.scheduledDeparture ?? new Map<number, string>()
+  const stillOn = opts.stillOn
+  let verifyBudget = opts.verifyBudget ?? 0
+
+  const prevTitles = previous?.titles || []
+  const prevByField = new Map<string, CatalogTitle>()
+  for (const t of prevTitles) if (t.tmdbId) prevByField.set(fieldKey(t), t)
+  const nextIds = new Set<string>()
+  for (const t of catalog) if (t.tmdbId) nextIds.add(fieldKey(t))
+  const hasBaseline = Array.isArray(previous?.titles) && previous?.src === SNAPSHOT_SRC
+
+  const added: CatalogTitle[] = []
+  const confirmed: CatalogTitle[] = []
+  const arriveDate = new Map<number, string>()
+  let pendingAdds = 0
+  for (const t of catalog) {
+    const f = fieldKey(t)
+    const prev = prevByField.get(f)
+    if (!hasBaseline || (prev && !prev.pending)) {
+      confirmed.push(t)
+      continue
+    }
+    if (prev?.pending) {
+      added.push(t)
+      arriveDate.set(t.tmdbId!, prev.pending)
+      confirmed.push(t)
+      continue
+    }
+    if (feedIds.has(f)) {
+      added.push(t)
+      confirmed.push(t)
+      continue
+    }
+    pendingAdds++
+    confirmed.push({ ...t, pending: today })
+  }
+
+  const left: CatalogTitle[] = []
+  const departDate = new Map<number, string>()
+  const pendingLeft: Record<string, PendingDeparture> = {}
+
+  if (hasBaseline) {
+    const verifyQueue: { f: string; rec: PendingDeparture }[] = []
+    for (const [f, rec] of Object.entries(previous?.pendingLeft || {})) {
+      // Back in the catalog — the flap dies unreported.
+      if (nextIds.has(f)) continue
+      const scheduled = rec.title.tmdbId ? scheduledDeparture.get(rec.title.tmdbId) : undefined
+      if (scheduled) {
+        left.push(rec.title)
+        departDate.set(rec.title.tmdbId!, scheduled)
+      } else {
+        verifyQueue.push({ f, rec })
+      }
+    }
+    for (const t of prevTitles) {
+      if (!t.tmdbId || t.pending || nextIds.has(fieldKey(t))) continue
+      const scheduled = scheduledDeparture.get(t.tmdbId)
+      if (scheduled) {
+        left.push(t)
+        departDate.set(t.tmdbId, scheduled)
+      } else {
+        pendingLeft[fieldKey(t)] = { d: today, title: t }
+      }
+    }
+    for (const { f, rec } of verifyQueue) {
+      const recheckDue = !rec.v || dayAge(rec.v, today) >= LEFT_REVERIFY_DAYS
+      if (stillOn && verifyBudget > 0 && recheckDue) {
+        verifyBudget--
+        const on = await stillOn(rec.title)
+        if (on == null) {
+          pendingLeft[f] = rec
+          continue
+        }
+        if (on) {
+          pendingLeft[f] = { ...rec, v: today }
+          continue
+        }
+      } else if (rec.v && !recheckDue) {
+        pendingLeft[f] = rec
+        continue
+      }
+      left.push(rec.title)
+      departDate.set(rec.title.tmdbId!, rec.d)
+    }
+  }
+
+  return {
+    added,
+    left,
+    confirmed,
+    pendingLeft,
+    arriveDate,
+    departDate,
+    pendingCount: pendingAdds + Object.keys(pendingLeft).length
+  }
 }
 
 // Free plan returns an unfiltered 10-title preview across all tracked sources
@@ -415,7 +597,7 @@ export async function updateStreamingChanges() {
   const kv = getRedis()
   if (!kv) return { error: 'Redis unavailable' }
 
-  const summary: Record<string, { added: number; left: number; coming: number; catalog: number } | string | number> = {}
+  const summary: Record<string, { added: number; left: number; coming: number; catalog: number; pending?: number } | string | number> = {}
 
   // Every diff item is a detail page whose "where to watch" answer just
   // changed — collect their URLs and ping IndexNow once at the end so Bing
@@ -436,6 +618,10 @@ export async function updateStreamingChanges() {
   }
   const monthliesForIndex: [string, MonthlyChanges][] = []
   const yearlyUs: Record<string, YearlyChanges> = {}
+  // Daily per-provider catalog totals — the durable series behind the churn
+  // report's "how big is this catalog" column. Fields are {provider}:{date}.
+  const sizesUs: Record<string, { m: number; t: number }> = {}
+  const sizesIn: Record<string, { m: number; t: number }> = {}
 
   if (Object.keys(sourceMap).length > 0) {
     const [upcoming, leavingRaw] = await Promise.all([
@@ -460,114 +646,123 @@ export async function updateStreamingChanges() {
       )
     )
 
-    for (const [key, source] of Object.entries(sourceMap)) {
-      const catalog = await fetchTmdbCatalog(key, 'US')
-      // An empty fetch means TMDB errored — skip rather than overwriting the
-      // baseline and reporting every title as left.
-      if (!catalog.length) {
-        summary[key] = 'skipped: empty catalog'
-        // Keep the skipped provider's last monthly in the title index so its
-        // entries don't vanish until it fetches successfully again.
-        const stored = await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
-        if (stored) {
-          monthliesForIndex.push([key, stored])
-          yearlyUs[`${key}:${month}`] = yearlyFromMonthly(stored)
+    await mapChunked(Object.entries(sourceMap), PROVIDER_CHUNK, async ([key, source]) => {
+      try {
+        const { titles: catalog, size } = await fetchTmdbCatalog(key, 'US')
+        // An empty fetch means TMDB errored — skip rather than overwriting the
+        // baseline and reporting every title as left.
+        if (!catalog.length) {
+          summary[key] = 'skipped: empty catalog'
+          // Keep the skipped provider's last monthly in the title index so its
+          // entries don't vanish until it fetches successfully again.
+          const stored = await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
+          if (stored) {
+            monthliesForIndex.push([key, stored])
+            yearlyUs[`${key}:${month}`] = yearlyFromMonthly(stored)
+          }
+          return
         }
-        continue
-      }
-      const [previous, prevChanges] = await Promise.all([
-        kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null),
-        kv.get<ProviderChanges>(changesKey(key)).catch(() => null)
-      ])
+        sizesUs[`${key}:${today}`] = size
+        const [previous, prevChanges] = await Promise.all([
+          kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null),
+          kv.get<ProviderChanges>(changesKey(key)).catch(() => null)
+        ])
 
-      const prevIds = new Set((previous?.titles || []).map((t) => t.tmdbId))
-      const nextIds = new Set(catalog.map((t) => t.tmdbId))
+        // This run's scheduled departures resolve against the fresh catalog —
+        // they're still on the service until their date passes. Yesterday's
+        // resolved rows (stored on the diff payload) carry dates forward for
+        // titles that have since dropped out of the catalog.
+        const catalogByTitle = new Map(catalog.map((t) => [`${t.tmdbType}:${normalizeForMatch(t.title)}`, t]))
+        const leavingSoon: LeavingSoonTitle[] = (leavingByKey[key] || []).map((item) => {
+          const tmdbType = wmTitleTypeToMedia(item.title_type)
+          const match = catalogByTitle.get(`${tmdbType}:${normalizeForMatch(item.title)}`)
+          return {
+            tmdbId: match?.tmdbId ?? null,
+            tmdbType,
+            title: item.title,
+            date: item.leaving_date,
+            season: item.season ?? null
+          }
+        })
+        const scheduledDeparture = new Map<number, string>()
+        for (const t of prevChanges?.leavingSoon || []) if (t.tmdbId && t.date) scheduledDeparture.set(t.tmdbId, t.date)
+        for (const t of leavingSoon) if (t.tmdbId && t.date) scheduledDeparture.set(t.tmdbId, t.date)
 
-      // First run (or a pre-TMDB snapshot lacking the src marker) seeds the
-      // baseline with no diff — otherwise every title would show as "just added".
-      const hasBaseline = Array.isArray(previous?.titles) && previous?.src === 'tmdb'
-      const added = (hasBaseline ? catalog.filter((t) => !prevIds.has(t.tmdbId)) : []).sort(byPopularity)
-      const left = (hasBaseline
-        ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
-        : []
-      ).sort(byPopularity)
+        const releases = upcoming[source.id] || []
+        // Releases-feed ids corroborate first-sight adds — those publish the
+        // same day; uncorroborated sightings wait for a second run.
+        const feedIds = new Set(releases.map((r) => fieldKey(r)))
+        const { added, left, confirmed, pendingLeft, arriveDate, departDate, pendingCount } = await diffCatalogs({
+          catalog,
+          previous,
+          today,
+          feedIds,
+          scheduledDeparture,
+          stillOn: (t) => stillOnProvider(t, key, 'US'),
+          verifyBudget: LEFT_VERIFY_BUDGET
+        })
+        added.sort(byPopularity)
+        left.sort(byPopularity)
 
-      // This run's scheduled departures resolve against the fresh catalog —
-      // they're still on the service until their date passes. Yesterday's
-      // resolved rows (stored on the diff payload) carry dates forward for
-      // titles that have since dropped out of the catalog.
-      const catalogByTitle = new Map(catalog.map((t) => [`${t.tmdbType}:${normalizeForMatch(t.title)}`, t]))
-      const leavingSoon: LeavingSoonTitle[] = (leavingByKey[key] || []).map((item) => {
-        const tmdbType = wmTitleTypeToMedia(item.title_type)
-        const match = catalogByTitle.get(`${tmdbType}:${normalizeForMatch(item.title)}`)
-        return {
-          tmdbId: match?.tmdbId ?? null,
-          tmdbType,
-          title: item.title,
-          date: item.leaving_date,
-          season: item.season ?? null
+        const payload: ProviderChanges = {
+          source: source.name,
+          updatedAt: Date.now(),
+          added: added.slice(0, CHANGE_LIST_LIMIT),
+          left: left.slice(0, CHANGE_LIST_LIMIT),
+          coming: releases.filter((r) => r.date > today).slice(0, CHANGE_LIST_LIMIT),
+          leavingSoon
         }
-      })
-      const scheduledDeparture = new Map<number, string>()
-      for (const t of prevChanges?.leavingSoon || []) if (t.tmdbId && t.date) scheduledDeparture.set(t.tmdbId, t.date)
-      for (const t of leavingSoon) if (t.tmdbId && t.date) scheduledDeparture.set(t.tmdbId, t.date)
 
-      const releases = upcoming[source.id] || []
-      const payload: ProviderChanges = {
-        source: source.name,
-        updatedAt: Date.now(),
-        added: added.slice(0, CHANGE_LIST_LIMIT),
-        left: left.slice(0, CHANGE_LIST_LIMIT),
-        coming: releases.filter((r) => r.date > today).slice(0, CHANGE_LIST_LIMIT),
-        leavingSoon
-      }
-
-      // Dated monthly accumulation backs /leaving/[provider]. Release-feed and
-      // leaving-feed dates are the true on/off-service dates; diff detections
-      // get stamped with today.
-      const prev = prevMonthly.get(key)
-      const arrived = new Map<number, ComingTitle>()
-      for (const t of prev?.arrived || []) arrived.set(t.tmdbId, t)
-      for (const t of added) {
-        if (t.tmdbId && !arrived.has(t.tmdbId)) {
-          arrived.set(t.tmdbId, { tmdbId: t.tmdbId, tmdbType: t.tmdbType, title: t.title, date: today, season: null, popularity: t.popularity })
+        // Dated monthly accumulation backs /leaving/[provider]. Release-feed and
+        // leaving-feed dates are the true on/off-service dates; diff detections
+        // stamp with first-seen / first-miss day.
+        const prev = prevMonthly.get(key)
+        const arrived = new Map<number, ComingTitle>()
+        for (const t of prev?.arrived || []) arrived.set(t.tmdbId, t)
+        for (const t of added) {
+          if (t.tmdbId && !arrived.has(t.tmdbId)) {
+            arrived.set(t.tmdbId, { tmdbId: t.tmdbId, tmdbType: t.tmdbType, title: t.title, date: arriveDate.get(t.tmdbId) || today, season: null, popularity: t.popularity })
+          }
         }
-      }
-      for (const t of releases.filter((r) => r.date <= today)) arrived.set(t.tmdbId, t)
+        for (const t of releases.filter((r) => r.date <= today)) arrived.set(t.tmdbId, t)
 
-      const departed = new Map<number, DatedCatalogTitle>()
-      for (const t of prev?.departed || []) if (t.tmdbId) departed.set(t.tmdbId, t)
-      for (const t of added) if (t.tmdbId) departed.delete(t.tmdbId)
-      for (const t of left) {
-        if (t.tmdbId) {
-          arrived.delete(t.tmdbId)
-          departed.set(t.tmdbId, { ...t, date: scheduledDeparture.get(t.tmdbId) || today })
+        const departed = new Map<number, DatedCatalogTitle>()
+        for (const t of prev?.departed || []) if (t.tmdbId) departed.set(t.tmdbId, t)
+        for (const t of added) if (t.tmdbId) departed.delete(t.tmdbId)
+        for (const t of left) {
+          if (t.tmdbId) {
+            arrived.delete(t.tmdbId)
+            departed.set(t.tmdbId, { ...t, date: departDate.get(t.tmdbId) || today })
+          }
         }
-      }
 
-      const monthly: MonthlyChanges = {
-        source: source.name,
-        month,
-        updatedAt: Date.now(),
-        arrived: [...arrived.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT),
-        coming: releases.filter((r) => r.date > today).slice(0, MONTHLY_LIST_LIMIT),
-        departed: [...departed.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT),
-        leavingSoon
-      }
+        const monthly: MonthlyChanges = {
+          source: source.name,
+          month,
+          updatedAt: Date.now(),
+          arrived: [...arrived.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT),
+          coming: releases.filter((r) => r.date > today).slice(0, MONTHLY_LIST_LIMIT),
+          departed: [...departed.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT),
+          leavingSoon
+        }
 
-      await kv.set(catalogKey(key), { titles: catalog, updatedAt: Date.now(), src: 'tmdb' })
-      await kv.set(changesKey(key), payload)
-      await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
-      await recordProviderMoves('US', key, added, left, today, scheduledDeparture)
-      monthliesForIndex.push([key, monthly])
-      yearlyUs[`${key}:${month}`] = yearlyFromMonthly(monthly)
-      pushTitleUrls([...payload.added, ...payload.coming, ...payload.left, ...leavingSoon])
-      if (payload.added.length || payload.left.length || payload.coming.length || leavingSoon.length) {
-        indexNowUrls.add(`${SITE_URL}/streaming/${key}`)
-        indexNowUrls.add(`${SITE_URL}/leaving/${key}`)
+        await kv.set(catalogKey(key), { titles: confirmed, updatedAt: Date.now(), src: SNAPSHOT_SRC, pendingLeft })
+        await kv.set(changesKey(key), payload)
+        await kv.set(monthlyKey(key, month), monthly, { ex: MONTHLY_TTL_SECONDS })
+        await recordProviderMoves('US', key, added, left, today, departDate)
+        monthliesForIndex.push([key, monthly])
+        yearlyUs[`${key}:${month}`] = yearlyFromMonthly(monthly)
+        pushTitleUrls([...payload.added, ...payload.coming, ...payload.left, ...leavingSoon])
+        if (payload.added.length || payload.left.length || payload.coming.length || leavingSoon.length) {
+          indexNowUrls.add(`${SITE_URL}/streaming/${key}`)
+          indexNowUrls.add(`${SITE_URL}/leaving/${key}`)
+        }
+        summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: confirmed.length, pending: pendingCount }
+      } catch (error) {
+        console.error(`US catalog update failed for ${key}:`, error)
+        summary[key] = 'error: fetch failed'
       }
-      summary[key] = { added: added.length, left: left.length, coming: payload.coming.length, catalog: catalog.length }
-    }
+    })
 
     if (Object.keys(yearlyUs).length) {
       try {
@@ -575,6 +770,14 @@ export async function updateStreamingChanges() {
         await kv.expire(yearHashKey('US', month.slice(0, 4)), YEAR_TTL_SECONDS)
       } catch (error) {
         console.error('year rollup write failed:', error)
+      }
+    }
+    if (Object.keys(sizesUs).length) {
+      try {
+        await kv.hset(sizeHashKey('US', month.slice(0, 4)), sizesUs)
+        await kv.expire(sizeHashKey('US', month.slice(0, 4)), YEAR_TTL_SECONDS)
+      } catch (error) {
+        console.error('size index write failed:', error)
       }
     }
   }
@@ -593,19 +796,22 @@ export async function updateStreamingChanges() {
   const inYear = inToday.slice(0, 4)
   const yearlyIn: Record<string, YearlyChanges> = {}
 
-  for (const key of IN_TRACKED_PROVIDERS) {
+  await mapChunked(IN_TRACKED_PROVIDERS, PROVIDER_CHUNK, async (key) => {
     try {
-      const catalog = await fetchTmdbCatalog(key, 'IN')
-      if (!catalog.length) continue
+      const { titles: catalog, size } = await fetchTmdbCatalog(key, 'IN')
+      if (!catalog.length) return
+      sizesIn[`${key}:${inToday}`] = size
       const previous = await kv.get<CatalogSnapshot>(catalogKey(key, 'IN')).catch(() => null)
 
-      const prevIds = new Set((previous?.titles || []).map((t) => t.tmdbId))
-      const nextIds = new Set(catalog.map((t) => t.tmdbId))
-      const hasBaseline = Array.isArray(previous?.titles) && previous?.src === 'tmdb'
-      const added = hasBaseline ? catalog.filter((t) => !prevIds.has(t.tmdbId)) : []
-      const left = hasBaseline
-        ? (previous?.titles || []).filter((t) => !nextIds.has(t.tmdbId))
-        : []
+      const { added, left, confirmed, pendingLeft, departDate, pendingCount } = await diffCatalogs({
+        catalog,
+        previous,
+        today: inToday,
+        stillOn: (t) => stillOnProvider(t, key, 'IN'),
+        verifyBudget: LEFT_VERIFY_BUDGET
+      })
+      added.sort(byPopularity)
+      left.sort(byPopularity)
 
       const payload: ProviderChanges = {
         source: streamingProviders[key].title.replace(/ Movies$/, ''),
@@ -615,18 +821,18 @@ export async function updateStreamingChanges() {
         coming: []
       }
 
-      await kv.set(catalogKey(key, 'IN'), { titles: catalog, updatedAt: Date.now(), src: 'tmdb' })
+      await kv.set(catalogKey(key, 'IN'), { titles: confirmed, updatedAt: Date.now(), src: SNAPSHOT_SRC, pendingLeft })
       await kv.set(changesKey(key, 'IN'), payload)
-      await recordProviderMoves('IN', key, added, left, inToday)
+      await recordProviderMoves('IN', key, added, left, inToday, departDate)
       const yearField = `${key}:${inMonth}`
       const priorYear = await kv.hget<YearlyChanges>(yearHashKey('IN', inYear), yearField).catch(() => null)
       yearlyIn[yearField] = mergeYearlyDiff(priorYear, payload.source, inMonth, added, left, inToday)
       pushTitleUrls([...payload.added, ...payload.left])
-      summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: catalog.length }
+      summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: confirmed.length, pending: pendingCount }
     } catch (error) {
       console.error(`in catalog update failed for ${key}:`, error)
     }
-  }
+  })
 
   if (Object.keys(yearlyIn).length) {
     try {
@@ -634,6 +840,15 @@ export async function updateStreamingChanges() {
       await kv.expire(yearHashKey('IN', inYear), YEAR_TTL_SECONDS)
     } catch (error) {
       console.error('IN year rollup write failed:', error)
+    }
+  }
+
+  if (Object.keys(sizesIn).length) {
+    try {
+      await kv.hset(sizeHashKey('IN', inYear), sizesIn)
+      await kv.expire(sizeHashKey('IN', inYear), YEAR_TTL_SECONDS)
+    } catch (error) {
+      console.error('IN size index write failed:', error)
     }
   }
 
@@ -785,6 +1000,33 @@ export function buildChurnRows(yearly: Record<string, YearlyChanges>): ChurnProv
     rows.set(key, row)
   }
   return [...rows.values()].sort((a, b) => (b.totals.arrived + b.totals.departed) - (a.totals.arrived + a.totals.departed))
+}
+
+export interface CatalogSizePoint {
+  m: number
+  t: number
+  date: string
+}
+
+// Latest tracked size per provider — fields are {provider}:{YYYY-MM-DD}.
+export async function getCatalogSizes(region: 'US' | 'IN' = 'US', year?: string): Promise<Record<string, CatalogSizePoint>> {
+  const kv = getRedis()
+  if (!kv) return {}
+  const y = year || new Date().toISOString().slice(0, 4)
+  try {
+    const hash = (await kv.hgetall<Record<string, { m: number; t: number }>>(sizeHashKey(region, y))) ?? {}
+    const latest: Record<string, CatalogSizePoint> = {}
+    for (const [field, size] of Object.entries(hash)) {
+      const sep = field.lastIndexOf(':')
+      const key = field.slice(0, sep)
+      const date = field.slice(sep + 1)
+      if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !size) continue
+      if (!latest[key] || date > latest[key].date) latest[key] = { m: size.m || 0, t: size.t || 0, date }
+    }
+    return latest
+  } catch {
+    return {}
+  }
 }
 
 // One HGETALL backs the whole churn report — ~providers×months fields.

@@ -59,6 +59,8 @@ export interface DiscoverOptions {
   page?: number
   releasedAfter?: string
   monetizationTypes?: string
+  // Default 10 — catalog snapshots drop to 1 so low-vote regional titles count.
+  voteFloor?: number
 }
 
 // Carries the upstream status so SSR callers can map 404 → notFound instead
@@ -399,7 +401,7 @@ export function providerKeyForId(providerId: number, region = 'US'): string | nu
   return null
 }
 
-export async function fetchDiscoverMovies({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
+export async function fetchDiscoverMovies({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, voteFloor, page = 1 }: DiscoverOptions): Promise<TmdbPaged<TmdbMovie>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const ninetyDaysAgo = new Date(now)
@@ -409,7 +411,7 @@ export async function fetchDiscoverMovies({ category, genreId, genreParams, prov
     page,
     include_adult: 'false',
     sort_by: 'popularity.desc',
-    'vote_count.gte': 10
+    'vote_count.gte': voteFloor ?? 10
   }
 
   if (category === 'popular') {
@@ -451,7 +453,7 @@ async function fetchList(path: '/discover/movie' | '/discover/tv', discoverParam
   })
 }
 
-export async function fetchDiscoverTv({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
+export async function fetchDiscoverTv({ category, genreId, genreParams, providerId, region, releasedAfter, monetizationTypes, voteFloor, page = 1 }: DiscoverOptions): Promise<TmdbPaged<NormalizedTvShow>> {
   const now = new Date()
   const today = now.toISOString().split('T')[0]
   const daysAgo = (n: number) => {
@@ -468,7 +470,7 @@ export async function fetchDiscoverTv({ category, genreId, genreParams, provider
   const params: TmdbParams = {
     page,
     include_adult: 'false',
-    'vote_count.gte': 10
+    'vote_count.gte': voteFloor ?? 10
   }
 
   if (category === 'airing-today') {
