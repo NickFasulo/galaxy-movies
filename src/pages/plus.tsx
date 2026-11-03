@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import type { GetServerSidePropsContext, InferGetServerSidePropsType } from 'next'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { Badge, Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
@@ -27,6 +28,7 @@ import { setAlertsCredentials } from '../features/alerts/alertsSync'
 import { firstParam } from '../lib/http'
 import { secondaryButton } from '../theme'
 import { trackEvent } from '../lib/umami'
+import { detectRegion } from '../lib/region'
 
 const FEATURES = [
   { icon: LuBell, title: 'Taste-matched alerts', blurb: 'New arrivals on your services, matched to what you rate highly.' },
@@ -50,7 +52,13 @@ const cardProps = {
   borderRadius: 'lg'
 } as const
 
-export default function Plus() {
+// No shared cache: the price cards differ by visitor country, so a cached
+// render would leak the wrong currency across regions.
+export const getServerSideProps = ({ req }: GetServerSidePropsContext) => ({
+  props: { inr: detectRegion(req) === 'IN' }
+})
+
+export default function Plus({ inr }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const { query } = useRouter()
   const { loading, creds, plus, features, refresh } = usePlusStatus()
   const [busy, setBusy] = useState<'monthly' | 'yearly' | null>(null)
@@ -198,7 +206,7 @@ export default function Plus() {
                 <Flex direction='column' {...cardProps} borderRadius='xl' p={6}>
                   <Text color='white' fontWeight='bold'>Monthly</Text>
                   <Flex align='baseline' gap={1} mt={2}>
-                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$3</Text>
+                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>{inr ? '₹99' : '$3'}</Text>
                     <Text color='gray.400' fontSize='sm'>/ month</Text>
                   </Flex>
                   <Text color='gray.500' fontSize='xs' mt={1} mb={5}>Cancel anytime</Text>
@@ -220,10 +228,10 @@ export default function Plus() {
                     <Badge colorPalette='yellow' fontSize='2xs'>Best value</Badge>
                   </Flex>
                   <Flex align='baseline' gap={1} mt={2}>
-                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>$30</Text>
+                    <Text color='white' fontSize='3xl' fontWeight='bold' lineHeight={1}>{inr ? '₹999' : '$30'}</Text>
                     <Text color='gray.400' fontSize='sm'>/ year</Text>
                   </Flex>
-                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>About $2.50 a month (save 17%)</Text>
+                  <Text color='gray.500' fontSize='xs' mt={1} mb={5}>{inr ? 'About ₹83 a month (save 16%)' : 'About $2.50 a month (save 17%)'}</Text>
                   <Button mt='auto' colorPalette='yellow' loading={busy === 'yearly'} onClick={() => checkout('yearly')} w='100%'>
                     Go yearly
                   </Button>

@@ -23,7 +23,7 @@ export async function startPlusCheckout(creds: AlertsCredentials, plan: 'monthly
 
 // Renders nothing for active Plus subscribers or while status loads. Without
 // alert creds the card degrades to a /plus link, since checkout needs them.
-export default function PlusUpsell() {
+export default function PlusUpsell({ inr = false }: { inr?: boolean }) {
   const { loading, creds, plus } = usePlusStatus()
   const [busy, setBusy] = useState<'monthly' | 'yearly' | null>(null)
   const [error, setError] = useState('')
@@ -50,16 +50,16 @@ export default function PlusUpsell() {
         <Text color='white' fontWeight='bold' fontSize='xs' textTransform='uppercase'>Galaxy Plus</Text>
       </Flex>
       <Text color='gray.400' fontSize='sm' mb={3}>
-        Leaving-soon warnings, next-episode alerts, and every provider we track — $3/mo or $30/yr.
+        Leaving-soon warnings, next-episode alerts, and every provider we track — {inr ? '₹99/mo or ₹999/yr' : '$3/mo or $30/yr'}.
       </Text>
       {creds ? (
         <>
           <Flex gap={2} wrap='wrap'>
             <Button size='sm' colorPalette='yellow' loading={busy === 'monthly'} onClick={() => checkout('monthly')}>
-              $3 / month
+              {inr ? '₹99' : '$3'} / month
             </Button>
             <Button size='sm' {...secondaryButton} loading={busy === 'yearly'} onClick={() => checkout('yearly')}>
-              $30 / year
+              {inr ? '₹999' : '$30'} / year
             </Button>
             <Link asChild color='gray.300' fontSize='xs' alignSelf='center' _hover={{ color: 'white' }}>
               <NextLink href='/plus'>What&apos;s included</NextLink>

@@ -11,7 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Billing is not available yet.' })
   }
 
-  const allowed = await checkDistributedRateLimit(getClientIP(req), {
+  const clientIp = getClientIP(req)
+  const allowed = await checkDistributedRateLimit(clientIp, {
     keyPrefix: 'billing_rl',
     maxRequests: 10,
     windowSeconds: 60 * 60
@@ -30,9 +31,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: 'Billing is not configured.' })
   }
 
+  // Sessions are created server-side, so Polar sees the Worker's IP — forward
+  // the real client IP or multi-currency geo-detection (INR price) picks wrong.
   const checkout = await polarPost<{ url?: string }>('/v1/checkouts/', {
     products: [product],
     customer_email: email,
+    customer_ip_address: clientIp === 'unknown' ? undefined : clientIp,
     success_url: PLUS_SUCCESS_URL,
     metadata: { email, plan: req.body?.plan === 'yearly' ? 'yearly' : 'monthly' }
   })

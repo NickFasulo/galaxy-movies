@@ -364,9 +364,14 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   // identical forms stacked back to back.
   const embedAlert = !hasAnyProviders && !hasTitleEvents && Boolean(displayTitle)
 
+  // Pre-release queries are "release date"-phrased, not "where to watch" —
+  // unreleased titles get release-date framing in both title and description.
+  const unreleased = Boolean(releaseDate && releaseDate > new Date().toISOString().slice(0, 10))
   const metaDescription = hasStreaming
     ? description
-    : `${displayTitle} isn't on any streaming service yet: get an email the day it lands.`
+    : unreleased
+      ? `${displayTitle} ${isTv ? 'premieres' : 'releases'} ${dateFormatter(releaseDate!)} — not streaming yet. Get an email the day it lands.`
+      : `${displayTitle} isn't on any streaming service yet: get an email the day it lands.`
   const genres = title.genres?.map((g) => g.name) || []
   const ogSubtitle = (!isTv && tagline) || description
   const releaseYear = Number((releaseDate || '').slice(0, 4)) || null
@@ -415,7 +420,10 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
       <PageHead
         // "Where to watch {title}" is the dominant title-query phrasing — the
         // tag front-loads it while the on-page H1 stays the bare title.
-        title={isTv ? `Where to Watch ${displayTitle} (TV Series)` : `Where to Watch ${displayTitle}`}
+        // Pre-release, demand is "{title} release date" phrased instead.
+        title={isTv
+          ? unreleased ? `${displayTitle} Release Date & Where to Watch` : `Where to Watch ${displayTitle} (TV Series)`
+          : unreleased ? `${displayTitle} Release Date & Where to Watch` : `Where to Watch ${displayTitle}`}
         description={metaDescription}
         canonicalUrl={canonicalUrl}
         ogType={isTv ? 'video.tv_show' : 'video.movie'}
@@ -474,7 +482,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
             )}
 
             <Box w='20rem' maxW='100%'>
-              <PlusUpsell />
+              <PlusUpsell inr={detectedRegion === 'IN'} />
             </Box>
           </>
         }
