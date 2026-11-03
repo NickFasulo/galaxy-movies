@@ -327,8 +327,8 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         description={pageDescription}
         canonicalUrl={SITE_URL}
         ogTitle='Galaxy Movies'
-        socialTitle='Discover Popular & New Films'
-        ogSubtitle='Discover Popular & New Films'
+        socialTitle='What to Watch Tonight'
+        ogSubtitle='Alerts before it leaves your services'
         structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
         <link rel='icon' href='/favicon.ico' />
@@ -352,7 +352,8 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             <Heading as='h1' textAlign='center' mt='2rem'>
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3} mb='1.5rem'>What to watch tonight · alerts before it leaves your services</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>What to watch tonight</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={1} mb='1.5rem'>Alerts before it leaves your services</Text>
           </HomeHero>
         )}
 
