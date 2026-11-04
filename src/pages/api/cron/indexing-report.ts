@@ -1,8 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { getDailyStats, hasBingCredentials, weekStats, type BingWeekStats } from '../../../features/indexing/bingAnalytics'
+import { runBingCheck, type BingIndexReport } from '../../../features/indexing/bingCheck'
 import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
+import { INDEXNOW_STATUS_KEY, type IndexNowStatus } from '../../../lib/indexnow'
 import { getRedis } from '../../../lib/redis'
 
 export const config = { maxDuration: 120 }
@@ -81,6 +84,23 @@ function digestSection(d: WeeklyDigest) {
   )
 }
 
+function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping: IndexNowStatus | null) {
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
+  const rows = report.pending
+    .map((p) => `<p style="margin:10px 0 0; font-size:13px; line-height:1.5;"><span style="color:#1f2937;">${escapeHtml(p.title)}</span><br/><span style="color:#596579; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`)
+    .join('')
+  const pingLine = ping
+    ? `IndexNow last ping: ${ping.ok ? `${ping.urls} urls` : `<span style="color:#b91c1c;">failed${ping.status ? ` ${ping.status}` : ''}${ping.error ? ` — ${escapeHtml(ping.error)}` : ''}</span>`} · ${escapeHtml(ping.at.slice(0, 16).replace('T', ' '))} UTC`
+    : 'IndexNow: no ping recorded yet'
+  const statLine = stats
+    ? `<br/><span style="font-size:13px;">${stats.clicks} clicks (${delta(stats.clicks, stats.prevClicks)} vs prior wk) · ${stats.impressions.toLocaleString()} impressions (${delta(stats.impressions, stats.prevImpressions)})</span>`
+    : ''
+  const submitted = report.submitted
+    ? ` · ${report.submitted} auto-submitted${report.quota ? ` (quota ${report.quota.daily}/day)` : ''}`
+    : ''
+  return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored.</p>` : ''}`)
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -91,8 +111,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const kv = getRedis()
-    const [report, prevSignature, prevBands] = await Promise.all([
+    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands] = await Promise.all([
       runIndexCheck(),
+      hasBingCredentials()
+        ? runBingCheck().catch((err) => {
+            console.error('Bing check failed:', err)
+            return null
+          })
+        : Promise.resolve(null),
+      hasBingCredentials() ? getDailyStats().then(weekStats).catch(() => null) : Promise.resolve(null),
+      kv?.get<IndexNowStatus>(INDEXNOW_STATUS_KEY).catch(() => null) ?? Promise.resolve(null),
       kv?.get<string>(LAST_REPORT_KEY).catch(() => null),
       kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null)
     ])
@@ -115,14 +143,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         heading: 'Weekly search report',
         preheader: subject,
         reason: 'Weekly indexing + Search Console report for galaxymovies.app.',
-        body: indexingSection(report, prevSignature) + (digest ? digestSection(digest) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>')
+        body:
+          indexingSection(report, prevSignature) +
+          (digest ? digestSection(digest) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
+          (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null) : '')
       })
     })
     if (sent) {
       await kv?.set(LAST_REPORT_KEY, pendingSignature(report.pending)).catch(() => {})
       if (digest) await kv?.set(LAST_BANDS_KEY, digest.listsBands).catch(() => {})
     }
-    return res.status(200).json({ emailed: sent, report, digest })
+    return res.status(200).json({ emailed: sent, report, digest, bing: bingReport })
   } catch (err) {
     console.error('Indexing report failed:', err)
     return res.status(500).json({ error: 'Indexing report failed' })

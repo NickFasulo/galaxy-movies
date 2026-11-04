@@ -67,6 +67,8 @@ declare namespace NodeJS {
     GSC_CLIENT_EMAIL?: string
     GSC_PRIVATE_KEY?: string
     GSC_SITE_URL?: string
+    BING_WEBMASTER_API_KEY?: string
+    BING_SITE_URL?: string
     INDEXING_REPORT_EMAIL?: string
   }
 }

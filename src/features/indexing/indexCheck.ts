@@ -112,13 +112,17 @@ async function upcoming(region: 'US' | 'IN'): Promise<TmdbMovie[]> {
   return data?.results || []
 }
 
-export async function runIndexCheck(topN = 12): Promise<IndexReport> {
+// Shared with bingCheck.ts so the Google and Bing verdicts cover the same set.
+export async function upcomingTitles(topN = 12): Promise<TmdbMovie[]> {
   const seen = new Set<number>()
-  const titles = [...(await upcoming('US')), ...(await upcoming('IN'))]
+  return [...(await upcoming('US')), ...(await upcoming('IN'))]
     .filter((t) => t?.id && t.overview && !seen.has(t.id) && seen.add(t.id))
     .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
     .slice(0, topN)
+}
 
+export async function runIndexCheck(topN = 12): Promise<IndexReport> {
+  const titles = await upcomingTitles(topN)
   const token = await gscAccessToken()
   const report: IndexReport = { checked: titles.length, indexed: 0, pending: [], errors: [] }
 
