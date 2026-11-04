@@ -63,8 +63,64 @@ const CRON_ROUTES = {
   '0 15 * * 3': '/api/cron/price-drops'
 }
 
+// s-maxage on a Worker response does NOT reach Cloudflare's edge cache, so
+// cacheable GETs go through the Cache API here. Handlers opt in with the
+// Cache-Control they already emit: only 200s carrying s-maxage (and no
+// private/no-store/set-cookie) are stored — bot thin renders and AI-
+// incomplete pages emit private/no-store and stay out. Cookie/Authorization
+// requests bypass entirely: nothing personalizes by header today, but that
+// keeps any future header-varying response out of the shared pool. The
+// country is in the key because GSSP varies on cf-ipcountry (detectRegion).
+// BUILD_STAMP isolates each deploy — stale HTML can't serve dead chunk hashes.
+const BUILD_STAMP = ${Date.now()}
+const TRACKING_PARAM = /^(?:utm_|_ga$|_gl$|fbclid$|gclid$|dclid$|gbraid$|wbraid$|mc_cid$|mc_eid$|igshid$|ref_src$|spm$|scm$)/
+const STATIC_FILE = /\\.(?:ico|png|jpe?g|webp|avif|svg|gif|woff2?|ttf|otf|css|js|map|json|txt|webmanifest|mp4|webm|mov|pdf)$/
+const SKIP_PREFIXES = ['/_next/', '/api/cron/', '/api/og']
+
+function edgeKey(request) {
+  const url = new URL(request.url)
+  const params = [...url.searchParams.entries()]
+    .filter(([k]) => !TRACKING_PARAM.test(k))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  const qs = new URLSearchParams(params).toString()
+  return url.origin + url.pathname + '?__r=' + (request.cf?.country || 'XX') + '&__b=' + BUILD_STAMP + (qs ? '&' + qs : '')
+}
+
+async function fetch(request, env, ctx) {
+  const url = new URL(request.url)
+  const cacheable =
+    request.method === 'GET' &&
+    !request.headers.get('cookie') &&
+    !request.headers.get('authorization') &&
+    !request.headers.get('range') &&
+    !SKIP_PREFIXES.some((p) => url.pathname.startsWith(p)) &&
+    !STATIC_FILE.test(url.pathname)
+  if (!cacheable) return worker.fetch(request, env, ctx)
+
+  const key = edgeKey(request)
+  const hit = await caches.default.match(key)
+  if (hit) {
+    const cached = new Response(hit.body, hit)
+    cached.headers.set('x-edge-cache', 'hit')
+    return cached
+  }
+
+  const res = await worker.fetch(request, env, ctx)
+  const cc = res.headers.get('cache-control') || ''
+  const ttl = Number(/s-maxage=(\\d+)/.exec(cc)?.[1] || 0)
+  if (res.status === 200 && ttl > 0 && !/(?:private|no-store)/.test(cc) && !res.headers.has('set-cookie')) {
+    const stored = new Response(res.clone().body, res)
+    stored.headers.set('cache-control', 'public, max-age=' + ttl)
+    ctx.waitUntil(caches.default.put(key, stored))
+  }
+  const out = new Response(res.body, res)
+  out.headers.set('x-edge-cache', 'miss')
+  return out
+}
+
 export default {
   ...worker,
+  fetch,
   async scheduled(event, env, ctx) {
     const route = CRON_ROUTES[event.cron]
     console.log('[cron]', JSON.stringify(event.cron), '→', route || 'no match')

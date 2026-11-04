@@ -1,3 +1,4 @@
+import { edgeCacheGet, edgeCachePut } from '../../lib/edgeCache'
 import type { MediaType, NormalizedTvShow, TmdbCollection, TmdbMovie, TmdbPaged, TmdbTvShow } from '../../types/tmdb'
 
 const TMDB_URL = 'https://api.themoviedb.org/3'
@@ -74,21 +75,44 @@ export class TmdbError extends Error {
   }
 }
 
-export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promise<T> {
+// Listing endpoints drift hourly; per-title payloads (details, credits,
+// providers, ratings) move on the daily-diff cadence, so they cache longer.
+function defaultCacheSeconds(path: string): number {
+  if (/^\/(trending|discover|search|find)\//.test(path)) return 3600
+  if (/\/(popular|now_playing|top_rated|upcoming|latest|airing_today|on_the_air)$/.test(path)) return 3600
+  return 6 * 3600
+}
+
+const TMDB_CACHE_ORIGIN = 'https://tmdb.worker.internal'
+
+// Cache API storage is free — unlike billed Upstash commands — which is why
+// TMDB responses cache at the edge instead of in Redis.
+function tmdbCacheKey(path: string, queryEntries: Record<string, string>): string {
+  const search = new URLSearchParams(queryEntries)
+  search.sort()
+  return `${TMDB_CACHE_ORIGIN}${path}?${search}`
+}
+
+export async function fetchTmdb<T>(path: string, params: TmdbParams = {}, opts: { cacheSeconds?: number } = {}): Promise<T> {
   const apiKey = process.env.TMDB_API_KEY
 
   if (!apiKey) {
     throw new Error('TMDB_API_KEY is missing')
   }
 
-  const searchParams = new URLSearchParams({
-    api_key: apiKey,
-    ...Object.fromEntries(
-      Object.entries(params)
-        .filter(([, value]) => value !== undefined && value !== null)
-        .map(([key, value]) => [key, String(value)])
-    )
-  })
+  const queryEntries = Object.fromEntries(
+    Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, String(value)])
+  )
+  const cacheTtl = opts.cacheSeconds ?? defaultCacheSeconds(path)
+  const cacheKey = cacheTtl > 0 ? tmdbCacheKey(path, queryEntries) : null
+  if (cacheKey) {
+    const cached = await edgeCacheGet(cacheKey)
+    if (cached) return cached.json() as Promise<T>
+  }
+
+  const searchParams = new URLSearchParams({ api_key: apiKey, ...queryEntries })
   // fetch has no default timeout — a stalled TMDB connection would hold SSR
   // open until Vercel kills the function (a real 5xx for Googlebot). One retry
   // absorbs transient 429s, e.g. when the sitemap fan-out bursts upstream.
@@ -107,7 +131,11 @@ export async function fetchTmdb<T>(path: string, params: TmdbParams = {}): Promi
     throw new TmdbError(`TMDB request failed with status ${response?.status ?? 'timeout'}`, response?.status)
   }
 
-  return response.json() as Promise<T>
+  const text = await response.text()
+  if (cacheKey) {
+    await edgeCachePut(cacheKey, new TextEncoder().encode(text).buffer, 'application/json', cacheTtl)
+  }
+  return JSON.parse(text) as T
 }
 
 export const movieCategories: Record<string, MovieCategory> = {

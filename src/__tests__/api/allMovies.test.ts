@@ -52,7 +52,7 @@ function makeRes() {
 const tmdbPage = (results: unknown[], over: Record<string, unknown> = {}) => ({
   ok: true,
   status: 200,
-  json: async () => ({ page: 1, results, total_pages: 5, total_results: 100, ...over })
+  text: async () => JSON.stringify({ page: 1, results, total_pages: 5, total_results: 100, ...over })
 })
 
 const movie = (over: Record<string, unknown> = {}) => ({ id: 1, title: 'Film', poster_path: '/p.jpg', release_date: '2024-06-01', ...over })
@@ -491,14 +491,14 @@ describe('edge case inputs', () => {
   })
 
   it('returns empty results when TMDB has no results array', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ page: 1, total_pages: 0, total_results: 0 }) })
+    fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '{"page":1,"total_pages":0,"total_results":0}' })
     const res = makeRes()
     await handler(makeReq(), res)
     expect((res.jsonBody as { results: unknown[] }).results).toEqual([])
   })
 
   it('returns 500 when TMDB results is not an array', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ results: { weird: true } }) })
+    fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '{"results":{"weird":true}}' })
     const res = makeRes()
     await handler(makeReq(), res)
     expect(res.statusCode).toBe(500)
@@ -506,7 +506,7 @@ describe('edge case inputs', () => {
   })
 
   it('returns 500 when the TMDB body is not JSON', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error('invalid json') } })
+    fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => 'not json' })
     const res = makeRes()
     await handler(makeReq(), res)
     expect(res.statusCode).toBe(500)
