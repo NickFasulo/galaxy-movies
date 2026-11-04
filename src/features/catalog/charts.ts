@@ -146,12 +146,20 @@ const APPLE_CHARTS: [string, 'movie' | 'tv'][] = [
   ['toptvseasons', 'tv']
 ]
 
-async function updateApple(kv: NonNullable<ReturnType<typeof getRedis>>, today: string): Promise<number> {
+// Apple's store CDN 403s the default workerd UA — send a browser one.
+const FETCH_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+
+async function updateApple(kv: NonNullable<ReturnType<typeof getRedis>>, today: string): Promise<{ count: number; statuses: Record<string, number> }> {
   const fields: Record<string, ChartRow[]> = {}
+  const statuses: Record<string, number> = {}
   for (const cc of ['us', 'in']) {
     for (const [chart, media] of APPLE_CHARTS) {
+      const bucket = `${cc}:${chart === 'topmovies' ? 'movies' : 'tv'}`
       try {
-        const res = await fetch(`https://itunes.apple.com/${cc}/rss/${chart}/limit=${APPLE_LIMIT}/json`)
+        const res = await fetch(`https://itunes.apple.com/${cc}/rss/${chart}/limit=${APPLE_LIMIT}/json`, {
+          headers: { 'User-Agent': FETCH_UA, Accept: 'application/json' }
+        })
+        statuses[bucket] = res.status
         if (!res.ok) continue
         const data = (await res.json()) as { feed?: { entry?: AppleEntry[] | AppleEntry } }
         const entries = Array.isArray(data?.feed?.entry) ? data.feed.entry : data?.feed?.entry ? [data.feed.entry] : []
@@ -166,18 +174,18 @@ async function updateApple(kv: NonNullable<ReturnType<typeof getRedis>>, today: 
           if (id) row.id = id
           rows.push(row)
         }
-        if (rows.length) fields[`${cc}:${chart === 'topmovies' ? 'movies' : 'tv'}`] = rows
+        if (rows.length) fields[bucket] = rows
       } catch {
-        continue
+        statuses[bucket] = 0
       }
     }
   }
   const count = Object.keys(fields).length
-  if (!count) return 0
+  if (!count) return { count: 0, statuses }
   await kv.hset(appleKey(today), fields as Record<string, unknown>)
   await kv.expire(appleKey(today), CHART_TTL_SECONDS)
   await kv.hset(LATEST_KEY, { apple: appleKey(today) })
-  return count
+  return { count, statuses }
 }
 
 // Netflix publishes the full weekly history as TSV — no build-id scraping
@@ -277,6 +285,7 @@ export interface ChartsSummary {
   apple: number
   netflix: number
   netflixWeek?: string
+  appleStatus?: Record<string, number>
   skipped?: string
 }
 
@@ -292,14 +301,20 @@ export async function updateCharts(): Promise<ChartsSummary> {
     }),
     updateApple(kv, today).catch((e) => {
       console.error('apple charts failed:', e)
-      return 0
+      return { count: 0, statuses: {} }
     }),
     updateNetflix(kv).catch((e) => {
       console.error('netflix charts failed:', e)
       return { count: 0, week: '' }
     })
   ])
-  return { trakt, apple, netflix: netflix.count, netflixWeek: netflix.week || undefined }
+  return {
+    trakt,
+    apple: apple.count,
+    appleStatus: apple.statuses,
+    netflix: netflix.count,
+    netflixWeek: netflix.week || undefined
+  }
 }
 
 export interface ChartsFeed {
