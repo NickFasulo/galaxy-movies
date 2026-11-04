@@ -8,17 +8,22 @@ const BING_API = 'https://ssl.bing.com/webmaster/api.svc/json'
 
 export const hasBingCredentials = () => Boolean(process.env.BING_WEBMASTER_API_KEY)
 
-// The registered BWT site must match exactly (scheme/host/trailing slash) —
-// override via env if the property was added as e.g. the bare apex.
-const bingSite = () => process.env.BING_SITE_URL || SITE_URL
+// The registered BWT site must match exactly (scheme/host) — override via
+// env if the property was added as e.g. the bare apex. Scheme is normalized
+// so a host-only value doesn't fault every call.
+const bingSite = () => {
+  const u = process.env.BING_SITE_URL || SITE_URL
+  return u.includes('://') ? u : `https://${u}`
+}
 
 // /Date(1696118400000-0700)/ — WCF DataContractJsonSerializer format.
+// Never-crawled records come back with DateTime.MinValue — treat anything
+// before 2000 as "no date".
 export const parseBingDate = (v: string | undefined | null): string | null => {
   if (!v) return null
-  const ticks = v.match(/\/Date\((\d+)/)
-  if (ticks) return new Date(Number(ticks[1])).toISOString()
-  const d = new Date(v)
-  return isNaN(d.getTime()) ? null : d.toISOString()
+  const ticks = v.match(/\/Date\((-?\d+)/)
+  const d = ticks ? new Date(Number(ticks[1])) : new Date(v)
+  return isNaN(d.getTime()) || d.getUTCFullYear() < 2000 ? null : d.toISOString()
 }
 
 interface BingFault {
@@ -52,20 +57,28 @@ export interface BingUrlInfo {
   state: string
 }
 
-// GetUrlInfo is the index record for a single page — a fault response means
-// Bing doesn't know the URL, which we report as a state rather than an error.
+// GetUrlInfo 200s even for URLs Bing never touched — the empty record is
+// HttpStatus:0 with MinValue dates, so "indexed" = Bing's last fetch was a
+// 200. A fault response (unknown URL) becomes a state, not an error.
 export async function getUrlInfo(url: string): Promise<BingUrlInfo> {
   try {
     const d = await bingApi<{
       HttpStatus?: number
       LastCrawledDate?: string
     }>('GetUrlInfo', { siteUrl: bingSite(), url })
+    const httpStatus = d?.HttpStatus
+    const lastCrawled = parseBingDate(d?.LastCrawledDate)
+    const inIndex = httpStatus === 200
     return {
       url,
-      inIndex: true,
-      httpStatus: d?.HttpStatus,
-      lastCrawled: parseBingDate(d?.LastCrawledDate) || undefined,
-      state: 'in Bing index'
+      inIndex,
+      httpStatus,
+      lastCrawled: lastCrawled || undefined,
+      state: inIndex
+        ? `crawled${lastCrawled ? ` ${lastCrawled.slice(0, 10)}` : ''}`
+        : httpStatus
+          ? `Bing last saw HTTP ${httpStatus}`
+          : 'never crawled'
     }
   } catch (err) {
     if (err instanceof BingApiError && (err.status === 401 || err.status === 403)) throw err

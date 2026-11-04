@@ -18,6 +18,10 @@ describe('parseBingDate', () => {
     expect(parseBingDate('nope')).toBeNull()
     expect(parseBingDate(undefined)).toBeNull()
   })
+
+  it('treats DateTime.MinValue as never-crawled', () => {
+    expect(parseBingDate('/Date(-62135596800000)/')).toBeNull()
+  })
 })
 
 describe('weekStats', () => {
@@ -40,6 +44,17 @@ describe('getUrlInfo', () => {
     const info = await getUrlInfo('https://www.galaxymovies.app/movies/1')
     expect(info.inIndex).toBe(true)
     expect(info.lastCrawled).toBe(new Date(1730000000000).toISOString())
+  })
+
+  it('maps empty records (HttpStatus 0, MinValue dates) to never-crawled', async () => {
+    vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      json({ d: { HttpStatus: 0, LastCrawledDate: '/Date(-62135596800000)/', IsPage: true } })
+    ))
+    const info = await getUrlInfo('https://www.galaxymovies.app/movies/1')
+    expect(info.inIndex).toBe(false)
+    expect(info.state).toBe('never crawled')
+    expect(info.lastCrawled).toBeUndefined()
   })
 
   it('maps fault responses to a not-indexed state without throwing', async () => {
