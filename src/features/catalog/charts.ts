@@ -77,6 +77,8 @@ interface TraktItem {
   show?: { title?: string; year?: number; ids?: { tmdb?: number } }
 }
 
+let lastTraktStatus = 0
+
 async function traktFetch(path: string): Promise<TraktItem[]> {
   const clientId = process.env.TRAKT_CLIENT_ID
   if (!clientId) return []
@@ -88,9 +90,11 @@ async function traktFetch(path: string): Promise<TraktItem[]> {
         'User-Agent': 'galaxymovies.app'
       }
     })
+    lastTraktStatus = lastTraktStatus || res.status
     if (!res.ok) return []
     return (await res.json()) as TraktItem[]
   } catch {
+    lastTraktStatus = lastTraktStatus || -1
     return []
   }
 }
@@ -120,6 +124,7 @@ async function updateTrakt(kv: NonNullable<ReturnType<typeof getRedis>>, today: 
     ['weekly', 'tv', `/shows/watched/weekly?limit=${TRAKT_LIMIT}`, (i) => i.play_count ?? i.watcher_count],
     ['anticipated', 'tv', `/shows/anticipated?limit=${TRAKT_LIMIT}`, (i) => i.list_count]
   ]
+  lastTraktStatus = 0
   const results = await Promise.all(metrics.map(([, , path]) => traktFetch(path)))
   const fields: Record<string, ChartRow[]> = {}
   metrics.forEach(([metric, media], i) => {
@@ -286,6 +291,7 @@ export interface ChartsSummary {
   netflix: number
   netflixWeek?: string
   appleStatus?: Record<string, number>
+  traktStatus?: number
   skipped?: string
 }
 
@@ -312,6 +318,7 @@ export async function updateCharts(): Promise<ChartsSummary> {
     trakt,
     apple: apple.count,
     appleStatus: apple.statuses,
+    traktStatus: lastTraktStatus || undefined,
     netflix: netflix.count,
     netflixWeek: netflix.week || undefined
   }
