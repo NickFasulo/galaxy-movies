@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { createHmac } from 'crypto'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler, { verifySignature } from '../../pages/api/webhooks/polar'
 import { BILLING_KEY } from '../../features/alerts/waitlistStore'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   kvHset: vi.fn<(key: string, fields: Record<string, unknown>) => Promise<number>>(async () => 1)
@@ -20,38 +20,8 @@ function sign(body: string, id: string, timestamp: string, secret = SECRET): str
   return `v1,${expected}`
 }
 
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-function makeReq(body: string, headers: Record<string, string>): NextApiRequest {
-  return {
-    method: 'POST',
-    headers,
-    async *[Symbol.asyncIterator]() {
-      yield Buffer.from(body)
-    }
-  } as unknown as NextApiRequest
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
+const post = (body: string, headers: Record<string, string>) =>
+  makeReq({ method: 'POST', headers, rawBody: body })
 
 function subscriptionEvent(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
@@ -112,7 +82,7 @@ describe('POST /api/webhooks/polar', () => {
   it('writes entitlement state for subscription events', async () => {
     const body = subscriptionEvent()
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHset).toHaveBeenCalledWith(BILLING_KEY, {
       [EMAIL]: expect.objectContaining({
@@ -127,7 +97,7 @@ describe('POST /api/webhooks/polar', () => {
   it('keys the record to the stamped metadata email, not the payment email', async () => {
     const body = subscriptionEvent({ customer: { email: 'payer@example.com' }, metadata: { email: 'sync@example.com' } })
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHset).toHaveBeenCalledWith(BILLING_KEY, {
       'sync@example.com': expect.objectContaining({ status: 'active' })
@@ -137,7 +107,7 @@ describe('POST /api/webhooks/polar', () => {
   it('rejects an invalid signature without writing', async () => {
     const body = subscriptionEvent()
     const res = makeRes()
-    await handler(makeReq(body, { ...headersFor(body), 'webhook-signature': 'v1,forged' }), res)
+    await handler(post(body, { ...headersFor(body), 'webhook-signature': 'v1,forged' }), res)
     expect(res.statusCode).toBe(403)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
@@ -145,7 +115,7 @@ describe('POST /api/webhooks/polar', () => {
   it('maps non-active statuses to inactive', async () => {
     const body = subscriptionEvent({ status: 'unpaid' })
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as { status: string; rawStatus: string }
     expect(written.status).toBe('inactive')
@@ -157,7 +127,7 @@ describe('POST /api/webhooks/polar', () => {
       mocks.kvHset.mockClear()
       const body = subscriptionEvent({ status })
       const res = makeRes()
-      await handler(makeReq(body, headersFor(body)), res)
+      await handler(post(body, headersFor(body)), res)
       expect(res.statusCode).toBe(200)
       const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as { status: string }
       expect(written.status).toBe(status)
@@ -167,7 +137,7 @@ describe('POST /api/webhooks/polar', () => {
   it('skips the write when no email can be resolved', async () => {
     const body = subscriptionEvent({ customer: {}, customer_email: undefined, metadata: undefined })
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
@@ -176,7 +146,7 @@ describe('POST /api/webhooks/polar', () => {
     delete process.env.POLAR_WEBHOOK_SECRET
     const body = subscriptionEvent()
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(503)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
@@ -184,7 +154,7 @@ describe('POST /api/webhooks/polar', () => {
   it('ignores non-subscription events', async () => {
     const body = JSON.stringify({ type: 'order.paid', data: {} })
     const res = makeRes()
-    await handler(makeReq(body, headersFor(body)), res)
+    await handler(post(body, headersFor(body)), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
@@ -211,7 +181,7 @@ describe('webhook → isPlusActive chain', () => {
       mocks.kvHset.mockClear()
       const body = subscriptionEvent({ status: c.status, current_period_end: c.periodEnd })
       const res = makeRes()
-      await handler(makeReq(body, headersFor(body)), res)
+      await handler(post(body, headersFor(body)), res)
       const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as Parameters<typeof isPlusActive>[0]
       expect({ status: c.status, entitled: isPlusActive(written) }).toEqual({ status: c.status, entitled: c.entitled })
     }

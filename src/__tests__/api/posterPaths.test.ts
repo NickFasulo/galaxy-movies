@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/poster-paths'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   fetchTmdb: vi.fn<(path?: string) => Promise<unknown>>(async () => ({})),
@@ -11,44 +11,6 @@ vi.mock('../../features/catalog/tmdb', () => ({ fetchTmdb: mocks.fetchTmdb }))
 vi.mock('../../lib/redis', () => ({
   getRedis: () => ({ eval: mocks.kvEval })
 }))
-
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
-
-let ipSeq = 0
-const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
-
-function makeReq({ method = 'POST', body }: { method?: string; body?: unknown } = {}): NextApiRequest {
-  const ip = nextIp()
-  return {
-    method,
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip },
-    body,
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
-}
-
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -62,7 +24,7 @@ describe('POST /api/poster-paths', () => {
       throw new Error(`unexpected ${path}`)
     })
     const res = makeRes()
-    await handler(makeReq({ body: { items: [{ id: 1 }, { id: 2, mediaType: 'tv' }] } }), res)
+    await handler(makeReq({ method: 'POST', body: { items: [{ id: 1 }, { id: 2, mediaType: 'tv' }] } }), res)
     expect(res.statusCode).toBe(200)
     const { results } = res.jsonBody as { results: Record<string, unknown>[] }
     expect(results).toEqual([
@@ -77,7 +39,7 @@ describe('POST /api/poster-paths', () => {
       throw new Error('tmdb down')
     })
     const res = makeRes()
-    await handler(makeReq({ body: { items: [{ id: 1 }, { id: 2 }] } }), res)
+    await handler(makeReq({ method: 'POST', body: { items: [{ id: 1 }, { id: 2 }] } }), res)
     expect(res.statusCode).toBe(200)
     const { results } = res.jsonBody as { results: Record<string, unknown>[] }
     expect(results).toHaveLength(1)
@@ -87,7 +49,7 @@ describe('POST /api/poster-paths', () => {
   it('rejects a missing or empty items list without calling TMDB', async () => {
     for (const body of [undefined, {}, { items: 'x' }, { items: [] }, { items: [{ id: -1 }, { id: 'a' }] }]) {
       const res = makeRes()
-      await handler(makeReq({ body }), res)
+      await handler(makeReq({ method: 'POST', body }), res)
       expect(res.statusCode).toBe(400)
     }
     expect(mocks.fetchTmdb).not.toHaveBeenCalled()

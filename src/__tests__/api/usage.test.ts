@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { makeReq, makeRes, type MockRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   kv: {
@@ -59,55 +59,24 @@ vi.mock('../../features/indexing/gscAnalytics', () => ({
 }))
 vi.stubGlobal('fetch', mocks.fetch)
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 const TOKEN = 'test-dash-token'
 
-let ipSeq = 0
-const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
-
-function makeReq(auth?: string, method = 'GET'): NextApiRequest {
-  const ip = nextIp()
-  return {
-    method,
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip, ...(auth ? { authorization: auth } : {}) },
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
+interface UsageBody {
+  panels?: {
+    name: string
+    status: string
+    metrics: { label: string; value: string; hint?: string; tone?: string }[]
+    series?: { label: string; points: number[]; format?: string; color?: string }[]
+    links?: { label: string; url: string }[]
+    error?: string
+  }[]
 }
 
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: {
-    panels?: {
-      name: string
-      status: string
-      metrics: { label: string; value: string; hint?: string; tone?: string }[]
-      series?: { label: string; points: number[]; format?: string; color?: string }[]
-      links?: { label: string; url: string }[]
-      error?: string
-    }[]
-  }
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown as MockRes['jsonBody'],
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload as MockRes['jsonBody']
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
+const reqFor = (auth?: string, method = 'GET') =>
+  makeReq({ method, headers: auth ? { authorization: auth } : {} })
 
 const handler = async () => (await import('../../pages/api/usage')).default
-const panel = (res: MockRes, name: string) => res.jsonBody.panels?.find((p) => p.name === name)
+const panel = (res: MockRes, name: string) => (res.jsonBody as UsageBody).panels?.find((p) => p.name === name)
 
 beforeEach(() => {
   vi.resetModules()
@@ -144,7 +113,7 @@ describe('GET /api/usage', () => {
     const h = await handler()
     for (const auth of [undefined, 'Bearer nope']) {
       const res = makeRes()
-      await h(makeReq(auth), res)
+      await h(reqFor(auth), res)
       expect(res.statusCode).toBe(401)
     }
   })
@@ -152,13 +121,13 @@ describe('GET /api/usage', () => {
   it('401s when USAGE_DASH_TOKEN is unset', async () => {
     delete process.env.USAGE_DASH_TOKEN
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     expect(res.statusCode).toBe(401)
   })
 
   it('405s on POST', async () => {
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`, 'POST'), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`, 'POST'), res)
     expect(res.statusCode).toBe(405)
   })
 
@@ -179,7 +148,7 @@ describe('GET /api/usage', () => {
     mocks.kv.dbsize.mockResolvedValue(999)
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     expect(res.statusCode).toBe(200)
 
     expect(panel(res, 'Cloudflare Workers')?.status).toBe('unconfigured')
@@ -230,7 +199,7 @@ describe('GET /api/usage', () => {
     })
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     const polar = panel(res, 'Polar')
     expect(polar?.status).toBe('ok')
     expect(polar?.metrics.find((m) => m.label === 'Active / trialing')?.value).toBe('2')
@@ -252,7 +221,7 @@ describe('GET /api/usage', () => {
     })
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     expect(panel(res, 'Polar')?.status).toBe('ok')
     expect(auth).toBe('Bearer usage-tok')
   })
@@ -288,7 +257,7 @@ describe('GET /api/usage', () => {
     )
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     const cf = panel(res, 'Cloudflare Workers')
     expect(cf?.status).toBe('ok')
     const metric = (label: string) => cf?.metrics.find((m) => m.label === label)
@@ -316,7 +285,7 @@ describe('GET /api/usage', () => {
     })
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     const openai = panel(res, 'OpenAI')
     expect(openai?.status).toBe('ok')
     expect(openai?.metrics.find((m) => m.label === 'Credits remaining')?.value).toBe('≈$80.00')
@@ -327,7 +296,7 @@ describe('GET /api/usage', () => {
     process.env.GSC_PRIVATE_KEY = 'key'
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
 
     const gsc = panel(res, 'Search Console')
     expect(gsc?.status).toBe('ok')
@@ -361,7 +330,7 @@ describe('GET /api/usage', () => {
     })
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     const resend = panel(res, 'Resend')
     expect(resend?.status).toBe('ok')
     expect(resend?.metrics.find((m) => m.label === 'Emails (billing month)')?.value).toBe('22 / 3,000')
@@ -375,7 +344,7 @@ describe('GET /api/usage', () => {
     mocks.fetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as Response)
 
     const res = makeRes()
-    await (await handler())(makeReq(`Bearer ${TOKEN}`), res)
+    await (await handler())(reqFor(`Bearer ${TOKEN}`), res)
     expect(res.statusCode).toBe(200)
     expect(panel(res, 'Polar')?.status).toBe('error')
     expect(panel(res, 'Rate limits')?.status).toBe('ok')

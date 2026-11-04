@@ -22,7 +22,7 @@ export interface SlateEntry {
   title: string
 }
 
-export const GAME_PROVIDERS = Object.keys(PROVIDER_NAME_MATCH)
+const GAME_PROVIDERS = Object.keys(PROVIDER_NAME_MATCH)
 
 export const providerLabel = (key: string) =>
   streamingProviders[key]?.title?.replace(/ Movies$/, '') || key

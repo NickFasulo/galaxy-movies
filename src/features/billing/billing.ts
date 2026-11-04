@@ -81,15 +81,3 @@ export function manageLink(email: string, key?: string | null): string {
     ? `${SITE_URL}/alerts#email=${encodeURIComponent(email)}&key=${encodeURIComponent(key)}`
     : `${SITE_URL}/alerts`
 }
-
-export async function isPlusSubscriber(email: string, key: string): Promise<boolean> {
-  const kv = getRedis()
-  if (!kv) return false
-  try {
-    const stored = await kv.hget<string>(SYNCKEY_KEY, email)
-    if (!stored || !safeEqual(stored, key)) return false
-  } catch {
-    return false
-  }
-  return isPlusActive(await getBillingRecord(email))
-}

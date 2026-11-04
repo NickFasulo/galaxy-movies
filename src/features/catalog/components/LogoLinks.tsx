@@ -25,7 +25,7 @@ export function ActorAvatar({ profilePath, name }: { profilePath?: string | null
 
 type LogoCompany = Pick<ProductionCompany, 'name' | 'logo_path'>
 
-export function ProductionLogo({ company }: { company: LogoCompany }) {
+function ProductionLogo({ company }: { company: LogoCompany }) {
   const logoPath = company.logo_path
   const logoUrl = tmdbImage(logoPath, 'w185') ?? null
   const [width, setWidth] = useState(64)

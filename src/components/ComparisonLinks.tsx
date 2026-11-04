@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Button, Flex, Heading } from '@chakra-ui/react'
 import { secondaryButton } from '../theme'
 
-export const COMPARISON_PAGES = [
+const COMPARISON_PAGES = [
   { href: '/justwatch-alternative', label: 'JustWatch' },
   { href: '/reelgood-alternative', label: 'Reelgood' },
   { href: '/trakt-alternative', label: 'Trakt' },

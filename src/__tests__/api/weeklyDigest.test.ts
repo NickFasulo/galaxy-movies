@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/cron/weekly-digest'
 import { CONFIRMED_KEY, ALERTS_PREFS_KEY, BILLING_KEY } from '../../features/alerts/waitlistStore'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   kvHgetall: vi.fn<(key?: string) => Promise<Record<string, unknown> | null>>(async () => null),
@@ -18,31 +18,7 @@ vi.mock('../../features/catalog/streamingChanges', async (importOriginal) => ({
   getMonthlyChanges: (keys: string[]) => mocks.monthly(keys)
 }))
 
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
-
-const makeReq = () =>
-  ({ method: 'GET', headers: { authorization: 'Bearer test-secret' } }) as unknown as NextApiRequest
+const cronReq = () => makeReq({ headers: { authorization: 'Bearer test-secret' } })
 
 const PLUS = 'plus@example.com'
 const FREE = 'free@example.com'
@@ -93,7 +69,7 @@ describe('weekly digest — leaving this month', () => {
     })
 
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(cronReq(), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.monthly).toHaveBeenCalledWith(['netflix'])
 
@@ -110,7 +86,7 @@ describe('weekly digest — leaving this month', () => {
   it('omits the section when monthly data has nothing for the subscriber\'s services', async () => {
     mocks.monthly.mockResolvedValue({})
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(cronReq(), res)
     const plusMail = sentBodies().find((b) => b.to === PLUS)!
     expect(plusMail.html).toContain('Arrived')
     expect(plusMail.html).not.toContain('Leaving this month')
@@ -123,7 +99,7 @@ describe('weekly digest — leaving this month', () => {
         : key === BILLING_KEY ? { [PLUS]: { status: 'active' } }
         : null)
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(cronReq(), res)
     expect(mocks.monthly).not.toHaveBeenCalled()
     const plusMail = sentBodies().find((b) => b.to === PLUS)!
     expect(plusMail.html).toContain('Arrived')

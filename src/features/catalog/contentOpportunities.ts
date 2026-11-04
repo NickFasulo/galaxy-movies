@@ -39,7 +39,7 @@ export const tvProviderGenreSlugs = [
   'sci-fi-fantasy'
 ]
 
-export function getProviderLabel(providerKey: string): string | null {
+function getProviderLabel(providerKey: string): string | null {
   return streamingProviders[providerKey]?.title?.replace(' Movies', '') || null
 }
 

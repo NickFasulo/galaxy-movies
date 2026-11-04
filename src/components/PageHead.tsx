@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { buildOgImageUrl } from '../features/catalog/schema'
 import { SITE_URL } from '../lib/site'
 
-export function JsonLd({ data }: { data: Record<string, unknown> }) {
+function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
       type='application/ld+json'

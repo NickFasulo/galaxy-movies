@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/resolve-titles'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   resolve: vi.fn<(title: string, year?: string) => Promise<unknown>>(async () => null),
@@ -13,43 +13,7 @@ vi.mock('../../features/ai/movieSearch', async (importOriginal) => ({
 }))
 vi.mock('../../lib/redis', () => ({ getRedis: () => ({ eval: mocks.kvEval }) }))
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
-
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-let ipSeq = 0
-const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
-
-function makeReq(body?: unknown): NextApiRequest {
-  const ip = nextIp()
-  return {
-    method: 'POST',
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip },
-    body,
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
+const post = (body?: unknown) => makeReq({ method: 'POST', body })
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -69,7 +33,7 @@ describe('POST /api/resolve-titles', () => {
       { items: [null] }
     ]) {
       const res = makeRes()
-      await handler(makeReq(body), res)
+      await handler(post(body), res)
       expect(res.statusCode).toBe(400)
     }
     expect(mocks.resolve).not.toHaveBeenCalled()
@@ -80,7 +44,7 @@ describe('POST /api/resolve-titles', () => {
       title === 'Heat' ? { id: 949, mediaType: 'movie', title: 'Heat', year: '1995', poster_path: '/p.jpg' } : null
     )
     const res = makeRes()
-    await handler(makeReq({ items: [{ title: 'Heat', year: '1995' }, { title: 'Nonexistent' }, { title: 'Heat' }] }), res)
+    await handler(post({ items: [{ title: 'Heat', year: '1995' }, { title: 'Nonexistent' }, { title: 'Heat' }] }), res)
     expect(res.statusCode).toBe(200)
     const { results } = res.jsonBody as { results: { title: string; resolved: unknown }[] }
     expect(results).toHaveLength(3)
@@ -91,7 +55,7 @@ describe('POST /api/resolve-titles', () => {
 
   it('passes the year through only when it is a four-digit string', async () => {
     const res = makeRes()
-    await handler(makeReq({ items: [{ title: 'Heat', year: '1995' }, { title: 'Heat', year: '95' }, { title: 'Heat', year: 1995 }] }), res)
+    await handler(post({ items: [{ title: 'Heat', year: '1995' }, { title: 'Heat', year: '95' }, { title: 'Heat', year: 1995 }] }), res)
     expect(mocks.resolve).toHaveBeenNthCalledWith(1, 'Heat', '1995')
     expect(mocks.resolve).toHaveBeenNthCalledWith(2, 'Heat', undefined)
     expect(mocks.resolve).toHaveBeenNthCalledWith(3, 'Heat', undefined)
@@ -99,7 +63,7 @@ describe('POST /api/resolve-titles', () => {
 
   it('accepts an empty items array', async () => {
     const res = makeRes()
-    await handler(makeReq({ items: [] }), res)
+    await handler(post({ items: [] }), res)
     expect(res.statusCode).toBe(200)
     expect(res.jsonBody).toEqual({ results: [] })
   })

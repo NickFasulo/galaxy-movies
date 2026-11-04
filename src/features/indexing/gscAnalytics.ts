@@ -81,7 +81,7 @@ export async function sitemapStatus(): Promise<SitemapStatus> {
 
 // Resubmit the sitemap (a real recrawl nudge — IndexNow doesn't reach Google)
 // and return its status so the email can surface fetch errors.
-export async function resubmitAndStatus(): Promise<SitemapStatus> {
+async function resubmitAndStatus(): Promise<SitemapStatus> {
   const token = await gscAccessToken()
   const site = encodeURIComponent(gscSite())
   const feed = encodeURIComponent(SITEMAP_PATH)

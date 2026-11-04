@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/alerts-prefs'
 import { SYNCKEY_KEY, ALERTS_PREFS_KEY, DISCORD_KEY } from '../../features/alerts/waitlistStore'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
@@ -14,46 +14,8 @@ vi.mock('../../lib/redis', () => ({
   getRedis: () => ({ hget: mocks.kvHget, hset: mocks.kvHset, hdel: mocks.kvHdel, eval: mocks.kvEval })
 }))
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 const SYNC_KEY = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 const EMAIL = 'user@example.com'
-
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-let ipSeq = 0
-const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
-
-function makeReq({ method = 'POST', body, query }: { method?: string; body?: unknown; query?: Record<string, string> } = {}): NextApiRequest {
-  const ip = nextIp()
-  return {
-    method,
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip },
-    body,
-    query: query || {},
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
 
 const validBody = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   email: EMAIL,
@@ -78,7 +40,7 @@ beforeEach(() => {
 describe('POST /api/alerts-prefs', () => {
   it('stores watchlist, services, and ratings keyed by email', async () => {
     const res = makeRes()
-    await handler(makeReq({ body: validBody() }), res)
+    await handler(makeReq({ method: 'POST', body: validBody() }), res)
     expect(res.statusCode).toBe(200)
     const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as WrittenPrefs
     expect(written.watchlist[0]).toMatchObject({ id: 1, poster_path: '/p.jpg', year: '2020' })
@@ -90,7 +52,7 @@ describe('POST /api/alerts-prefs', () => {
     const body = validBody()
     delete body.ratings
     const res = makeRes()
-    await handler(makeReq({ body }), res)
+    await handler(makeReq({ method: 'POST', body }), res)
     expect(res.statusCode).toBe(200)
     const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as WrittenPrefs
     expect(written.ratings).toEqual([])
@@ -105,21 +67,21 @@ describe('POST /api/alerts-prefs', () => {
     { title: 'x'.repeat(301), rating: 5 }
   ])('rejects malformed rating %j', async (bad) => {
     const res = makeRes()
-    await handler(makeReq({ body: validBody({ ratings: [{ id: 1, mediaType: 'movie', title: 'T', ...bad }] }) }), res)
+    await handler(makeReq({ method: 'POST', body: validBody({ ratings: [{ id: 1, mediaType: 'movie', title: 'T', ...bad }] }) }), res)
     expect(res.statusCode).toBe(400)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
 
   it('rejects a wrong sync key', async () => {
     const res = makeRes()
-    await handler(makeReq({ body: validBody({ key: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' }) }), res)
+    await handler(makeReq({ method: 'POST', body: validBody({ key: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' }) }), res)
     expect(res.statusCode).toBe(403)
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
 
   it('stores a valid Discord webhook without touching prefs', async () => {
     const res = makeRes()
-    await handler(makeReq({ body: {
+    await handler(makeReq({ method: 'POST', body: {
       email: EMAIL,
       key: SYNC_KEY,
       discordWebhook: 'https://discord.com/api/webhooks/123/abc'
@@ -131,7 +93,7 @@ describe('POST /api/alerts-prefs', () => {
 
   it('clears the webhook on an empty string', async () => {
     const res = makeRes()
-    await handler(makeReq({ body: { email: EMAIL, key: SYNC_KEY, discordWebhook: '' } }), res)
+    await handler(makeReq({ method: 'POST', body: { email: EMAIL, key: SYNC_KEY, discordWebhook: '' } }), res)
     expect(res.statusCode).toBe(200)
     expect(mocks.kvHdel).toHaveBeenCalledWith(DISCORD_KEY, EMAIL)
   })
@@ -144,7 +106,7 @@ describe('POST /api/alerts-prefs', () => {
     'not a url'
   ])('rejects non-Discord webhook %s', async (url) => {
     const res = makeRes()
-    await handler(makeReq({ body: { email: EMAIL, key: SYNC_KEY, discordWebhook: url } }), res)
+    await handler(makeReq({ method: 'POST', body: { email: EMAIL, key: SYNC_KEY, discordWebhook: url } }), res)
     expect(res.statusCode).toBe(400)
     expect(mocks.kvHset).not.toHaveBeenCalledWith(DISCORD_KEY, expect.anything())
   })

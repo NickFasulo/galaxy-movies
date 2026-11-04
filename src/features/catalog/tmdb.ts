@@ -30,7 +30,7 @@ export interface GenreDef {
 // with_origin_country=JP keeps co-productions like Cyberpunk: Edgerunners
 // while excluding Western animation. Verified against live discover output —
 // for movies it matched with_original_language=ja within ~1% of results.
-export const ANIME_ORIGIN: TmdbParams = { with_origin_country: 'JP' }
+const ANIME_ORIGIN: TmdbParams = { with_origin_country: 'JP' }
 export const ANIME_PARAMS: TmdbParams = { with_genres: '16', ...ANIME_ORIGIN }
 
 // Detail-page detection — same definition the discover pages use, applied to

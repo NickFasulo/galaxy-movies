@@ -216,7 +216,7 @@ export function buildDeparturesPost(
 // Churn-first variant: the month's net adds/losses per service is the headline,
 // dated departures trail it. Links the report page — the stat table is the
 // shareable asset, the leaving list is context.
-export function buildMonthlyChurnPost(
+function buildMonthlyChurnPost(
   changes: Record<string, { leavingSoon?: { title: string; date?: string | null }[] }>,
   monthly: Record<string, MonthlyChanges | null | undefined>,
   maxLen = 300

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/trakt/import'
 import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../features/alerts/waitlistStore'
+import { makeReq, makeRes } from '../helpers/mockApi'
 
 const mocks = vi.hoisted(() => ({
   kvHget: vi.fn<(key?: string, field?: string) => Promise<unknown>>(async () => null),
@@ -22,45 +22,10 @@ vi.mock('../../features/billing/trakt', async (importOriginal) => ({
   pullFromTrakt: mocks.pull
 }))
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 const SYNC_KEY = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 const EMAIL = 'user@example.com'
 
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
-
-let ipSeq = 0
-const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
-
-const makeReq = (email = EMAIL): NextApiRequest => {
-  const ip = nextIp()
-  return {
-    method: 'POST',
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip },
-    body: { email, key: SYNC_KEY },
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
+const reqFor = (email = EMAIL) => makeReq({ method: 'POST', body: { email, key: SYNC_KEY } })
 
 const pullItem = (id: number, mediaType: 'movie' | 'tv' = 'movie') => ({ id, mediaType, title: `T${id}`, year: '2020' })
 
@@ -89,7 +54,7 @@ describe('POST /api/trakt/import', () => {
       ratings: [{ ...pullItem(2), rating: 4 }, { ...pullItem(7), rating: 9 }]
     })
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     expect(res.statusCode).toBe(200)
     expect(res.jsonBody).toEqual({ ok: true, imported: { watchlist: 2, ratings: 1 } })
 
@@ -106,7 +71,7 @@ describe('POST /api/trakt/import', () => {
     mocks.kvHget.mockImplementation(async (key, field) => plusKvs(EMAIL, null)(key, field))
     mocks.pull.mockResolvedValue({ watchlist: [pullItem(9)], ratings: [] })
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as typeof storedPrefs
     expect(written.watchlist.map((w) => w.id)).toEqual([9])
     expect(written.services).toEqual([])
@@ -116,7 +81,7 @@ describe('POST /api/trakt/import', () => {
   it('writes nothing when everything is already stored', async () => {
     mocks.pull.mockResolvedValue({ watchlist: [pullItem(1)], ratings: [{ ...pullItem(2), rating: 3 }] })
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     expect(res.jsonBody).toEqual({ ok: true, imported: { watchlist: 0, ratings: 0 } })
     expect(mocks.kvHset).not.toHaveBeenCalledWith(ALERTS_PREFS_KEY, expect.anything())
   })
@@ -129,7 +94,7 @@ describe('POST /api/trakt/import', () => {
     mocks.kvHget.mockImplementation(async (key, field) => plusKvs(EMAIL, full)(key, field))
     mocks.pull.mockResolvedValue({ watchlist: [pullItem(1), pullItem(2), pullItem(3)], ratings: [] })
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     expect((res.jsonBody as { imported: { watchlist: number } }).imported.watchlist).toBe(1)
     expect((mocks.kvHset.mock.calls[0]![1][EMAIL] as typeof storedPrefs).watchlist).toHaveLength(1000)
   })
@@ -137,7 +102,7 @@ describe('POST /api/trakt/import', () => {
   it('passes through a dead trakt connection as 409', async () => {
     mocks.accessToken.mockResolvedValue({ error: 'not_connected' })
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     expect(res.statusCode).toBe(409)
     expect((res.jsonBody as { code: string }).code).toBe('not_connected')
     expect(mocks.pull).not.toHaveBeenCalled()
@@ -146,14 +111,14 @@ describe('POST /api/trakt/import', () => {
   it('returns 502 when the pull fails upstream', async () => {
     mocks.pull.mockResolvedValue(null)
     const res = makeRes()
-    await handler(makeReq(), res)
+    await handler(reqFor(), res)
     expect(res.statusCode).toBe(502)
   })
 
   it('rejects free-tier subscribers', async () => {
     // Distinct email — the module billing cache holds EMAIL as active.
     const res = makeRes()
-    await handler(makeReq('free@example.com'), res)
+    await handler(reqFor('free@example.com'), res)
     expect(res.statusCode).toBe(403)
     expect(mocks.pull).not.toHaveBeenCalled()
   })

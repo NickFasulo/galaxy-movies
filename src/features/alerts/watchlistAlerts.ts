@@ -192,7 +192,7 @@ const prettyDate = shortDate
 const episodeLine = (item: MatchedItem) =>
   `New episode${item.season != null && item.episode != null ? ` S${item.season}E${item.episode}` : ''} airs ${prettyDate(item.date) || 'soon'}`
 
-export function statusLine(item: MatchedItem): string {
+function statusLine(item: MatchedItem): string {
   switch (item.kind) {
     case 'coming':
       return `Coming to ${escapeHtml(item.provider)}${item.date ? `, ${prettyDate(item.date)}` : ''}${item.season ? `, season ${item.season}` : ''}`

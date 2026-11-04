@@ -12,7 +12,7 @@ const ITEMS = [
   { href: '/disclosure', label: 'Disclosure' }
 ]
 
-export function LegalLinks() {
+function LegalLinks() {
   return (
     <>
       {ITEMS.map((item, i) => (
@@ -36,7 +36,7 @@ const SOCIAL_ICONS: Record<string, IconType> = {
   Discord: FaDiscord
 }
 
-export function SocialLinks() {
+function SocialLinks() {
   return (
     <>
       {SOCIAL_PROFILES.map((p) => {

@@ -126,7 +126,7 @@ export function StreamingAlertCta({ tmdbId, tmdbType, title }: { tmdbId: number;
   )
 }
 
-export function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescription }: { tmdbId: number; tmdbType: MediaType; title: string; hasEvents: boolean; hideDescription?: boolean }) {
+function TitleAlertForm({ tmdbId, tmdbType, title, hasEvents, hideDescription }: { tmdbId: number; tmdbType: MediaType; title: string; hasEvents: boolean; hideDescription?: boolean }) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')

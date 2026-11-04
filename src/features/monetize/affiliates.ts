@@ -31,7 +31,7 @@ export function tagAmazonUrl(url: string | null | undefined): string | null {
 // CJ tracking links for Gruv (program 5830404) — physical media: DVD, Blu-ray,
 // 4K. The 1x1 images are CJ's impression pixels — they power CTR reporting,
 // keep them next to each link.
-export const GRUV_AFFILIATE_LINK = 'https://www.anrdoezrs.net/click-101891488-15735954'
+const GRUV_AFFILIATE_LINK = 'https://www.anrdoezrs.net/click-101891488-15735954'
 export const GRUV_AFFILIATE_PIXEL = 'https://www.ftjcfx.com/image-101891488-15735954'
 
 export const GRUV_LINK_TEXT = 'Buy the disc at Gruv'

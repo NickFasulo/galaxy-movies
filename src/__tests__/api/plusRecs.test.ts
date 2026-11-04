@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { NextApiRequest, NextApiResponse } from 'next'
 import handler from '../../pages/api/plus-recs'
+import { makeReq, makeRes } from '../helpers/mockApi'
 import { SYNCKEY_KEY, BILLING_KEY, ALERTS_PREFS_KEY } from '../../features/alerts/waitlistStore'
 
 const mocks = vi.hoisted(() => ({
@@ -21,47 +21,13 @@ vi.mock('../../features/catalog/tmdb', async (importOriginal) => ({
   fetchRecommendedTv: mocks.recTv
 }))
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 const SYNC_KEY = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-
-interface MockRes extends NextApiResponse {
-  statusCode: number
-  jsonBody: unknown
-}
 
 // billingCache and recsLru are module-level and keyed by email — each test
 // gets its own address so nothing carries over.
 let seq = 0
-const nextIp = () => `203.0.113.${(seq++ % 250) + 1}`
-const nextEmail = () => `user${seq}@example.com`
-
-const makeReq = (email: string): NextApiRequest => {
-  const ip = nextIp()
-  return {
-    method: 'GET',
-    headers: { 'user-agent': UA, 'x-forwarded-for': ip },
-    query: { email, key: SYNC_KEY },
-    socket: { remoteAddress: ip }
-  } as unknown as NextApiRequest
-}
-
-function makeRes(): MockRes {
-  const res = {
-    statusCode: 200,
-    jsonBody: undefined as unknown,
-    setHeader() {},
-    status(code: number) {
-      res.statusCode = code
-      return res
-    },
-    json(payload: unknown) {
-      res.jsonBody = payload
-      return res
-    },
-    end() { return res }
-  }
-  return res as unknown as MockRes
-}
+const nextEmail = () => `user${seq++}@example.com`
+const reqFor = (email: string) => makeReq({ query: { email, key: SYNC_KEY } })
 
 const basePrefs = {
   watchlist: [{ id: 1, mediaType: 'movie' as const, title: 'Already Saved' }],
@@ -88,12 +54,12 @@ describe('GET /api/plus-recs', () => {
   it('rejects free-tier and bad credentials', async () => {
     mocks.kvHget.mockImplementation(kvFor(basePrefs, false))
     const res = makeRes()
-    await handler(makeReq(nextEmail()), res)
+    await handler(reqFor(nextEmail()), res)
     expect(res.statusCode).toBe(403)
 
     mocks.kvHget.mockImplementation(async () => null)
     const res2 = makeRes()
-    await handler(makeReq(nextEmail()), res2)
+    await handler(reqFor(nextEmail()), res2)
     expect(res2.statusCode).toBe(403)
   })
 
@@ -101,7 +67,7 @@ describe('GET /api/plus-recs', () => {
     mocks.kvHget.mockImplementation(kvFor({ ...basePrefs, ratings: [{ id: 300, mediaType: 'movie', title: 'C', rating: 4 }] }))
     mocks.kvMget.mockImplementation(mgetFor({}))
     const res = makeRes()
-    await handler(makeReq(nextEmail()), res)
+    await handler(reqFor(nextEmail()), res)
     expect(res.jsonBody).toEqual({ items: [] })
   })
 
@@ -112,7 +78,7 @@ describe('GET /api/plus-recs', () => {
       'recs:v1:tv:200': [5, 6, 7, 200]     // 200 is rated
     }))
     const res = makeRes()
-    await handler(makeReq(nextEmail()), res)
+    await handler(reqFor(nextEmail()), res)
     expect(res.statusCode).toBe(200)
     expect(res.jsonBody).toEqual({
       items: [
@@ -137,7 +103,7 @@ describe('GET /api/plus-recs', () => {
     mocks.kvMget.mockImplementation(mgetFor({}))
     mocks.recMovies.mockResolvedValue({ results: [{ id: 8 }, { id: 9 }] })
     const res = makeRes()
-    await handler(makeReq(nextEmail()), res)
+    await handler(reqFor(nextEmail()), res)
     expect(res.jsonBody).toEqual({ items: [{ id: 8, mediaType: 'movie' }, { id: 9, mediaType: 'movie' }] })
     expect(mocks.kvSet).toHaveBeenCalledWith('recs:v1:movie:100', [8, 9], { ex: 60 * 60 * 24 * 30 })
   })
@@ -152,14 +118,14 @@ describe('GET /api/plus-recs', () => {
     mocks.kvMget.mockImplementation(mgetFor({ 'recs:v1:movie:101': [11, 12] }))
 
     const first = makeRes()
-    await handler(makeReq(email), first)
+    await handler(reqFor(email), first)
     expect((first.jsonBody as { items: unknown[] }).items).toHaveLength(2)
     // The synckey credential read happens on every request — the LRU only
     // needs to spare the prefs + rec-index reads.
     const prefsReads = mocks.kvHget.mock.calls.filter((c) => c[0] === ALERTS_PREFS_KEY).length
 
     const second = makeRes()
-    await handler(makeReq(email), second)
+    await handler(reqFor(email), second)
     expect(second.jsonBody).toEqual(first.jsonBody)
     expect(mocks.kvHget.mock.calls.filter((c) => c[0] === ALERTS_PREFS_KEY)).toHaveLength(prefsReads)
     expect(mocks.kvMget).toHaveBeenCalledTimes(1)

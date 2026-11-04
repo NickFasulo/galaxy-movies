@@ -13,12 +13,18 @@ export interface MakeReqOptions {
   headers?: Record<string, string>
   ip?: string
   ua?: string
+  // For handlers that read the raw stream (e.g. webhook signature checks) —
+  // makes the mock async-iterable so `for await (const c of req)` yields it.
+  rawBody?: string | Buffer
 }
 
-export function makeReq({ method = 'GET', query = {}, body, headers = {}, ip, ua }: MakeReqOptions = {}): NextApiRequest {
+export type MockReq = NextApiRequest & { emit: (event: string) => void }
+
+export function makeReq({ method = 'GET', query = {}, body, headers = {}, ip, ua, rawBody }: MakeReqOptions = {}): MockReq {
   const remoteIp = ip ?? nextIp()
   const uaValue = ua === undefined ? UA : ua
-  return {
+  const listeners = new Map<string, () => void>()
+  const req = {
     method,
     headers: {
       ...(uaValue ? { 'user-agent': uaValue } : {}),
@@ -27,17 +33,29 @@ export function makeReq({ method = 'GET', query = {}, body, headers = {}, ip, ua
     },
     query,
     body,
+    on(event: string, fn: () => void) {
+      listeners.set(event, fn)
+      return req
+    },
+    emit: (event: string) => listeners.get(event)?.(),
+    ...(rawBody !== undefined
+      ? { async *[Symbol.asyncIterator]() { yield typeof rawBody === 'string' ? Buffer.from(rawBody) : rawBody } }
+      : {}),
     socket: { remoteAddress: remoteIp }
-  } as unknown as NextApiRequest
+  }
+  return req as unknown as MockReq
 }
 
 export interface MockRes extends NextApiResponse {
   statusCode: number
   jsonBody: unknown
   textBody?: string
+  body: string
   headers: Record<string, string | string[]>
   redirectTo?: { code: number; url: string }
   ended: boolean
+  headersSent: boolean
+  writableEnded: boolean
 }
 
 export function makeRes(): MockRes {
@@ -45,9 +63,12 @@ export function makeRes(): MockRes {
     statusCode: 200,
     jsonBody: undefined as unknown,
     textBody: undefined as string | undefined,
+    body: '',
     headers: {} as Record<string, string | string[]>,
     redirectTo: undefined as { code: number; url: string } | undefined,
     ended: false,
+    headersSent: false,
+    writableEnded: false,
     setHeader(name: string, value: string | string[]) {
       res.headers[name] = value
     },
@@ -60,15 +81,25 @@ export function makeRes(): MockRes {
     },
     json(payload: unknown) {
       res.jsonBody = payload
+      res.headersSent = true
+      res.writableEnded = true
       return res
     },
     send(payload: unknown) {
       res.textBody = typeof payload === 'string' ? payload : JSON.stringify(payload)
       res.ended = true
+      res.headersSent = true
+      res.writableEnded = true
       return res
+    },
+    write(chunk: string) {
+      res.body += chunk
+      res.headersSent = true
+      return true
     },
     end() {
       res.ended = true
+      res.writableEnded = true
       return res
     },
     redirect(codeOrUrl: number | string, url?: string) {
