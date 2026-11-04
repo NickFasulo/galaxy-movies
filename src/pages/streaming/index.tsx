@@ -87,7 +87,7 @@ export default function StreamingIndex({ region }: InferGetServerSidePropsType<t
         <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Available in India</Heading>
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
           {indiaProviders.map((provider) => (
-            <LinkTile key={provider.key} href={`/streaming/${provider.key}`}>
+            <LinkTile key={provider.key} href={`/in/streaming/${provider.key}`}>
               <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
             </LinkTile>
           ))}

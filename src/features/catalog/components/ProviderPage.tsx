@@ -75,7 +75,13 @@ export type ProviderPageProps = StreamingProvider & {
   indexabilityReason: string | null
 }
 
-export function providerServerSideProps(media: MediaType) {
+export interface ProviderPageOpts {
+  // Pinned region bypasses cf-ipcountry detection — the /in/ URL space always
+  // renders the India catalog so Googlebot (US IPs) can index it.
+  region?: 'IN'
+}
+
+export function providerServerSideProps(media: MediaType, opts?: ProviderPageOpts) {
   const { discover, basePath } = CONFIG[media]
 
   return async function getServerSideProps({ params, query, req, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<ProviderPageProps>> {
@@ -83,32 +89,30 @@ export function providerServerSideProps(media: MediaType) {
     const provider = streamingProviders[slug]
     if (!provider) return { notFound: true }
 
+    const region = opts?.region ?? detectRegion(req)
     const { page, requested } = getPageParam(query)
     if (requested && page === 1) {
-      return { redirect: { destination: `${basePath}/${slug}`, permanent: true } }
+      return { redirect: { destination: `${region === 'IN' ? '/in' : ''}${basePath}/${slug}`, permanent: true } }
     }
-    const region = detectRegion(req)
     const availableInRegion = isProviderAvailableInRegion(slug, region)
     const providerIds = getProviderIds(slug, region)
     const providerId = providerIds.length ? providerIds.join('|') : null
     const base = { media, provider: slug, ...provider, region, availableInRegion, page }
 
     try {
-      // Diffs only exist for US (Watchmode) and IN (TMDB snapshots) catalogs;
-      // IN diffs live under `changes:diff:IN:{key}` — passing the prefixed key
-      // reads them through the same memoized lookup. LRU-memoized, so repeat
-      // renders cost zero Redis commands.
-      const changeKey = region === 'IN' ? `IN:${slug}` : slug
+      // Diffs only exist for US (Watchmode) and IN (TMDB snapshots) catalogs —
+      // the region arg reads the namespaced `changes:diff:IN:{key}` entries.
+      // LRU-memoized, so repeat renders cost zero Redis commands.
       const [data, changesMap] = await Promise.all([
         discover({ providerId, region, page }),
         media === 'movie' && (region === 'US' || region === 'IN')
-          ? getProviderChanges([changeKey]).catch((): Record<string, ProviderChanges> => ({}))
+          ? getProviderChanges([slug], { region }).catch((): Record<string, ProviderChanges> => ({}))
           : Promise.resolve<Record<string, ProviderChanges>>({})
       ])
       if (page > 1 && !data.results?.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: data.results })
       setSwrCache(res)
-      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[changeKey] || null, isIndexable: indexability.isIndexable, indexabilityReason: indexability.reason } }
+      return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[slug] || null, isIndexable: indexability.isIndexable, indexabilityReason: indexability.reason } }
     } catch (error) {
       console.error(error)
       const indexability = getContentIndexability({ dataError: true })
@@ -120,10 +124,24 @@ export function providerServerSideProps(media: MediaType) {
 
 export default function ProviderPage({ media, provider, title, titles, totalPages, changes, dataError, region, page, availableInRegion, regions, isIndexable, indexabilityReason }: ProviderPageProps) {
   const { basePath, otherBasePath, crumbRoot, noun, plural, itemWord, genreSlugs, genreTarget } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${provider}${page > 1 ? `?page=${page}` : ''}`
+  // Region drives the URL space, not the route: a geo-detected IN render of
+  // /streaming/x canonicalizes to /in/streaming/x (the indexable variant),
+  // and its internal links stay inside the /in/ space.
+  const pathPrefix = region === 'IN' ? '/in' : ''
+  const pageSuffix = page > 1 ? `?page=${page}` : ''
+  const canonicalUrl = `${SITE_URL}${pathPrefix}${basePath}/${provider}${pageSuffix}`
   const providerLabel = title.replace(' Movies', '')
   const pageTitle = media === 'tv' ? `Best Shows on ${providerLabel}` : `Best Movies on ${providerLabel}`
   const metaTitle = page > 1 ? `${pageTitle} - Page ${page}` : pageTitle
+  // Every provider has a US-view page, but only US-available ones can index
+  // it — en-US is only a valid hreflang target when the US page can rank.
+  const inUrl = `${SITE_URL}/in${basePath}/${provider}${pageSuffix}`
+  const hreflangAlternates = !isProviderAvailableInRegion(provider, 'IN')
+    ? undefined
+    : isProviderAvailableInRegion(provider, 'US')
+      ? { us: `${SITE_URL}${basePath}/${provider}${pageSuffix}`, in: inUrl }
+      : { in: inUrl }
+  const crumb = pathPrefix ? { name: 'Streaming in India', path: '/streaming-in-india' } : crumbRoot
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(regions)
   const description = availableInRegion
@@ -140,28 +158,33 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
   const siblingProviders = Object.keys(streamingProviders)
     .filter((key) => key !== provider && isProviderAvailableInRegion(key, region))
     .slice(0, 7)
+  // IN catalog diffs exist for every IN-available provider (TMDB snapshots);
+  // US diff pages exist only for the Watchmode-tracked set.
+  const hasDiffPages = pathPrefix ? isProviderAvailableInRegion(provider, 'IN') : Boolean(PROVIDER_NAME_MATCH[provider])
 
   return (
     <>
       <PageHead
-        title={metaTitle}
+        title={pathPrefix && availableInRegion ? `${metaTitle} in India` : metaTitle}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={hreflangAlternates}
         noindex={!isIndexable}
+        ogLocale={pathPrefix ? 'en_IN' : 'en_US'}
         posterPath={titles[0]?.poster_path}
         structuredData={titleListSchema({ name: pageTitle, description, url: canonicalUrl, titles, media })}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: crumbRoot.name, url: `${SITE_URL}${crumbRoot.path}` },
+          { name: crumb.name, url: `${SITE_URL}${crumb.path}` },
           { name: pageTitle, url: canonicalUrl }
         ]}
       />
       <PageShell title={pageTitle} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.300' fontSize='sm'>
           Looking for {media === 'tv' ? 'movies' : 'shows'} instead? Browse{' '}
-          <Link href={`${otherBasePath}/${provider}`} style={{ textDecoration: 'underline' }}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
-          {PROVIDER_NAME_MATCH[provider] && (
-            <> See what&apos;s <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>new and leaving {providerLabel} this month</Link>.</>
+          <Link href={`${pathPrefix}${otherBasePath}/${provider}`} style={{ textDecoration: 'underline' }}>{providerLabel} {media === 'tv' ? 'movies' : 'shows'}</Link>.
+          {hasDiffPages && (
+            <> See what&apos;s <Link href={`${pathPrefix}/leaving/${provider}`} style={{ textDecoration: 'underline' }}>new and leaving {providerLabel} this month</Link>.</>
           )}
         </Text>
         {media === 'movie' && (
@@ -176,7 +199,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         </Heading>
         <SimpleGrid columns={{ base: 2, md: 5 }} gap={4}>
           {genreTargets.map((target) => (
-            <LinkTile key={target.genreKey} href={`${basePath}/${provider}/${target.genreKey}`}>
+            <LinkTile key={target.genreKey} href={`${pathPrefix}${basePath}/${provider}/${target.genreKey}`}>
               <Text fontWeight='medium' textAlign='center'>{target.genreLabel}</Text>
             </LinkTile>
           ))}
@@ -227,10 +250,10 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
           </>
         )}
 
-        {PROVIDER_NAME_MATCH[provider] && (
+        {hasDiffPages && (
           <Text mt={6} color='gray.300' fontSize='sm' textAlign={{ base: 'center', md: 'left' }}>
-            See <Link href={`/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel} this month</Link> or{' '}
-            <Link href={`/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s leaving</Link>.
+            See <Link href={`${pathPrefix}/new-on-streaming/${provider}`} style={{ textDecoration: 'underline' }}>everything new on {providerLabel} this month</Link> or{' '}
+            <Link href={`${pathPrefix}/leaving/${provider}`} style={{ textDecoration: 'underline' }}>what&apos;s leaving</Link>.
           </Text>
         )}
 
@@ -239,11 +262,11 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
         </Heading>
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
           {siblingProviders.map((key) => (
-            <LinkTile key={key} href={`${basePath}/${key}`}>
+            <LinkTile key={key} href={`${pathPrefix}${basePath}/${key}`}>
               <Text fontWeight='medium' textAlign='center'>{streamingProviders[key].title.replace(' Movies', '')}</Text>
             </LinkTile>
           ))}
-          <LinkTile href={media === 'tv' ? '/tv' : '/streaming'}>
+          <LinkTile href={pathPrefix ? '/streaming-in-india' : media === 'tv' ? '/tv' : '/streaming'}>
             <Text fontWeight='medium' textAlign='center'>All services →</Text>
           </LinkTile>
         </SimpleGrid>
@@ -266,7 +289,7 @@ export default function ProviderPage({ media, provider, title, titles, totalPage
             initialPage={page}
             queryKey={['provider', media, provider, region, page]}
             fetchUrl={(p) => `/api/discover?type=${media}&provider=${provider}&region=${region}&page=${p}`}
-            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${provider}?page=${p}` }}
+            pagination={{ page, totalPages, hrefFor: (p) => `${pathPrefix}${basePath}/${provider}?page=${p}` }}
           />
         )}
       </PageShell>

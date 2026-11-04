@@ -7,7 +7,7 @@ import { getProviderLogosByKey } from '../../features/catalog/providerCatalog'
 import ProviderLinkButtons from '../../features/catalog/components/ProviderLinkButtons'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
+import { PROVIDER_NAME_MATCH, streamingProviders, isProviderAvailableInRegion } from '../../features/catalog/tmdb'
 import { getMonthlyChanges, getProviderChanges } from '../../features/catalog/streamingChanges'
 import { setSwrCache } from '../../lib/http'
 import { itemListSchema } from '../../features/catalog/schema'
@@ -25,6 +25,7 @@ export interface TitleRef {
 interface Props {
   provider: string
   providerLabel: string
+  region: 'US' | 'IN'
   monthLabel: string
   arrivedCount: number
   departedCount: number
@@ -45,62 +46,69 @@ const toRef = (t: { tmdbId: number | null; tmdbType: MediaType; title: string; y
       }
     : null
 
-export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
-  const slug = params?.provider ?? ''
-  const provider = streamingProviders[slug]
-  if (!provider || !PROVIDER_NAME_MATCH[slug]) return { notFound: true }
+export function thisMonthProviderServerSideProps(region: 'US' | 'IN' = 'US') {
+  return async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
+    const slug = params?.provider ?? ''
+    const provider = streamingProviders[slug]
+    const tracked = region === 'IN' ? isProviderAvailableInRegion(slug, 'IN') : Boolean(PROVIDER_NAME_MATCH[slug])
+    if (!provider || !tracked) return { notFound: true }
 
-  const providerLabel = provider.title.replace(' Movies', '')
-  const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
-  const trackedProviders = Object.keys(PROVIDER_NAME_MATCH)
-    .filter((key) => streamingProviders[key])
-    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
-  const today = new Date().toISOString().split('T')[0]
-  const monthLabel = `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`
-  const base = { provider: slug, providerLabel, trackedProviders, monthLabel }
+    const providerLabel = provider.title.replace(' Movies', '')
+    const logos = await getProviderLogosByKey(region).catch(() => new Map<string, string>())
+    const trackedProviders = (region === 'IN'
+      ? Object.keys(streamingProviders).filter((key) => isProviderAvailableInRegion(key, 'IN'))
+      : Object.keys(PROVIDER_NAME_MATCH).filter((key) => streamingProviders[key])
+    ).map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
+    const today = new Date().toISOString().split('T')[0]
+    const monthLabel = `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`
+    const base = { provider: slug, providerLabel, region, trackedProviders, monthLabel }
 
-  try {
-    let monthly = (await getMonthlyChanges([slug]))[slug]
-    if (!monthly) {
-      const fallback = (await getProviderChanges([slug]))[slug]
-      if (fallback) {
-        const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
-        monthly = {
-          source: fallback.source,
-          month: stamp.slice(0, 7),
-          updatedAt: fallback.updatedAt,
-          arrived: fallback.added.map((t) => ({ ...t, tmdbId: t.tmdbId ?? 0, date: stamp, season: null })),
-          coming: fallback.coming,
-          departed: fallback.left.map((t) => ({ ...t, date: stamp }))
+    try {
+      const monthlyKey = region === 'IN' ? `IN:${slug}` : slug
+      let monthly = (await getMonthlyChanges([monthlyKey]))[monthlyKey]
+      if (!monthly) {
+        const fallback = (await getProviderChanges([slug], { region }))[slug]
+        if (fallback) {
+          const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
+          monthly = {
+            source: fallback.source,
+            month: stamp.slice(0, 7),
+            updatedAt: fallback.updatedAt,
+            arrived: fallback.added.map((t) => ({ ...t, tmdbId: t.tmdbId ?? 0, date: stamp, season: null })),
+            coming: fallback.coming,
+            departed: fallback.left.map((t) => ({ ...t, date: stamp }))
+          }
         }
       }
-    }
-    if (!monthly) {
-      return { props: { ...base, arrivedCount: 0, departedCount: 0, comingCount: 0, topArrived: [], topDeparted: [], topComing: [] } }
-    }
-
-    const [year, monthNum] = monthly.month.split('-').map(Number)
-    setSwrCache(res, 21600)
-    return {
-      props: {
-        ...base,
-        monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
-        arrivedCount: monthly.arrived.length,
-        departedCount: monthly.departed.length,
-        comingCount: monthly.coming.length,
-        topArrived: monthly.arrived.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t)),
-        topDeparted: monthly.departed.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t)),
-        topComing: monthly.coming.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t))
+      if (!monthly) {
+        return { props: { ...base, arrivedCount: 0, departedCount: 0, comingCount: 0, topArrived: [], topDeparted: [], topComing: [] } }
       }
-    }
-  } catch (error) {
-    console.error(error)
-    res.statusCode = 502
-    return {
-      props: { ...base, arrivedCount: 0, departedCount: 0, comingCount: 0, topArrived: [], topDeparted: [], topComing: [], dataError: true }
+
+      const [year, monthNum] = monthly.month.split('-').map(Number)
+      setSwrCache(res, 21600)
+      return {
+        props: {
+          ...base,
+          monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
+          arrivedCount: monthly.arrived.length,
+          departedCount: monthly.departed.length,
+          comingCount: monthly.coming.length,
+          topArrived: monthly.arrived.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t)),
+          topDeparted: monthly.departed.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t)),
+          topComing: monthly.coming.slice(0, 10).map(toRef).filter((t): t is TitleRef => Boolean(t))
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      res.statusCode = 502
+      return {
+        props: { ...base, arrivedCount: 0, departedCount: 0, comingCount: 0, topArrived: [], topDeparted: [], topComing: [], dataError: true }
+      }
     }
   }
 }
+
+export const getServerSideProps = thisMonthProviderServerSideProps()
 
 function TitleRow({ items }: { items: TitleRef[] }) {
   return (
@@ -117,10 +125,15 @@ function TitleRow({ items }: { items: TitleRef[] }) {
   )
 }
 
-export default function ThisMonthProvider({ provider, providerLabel, monthLabel, arrivedCount, departedCount, comingCount, topArrived, topDeparted, topComing, trackedProviders, dataError }: Props) {
-  const canonicalUrl = `${SITE_URL}/this-month/${provider}`
-  const title = `Is ${providerLabel} Worth It in ${monthLabel}?`
-  const description = `${providerLabel} added ${arrivedCount} titles and lost ${departedCount} in ${monthLabel}: see the highlights and decide whether it's worth a month.`
+export default function ThisMonthProvider({ provider, providerLabel, region, monthLabel, arrivedCount, departedCount, comingCount, topArrived, topDeparted, topComing, trackedProviders, dataError }: Props) {
+  const prefix = region === 'IN' ? '/in' : ''
+  const regionLabel = region === 'IN' ? 'India' : 'US'
+  const canonicalUrl = `${SITE_URL}${prefix}/this-month/${provider}`
+  const title = `Is ${providerLabel}${region === 'IN' ? ' India' : ''} Worth It in ${monthLabel}?`
+  const description = `${providerLabel}${region === 'IN' ? ' India' : ''} added ${arrivedCount} titles and lost ${departedCount} in ${monthLabel}: see the highlights and decide whether it's worth a month.`
+  const hreflangAlternates = PROVIDER_NAME_MATCH[provider]
+    ? { us: `${SITE_URL}/this-month/${provider}`, in: `${SITE_URL}/in/this-month/${provider}` }
+    : { in: `${SITE_URL}/in/this-month/${provider}` }
 
   const net = arrivedCount - departedCount
   const verdict = dataError
@@ -148,10 +161,11 @@ export default function ThisMonthProvider({ provider, providerLabel, monthLabel,
         title={title}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={hreflangAlternates}
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'This Month', url: `${SITE_URL}/this-month` },
+          { name: 'This Month', url: `${SITE_URL}${prefix}/this-month` },
           { name: providerLabel, url: canonicalUrl }
         ]}
       />
@@ -183,23 +197,23 @@ export default function ThisMonthProvider({ provider, providerLabel, monthLabel,
 
             <Flex wrap='wrap' gap={2} mt={8}>
               <Button asChild size='xs' {...secondaryButton}>
-                <Link href={`/new-on-streaming/${provider}`}>Everything new on {providerLabel}</Link>
+                <Link href={`${prefix}/new-on-streaming/${provider}`}>Everything new on {providerLabel}</Link>
               </Button>
               <Button asChild size='xs' {...secondaryButton}>
-                <Link href={`/leaving/${provider}`}>What left</Link>
+                <Link href={`${prefix}/leaving/${provider}`}>What left</Link>
               </Button>
               <Button asChild size='xs' {...secondaryButton}>
-                <Link href={`/streaming/${provider}`}>Browse the whole catalog</Link>
+                <Link href={`${prefix}/streaming/${provider}`}>Browse the whole catalog</Link>
               </Button>
             </Flex>
           </>
         )}
 
         <Heading as='h2' size='sm' mt={12} mb={3}>Compare other services</Heading>
-        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `/this-month/${p.key}` }))} />
+        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `${prefix}/this-month/${p.key}` }))} />
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
-          Counts cover the tracked US catalog and update daily. A pickup month makes sense when the arrivals you want
+          Counts cover the tracked {regionLabel} catalog and update daily. A pickup month makes sense when the arrivals you want
           outweigh what&apos;s leaving: heavy watchers can rotate services month to month instead of stacking subscriptions.
         </Text>
       </PageShell>

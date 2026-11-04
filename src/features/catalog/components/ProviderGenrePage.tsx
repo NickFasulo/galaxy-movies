@@ -74,7 +74,7 @@ export interface ProviderGenrePageProps {
   indexabilityReason: string | null
 }
 
-export function providerGenreServerSideProps(media: MediaType) {
+export function providerGenreServerSideProps(media: MediaType, opts?: { region?: 'IN' }) {
   const { discover, genres, genreTarget, basePath } = CONFIG[media]
 
   return async function getServerSideProps({ params, query, req, res }: GetServerSidePropsContext<{ provider: string; genre: string }>): Promise<GetServerSidePropsResult<ProviderGenrePageProps>> {
@@ -83,11 +83,11 @@ export function providerGenreServerSideProps(media: MediaType) {
     const target = genreTarget(providerSlug, genreSlug)
     if (!target) return { notFound: true }
 
+    const region = opts?.region ?? detectRegion(req)
     const { page, requested } = getPageParam(query)
     if (requested && page === 1) {
-      return { redirect: { destination: `${basePath}/${providerSlug}/${genreSlug}`, permanent: true } }
+      return { redirect: { destination: `${region === 'IN' ? '/in' : ''}${basePath}/${providerSlug}/${genreSlug}`, permanent: true } }
     }
-    const region = detectRegion(req)
     const providerIds = getProviderIds(providerSlug, region)
     const providerId = providerIds.length ? providerIds.join('|') : null
     const genreId = genres[genreSlug].id
@@ -153,7 +153,18 @@ export default function ProviderGenrePage({
   indexabilityReason
 }: ProviderGenrePageProps) {
   const { basePath, genreBasePath, crumbRoot, noun, plural, itemWord } = CONFIG[media]
-  const canonicalUrl = `${SITE_URL}${basePath}/${provider}/${genre}${page > 1 ? `?page=${page}` : ''}`
+  // See ProviderPage: the IN render canonicalizes into the /in/ URL space
+  // whether it was geo-detected or reached via the /in/ route.
+  const pathPrefix = region === 'IN' ? '/in' : ''
+  const pageSuffix = page > 1 ? `?page=${page}` : ''
+  const canonicalUrl = `${SITE_URL}${pathPrefix}${basePath}/${provider}/${genre}${pageSuffix}`
+  const inUrl = `${SITE_URL}/in${basePath}/${provider}/${genre}${pageSuffix}`
+  const hreflangAlternates = !isProviderAvailableInRegion(provider, 'IN')
+    ? undefined
+    : isProviderAvailableInRegion(provider, 'US')
+      ? { us: `${SITE_URL}${basePath}/${provider}/${genre}${pageSuffix}`, in: inUrl }
+      : { in: inUrl }
+  const crumb = pathPrefix ? { name: 'Streaming in India', path: '/streaming-in-india' } : crumbRoot
   const regionName = regionDisplayName(region)
   const homeRegionNames = regionListDisplayNames(streamingProviders[provider]?.regions)
   const description = availableInRegion
@@ -163,23 +174,25 @@ export default function ProviderGenrePage({
   return (
     <>
       <PageHead
-        title={page > 1 ? `${target.title} - Page ${page}` : target.title}
+        title={`${page > 1 ? `${target.title} - Page ${page}` : target.title}${pathPrefix && availableInRegion ? ' in India' : ''}`}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={hreflangAlternates}
         noindex={!isIndexable}
+        ogLocale={pathPrefix ? 'en_IN' : 'en_US'}
         posterPath={titles[0]?.poster_path}
         structuredData={titleListSchema({ name: target.title, description, url: canonicalUrl, titles, media })}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: crumbRoot.name, url: `${SITE_URL}${crumbRoot.path}` },
-          { name: target.providerLabel, url: `${SITE_URL}${basePath}/${provider}` },
+          { name: crumb.name, url: `${SITE_URL}${crumb.path}` },
+          { name: target.providerLabel, url: `${SITE_URL}${pathPrefix}${basePath}/${provider}` },
           { name: target.genreLabel, url: canonicalUrl }
         ]}
       />
       <PageShell title={target.title} description={description} withBackButton>
         <Text maxW='42rem' mt={2} color='gray.300' fontSize='sm'>
           Browse all{' '}
-          <Link href={`${basePath}/${provider}`} style={{ textDecoration: 'underline' }}>{target.providerLabel} {plural}</Link>
+          <Link href={`${pathPrefix}${basePath}/${provider}`} style={{ textDecoration: 'underline' }}>{target.providerLabel} {plural}</Link>
           {' '}or all{' '}
           <Link href={`${genreBasePath}/${genre}`} style={{ textDecoration: 'underline' }}>{target.genreLabel.toLowerCase()} {plural}</Link>.
         </Text>
@@ -204,7 +217,7 @@ export default function ProviderGenrePage({
             initialPage={page}
             queryKey={['providerGenre', media, provider, genre, region, page]}
             fetchUrl={(p) => `/api/discover?type=${media}&provider=${provider}&genre=${genre}&region=${region}&page=${p}`}
-            pagination={{ page, totalPages, hrefFor: (p) => `${basePath}/${provider}/${genre}?page=${p}` }}
+            pagination={{ page, totalPages, hrefFor: (p) => `${pathPrefix}${basePath}/${provider}/${genre}?page=${p}` }}
           />
         )}
       </PageShell>

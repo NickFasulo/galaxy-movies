@@ -62,9 +62,19 @@ function digestSection(d: WeeklyDigest) {
   const top10 = counts.top10
   const top20 = counts.top10 + counts.top20
 
+  const indiaSection =
+    s(`<p style="margin:0; color:#4b5563; font-size:14px;"><strong style="color:#1f2937;">India</strong> <span style="font-size:12px; color:#596579;">country=ind</span><br/><span style="font-size:13px;">${d.india.clicks} clicks (${delta(d.india.clicks, d.india.prevClicks)} vs prior wk) · ${d.india.impressions.toLocaleString()} impressions (${delta(d.india.impressions, d.india.prevImpressions)})</span></p>`) +
+    (d.india.topQueries.length
+      ? s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>Top IN queries</strong></p>${rows(d.india.topQueries.map((q) => `<div style="font-size:12px; color:#4b5563; line-height:1.6;">"${escapeHtml(q.keys[0])}" · ${q.clicks} clicks · ${q.impressions} imp · pos ${q.position.toFixed(0)}</div>`))}`)
+      : '') +
+    (d.india.topPages.length
+      ? s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>Top IN pages</strong></p>${rows(pageRows(d.india.topPages))}`)
+      : '')
+
   return (
     s(`<p style="margin:0; color:#4b5563; font-size:14px;"><strong style="color:#1f2937;">This week in Search</strong> <span style="font-size:12px; color:#596579;">${d.rangeLabel}</span><br/><span style="font-size:13px;">${d.clicks} clicks (${delta(d.clicks, d.prevClicks)} vs prior wk) · ${d.impressions.toLocaleString()} impressions (${delta(d.impressions, d.prevImpressions)})</span></p>`) +
     s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>Top pages by clicks</strong></p>${rows(pageRows(d.topPages.slice(0, 6)))}`) +
+    indiaSection +
     (d.movers.up.length || d.movers.down.length
       ? s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>Movers</strong></p>${moverRows(d.movers.up, '+')}${moverRows(d.movers.down, '')}`)
       : '') +

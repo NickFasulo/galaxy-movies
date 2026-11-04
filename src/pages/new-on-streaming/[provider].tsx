@@ -7,7 +7,7 @@ import { getProviderLogosByKey } from '../../features/catalog/providerCatalog'
 import ProviderLinkButtons from '../../features/catalog/components/ProviderLinkButtons'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
+import { PROVIDER_NAME_MATCH, streamingProviders, isProviderAvailableInRegion } from '../../features/catalog/tmdb'
 import { getMonthlyChanges, getProviderChanges } from '../../features/catalog/streamingChanges'
 import { setSwrCache } from '../../lib/http'
 import { shortDate } from '../../lib/format/formatters'
@@ -34,6 +34,7 @@ interface DayGroup {
 interface Props {
   provider: string
   providerLabel: string
+  region: 'US' | 'IN'
   monthLabel: string
   monthShort: string
   updatedLabel: string | null
@@ -63,73 +64,83 @@ function groupDays(items: DatedInput[], order: 'asc' | 'desc'): DayGroup[] {
     .map(([date, items]) => ({ date, items }))
 }
 
-export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
-  const slug = params?.provider ?? ''
-  const provider = streamingProviders[slug]
-  if (!provider || !PROVIDER_NAME_MATCH[slug]) return { notFound: true }
+// Region-pinning lets /in/new-on-streaming/{provider} serve the India diff —
+// monthly keys are namespaced `IN:{provider}` in Redis.
+export function newOnProviderServerSideProps(region: 'US' | 'IN' = 'US') {
+  return async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
+    const slug = params?.provider ?? ''
+    const provider = streamingProviders[slug]
+    const tracked = region === 'IN' ? isProviderAvailableInRegion(slug, 'IN') : Boolean(PROVIDER_NAME_MATCH[slug])
+    if (!provider || !tracked) return { notFound: true }
 
-  const providerLabel = provider.title.replace(' Movies', '')
-  const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
-  const trackedProviders = Object.keys(PROVIDER_NAME_MATCH)
-    .filter((key) => streamingProviders[key])
-    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
+    const providerLabel = provider.title.replace(' Movies', '')
+    const logos = await getProviderLogosByKey(region).catch(() => new Map<string, string>())
+    const trackedProviders = (region === 'IN'
+      ? Object.keys(streamingProviders).filter((key) => isProviderAvailableInRegion(key, 'IN'))
+      : Object.keys(PROVIDER_NAME_MATCH).filter((key) => streamingProviders[key])
+    ).map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
 
-  const today = new Date().toISOString().split('T')[0]
-  const base: Pick<Props, 'provider' | 'providerLabel' | 'trackedProviders'> = {
-    provider: slug,
-    providerLabel,
-    trackedProviders
-  }
-
-  try {
-    const monthly = (await getMonthlyChanges([slug]))[slug]
-    let coming: DayGroup[] = []
-    let arrived: DayGroup[] = []
-    let updatedAt: number | null = monthly?.updatedAt ?? null
-    let month = monthly?.month ?? today.slice(0, 7)
-
-    if (monthly) {
-      coming = groupDays(monthly.coming, 'asc')
-      arrived = groupDays(monthly.arrived, 'desc')
-    } else {
-      const fallback = (await getProviderChanges([slug]))[slug]
-      if (fallback) {
-        updatedAt = fallback.updatedAt
-        month = new Date(fallback.updatedAt).toISOString().slice(0, 7)
-        const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
-        coming = groupDays(fallback.coming, 'asc')
-        arrived = groupDays(fallback.added.map((t) => ({ ...t, date: stamp })), 'desc')
-      }
+    const today = new Date().toISOString().split('T')[0]
+    const base: Pick<Props, 'provider' | 'providerLabel' | 'region' | 'trackedProviders'> = {
+      provider: slug,
+      providerLabel,
+      region,
+      trackedProviders
     }
 
-    const [year, monthNum] = month.split('-').map(Number)
-    setSwrCache(res, 21600)
-    return {
-      props: {
-        ...base,
-        monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
-        monthShort: MONTHS_SHORT[monthNum - 1],
-        updatedLabel: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : null,
-        coming,
-        arrived
+    try {
+      const monthlyKey = region === 'IN' ? `IN:${slug}` : slug
+      const monthly = (await getMonthlyChanges([monthlyKey]))[monthlyKey]
+      let coming: DayGroup[] = []
+      let arrived: DayGroup[] = []
+      let updatedAt: number | null = monthly?.updatedAt ?? null
+      let month = monthly?.month ?? today.slice(0, 7)
+
+      if (monthly) {
+        coming = groupDays(monthly.coming, 'asc')
+        arrived = groupDays(monthly.arrived, 'desc')
+      } else {
+        const fallback = (await getProviderChanges([slug], { region }))[slug]
+        if (fallback) {
+          updatedAt = fallback.updatedAt
+          month = new Date(fallback.updatedAt).toISOString().slice(0, 7)
+          const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
+          coming = groupDays(fallback.coming, 'asc')
+          arrived = groupDays(fallback.added.map((t) => ({ ...t, date: stamp })), 'desc')
+        }
       }
-    }
-  } catch (error) {
-    console.error(error)
-    res.statusCode = 502
-    return {
-      props: {
-        ...base,
-        monthLabel: `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`,
-        monthShort: MONTHS_SHORT[Number(today.slice(5, 7)) - 1],
-        updatedLabel: null,
-        coming: [],
-        arrived: [],
-        dataError: true
+
+      const [year, monthNum] = month.split('-').map(Number)
+      setSwrCache(res, 21600)
+      return {
+        props: {
+          ...base,
+          monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
+          monthShort: MONTHS_SHORT[monthNum - 1],
+          updatedLabel: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : null,
+          coming,
+          arrived
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      res.statusCode = 502
+      return {
+        props: {
+          ...base,
+          monthLabel: `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`,
+          monthShort: MONTHS_SHORT[Number(today.slice(5, 7)) - 1],
+          updatedLabel: null,
+          coming: [],
+          arrived: [],
+          dataError: true
+        }
       }
     }
   }
 }
+
+export const getServerSideProps = newOnProviderServerSideProps()
 
 function DaySection({ heading, groups, emptyText }: { heading: string; groups: DayGroup[]; emptyText: string }) {
   return (
@@ -158,10 +169,15 @@ function DaySection({ heading, groups, emptyText }: { heading: string; groups: D
   )
 }
 
-export default function NewOnProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, coming, arrived, trackedProviders, dataError }: Props) {
-  const canonicalUrl = `${SITE_URL}/new-on-streaming/${provider}`
-  const title = `New on ${providerLabel} in ${monthLabel}`
-  const description = `Movies and shows added to ${providerLabel} in ${monthLabel}, plus what's still coming: the dated arrivals list, updated daily from the US catalog.`
+export default function NewOnProvider({ provider, providerLabel, region, monthLabel, monthShort, updatedLabel, coming, arrived, trackedProviders, dataError }: Props) {
+  const prefix = region === 'IN' ? '/in' : ''
+  const regionLabel = region === 'IN' ? 'India' : 'US'
+  const canonicalUrl = `${SITE_URL}${prefix}/new-on-streaming/${provider}`
+  const title = `New on ${providerLabel}${region === 'IN' ? ' India' : ''} in ${monthLabel}`
+  const description = `Movies and shows added to ${providerLabel}${region === 'IN' ? ' India' : ''} in ${monthLabel}, plus what's still coming: the dated arrivals list, updated daily from the ${regionLabel} catalog.`
+  const hreflangAlternates = PROVIDER_NAME_MATCH[provider]
+    ? { us: `${SITE_URL}/new-on-streaming/${provider}`, in: `${SITE_URL}/in/new-on-streaming/${provider}` }
+    : { in: `${SITE_URL}/in/new-on-streaming/${provider}` }
 
   const itemListData = itemListSchema({
     name: title,
@@ -183,28 +199,29 @@ export default function NewOnProvider({ provider, providerLabel, monthLabel, mon
         title={title}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={hreflangAlternates}
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'New on Streaming', url: `${SITE_URL}/new-on-streaming` },
+          { name: 'New on Streaming', url: `${SITE_URL}${prefix}/new-on-streaming` },
           { name: providerLabel, url: canonicalUrl }
         ]}
       >
-        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+        {region === 'US' && <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />}
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
         {updatedLabel && (
-          <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} US catalog.</Text>
+          <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} {regionLabel} catalog.</Text>
         )}
         <Flex wrap='wrap' gap={2} mt={4}>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/leaving/${provider}`}>What&apos;s leaving {providerLabel}</Link>
+            <Link href={`${prefix}/leaving/${provider}`}>What&apos;s leaving {providerLabel}</Link>
           </Button>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/streaming/${provider}`}>Full catalog</Link>
+            <Link href={`${prefix}/streaming/${provider}`}>Full catalog</Link>
           </Button>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/this-month/${provider}`}>Worth it this month?</Link>
+            <Link href={`${prefix}/this-month/${provider}`}>Worth it this month?</Link>
           </Button>
         </Flex>
 
@@ -218,17 +235,19 @@ export default function NewOnProvider({ provider, providerLabel, monthLabel, mon
         )}
 
         <Heading as='h2' size='sm' mt={12} mb={3}>New on other services</Heading>
-        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `/new-on-streaming/${p.key}` }))} />
+        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `${prefix}/new-on-streaming/${p.key}` }))} />
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
-          Arrival dates come from the service&apos;s release schedule where available. List covers the US catalog and updates daily.
-          See also <Link href='/new-on-streaming' style={{ textDecoration: 'underline' }}>new releases across all services</Link>.
+          Arrival dates come from the service&apos;s release schedule where available. List covers the {regionLabel} catalog and updates daily.
+          See also <Link href={`${prefix}/new-on-streaming`} style={{ textDecoration: 'underline' }}>new releases across all services</Link>.
         </Text>
-        <Flex wrap='wrap' gap={2} mt={4}>
-          <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/widgets?provider=${provider}`}>Embed this list on your site</Link>
-          </Button>
-        </Flex>
+        {region === 'US' && (
+          <Flex wrap='wrap' gap={2} mt={4}>
+            <Button asChild size='xs' {...secondaryButton}>
+              <Link href={`/widgets?provider=${provider}`}>Embed this list on your site</Link>
+            </Button>
+          </Flex>
+        )}
       </PageShell>
     </>
   );

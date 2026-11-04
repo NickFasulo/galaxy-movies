@@ -43,16 +43,29 @@ function BreadcrumbSchema({ items }: { items?: BreadcrumbItem[] }) {
   );
 }
 
-// All hreflang entries point to the same URL intentionally — regional
+export interface HreflangAlternates {
+  us?: string
+  in?: string
+}
+
+// Without alternates, all entries point to the same URL — regional
 // differences are rendered server-side, not via separate locale URLs.
-function HreflangTags({ canonicalUrl }: { canonicalUrl?: string | null }) {
-  if (!canonicalUrl) return null
+// Pages with an /in/ counterpart pass real alternates: en-IN targets the
+// region-pinned /in/ URL Google can crawl (Googlebot sends no geo headers,
+// so it would otherwise only ever index the US render).
+function HreflangTags({ canonicalUrl, alternates }: { canonicalUrl?: string | null; alternates?: HreflangAlternates }) {
+  // When alternates are given, emit exactly what's provided — an IN-only page
+  // must not fall back to its canonical for en-US. No alternates = legacy
+  // same-URL tags.
+  const us = alternates ? alternates.us : canonicalUrl
+  const inUrl = alternates ? alternates.in : canonicalUrl
+  if (!us && !inUrl) return null
 
   return (
     <>
-      <link rel='alternate' hrefLang='en-US' href={canonicalUrl} />
-      <link rel='alternate' hrefLang='en-IN' href={canonicalUrl} />
-      <link rel='alternate' hrefLang='x-default' href={canonicalUrl} />
+      {us && <link rel='alternate' hrefLang='en-US' href={us} />}
+      {inUrl && <link rel='alternate' hrefLang='en-IN' href={inUrl} />}
+      <link rel='alternate' hrefLang='x-default' href={us ?? inUrl!} />
     </>
   )
 }
@@ -74,6 +87,7 @@ export default function PageHead({
   backdropPath,
   noindex = false,
   hreflang = true,
+  hreflangAlternates,
   structuredData,
   breadcrumbItems,
   children
@@ -92,6 +106,7 @@ export default function PageHead({
   backdropPath?: string | null
   noindex?: boolean
   hreflang?: boolean
+  hreflangAlternates?: HreflangAlternates
   structuredData?: StructuredData | StructuredData[]
   breadcrumbItems?: BreadcrumbItem[]
   children?: ReactNode
@@ -112,9 +127,11 @@ export default function PageHead({
     <Head>
       <title>{pageTitle}</title>
       <meta name='description' content={description} />
-      {noindex && <meta name='robots' content='noindex,follow' />}
+      {/* max-image-preview:large opts every page into large Discover/image
+          previews — Google's default image preview is thumbnail-sized. */}
+      <meta name='robots' content={noindex ? 'noindex,follow' : 'max-image-preview:large'} />
       {canonicalUrl && <link rel='canonical' href={canonicalUrl} />}
-      {hreflang && <HreflangTags canonicalUrl={canonicalUrl} />}
+      {hreflang && <HreflangTags canonicalUrl={canonicalUrl} alternates={hreflangAlternates} />}
 
       <meta property='og:type' content={ogType} />
       <meta property='og:site_name' content='Galaxy Movies' />

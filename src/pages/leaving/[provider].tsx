@@ -5,7 +5,7 @@ import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react'
 import { secondaryButton } from '../../theme'
 import PageHead from '../../components/PageHead'
 import PageShell from '../../components/PageShell'
-import { PROVIDER_NAME_MATCH, streamingProviders } from '../../features/catalog/tmdb'
+import { PROVIDER_NAME_MATCH, streamingProviders, isProviderAvailableInRegion } from '../../features/catalog/tmdb'
 import { getMonthlyChanges, getProviderChanges } from '../../features/catalog/streamingChanges'
 import { getProviderLogosByKey } from '../../features/catalog/providerCatalog'
 import ProviderLinkButtons from '../../features/catalog/components/ProviderLinkButtons'
@@ -34,6 +34,7 @@ interface DayGroup {
 interface Props {
   provider: string
   providerLabel: string
+  region: 'US' | 'IN'
   monthLabel: string
   monthShort: string
   updatedLabel: string | null
@@ -62,73 +63,83 @@ function groupDays(items: DatedInput[], order: 'asc' | 'desc'): DayGroup[] {
     .map(([date, items]) => ({ date, items }))
 }
 
-export async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
-  const slug = params?.provider ?? ''
-  const provider = streamingProviders[slug]
-  if (!provider || !PROVIDER_NAME_MATCH[slug]) return { notFound: true }
+// Region-pinning lets /in/leaving/{provider} serve the India diff — the
+// monthly keys are just namespaced as `IN:{provider}` in Redis.
+export function leavingProviderServerSideProps(region: 'US' | 'IN' = 'US') {
+  return async function getServerSideProps({ params, res }: GetServerSidePropsContext<{ provider: string }>): Promise<GetServerSidePropsResult<Props>> {
+    const slug = params?.provider ?? ''
+    const provider = streamingProviders[slug]
+    const tracked = region === 'IN' ? isProviderAvailableInRegion(slug, 'IN') : Boolean(PROVIDER_NAME_MATCH[slug])
+    if (!provider || !tracked) return { notFound: true }
 
-  const providerLabel = provider.title.replace(' Movies', '')
-  const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
-  const trackedProviders = Object.keys(PROVIDER_NAME_MATCH)
-    .filter((key) => streamingProviders[key])
-    .map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
+    const providerLabel = provider.title.replace(' Movies', '')
+    const logos = await getProviderLogosByKey(region).catch(() => new Map<string, string>())
+    const trackedProviders = (region === 'IN'
+      ? Object.keys(streamingProviders).filter((key) => isProviderAvailableInRegion(key, 'IN'))
+      : Object.keys(PROVIDER_NAME_MATCH).filter((key) => streamingProviders[key])
+    ).map((key) => ({ key, label: streamingProviders[key].title.replace(' Movies', ''), logo: logos.get(key) ?? null }))
 
-  const today = new Date().toISOString().split('T')[0]
-  const base: Pick<Props, 'provider' | 'providerLabel' | 'trackedProviders'> = {
-    provider: slug,
-    providerLabel,
-    trackedProviders
-  }
-
-  try {
-    const monthly = (await getMonthlyChanges([slug]))[slug]
-    let departed: DayGroup[] = []
-    let leavingSoon: DayGroup[] = []
-    let updatedAt: number | null = monthly?.updatedAt ?? null
-    let month = monthly?.month ?? today.slice(0, 7)
-
-    if (monthly) {
-      departed = groupDays(monthly.departed, 'desc')
-      leavingSoon = groupDays((monthly.leavingSoon || []).filter((t) => t.date >= today), 'asc')
-    } else {
-      const fallback = (await getProviderChanges([slug]))[slug]
-      if (fallback) {
-        updatedAt = fallback.updatedAt
-        month = new Date(fallback.updatedAt).toISOString().slice(0, 7)
-        const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
-        departed = groupDays(fallback.left.map((t) => ({ ...t, date: stamp })), 'desc')
-        leavingSoon = groupDays((fallback.leavingSoon || []).filter((t) => t.date >= today), 'asc')
-      }
+    const today = new Date().toISOString().split('T')[0]
+    const base: Pick<Props, 'provider' | 'providerLabel' | 'region' | 'trackedProviders'> = {
+      provider: slug,
+      providerLabel,
+      region,
+      trackedProviders
     }
 
-    const [year, monthNum] = month.split('-').map(Number)
-    setSwrCache(res, 21600)
-    return {
-      props: {
-        ...base,
-        monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
-        monthShort: MONTHS_SHORT[monthNum - 1],
-        updatedLabel: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : null,
-        departed,
-        leavingSoon
+    try {
+      const monthlyKey = region === 'IN' ? `IN:${slug}` : slug
+      const monthly = (await getMonthlyChanges([monthlyKey]))[monthlyKey]
+      let departed: DayGroup[] = []
+      let leavingSoon: DayGroup[] = []
+      let updatedAt: number | null = monthly?.updatedAt ?? null
+      let month = monthly?.month ?? today.slice(0, 7)
+
+      if (monthly) {
+        departed = groupDays(monthly.departed, 'desc')
+        leavingSoon = groupDays((monthly.leavingSoon || []).filter((t) => t.date >= today), 'asc')
+      } else {
+        const fallback = (await getProviderChanges([slug], { region }))[slug]
+        if (fallback) {
+          updatedAt = fallback.updatedAt
+          month = new Date(fallback.updatedAt).toISOString().slice(0, 7)
+          const stamp = new Date(fallback.updatedAt).toISOString().split('T')[0]
+          departed = groupDays(fallback.left.map((t) => ({ ...t, date: stamp })), 'desc')
+          leavingSoon = groupDays((fallback.leavingSoon || []).filter((t) => t.date >= today), 'asc')
+        }
       }
-    }
-  } catch (error) {
-    console.error(error)
-    res.statusCode = 502
-    return {
-      props: {
-        ...base,
-        monthLabel: `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`,
-        monthShort: MONTHS_SHORT[Number(today.slice(5, 7)) - 1],
-        updatedLabel: null,
-        departed: [],
-        leavingSoon: [],
-        dataError: true
+
+      const [year, monthNum] = month.split('-').map(Number)
+      setSwrCache(res, 21600)
+      return {
+        props: {
+          ...base,
+          monthLabel: `${MONTHS[monthNum - 1]} ${year}`,
+          monthShort: MONTHS_SHORT[monthNum - 1],
+          updatedLabel: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : null,
+          departed,
+          leavingSoon
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      res.statusCode = 502
+      return {
+        props: {
+          ...base,
+          monthLabel: `${MONTHS[Number(today.slice(5, 7)) - 1]} ${today.slice(0, 4)}`,
+          monthShort: MONTHS_SHORT[Number(today.slice(5, 7)) - 1],
+          updatedLabel: null,
+          departed: [],
+          leavingSoon: [],
+          dataError: true
+        }
       }
     }
   }
 }
+
+export const getServerSideProps = leavingProviderServerSideProps()
 
 function DaySection({ heading, groups, emptyText }: { heading: string; groups: DayGroup[]; emptyText: string }) {
   return (
@@ -161,10 +172,17 @@ function DaySection({ heading, groups, emptyText }: { heading: string; groups: D
   )
 }
 
-export default function LeavingProvider({ provider, providerLabel, monthLabel, monthShort, updatedLabel, departed, leavingSoon, trackedProviders, dataError }: Props) {
-  const canonicalUrl = `${SITE_URL}/leaving/${provider}`
-  const title = `Leaving ${providerLabel} in ${monthLabel}`
-  const description = `Movies and shows that left ${providerLabel} in ${monthLabel}: the dated departures list, updated daily from the US catalog.`
+export default function LeavingProvider({ provider, providerLabel, region, monthLabel, monthShort, updatedLabel, departed, leavingSoon, trackedProviders, dataError }: Props) {
+  const prefix = region === 'IN' ? '/in' : ''
+  const regionLabel = region === 'IN' ? 'India' : 'US'
+  const canonicalUrl = `${SITE_URL}${prefix}/leaving/${provider}`
+  const title = `Leaving ${providerLabel}${region === 'IN' ? ' India' : ''} in ${monthLabel}`
+  const description = `Movies and shows that left ${providerLabel}${region === 'IN' ? ' India' : ''} in ${monthLabel}: the dated departures list, updated daily from the ${regionLabel} catalog.`
+  // A US diff page exists only for the Watchmode-tracked set — IN-only
+  // providers self-reference en-IN + x-default instead.
+  const hreflangAlternates = PROVIDER_NAME_MATCH[provider]
+    ? { us: `${SITE_URL}/leaving/${provider}`, in: `${SITE_URL}/in/leaving/${provider}` }
+    : { in: `${SITE_URL}/in/leaving/${provider}` }
 
   const itemListData = itemListSchema({
     name: title,
@@ -187,28 +205,29 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         title={title}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={hreflangAlternates}
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
-          { name: 'Leaving', url: `${SITE_URL}/leaving` },
+          { name: 'Leaving', url: `${SITE_URL}${prefix}/leaving` },
           { name: providerLabel, url: canonicalUrl }
         ]}
       >
-        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+        {region === 'US' && <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />}
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
         {updatedLabel && (
-          <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} US catalog.</Text>
+          <Text mt={2} color='gray.500' fontSize='sm'>Updated {updatedLabel}. {providerLabel} {regionLabel} catalog.</Text>
         )}
         <Flex wrap='wrap' gap={2} mt={4}>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/new-on-streaming/${provider}`}>What&apos;s new on {providerLabel}</Link>
+            <Link href={`${prefix}/new-on-streaming/${provider}`}>What&apos;s new on {providerLabel}</Link>
           </Button>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/streaming/${provider}`}>Full catalog</Link>
+            <Link href={`${prefix}/streaming/${provider}`}>Full catalog</Link>
           </Button>
           <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/this-month/${provider}`}>Worth it this month?</Link>
+            <Link href={`${prefix}/this-month/${provider}`}>Worth it this month?</Link>
           </Button>
         </Flex>
 
@@ -222,20 +241,22 @@ export default function LeavingProvider({ provider, providerLabel, monthLabel, m
         )}
 
         <Heading as='h2' size='sm' mt={12} mb={3}>Leaving other services</Heading>
-        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `/leaving/${p.key}` }))} />
+        <ProviderLinkButtons providers={trackedProviders.filter((p) => p.key !== provider).map((p) => ({ ...p, href: `${prefix}/leaving/${p.key}` }))} />
 
         <Text maxW='42rem' mt={10} color='gray.500' fontSize='sm'>
           &quot;Leaving soon&quot; dates come from the service&apos;s announced schedule and can shift; &quot;left&quot; dates mark the day a
-          title was detected out of the tracked catalog. List covers the US catalog and updates daily.
+          title was detected out of the tracked catalog. List covers the {regionLabel} catalog and updates daily.
         </Text>
-        <Flex wrap='wrap' gap={2} mt={4}>
-          <Button asChild size='xs' {...secondaryButton}>
-            <Link href={`/widgets?provider=${provider}`}>Embed this list on your site</Link>
-          </Button>
-          <Button asChild size='xs' {...secondaryButton}>
-            <a href={`/api/cal/${provider}`}>Subscribe to the calendar feed</a>
-          </Button>
-        </Flex>
+        {region === 'US' && (
+          <Flex wrap='wrap' gap={2} mt={4}>
+            <Button asChild size='xs' {...secondaryButton}>
+              <Link href={`/widgets?provider=${provider}`}>Embed this list on your site</Link>
+            </Button>
+            <Button asChild size='xs' {...secondaryButton}>
+              <a href={`/api/cal/${provider}`}>Subscribe to the calendar feed</a>
+            </Button>
+          </Flex>
+        )}
       </PageShell>
     </>
   );

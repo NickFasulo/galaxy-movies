@@ -1,11 +1,11 @@
 import type { GetServerSidePropsContext } from 'next'
 import type { TmdbMovie, TmdbTvShow, TmdbPaged } from '../types/tmdb'
 import { fetchDiscoverMovies, fetchDiscoverTv, fetchTmdb, isProviderAvailableInRegion, movieCategories, movieGenres, tvCategories, tvGenres, streamingProviders, PROVIDER_NAME_MATCH } from '../features/catalog/tmdb'
-import { getMonthlyChanges, getTitleChangeIndex } from '../features/catalog/streamingChanges'
+import { getMonthlyChanges, getTitleChangeIndex, getCatalogSizes, IN_TRACKED_PROVIDERS } from '../features/catalog/streamingChanges'
 import { DEFAULT_REGION } from '../lib/region'
 import { curatedLists } from '../features/catalog/curatedLists'
 import { getGeneratedLists } from '../features/catalog/generatedLists'
-import { getProviderGenreTargets, getTvProviderGenreTargets } from '../features/catalog/contentOpportunities'
+import { getProviderGenreTargets, getTvProviderGenreTargets, MIN_INDEXABLE_MOVIES } from '../features/catalog/contentOpportunities'
 import { franchiseCollectionIds } from '../features/catalog/franchises'
 import { SITE_URL as siteUrl } from '../lib/site'
 import { setSwrCache } from '../lib/http'
@@ -53,10 +53,11 @@ async function runBatched<R>(tasks: (() => Promise<R>)[], size = 10): Promise<R[
 
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
-  const [generatedLists, titleChangeIndex, monthlyChanges] = await Promise.all([
+  const [generatedLists, titleChangeIndex, monthlyChanges, inCatalogSizes] = await Promise.all([
     getGeneratedLists(),
     getTitleChangeIndex(),
-    getMonthlyChanges(Object.keys(PROVIDER_NAME_MATCH))
+    getMonthlyChanges([...Object.keys(PROVIDER_NAME_MATCH), ...IN_TRACKED_PROVIDERS.map((k) => `IN:${k}`)]),
+    getCatalogSizes('IN')
   ])
 
   // Provider-diff events are real page-content changes ("leaves Netflix Oct 20")
@@ -81,6 +82,20 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     return updatedAt ? formatDate(new Date(updatedAt).toISOString()) : null
   }
   const anyProviderLastmod = newest(...Object.keys(PROVIDER_NAME_MATCH).map(diffLastmod))
+  const anyInProviderLastmod = newest(...IN_TRACKED_PROVIDERS.map((p) => diffLastmod(`IN:${p}`)))
+
+  // /in/ listing URLs always render the IN catalog, so region-lock thinness
+  // doesn't apply — but small regional services can still fall under the
+  // 8-title indexability floor on genre slices (~10-25% of catalog). Gate on
+  // the tracked catalog size; missing data fails open.
+  const inMovieSize = (provider: string) => inCatalogSizes[provider]?.m
+  const inTvSize = (provider: string) => inCatalogSizes[provider]?.t
+  const IN_PROVIDER_FLOOR = MIN_INDEXABLE_MOVIES
+  const IN_GENRE_FLOOR = 100
+  const inProviderPageOk = (p: string) => (inMovieSize(p) ?? IN_PROVIDER_FLOOR) >= IN_PROVIDER_FLOOR
+  const inGenrePageOk = (p: string) => (inMovieSize(p) ?? IN_GENRE_FLOOR) >= IN_GENRE_FLOOR
+  const inTvProviderPageOk = (p: string) => (inTvSize(p) ?? IN_PROVIDER_FLOOR) >= IN_PROVIDER_FLOOR
+  const inTvGenrePageOk = (p: string) => (inTvSize(p) ?? IN_GENRE_FLOOR) >= IN_GENRE_FLOOR
 
   // lastmod is only emitted where a real change date exists — emitting
   // "today" everywhere taught Google the field was meaningless.
@@ -104,12 +119,18 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/new-on-streaming`, anyProviderLastmod),
     urlEntry(`${siteUrl}/leaving`, anyProviderLastmod),
     urlEntry(`${siteUrl}/this-month`, anyProviderLastmod),
+    urlEntry(`${siteUrl}/in/new-on-streaming`, anyInProviderLastmod),
+    urlEntry(`${siteUrl}/in/leaving`, anyInProviderLastmod),
+    urlEntry(`${siteUrl}/in/this-month`, anyInProviderLastmod),
     urlEntry(`${siteUrl}/reports`),
     urlEntry(`${siteUrl}/reports/streaming-churn`, anyProviderLastmod),
     urlEntry(`${siteUrl}/widgets`),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/leaving/${provider}`, diffLastmod(provider))),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/this-month/${provider}`, diffLastmod(provider))),
     ...Object.keys(PROVIDER_NAME_MATCH).map(provider => urlEntry(`${siteUrl}/new-on-streaming/${provider}`, diffLastmod(provider))),
+    ...IN_TRACKED_PROVIDERS.map(provider => urlEntry(`${siteUrl}/in/leaving/${provider}`, diffLastmod(`IN:${provider}`))),
+    ...IN_TRACKED_PROVIDERS.map(provider => urlEntry(`${siteUrl}/in/this-month/${provider}`, diffLastmod(`IN:${provider}`))),
+    ...IN_TRACKED_PROVIDERS.map(provider => urlEntry(`${siteUrl}/in/new-on-streaming/${provider}`, diffLastmod(`IN:${provider}`))),
     urlEntry(`${siteUrl}/free`),
     urlEntry(`${siteUrl}/collections`),
     urlEntry(`${siteUrl}/lists`),
@@ -153,6 +174,25 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION))
       .map(({ providerKey, genreKey }) =>
         urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`)
+      ),
+    // The /in/ space pins region=IN server-side — it's the only surface where
+    // IN-only providers (JioHotstar, ZEE5, SonyLIV, …) can index at all, since
+    // Googlebot always crawls the US render of the unprefixed URLs.
+    ...IN_TRACKED_PROVIDERS
+      .filter(inProviderPageOk)
+      .map(provider => urlEntry(`${siteUrl}/in/streaming/${provider}`)),
+    ...getProviderGenreTargets()
+      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inGenrePageOk(providerKey))
+      .map(({ providerKey, genreKey }) =>
+        urlEntry(`${siteUrl}/in/streaming/${providerKey}/${genreKey}`)
+      ),
+    ...IN_TRACKED_PROVIDERS
+      .filter(inTvProviderPageOk)
+      .map(provider => urlEntry(`${siteUrl}/in/tv/streaming/${provider}`)),
+    ...getTvProviderGenreTargets()
+      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inTvGenrePageOk(providerKey))
+      .map(({ providerKey, genreKey }) =>
+        urlEntry(`${siteUrl}/in/tv/streaming/${providerKey}/${genreKey}`)
       ),
     ...Object.keys(curatedLists).map(slug =>
       urlEntry(`${siteUrl}/lists/${slug}`)

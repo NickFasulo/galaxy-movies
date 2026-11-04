@@ -237,7 +237,9 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           : [],
         getProviderAffiliateLinks(providerNames),
         withTimeout(findSimilarListRef(media, title.id), 2000, null),
-        withTimeout(getTitleChanges(media, Number(id)), 2000, null),
+        // Catalog-movement notices are region-scoped — IN visitors get the
+        // IN title index (JioHotstar/ZEE5 arrivals), everyone else gets US.
+        withTimeout(getTitleChanges(media, Number(id), countryCode === 'IN' ? 'IN' : 'US'), 2000, null),
         withTimeout(getTitleTenure(media, Number(id)), 2000, null)
       ])
 
@@ -309,6 +311,10 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
+  // Native-script name (Devanagari, Tamil, …) — TMDB ships it on the detail
+  // payload and it's the only surface matching non-Latin title queries.
+  const originalTitle = isTv ? (title as TmdbTvDetails).original_name : (title as TmdbMovieDetails).original_title
+  const nativeTitle = originalTitle && originalTitle !== displayTitle ? originalTitle : null
   const releaseDate = isTv ? (title as TmdbTvDetails).first_air_date : (title as TmdbMovieDetails).release_date
   const runtime = !isTv ? (title as TmdbMovieDetails).runtime : null
   const tagline = !isTv ? (title as TmdbMovieDetails).tagline : null
@@ -381,6 +387,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         '@context': 'https://schema.org',
         '@type': 'TVSeries',
         name: displayTitle,
+        alternateName: nativeTitle || undefined,
         description,
         inLanguage: title.original_language || 'en',
         image: absoluteImageUrl(posterUrl, SITE_URL),
@@ -398,6 +405,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         '@context': 'https://schema.org',
         '@type': 'Movie',
         name: displayTitle,
+        alternateName: nativeTitle || undefined,
         description,
         inLanguage: title.original_language || 'en',
         image: absoluteImageUrl(posterUrl, SITE_URL),
@@ -501,6 +509,9 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                   </Badge>
                 )}
               </Flex>
+              {nativeTitle && (
+                <DetailCreditLine>Original title: {nativeTitle}</DetailCreditLine>
+              )}
               {director && (
                 <DetailCreditLine>
                   Directed by{' '}

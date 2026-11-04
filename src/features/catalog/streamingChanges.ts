@@ -230,8 +230,8 @@ export function yearlyFromMonthly(monthly: MonthlyChanges): YearlyChanges {
   }
 }
 
-// IN providers accumulate no monthly diff — their year entry merges each run's
-// diff directly, with the same arrive-then-depart semantics as the US monthly.
+// IN monthlies are written under `IN:{provider}` keys (backs the /in/ diff
+// pages); the year hash still merges each run's diff directly for durability.
 export function mergeYearlyDiff(
   existing: YearlyChanges | null,
   source: string,
@@ -795,6 +795,15 @@ export async function updateStreamingChanges() {
   const inMonth = inToday.slice(0, 7)
   const inYear = inToday.slice(0, 4)
   const yearlyIn: Record<string, YearlyChanges> = {}
+  const monthliesForIndexIn: [string, MonthlyChanges][] = []
+  const prevInMonthly = new Map(
+    await Promise.all(
+      IN_TRACKED_PROVIDERS.map(async (key): Promise<[string, MonthlyChanges | null]> => [
+        key,
+        await kv.get<MonthlyChanges>(monthlyKey(`IN:${key}`, inMonth)).catch(() => null)
+      ])
+    )
+  )
 
   await mapChunked(IN_TRACKED_PROVIDERS, PROVIDER_CHUNK, async (key) => {
     try {
@@ -803,7 +812,7 @@ export async function updateStreamingChanges() {
       sizesIn[`${key}:${inToday}`] = size
       const previous = await kv.get<CatalogSnapshot>(catalogKey(key, 'IN')).catch(() => null)
 
-      const { added, left, confirmed, pendingLeft, departDate, pendingCount } = await diffCatalogs({
+      const { added, left, confirmed, pendingLeft, arriveDate, departDate, pendingCount } = await diffCatalogs({
         catalog,
         previous,
         today: inToday,
@@ -821,18 +830,61 @@ export async function updateStreamingChanges() {
         coming: []
       }
 
+      // Dated monthly accumulation backs the /in/ diff pages — same shape as
+      // the US monthly minus the Watchmode-only coming/leavingSoon feeds.
+      const prev = prevInMonthly.get(key)
+      const arrived = new Map<number, ComingTitle>()
+      for (const t of prev?.arrived || []) arrived.set(t.tmdbId, t)
+      for (const t of added) {
+        if (t.tmdbId && !arrived.has(t.tmdbId)) {
+          arrived.set(t.tmdbId, { tmdbId: t.tmdbId, tmdbType: t.tmdbType, title: t.title, date: arriveDate.get(t.tmdbId) || inToday, season: null, popularity: t.popularity })
+        }
+      }
+      const departed = new Map<number, DatedCatalogTitle>()
+      for (const t of prev?.departed || []) if (t.tmdbId) departed.set(t.tmdbId, t)
+      for (const t of added) if (t.tmdbId) departed.delete(t.tmdbId)
+      for (const t of left) {
+        if (t.tmdbId) {
+          arrived.delete(t.tmdbId)
+          departed.set(t.tmdbId, { ...t, date: departDate.get(t.tmdbId) || inToday })
+        }
+      }
+      const monthly: MonthlyChanges = {
+        source: payload.source,
+        month: inMonth,
+        updatedAt: Date.now(),
+        arrived: [...arrived.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT),
+        coming: [],
+        departed: [...departed.values()].sort(byPopularity).slice(0, MONTHLY_LIST_LIMIT)
+      }
+      monthliesForIndexIn.push([key, monthly])
+
       await kv.set(catalogKey(key, 'IN'), { titles: confirmed, updatedAt: Date.now(), src: SNAPSHOT_SRC, pendingLeft })
       await kv.set(changesKey(key, 'IN'), payload)
+      await kv.set(monthlyKey(`IN:${key}`, inMonth), monthly, { ex: MONTHLY_TTL_SECONDS })
       await recordProviderMoves('IN', key, added, left, inToday, departDate)
       const yearField = `${key}:${inMonth}`
       const priorYear = await kv.hget<YearlyChanges>(yearHashKey('IN', inYear), yearField).catch(() => null)
       yearlyIn[yearField] = mergeYearlyDiff(priorYear, payload.source, inMonth, added, left, inToday)
       pushTitleUrls([...payload.added, ...payload.left])
+      if (payload.added.length || payload.left.length) {
+        indexNowUrls.add(`${SITE_URL}/in/streaming/${key}`)
+        indexNowUrls.add(`${SITE_URL}/in/leaving/${key}`)
+      }
       summary[`in:${key}`] = { added: added.length, left: left.length, coming: 0, catalog: confirmed.length, pending: pendingCount }
     } catch (error) {
       console.error(`in catalog update failed for ${key}:`, error)
     }
   })
+
+  if (monthliesForIndexIn.length) {
+    try {
+      await kv.hset(titleIndexKey('IN'), buildTitleIndex(monthliesForIndexIn))
+      await kv.expire(titleIndexKey('IN'), TITLE_INDEX_TTL_SECONDS)
+    } catch (error) {
+      console.error('IN title index write failed:', error)
+    }
+  }
 
   if (Object.keys(yearlyIn).length) {
     try {

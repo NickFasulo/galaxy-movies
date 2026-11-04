@@ -63,10 +63,23 @@ export default function StreamingInIndia({ movies, dataError }: Props) {
         <Heading as='h2' size='md' mt={8} mb={4} textAlign={{ base: 'center', md: 'left' }}>Top streaming platforms in India</Heading>
         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
           {INDIA_PROVIDERS.map((provider) => (
-            <LinkTile key={provider.key} href={`/streaming/${provider.key}`}>
+            <LinkTile key={provider.key} href={`/in/streaming/${provider.key}`}>
               <Text fontWeight='medium' textAlign='center'>{provider.label}</Text>
             </LinkTile>
           ))}
+        </SimpleGrid>
+
+        <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>What&apos;s changing in India this month</Heading>
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+          <LinkTile href='/in/new-on-streaming'>
+            <Text fontWeight='medium' textAlign='center'>New on streaming in India</Text>
+          </LinkTile>
+          <LinkTile href='/in/leaving'>
+            <Text fontWeight='medium' textAlign='center'>Leaving services in India</Text>
+          </LinkTile>
+          <LinkTile href='/in/this-month'>
+            <Text fontWeight='medium' textAlign='center'>Worth it this month?</Text>
+          </LinkTile>
         </SimpleGrid>
 
         <VpnBanner message='International streaming catalogs carry titles not available in India: a VPN can unlock them.' />

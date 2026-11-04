@@ -42,57 +42,68 @@ interface ChangeItem {
 const NEW_RELEASE_WINDOW_DAYS = 45
 const MOVIES_PER_PROVIDER = 6
 
-export async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
-  const region = detectRegion(req)
-  const today = new Date()
-  const windowStart = new Date(today)
-  windowStart.setDate(windowStart.getDate() - NEW_RELEASE_WINDOW_DAYS)
-  const dateParams = {
-    'primary_release_date.gte': windowStart.toISOString().split('T')[0],
-    'primary_release_date.lte': today.toISOString().split('T')[0],
-    sort_by: 'primary_release_date.desc'
-  }
+export function newOnStreamingServerSideProps(pinnedRegion?: 'IN') {
+  return async function getServerSideProps({ req, res }: GetServerSidePropsContext): Promise<GetServerSidePropsResult<Props>> {
+    const region = pinnedRegion ?? detectRegion(req)
+    const today = new Date()
+    const windowStart = new Date(today)
+    windowStart.setDate(windowStart.getDate() - NEW_RELEASE_WINDOW_DAYS)
+    const dateParams = {
+      'primary_release_date.gte': windowStart.toISOString().split('T')[0],
+      'primary_release_date.lte': today.toISOString().split('T')[0],
+      sort_by: 'primary_release_date.desc'
+    }
 
-  const availableProviders = Object.entries(streamingProviders)
-    .filter(([key]) => isProviderAvailableInRegion(key, region))
+    const availableProviders = Object.entries(streamingProviders)
+      .filter(([key]) => isProviderAvailableInRegion(key, region))
 
-  try {
-    const results = await Promise.all(
-      availableProviders.map(async ([key, provider]) => {
-        const providerIds = getProviderIds(key, region)
-        const data = await fetchListMovies({
-          ...dateParams,
-          with_watch_providers: providerIds.join('|'),
-          watch_region: region
+    try {
+      const results = await Promise.all(
+        availableProviders.map(async ([key, provider]) => {
+          const providerIds = getProviderIds(key, region)
+          const data = await fetchListMovies({
+            ...dateParams,
+            with_watch_providers: providerIds.join('|'),
+            watch_region: region
+          })
+          return { key, label: provider.title.replace(' Movies', ''), movies: (data.results || []).slice(0, MOVIES_PER_PROVIDER) }
         })
-        return { key, label: provider.title.replace(' Movies', ''), movies: (data.results || []).slice(0, MOVIES_PER_PROVIDER) }
-      })
-    )
+      )
 
-    const sections = results.filter((section) => section.movies.length > 0)
-    const changes: Record<string, ProviderChanges> = (await withTimeout(
-      getProviderChanges(sections.map((section) => section.key)),
-      2000,
-      {}
-    )) || {}
-    const logos = await getProviderLogosByKey('US').catch(() => new Map<string, string>())
-    const arrivalProviders: ProviderLinkItem[] = Object.keys(PROVIDER_NAME_MATCH)
-      .filter((key) => streamingProviders[key])
-      .map((key) => ({
-        key,
-        label: streamingProviders[key].title.replace(' Movies', ''),
-        href: `/new-on-streaming/${key}`,
-        logo: logos.get(key) ?? null
-      }))
+      const sections = results.filter((section) => section.movies.length > 0)
+      // Diff data only exists for US and IN — other regions fall back to the
+      // US set, matching what the page showed before region-scoping.
+      const changes: Record<string, ProviderChanges> = (await withTimeout(
+        getProviderChanges(sections.map((section) => section.key), { region: region === 'IN' ? 'IN' : 'US' }),
+        2000,
+        {}
+      )) || {}
+      const prefix = region === 'IN' ? '/in' : ''
+      const logos = await getProviderLogosByKey(region).catch(() => new Map<string, string>())
+      // US dated-list pages exist only for the Watchmode set; under /in/ every
+      // IN-available provider gets one from the TMDB snapshot diffs.
+      const diffKeys = region === 'IN'
+        ? availableProviders.map(([key]) => key)
+        : Object.keys(PROVIDER_NAME_MATCH).filter((key) => streamingProviders[key])
+      const arrivalProviders: ProviderLinkItem[] = diffKeys
+        .map((key) => ({
+          key,
+          label: streamingProviders[key].title.replace(' Movies', ''),
+          href: `${prefix}/new-on-streaming/${key}`,
+          logo: logos.get(key) ?? null
+        }))
 
-    setSwrCache(res, 21600)
-    return { props: { region, sections, arrivalProviders, changes } }
-  } catch (error) {
-    console.error(error)
-    res.statusCode = 502
-    return { props: { region, sections: [], arrivalProviders: [], dataError: true } }
+      setSwrCache(res, 21600)
+      return { props: { region, sections, arrivalProviders, changes } }
+    } catch (error) {
+      console.error(error)
+      res.statusCode = 502
+      return { props: { region, sections: [], arrivalProviders: [], dataError: true } }
+    }
   }
 }
+
+export const getServerSideProps = newOnStreamingServerSideProps()
 
 const formatChangeDate = shortDate
 
@@ -127,11 +138,12 @@ function ChangeList({ label, items, showDate = false }: { label: string; items?:
   )
 }
 
-export default function NewOnStreaming({ sections, arrivalProviders, changes = {}, dataError }: Props) {
-  const canonicalUrl = `${SITE_URL}/new-on-streaming`
+export default function NewOnStreaming({ region, sections, arrivalProviders, changes = {}, dataError }: Props) {
+  const prefix = region === 'IN' ? '/in' : ''
+  const canonicalUrl = `${SITE_URL}${prefix}/new-on-streaming`
   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-  const title = `New Releases Streaming Now (${monthLabel})`
-  const description = `Recently released movies currently streaming by service, updated regularly: including Netflix, Amazon Prime Video, and more.`
+  const title = region === 'IN' ? `New Releases Streaming Now in India (${monthLabel})` : `New Releases Streaming Now (${monthLabel})`
+  const description = `Recently released movies currently streaming by service${region === 'IN' ? ' in India' : ''}, updated regularly: including ${region === 'IN' ? 'Netflix, Amazon Prime Video, JioHotstar, ZEE5, and more' : 'Netflix, Amazon Prime Video, and more'}.`
 
   const itemListData = itemListSchema({
     name: title,
@@ -147,13 +159,14 @@ export default function NewOnStreaming({ sections, arrivalProviders, changes = {
         title={title}
         description={description}
         canonicalUrl={canonicalUrl}
+        hreflangAlternates={{ us: `${SITE_URL}/new-on-streaming`, in: `${SITE_URL}/in/new-on-streaming` }}
         structuredData={itemListData}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
           { name: 'New on Streaming', url: canonicalUrl }
         ]}
       >
-        <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />
+        {region !== 'IN' && <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />}
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
           <Flex wrap='wrap' gap={2} mt={2} align='center'>
@@ -168,7 +181,7 @@ export default function NewOnStreaming({ sections, arrivalProviders, changes = {
             sections.map((section) => (
               <Box key={section.key} mt={10}>
                 <Heading as='h2' size='md' mb={4} textAlign={{ base: 'center', md: 'left' }}>
-                  <Link href={`/streaming/${section.key}`} style={{ textDecoration: 'underline' }}>{section.label}</Link>
+                  <Link href={`${prefix}/streaming/${section.key}`} style={{ textDecoration: 'underline' }}>{section.label}</Link>
                 </Heading>
                 <MovieGrid movies={section.movies} />
               </Box>
@@ -184,7 +197,7 @@ export default function NewOnStreaming({ sections, arrivalProviders, changes = {
                 {Object.entries(changes).map(([key, change]) => (
                   <Box key={key} mb={8}>
                     <Heading as='h3' size='sm' mb={3}>
-                      <Link href={`/streaming/${key}`} style={{ textDecoration: 'underline' }}>{change.source}</Link>
+                      <Link href={`${prefix}/streaming/${key}`} style={{ textDecoration: 'underline' }}>{change.source}</Link>
                     </Heading>
                     <ChangeList label='Coming soon' items={change.coming} showDate />
                     <ChangeList label='Just added' items={change.added} />

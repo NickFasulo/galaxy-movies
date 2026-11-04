@@ -18,6 +18,9 @@ interface AnalyticsOpts {
   dimensions: string[]
   rowLimit?: number
   pageContains?: string
+  // ISO-3166-1 alpha-3 lowercase ('ind', 'usa') as used by the Search
+  // Analytics API's country dimension.
+  country?: string
 }
 
 export async function queryAnalytics(startDate: string, endDate: string, opts: AnalyticsOpts): Promise<AnalyticsRow[]> {
@@ -30,11 +33,10 @@ export async function queryAnalytics(startDate: string, endDate: string, opts: A
     // byProperty is rejected when 'page' is a dimension; auto is valid in all cases
     aggregationType: 'auto'
   }
-  if (opts.pageContains) {
-    body.dimensionFilterGroups = [
-      { filters: [{ dimension: 'page', operator: 'contains', expression: opts.pageContains }] }
-    ]
-  }
+  const filters: Record<string, string>[] = []
+  if (opts.pageContains) filters.push({ dimension: 'page', operator: 'contains', expression: opts.pageContains })
+  if (opts.country) filters.push({ dimension: 'country', operator: 'equals', expression: opts.country })
+  if (filters.length) body.dimensionFilterGroups = [{ filters }]
   const res = await fetch(`${WM_BASE}/sites/${encodeURIComponent(gscSite())}/searchAnalytics/query`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -177,6 +179,15 @@ export function reportWindows() {
   }
 }
 
+export interface IndiaDigest {
+  clicks: number
+  prevClicks: number
+  impressions: number
+  prevImpressions: number
+  topQueries: AnalyticsRow[]
+  topPages: AnalyticsRow[]
+}
+
 export interface WeeklyDigest {
   rangeLabel: string
   clicks: number
@@ -191,11 +202,12 @@ export interface WeeklyDigest {
   nearClick: AnalyticsRow[]
   ctrGaps: AnalyticsRow[] | null
   sitemap: SitemapStatus | null
+  india: IndiaDigest
 }
 
 export async function buildWeeklyDigest(prevBands: Record<string, Band> | null, includeCtrGaps: boolean): Promise<WeeklyDigest> {
   const { cur, prev, month } = reportWindows()
-  const [totals, prevTotals, topPages, curPages, prevPages, curQueries, prevQueries, listsRows, gapRows] = await Promise.all([
+  const [totals, prevTotals, topPages, curPages, prevPages, curQueries, prevQueries, listsRows, gapRows, inTotals, inPrevTotals, inQueries, inPages] = await Promise.all([
     queryAnalytics(cur.start, cur.end, { dimensions: [] }),
     queryAnalytics(prev.start, prev.end, { dimensions: [] }),
     queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 8 }),
@@ -204,7 +216,11 @@ export async function buildWeeklyDigest(prevBands: Record<string, Band> | null, 
     queryAnalytics(cur.start, cur.end, { dimensions: ['query'], rowLimit: 60 }),
     queryAnalytics(prev.start, prev.end, { dimensions: ['query'], rowLimit: 60 }),
     queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 250, pageContains: '/lists/' }),
-    includeCtrGaps ? queryAnalytics(month.start, month.end, { dimensions: ['page'], rowLimit: 500 }) : Promise.resolve(null)
+    includeCtrGaps ? queryAnalytics(month.start, month.end, { dimensions: ['page'], rowLimit: 500 }) : Promise.resolve(null),
+    queryAnalytics(cur.start, cur.end, { dimensions: [], country: 'ind' }),
+    queryAnalytics(prev.start, prev.end, { dimensions: [], country: 'ind' }),
+    queryAnalytics(cur.start, cur.end, { dimensions: ['query'], rowLimit: 8, country: 'ind' }),
+    queryAnalytics(cur.start, cur.end, { dimensions: ['page'], rowLimit: 8, country: 'ind' })
   ])
 
   const sum = (rows: AnalyticsRow[], k: 'clicks' | 'impressions') => rows.reduce((s, r) => s + r[k], 0)
@@ -224,6 +240,14 @@ export async function buildWeeklyDigest(prevBands: Record<string, Band> | null, 
     bandShifts: prevBands ? bandDiff(listsBands, prevBands) : null,
     nearClick: nearClickPages(listsRows),
     ctrGaps: gapRows ? ctrGaps(gapRows) : null,
-    sitemap
+    sitemap,
+    india: {
+      clicks: sum(inTotals, 'clicks'),
+      prevClicks: sum(inPrevTotals, 'clicks'),
+      impressions: sum(inTotals, 'impressions'),
+      prevImpressions: sum(inPrevTotals, 'impressions'),
+      topQueries: inQueries.slice(0, 6),
+      topPages: inPages.slice(0, 6)
+    }
   }
 }
