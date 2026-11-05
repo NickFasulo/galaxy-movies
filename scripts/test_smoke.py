@@ -20,9 +20,15 @@ if url == 'https://galaxymovies.app/':
     print('HTTP/2 ' + os.environ['APEX_CODE'] + '\r')
     print(headers + '\r\n')
     print(os.environ['APEX_CODE'] + ' ' + os.environ.get('APEX_URL', ''), end='')
+elif url.endswith('/in') or url.endswith('/in/streaming'):
+    # check_redirect wants '%{http_code} %{redirect_url}' — emit just that line.
+    print('308 https://smoke.invalid/streaming-in-india', end='')
 else:
     print('HTTP/2 200\r\n\r\nTrending Fight Club tv/1399 Netflix Sitemap urlset')
-    print('"provider":"netflix" smoke-test-key')
+    print('Leaving Worth It reports churn Movie night alerts Curated Cozy')
+    print('JustWatch Reelgood Trakt Widget Galaxy Plus Galaxy Movies')
+    print('JioHotstar SonyLIV India BEGIN:VCALENDAR')
+    print('"provider":"netflix" "attribution" "days" smoke-test-key')
     print('200', end='')
 '''
 
