@@ -51,6 +51,8 @@ declare namespace NodeJS {
   WEBPUSH_SUBJECT?: string
     NEXT_PUBLIC_UMAMI_WEBSITE_ID?: string
     NEXT_PUBLIC_UMAMI_SRC?: string
+    // Build-time inlined like every NEXT_PUBLIC var — changing it needs a rebuild.
+    NEXT_PUBLIC_AMAZON_IN_TAG?: string
     USAGE_DASH_TOKEN?: string
     CF_ACCOUNT_ID?: string
     CF_ANALYTICS_API_TOKEN?: string

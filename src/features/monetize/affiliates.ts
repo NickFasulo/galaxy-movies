@@ -1,17 +1,23 @@
 export const AMAZON_ASSOCIATE_TAG = 'galaxymovie03-20'
 
+// Amazon Associates India is a separate program/enrollment — until a tag is
+// configured, IN visitors get the Takeads-resolved primevideo.com link instead
+// (ProviderCell treats a null return here as "use affiliateLink").
+const amazonInTag = () => process.env.NEXT_PUBLIC_AMAZON_IN_TAG || ''
+
 export function isAmazonProvider(providerName = '') {
   return providerName.toLowerCase().includes('amazon')
 }
 
-export function buildAmazonAffiliateLink(movieTitle = '') {
-  const query = `${movieTitle} (movie)`.trim()
+export function buildAmazonAffiliateLink(movieTitle = '', region = 'US'): string | null {
+  const inTag = region === 'IN' ? amazonInTag() : null
+  if (region === 'IN' && !inTag) return null
   const params = new URLSearchParams({
-    k: query,
+    k: `${movieTitle} (movie)`.trim(),
     i: 'instant-video',
-    tag: AMAZON_ASSOCIATE_TAG
+    tag: inTag || AMAZON_ASSOCIATE_TAG
   })
-  return `https://www.amazon.com/s?${params.toString()}`
+  return `https://www.amazon.${region === 'IN' ? 'in' : 'com'}/s?${params.toString()}`
 }
 
 // Watchmode web_urls are raw store deep links — unpaid unless the Associates
@@ -20,8 +26,13 @@ export function tagAmazonUrl(url: string | null | undefined): string | null {
   if (!url) return null
   try {
     const parsed = new URL(url)
-    if (!/(^|\.)amazon\.com$/i.test(parsed.hostname)) return url
-    parsed.searchParams.set('tag', AMAZON_ASSOCIATE_TAG)
+    const tag = /(^|\.)amazon\.com$/i.test(parsed.hostname)
+      ? AMAZON_ASSOCIATE_TAG
+      : /(^|\.)amazon\.in$/i.test(parsed.hostname)
+        ? amazonInTag()
+        : ''
+    if (!tag) return url
+    parsed.searchParams.set('tag', tag)
     return parsed.toString()
   } catch {
     return url

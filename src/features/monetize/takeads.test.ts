@@ -20,8 +20,8 @@ describe('getProviderHomePage', () => {
     expect(getProviderHomePage(provider)).toBe(url)
   })
 
-  it('returns null for Amazon providers (they keep Associates links)', () => {
-    expect(getProviderHomePage('Amazon Prime Video')).toBeNull()
+  it('maps Amazon providers to primevideo.com (IN Takeads fallback)', () => {
+    expect(getProviderHomePage('Amazon Prime Video')).toBe('https://www.primevideo.com')
   })
 
   it.each([

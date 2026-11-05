@@ -28,13 +28,14 @@ function GruvLink({ product }: { product?: { url: string; title: string } | null
   return <AffiliateTextLink href={buildGruvLink(product.url)} pixel={GRUV_AFFILIATE_PIXEL} text={GRUV_LINK_TEXT} event='gruv-click' />
 }
 
-function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, bucket }: {
+function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, bucket, region = 'US' }: {
   provider: WatchProvider
   movieTitle?: string
   affiliateLink?: string | null
   isMine?: boolean
   offer: PriceOffer | null
   bucket: 'stream' | 'free' | 'rent-buy'
+  region?: string
 }) {
   const caption = offer?.price != null ? `$${offer.price.toFixed(2)}` : null
   const icon = (
@@ -64,7 +65,7 @@ function ProviderCell({ provider, movieTitle, affiliateLink, isMine, offer, buck
 
   const href = offer?.url
     ? (isAmazonProvider(provider.provider_name) ? tagAmazonUrl(offer.url) : offer.url)
-    : (isAmazonProvider(provider.provider_name) ? buildAmazonAffiliateLink(movieTitle) : affiliateLink)
+    : (isAmazonProvider(provider.provider_name) ? (buildAmazonAffiliateLink(movieTitle, region) || affiliateLink) : affiliateLink)
 
   if (href) {
     return (
@@ -291,7 +292,7 @@ export default function WatchProviders({
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {flatrate.map((provider) => (
-                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} bucket='stream' />
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} isMine={myProviderIds?.has(provider.provider_id)} offer={bestOfferFor(provider.provider_name, offers)} bucket='stream' region={activeRegion} />
                   ))}
                 </Flex>
                 <CatalogLinks providerIds={flatrate.map((p) => p.provider_id)} region={activeRegion} mediaType={mediaType} />
@@ -309,7 +310,7 @@ export default function WatchProviders({
                 </Text>
                 <Flex wrap='wrap' gap={{ base: 4, md: 2 }} align='flex-start'>
                   {freeAds.map((provider) => (
-                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='free' />
+                    <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='free' region={activeRegion} />
                   ))}
                 </Flex>
               </Box>
@@ -323,7 +324,7 @@ export default function WatchProviders({
                   {[...rent, ...buy]
                     .filter((v, i, a) => a.findIndex((t) => t.provider_id === v.provider_id) === i)
                     .map((provider) => (
-                      <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='rent-buy' />
+                      <ProviderCell key={provider.provider_id} provider={provider} movieTitle={movieTitle} affiliateLink={affiliateLinks[provider.provider_name]} offer={bestOfferFor(provider.provider_name, offers)} bucket='rent-buy' region={activeRegion} />
                     ))}
                 </Flex>
                 <Flex align='center' justify='space-between' gap={2} mt={1.5} wrap='wrap'>

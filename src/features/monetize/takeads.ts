@@ -2,15 +2,20 @@ import { LRUCache } from 'lru-cache'
 
 const TAKEADS_RESOLVE_URL = 'https://api.takeads.com/v1/product/monetize-api/v2/resolve'
 
-// TMDB provider_name substrings → homepage. Amazon is intentionally absent:
-// those providers keep the existing Associates search link instead.
-// Offers are GEO-gated per Takeads' merchant directory (audited Oct 19, 2026):
+// TMDB provider_name substrings → homepage.
+// Offers are GEO-gated per Takeads' merchant directory (audited Oct 19, 2026,
+// IN set re-audited Nov 4):
 // US-converting: Paramount+ (US-only), Disney+ ($11 CPA, US incl.), fubo
 // (CA/ES/US), Hulu (WW, $9.60 — catalog-active but this account's resolve
-// returns null, needs program approval). Non-US: STARZplay (MENA only).
-// Unverifiable without dashboard access: apple tv, crunchyroll, espn+, plex,
-// sling. Everything else resolves to null — plain outbound link, unpaid.
+// returns null, needs program approval). Non-US: STARZplay (MENA only),
+// JioHotstar (hotstar.com) and primevideo.com — primevideo is Amazon's IN
+// fallback until a NEXT_PUBLIC_AMAZON_IN_TAG exists (US cells still use the
+// Associates search link). Unverifiable without dashboard access: apple tv,
+// crunchyroll, espn+, plex, sling. Everything else resolves to null — plain
+// outbound link, unpaid (includes all remaining IN providers: ZEE5, SonyLIV,
+// Lionsgate Play, aha, MX Player, Sun NXT, Hoichoi, ManoramaMAX, Hungama).
 const PROVIDER_HOME_PAGES: [string, string][] = [
+  ['amazon', 'https://www.primevideo.com'],
   ['netflix', 'https://www.netflix.com'],
   ['hulu', 'https://www.hulu.com'],
   ['disney plus', 'https://www.disneyplus.com'],
@@ -86,7 +91,6 @@ const linkCache = new LRUCache<string, string>({ max: 500, ttl: 1000 * 60 * 60 *
 
 export function getProviderHomePage(providerName = ''): string | null {
   const name = providerName.toLowerCase()
-  if (name.includes('amazon')) return null
   // Keys are substrings but must start at a word boundary — a bare includes()
   // maps ManoramaMAX to max.com because it contains "max".
   const match = PROVIDER_HOME_PAGES.find(([key]) => {
