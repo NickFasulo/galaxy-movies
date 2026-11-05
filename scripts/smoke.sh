@@ -45,18 +45,81 @@ check() {
   echo "ok   $path"
 }
 
+# check_redirect <path> <expected redirect_url substring>
+check_redirect() {
+  local path="$1" want="$2"
+  local out code loc
+  out=$(curl -sS -m 15 -o /dev/null -w $'%{http_code} %{redirect_url}' "$BASE$path" 2>&1)
+  if [ $? -ne 0 ]; then
+    echo "FAIL $path (curl: $out)"
+    FAIL=1
+    return
+  fi
+  code="${out%% *}"
+  loc="${out#* }"
+  case "$code" in
+    301|302|303|307|308)
+      if printf '%s' "$loc" | grep -qF "$want"; then
+        echo "ok   $path -> $loc"
+      else
+        echo "FAIL $path -> $code $loc (expected $want)"
+        FAIL=1
+      fi ;;
+    403)
+      echo "ok   $path (managed challenge)" ;;
+    *)
+      echo "FAIL $path -> HTTP $code (expected redirect to $want)"
+      FAIL=1 ;;
+  esac
+}
+
 check "/" "Trending"
 check "/movies/550" "Fight Club"
 check "/tv/1399" "tv/1399"
 check "/streaming/netflix" "Netflix"
+check "/leaving" "Leaving"
 check "/leaving/netflix"
 check "/new-on-streaming"
+check "/new-on-streaming/netflix" "Netflix"
+check "/this-month" "Worth It"
+check "/this-month/netflix" "Netflix"
+check "/reports" "reports"
+check "/reports/streaming-churn" "churn"
+check "/movie-night" "Movie night"
+check "/alerts" "alerts"
+check "/lists" "Curated"
+check "/lists/cozy-night-in" "Cozy"
+check "/justwatch-alternative" "JustWatch"
+check "/reelgood-alternative" "Reelgood"
+check "/trakt-alternative" "Trakt"
+check "/whats-on-netflix-alternative" "Netflix"
+check "/widgets" "Widget"
+check "/plus" "Galaxy Plus"
 check "/embed/netflix"
+check "/embed/churn" "Galaxy Movies"
 check "/robots.txt" "Sitemap"
 check "/sitemap.xml" "urlset"
 
+# The crawlable /in/ space renders IN catalogs for Googlebot (US IPs) — same
+# page modules as the US routes, so checks mirror them one-for-one.
+check "/streaming-in-india" "JioHotstar"
+check "/in/streaming/jiohotstar" "JioHotstar"
+check "/in/tv/streaming/sonyliv" "SonyLIV"
+check "/in/new-on-streaming" "India"
+check "/in/leaving" "India"
+check "/in/leaving/jiohotstar" "JioHotstar"
+check "/in/this-month/jiohotstar" "JioHotstar"
+check_redirect "/in" "/streaming-in-india"
+check_redirect "/in/streaming" "/streaming-in-india"
+
+# Public ICS feed: returns a valid (possibly empty) calendar even without data.
+check "/api/cal/netflix" "BEGIN:VCALENDAR"
+
 if [ "$LEVEL" = "full" ]; then
   check "/api/streaming-changes?provider=netflix" '"provider":"netflix"'
+  # Both 503 without a seeded Redis — prod-only checks.
+  check "/api/charts" '"attribution"'
+  check "/api/digital-releases" '"days"'
 fi
 
 # The IndexNow ownership file must be served or every ping 403s upstream.
