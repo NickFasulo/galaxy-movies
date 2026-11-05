@@ -102,7 +102,7 @@ export default function Privacy() {
         <List.Item>Watchlist, ratings, and preferences: stored only on your device until you clear them</List.Item>
         <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</List.Item>
         <List.Item>Galaxy Plus subscription status (plan state, customer and subscription IDs): kept while your subscription is active; payment records are retained by Polar as merchant of record</List.Item>
-        <List.Item>Galaxy Bot anonymous session statistics and OpenAI request logs (kept so responses can be reviewed and improved): up to 30 days; optional response ratings, which may include the rated reply: up to 90 days</List.Item>
+        <List.Item>Galaxy Bot anonymous usage data — session statistics, prompt and response logs (kept to review quality and understand what people ask about), and OpenAI request logs: up to 30 days; optional response ratings, which may include the rated reply: up to 90 days</List.Item>
         <List.Item>Chat responses may be cached server-side for up to 30 minutes to improve performance</List.Item>
         <List.Item>Hosting and security logs: retained by Vercel under their standard retention periods</List.Item>
       </List.Root>

@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
     hgetall: vi.fn<(key: string) => Promise<Record<string, unknown> | null>>(async () => null),
     dbsize: vi.fn(async () => 0),
     get: vi.fn(async () => null),
-    eval: vi.fn(async () => 1)
+    eval: vi.fn(async () => 1),
+    zrange: vi.fn(async () => []),
+    zcard: vi.fn(async () => 0)
   },
   fetch: vi.fn<(input?: unknown, init?: RequestInit) => Promise<Response>>(
     async () => ({ ok: true, json: async () => ({}) } as Response)

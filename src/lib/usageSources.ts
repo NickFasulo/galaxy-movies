@@ -1,6 +1,7 @@
 import { getRedis } from './redis'
 import { getWatchmodeLastStatus, getWatchmodeQuota, recordWatchmodeResponse } from '../features/catalog/watchmodeQuota'
 import { getCostEstimate, getUsageStats } from '../features/ai/aiUsage'
+import { CHAT_LOG_KEY, getChatDemand } from '../features/ai/chatLog'
 import { isPlusActive, parseBillingRecord } from '../features/billing/billing'
 import { hasGscCredentials } from '../features/indexing/indexCheck'
 import { pageBand, queryAnalytics, reportWindows, sitemapStatus } from '../features/indexing/gscAnalytics'
@@ -767,6 +768,35 @@ async function aiUsagePanel(): Promise<UsagePanel> {
   }
 }
 
+async function chatDemandPanel(): Promise<UsagePanel> {
+  const kv = getRedis()
+  if (!kv) return unconfigured('Chat demand', REDIS_ENV, UPSTASH_LINK)
+
+  const demand = await getChatDemand(kv, 7).catch(() => null)
+  if (!demand) return { name: 'Chat demand', status: 'error', metrics: [], error: 'chat log read failed' }
+  const logged = await kv.zcard(CHAT_LOG_KEY).catch(() => 0)
+  const rel = (ts: number) => {
+    const h = Math.round((Date.now() - ts) / 3_600_000)
+    return h < 1 ? '<1h' : h < 48 ? `${h}h` : `${Math.round(h / 24)}d`
+  }
+  const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s)
+
+  const metrics: UsageMetric[] = [
+    { label: 'Prompts (7d)', value: fmt(demand.requests), hint: `${fmt(demand.cached)} cached · ${fmt(logged)} in log` },
+    ...(demand.topIntents.length
+      ? [{ label: 'Intent mix', value: demand.topIntents.slice(0, 4).map((i) => `${i.name} ${i.count}`).join(' · ') }]
+      : []),
+    ...demand.topQuestions.slice(0, 3).map((q) => ({ label: `"${clip(q.q, 55)}"`, value: `×${q.count}` })),
+    ...demand.topTitles.slice(0, 3).map((t) => ({ label: clip(t.title, 50), value: `×${t.count}`, hint: 'in replies' })),
+    ...demand.recent.slice(0, 5).map((e) => ({
+      label: `${rel(e.ts)} ago${e.cached ? ' · cache' : ''}`,
+      value: `"${clip(e.q, 50)}"`,
+      hint: [e.region, e.plus ? 'plus' : '', e.intents[0] || ''].filter(Boolean).join(' · ')
+    }))
+  ]
+  return { name: 'Chat demand', status: 'ok', metrics }
+}
+
 const pctDelta = (cur: number, prev: number | undefined) =>
   prev ? ` ${cur >= prev ? '+' : '-'}${Math.abs(Math.round(((cur - prev) / prev) * 100))}%` : ''
 
@@ -834,6 +864,7 @@ const linksPanel = (): UsagePanel => ({
     { label: 'Cloudflare Analytics (zone)', url: 'https://dash.cloudflare.com/?to=/:account/:zone/analytics' },
     { label: 'Upstash', url: 'https://console.upstash.com' },
     { label: 'OpenAI usage', url: 'https://platform.openai.com/usage' },
+    { label: 'OpenAI logs', url: 'https://platform.openai.com/logs' },
     { label: 'Resend', url: 'https://resend.com/emails' },
     { label: 'Polar', url: 'https://polar.sh/dashboard' },
     { label: 'Watchmode', url: 'https://api.watchmode.com/dashboard' },
@@ -875,7 +906,8 @@ export async function aggregateUsage(): Promise<UsagePanel[]> {
     guarded('Watchmode', watchmodePanel),
     guarded('Resend', resendPanel),
     guarded('Subscribers', subscribersPanel),
-    guarded('AI usage', aiUsagePanel)
+    guarded('AI usage', aiUsagePanel),
+    guarded('Chat demand', chatDemandPanel)
   ])
   return [...panels, linksPanel()]
 }

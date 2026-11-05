@@ -44,7 +44,8 @@ vi.mock('../../features/ai/movieSearch', () => ({
   formatShowForChat: mocks.formatShowForChat
 }))
 
-vi.mock('../../features/ai/chatGrounding', () => ({
+vi.mock('../../features/ai/chatGrounding', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../features/ai/chatGrounding')>()),
   wantsAvailability: mocks.wantsAvailability,
   wantsServiceChanges: mocks.wantsServiceChanges,
   wantsServiceRecommendation: mocks.wantsServiceRecommendation,

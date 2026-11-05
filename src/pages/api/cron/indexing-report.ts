@@ -3,6 +3,7 @@ import { getDailyStats, hasBingCredentials, weekStats, type BingWeekStats } from
 import { runBingCheck, type BingIndexReport } from '../../../features/indexing/bingCheck'
 import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
+import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { INDEXNOW_STATUS_KEY, type IndexNowStatus } from '../../../lib/indexnow'
@@ -111,6 +112,27 @@ function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping:
   return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored.</p>` : ''}`)
 }
 
+function chatDemandSection(d: ChatDemand) {
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
+  if (!d.requests) {
+    return s(`<p style="margin:0; color:#4b5563; font-size:14px;"><strong style="color:#1f2937;">Chat demand</strong> · no prompts logged this week.</p>`)
+  }
+  const qRows = d.topQuestions
+    .slice(0, 8)
+    .map((q) => `<div style="font-size:12px; color:#4b5563; line-height:1.6;">"${escapeHtml(q.q)}" · ×${q.count}</div>`)
+    .join('')
+  const titleRows = d.topTitles
+    .slice(0, 8)
+    .map((t) => `<div style="font-size:12px; color:#4b5563; line-height:1.6;">${escapeHtml(t.title)} · ×${t.count}</div>`)
+    .join('')
+  return (
+    s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Chat demand</strong> · ${d.requests} prompts logged${d.cached ? ` (${d.cached} served from cache)` : ''} · ${d.plus} from Plus users</p>`) +
+    s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>What people ask</strong> <span style="color:#596579; font-size:12px;">exact-phrase counts — keyword + quick-action seeds</span></p>${qRows}`) +
+    s(`<p style="margin:0; color:#1f2937; font-size:13px;"><strong>Intent mix</strong><br/><span style="font-size:12px; color:#4b5563;">${escapeHtml(d.topIntents.map((i) => `${i.name} ${i.count}`).join(' · '))}</span></p>`) +
+    (titleRows ? s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>Titles discussed</strong></p>${titleRows}`) : '')
+  )
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -121,7 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const kv = getRedis()
-    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands] = await Promise.all([
+    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand] = await Promise.all([
       runIndexCheck(),
       hasBingCredentials()
         ? runBingCheck().catch((err) => {
@@ -132,7 +154,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hasBingCredentials() ? getDailyStats().then(weekStats).catch(() => null) : Promise.resolve(null),
       kv?.get<IndexNowStatus>(INDEXNOW_STATUS_KEY).catch(() => null) ?? Promise.resolve(null),
       kv?.get<string>(LAST_REPORT_KEY).catch(() => null),
-      kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null)
+      kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null),
+      kv ? getChatDemand(kv).catch(() => null) : Promise.resolve(null)
     ])
 
     // CTR-gap section is monthly: include on the first Monday of the month.
@@ -156,7 +179,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         body:
           indexingSection(report, prevSignature) +
           (digest ? digestSection(digest) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
-          (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null) : '')
+          (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null) : '') +
+          (chatDemand ? chatDemandSection(chatDemand) : '')
       })
     })
     if (sent) {

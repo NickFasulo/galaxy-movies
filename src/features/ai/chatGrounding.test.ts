@@ -7,7 +7,9 @@ import {
   fetchAvailabilityContext,
   fetchServiceChangesContext,
   fetchServicePicksContext,
-  fetchGenrePicksContext
+  fetchGenrePicksContext,
+  isRecentReleasesQuery,
+  chatIntents
 } from './chatGrounding'
 
 const mocks = vi.hoisted(() => ({
@@ -440,5 +442,51 @@ describe('fetchGenrePicksContext', () => {
     expect(mocks.discoverMovies).toHaveBeenCalledWith(
       expect.objectContaining({ genreId: 99, releasedAfter: expect.any(String) })
     )
+  })
+})
+
+describe('isRecentReleasesQuery', () => {
+  it.each([
+    'what are the latest movies in theaters',
+    'new shows to watch this weekend',
+    'any recent series worth binging',
+    "what's new on streaming"
+  ])('detects %s', (text) => {
+    expect(isRecentReleasesQuery(text)).toBe(true)
+  })
+
+  it.each(['old classics to watch', 'recommend a comedy', 'where can i watch Heat'])(
+    'does not fire on %s',
+    (text) => {
+      expect(isRecentReleasesQuery(text)).toBe(false)
+    }
+  )
+})
+
+describe('chatIntents', () => {
+  it('tags availability prompts', () => {
+    expect(chatIntents('where can i watch Heat')).toContain('availability')
+  })
+
+  it('tags service-change prompts only as service_changes', () => {
+    expect(chatIntents('what is leaving netflix this month')).toEqual(['service_changes'])
+  })
+
+  it('multi-tags service-scoped recommendations', () => {
+    const intents = chatIntents('recommend good action movies on hulu')
+    expect(intents).toContain('service_picks')
+    expect(intents).toContain('availability')
+  })
+
+  it('tags recent-release asks', () => {
+    expect(chatIntents('any new movies in theaters')).toContain('recent')
+  })
+
+  it('tags genre asks that carry a service or recency marker', () => {
+    expect(chatIntents('recent horror movies and where to watch them')).toContain('genre')
+  })
+
+  it('falls back to general', () => {
+    expect(chatIntents('what should i watch tonight')).toEqual(['general'])
   })
 })

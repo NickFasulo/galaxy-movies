@@ -12,7 +12,8 @@ import { safeEqual } from '../../lib/auth'
 import { isPlusActive, getBillingRecord } from '../../features/billing/billing'
 import { streamingProviders } from '../../features/catalog/tmdb'
 import { parsePrefs, type AlertPrefs } from '../../features/alerts/watchlistAlerts'
-import { wantsAvailability, wantsServiceChanges, wantsServiceRecommendation, wantsGenrePicks, fetchAvailabilityContext, fetchServiceChangesContext, fetchServicePicksContext, fetchGenrePicksContext, type AvailabilityContext, type ServiceChangesContext, type ServicePicksContext, type GenrePicksContext } from '../../features/ai/chatGrounding'
+import { isRecentReleasesQuery, chatIntents, wantsAvailability, wantsServiceChanges, wantsServiceRecommendation, wantsGenrePicks, fetchAvailabilityContext, fetchServiceChangesContext, fetchServicePicksContext, fetchGenrePicksContext, type AvailabilityContext, type ServiceChangesContext, type ServicePicksContext, type GenrePicksContext } from '../../features/ai/chatGrounding'
+import { logChatExchange } from '../../features/ai/chatLog'
 
 interface ChatTurn {
   role: 'user' | 'assistant'
@@ -62,21 +63,8 @@ async function writeChatCache(key: string, value: { text: string; links: Resolve
 
 const recentReleasesCache = new LRUCache<string, string>({ max: 4, ttl: 1000 * 60 * 60 })
 
-const RECENT_RELEASES_KEYWORDS = [
-  'recent movie', 'recent release', 'recently released', 'new movie', 'newest movie',
-  'new release', 'latest movie', 'latest release', 'just released', 'now playing',
-  'in theaters now', 'currently in theaters', 'best recent', "what's new", 'this year',
-  'new season', 'new episodes', 'new series', 'new show',
-  'recent show', 'recent series', 'recent tv', 'latest show', 'latest series'
-]
-
 const TV_KEYWORDS = ['tv show', 'series', 'show', 'season', 'episode', 'binge', 'sitcom']
 const MOVIE_KEYWORDS = ['movie', 'film', 'theater', 'theatre', 'cinema']
-
-function isRecentReleasesQuery(text: string): boolean {
-  const lower = text.toLowerCase()
-  return RECENT_RELEASES_KEYWORDS.some((keyword) => lower.includes(keyword))
-}
 
 async function getRecentReleasesContext(): Promise<string> {
   const cached = recentReleasesCache.get('movies')
@@ -276,6 +264,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (!region) region = 'US'
 
+  const priorUserText = messages
+    .slice(0, -1)
+    .filter((m) => m.role === 'user')
+    .map((m) => m.content)
+    .slice(-4)
+    .join('\n')
+
   const cacheKey = getConversationCacheKey(messages, tasteProfile, serviceKeys, region)
   const cachedEntry = await readChatCache(cacheKey)
   if (cachedEntry) {
@@ -285,6 +280,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (cachedEntry.links?.length) res.write(`data: ${JSON.stringify({ links: cachedEntry.links })}\n\n`)
     res.write('data: [DONE]\n\n')
     res.end()
+    if (kv) {
+      await logChatExchange(kv, {
+        q: rawLast.content,
+        region,
+        plus: isPlus,
+        turns: messages.length,
+        intents: chatIntents(rawLast.content, priorUserText),
+        cached: true
+      })
+    }
     return
   }
 
@@ -330,12 +335,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let serviceChangesContext: ServiceChangesContext[] | null = null
     let servicePicksContext: ServicePicksContext[] | null = null
     let genrePicksContext: GenrePicksContext | null = null
-    const priorUserText = messages
-      .slice(0, -1)
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content)
-      .slice(-4)
-      .join('\n')
     try {
       if (wantsServiceRecommendation(rawLast.content, priorUserText)) {
         servicePicksContext = await fetchServicePicksContext(rawLast.content, serviceKeys, region, priorUserText)
@@ -482,6 +481,25 @@ ${JSON.stringify(referenceData)}`
 
     if (fullResponse.trim()) {
       await writeChatCache(cacheKey, { text: fullResponse, links })
+      if (kv) {
+        const grounded = [
+          servicePicksContext && 'service_picks',
+          availabilityContext && 'availability',
+          genrePicksContext && 'genre_picks',
+          serviceChangesContext && 'service_changes',
+          (recentMoviesContext || recentShowsContext) && 'recent'
+        ].filter((g): g is string => Boolean(g))
+        await logChatExchange(kv, {
+          q: rawLast.content,
+          a: fullResponse.slice(0, 600),
+          region,
+          plus: isPlus,
+          turns: messages.length,
+          titles: links.map((l) => `${l.title}${l.year ? ` (${l.year})` : ''}`).slice(0, 5),
+          intents: chatIntents(rawLast.content, priorUserText),
+          grounded
+        })
+      }
     }
 
   } catch (error) {

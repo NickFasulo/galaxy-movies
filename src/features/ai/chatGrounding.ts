@@ -263,6 +263,32 @@ export function wantsGenrePicks(text: string): boolean {
   return RECENT_PATTERN.test(text) || GENERIC_SERVICES_PATTERN.test(text) || wantsAvailability(text)
 }
 
+const RECENT_RELEASES_KEYWORDS = [
+  'recent movie', 'recent release', 'recently released', 'new movie', 'newest movie',
+  'new release', 'latest movie', 'latest release', 'just released', 'now playing',
+  'in theaters now', 'currently in theaters', 'best recent', "what's new", 'this year',
+  'new season', 'new episodes', 'new series', 'new show',
+  'recent show', 'recent series', 'recent tv', 'latest show', 'latest series'
+]
+
+export function isRecentReleasesQuery(text: string): boolean {
+  const lower = text.toLowerCase()
+  return RECENT_RELEASES_KEYWORDS.some((keyword) => lower.includes(keyword))
+}
+
+// Demand-side tagging for the chat log: which of the grounding intents a
+// prompt matches, independent of whether context actually resolved.
+export function chatIntents(text: string, priorText = ''): string[] {
+  const intents: string[] = []
+  if (isRecentReleasesQuery(text)) intents.push('recent')
+  if (wantsAvailability(text)) intents.push('availability')
+  if (wantsServiceRecommendation(text, priorText)) intents.push('service_picks')
+  if (wantsGenrePicks(text)) intents.push('genre')
+  if (wantsServiceChanges(text)) intents.push('service_changes')
+  if (!intents.length) intents.push('general')
+  return intents
+}
+
 const GENRE_PICK_TITLES = 6
 
 const genrePicksCache = new LRUCache<string, { ctx: GenrePicksContext | null }>({ max: 500, ttl: 1000 * 60 * 60 * 6 })
