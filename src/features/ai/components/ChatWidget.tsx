@@ -25,7 +25,7 @@ import { useUserData } from '../../alerts/hooks/useUserData'
 import { useProviderCatalog } from '../../catalog/hooks/useProviderCatalog'
 import CardProviderIcons from '../../catalog/components/CardProviderIcons'
 import type { WatchProvider } from '../../../types/tmdb'
-import { LuMessageCircle, LuX } from 'react-icons/lu';
+import { LuMessageCircle, LuX, LuThumbsUp, LuThumbsDown } from 'react-icons/lu';
 
 const INTRO_STORAGE_KEY = 'gm.chat.seen.v1'
 
@@ -118,6 +118,7 @@ export default function ChatWidget() {
   const chatSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const messagesRef = useRef<ChatMessage[]>([])
   const linksRef = useRef<Record<number, ResolvedMention[]>>({})
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<number, 'up' | 'down'>>({})
 
   useEffect(() => { messagesRef.current = messages }, [messages])
   useEffect(() => { linksRef.current = messageLinks }, [messageLinks])
@@ -419,10 +420,29 @@ export default function ChatWidget() {
     handleSendMessage(query)
   }
 
+  const handleFeedback = (index: number, helpful: boolean) => {
+    if (feedbackGiven[index]) return
+    setFeedbackGiven(prev => ({ ...prev, [index]: helpful ? 'up' : 'down' }))
+    fetch('/api/chatAnalytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'record_feedback',
+        data: {
+          helpful,
+          rating: helpful ? 5 : 1,
+          sessionId: sessionId || '',
+          response: (messages[index]?.content || '').slice(0, 600)
+        }
+      })
+    }).catch(() => {})
+  }
+
   const handleClearChat = () => {
     abortControllerRef.current?.abort()
     setMessages([])
     setMessageLinks({})
+    setFeedbackGiven({})
     setInputValue('')
     setIsLoading(false)
     setIsStreaming(false)
@@ -551,6 +571,23 @@ export default function ChatWidget() {
                     </Text>
                     {message.role === 'assistant' && messageLinks[index]?.length ? (
                       <MessageProviders links={messageLinks[index]} />
+                    ) : null}
+                    {message.role === 'assistant' && message.content && !(isStreaming && index === messages.length - 1) ? (
+                      <HStack gap={0} mt={1}>
+                        {(['up', 'down'] as const).map((vote) => (
+                          <IconButton
+                            key={vote}
+                            size='xs'
+                            variant='ghost'
+                            color={feedbackGiven[index] === vote ? 'brand.accent' : 'gray.500'}
+                            onClick={() => handleFeedback(index, vote === 'up')}
+                            disabled={Boolean(feedbackGiven[index])}
+                            aria-label={vote === 'up' ? 'Good response' : 'Bad response'}
+                          >
+                            {vote === 'up' ? <LuThumbsUp /> : <LuThumbsDown />}
+                          </IconButton>
+                        ))}
+                      </HStack>
                     ) : null}
                   </Box>
                 ))}

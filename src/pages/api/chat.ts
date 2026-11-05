@@ -430,7 +430,11 @@ ${JSON.stringify(referenceData)}`
       ...aiParams('chat', 300, 0.7),
       messages: allMessages,
       stream: true,
-      stream_options: { include_usage: true }
+      stream_options: { include_usage: true },
+      // store keeps the completion in OpenAI's Logs dashboard (30d) — the only
+      // review surface for prompt iteration; no transcripts are kept in Redis.
+      store: true,
+      metadata: { prompt: CHAT_PROMPT_VERSION, region, plus: isPlus ? '1' : '0' }
     })
 
     req.on('close', () => {

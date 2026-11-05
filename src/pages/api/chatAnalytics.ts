@@ -67,6 +67,8 @@ async function recordFeedback(feedbackData: Record<string, unknown>): Promise<st
     comment: cleanString(feedbackData.comment, 500),
     sessionId: typeof feedbackData.sessionId === 'string' && ID_PATTERN.test(feedbackData.sessionId) ? feedbackData.sessionId : '',
     recommendationType: cleanString(feedbackData.recommendationType, 40) || 'general',
+    // The rated reply itself, so a bad vote is reviewable without a transcript.
+    response: cleanString(feedbackData.response, 600),
     helpful: feedbackData.helpful === true
   }
 
