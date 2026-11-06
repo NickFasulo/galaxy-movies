@@ -70,7 +70,7 @@ export function FooterPill() {
     <Box
       as='footer'
       position='fixed'
-      bottom='calc(0.5rem + env(safe-area-inset-bottom))'
+      bottom={{ base: 'calc(0.25rem + env(safe-area-inset-bottom))', md: 'calc(0.5rem + env(safe-area-inset-bottom))' }}
       left='0'
       right='0'
       mx='auto'

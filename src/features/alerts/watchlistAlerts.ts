@@ -223,7 +223,8 @@ export function buildEmail(items: MatchedItem[], email: string, unsubToken: stri
     body: `
       <p style="margin: 0 0 14px; color: #4b5563; line-height: 1.6;">Here's what's new for titles on your Galaxy Movies watchlist.</p>
       ${rows}
-      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/watchlist" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">View your list →</a>${manageUrl ? ` · <a href="${manageUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Manage alerts →</a>` : ''}</p>
+      <p style="margin: 22px 0 0;"><a href="${SITE_URL}/watchlist" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">View your list →</a></p>
+      ${manageUrl ? `<p style="margin: 8px 0 0;"><a href="${manageUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">Manage alerts →</a></p>` : ''}
       ${plusUrl ? emailCallout(`Plus members also get leaving-soon warnings, next-episode alerts, and picks seeded by your ratings.<span style="display:block; margin-top:8px;"><a href="${plusUrl}" style="color: #1d4ed8; font-weight: 600; text-decoration: none;">See Galaxy Plus →</a></span>`) : ''}`,
     reason: 'You asked for streaming alerts from Galaxy Movies.',
     unsubUrl: unsub
