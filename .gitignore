@@ -52,3 +52,6 @@ next-env.d.ts
 .dev.vars
 .secrets*.json
 /social/
+
+# generated artifacts (screenshots, video renders) — never commit
+/shots/
