@@ -81,7 +81,6 @@ const FONTS = [
 // Easing helpers driving the hook-slide intro animation (t is 0..1).
 const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)))
 const easeOut = (t) => 1 - Math.pow(1 - t, 3)
-const easeOutBack = (t) => { const c = 1.3, u = t - 1; return 1 + (c + 1) * u * u * u + c * u * u }
 
 const slide = (children) => new ImageResponse(
   {
@@ -112,11 +111,11 @@ const slide = (children) => new ImageResponse(
   { width: W, height: H, fonts: FONTS }
 )
 
-// t drives the intro: eyebrow fades up, headline rises with a soft overshoot.
-// zoom adds a slow scale drift during the hold so the open never freezes.
-const hookSlide = (n, provider, t = 1, zoom = 0) => {
-  const pEyebrow = easeOut(seg(t, 0, 0.45))
-  const pHead = easeOutBack(seg(t, 0.15, 0.9))
+// t drives the intro: a clean fade+scale that lands at rest — no positional
+// travel or drift, which reads as floating on mobile.
+const hookSlide = (n, provider, t = 1) => {
+  const pEyebrow = easeOut(seg(t, 0, 0.5))
+  const pHead = easeOut(seg(t, 0.2, 1))
   return slide(
     {
       type: 'div',
@@ -128,7 +127,7 @@ const hookSlide = (n, provider, t = 1, zoom = 0) => {
             props: {
               style: {
                 fontSize: 60, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.14em', marginBottom: 36,
-                opacity: pEyebrow, transform: `translateY(${(1 - pEyebrow) * 40}px)`
+                opacity: pEyebrow, transform: `scale(${0.9 + 0.1 * pEyebrow})`
               },
               children: 'THIS WEEK'
             }
@@ -138,8 +137,8 @@ const hookSlide = (n, provider, t = 1, zoom = 0) => {
             props: {
               style: {
                 fontSize: 140, fontWeight: 700, lineHeight: 1.12,
-                opacity: easeOut(seg(t, 0.15, 0.6)),
-                transform: `translateY(${(1 - pHead) * 32}px) scale(${0.74 + 0.26 * pHead + zoom})`
+                opacity: easeOut(seg(t, 0.2, 0.7)),
+                transform: `scale(${0.88 + 0.12 * pHead})`
               },
               children: meta.headline(n, displayName(provider))
             }
@@ -272,12 +271,11 @@ async function main() {
     }
   }))
 
-  // ~1s ease-in pop, then a slow-zoom hold — all rendered as per-frame slides.
+  // 1s fade+scale intro, then a static hold — motion stops cleanly.
   const POP_FRAMES = 30
-  const HOLD_FRAMES = 36
   const slides = [
     ...Array.from({ length: POP_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, (i + 1) / POP_FRAMES), dur: 1 / 30 })),
-    ...Array.from({ length: HOLD_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, 1, 0.025 * (i + 1) / HOLD_FRAMES), dur: 1 / 30 })),
+    { resp: hookSlide(titles.length, PROVIDER, 1), dur: 1.4 },
     ...titles.map((t, i) => ({ resp: titleSlide(t, i, t.posterDataUri), dur: 2.6 })),
     { resp: ctaSlide(), dur: 2.2 }
   ]
@@ -297,11 +295,21 @@ async function main() {
     console.log('No ffmpeg found — slides are still postable as a TikTok photo carousel. `npm i -D ffmpeg-static` or install ffmpeg for the MP4.')
     return
   }
-  const list = path.join(dir, 'concat.txt')
-  fs.writeFileSync(list, files.map((f) => `file '${f.file.replace(/\\/g, '/')}'\nduration ${f.dur}`).join('\n') + `\nfile '${files.at(-1).file.replace(/\\/g, '/')}'\n`)
+  // One entry per output frame via a numbered sequence (hardlinks for the
+  // repeat frames) — concat-duration rounding drops/dups frames at 30fps.
+  const seqDir = path.join(dir, 'frames')
+  fs.mkdirSync(seqDir, { recursive: true })
+  let fi = 0
+  for (const f of files) {
+    const reps = Math.max(1, Math.round(f.dur * 30))
+    for (let k = 0; k < reps; k++) {
+      const dest = path.join(seqDir, `${String(fi++).padStart(5, '0')}.png`)
+      try { fs.linkSync(f.file, dest) } catch { fs.copyFileSync(f.file, dest) }
+    }
+  }
   const r = spawnSync(bin, [
-    '-y', '-f', 'concat', '-safe', '0', '-i', list,
-    '-vf', 'fps=30,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium',
+    '-y', '-framerate', '30', '-i', path.join(seqDir, '%05d.png'),
+    '-vf', 'format=yuv420p', '-c:v', 'libx264', '-preset', 'medium',
     '-crf', '20', '-movflags', '+faststart', mp4
   ], { stdio: 'inherit' })
   if (r.status !== 0) {
