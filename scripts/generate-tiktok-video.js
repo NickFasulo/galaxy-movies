@@ -6,7 +6,10 @@
 //
 // Usage: node scripts/generate-tiktok-video.js [--provider netflix]
 //        [--kind added|left|coming] [--count 5] [--out shots/tiktok]
-//        [--slides-only]
+//        [--api https://www.galaxymovies.app] [--slides-only]
+//
+// --api reads the public /api/streaming-changes feed instead of Redis —
+// the tiktok.yml workflow uses it so CI needs no Upstash secrets.
 //
 // Slides always write to {out}/{date}-{provider}-{kind}/. MP4 assembles when
 // ffmpeg is available (devDep ffmpeg-static, or ffmpeg on PATH).
@@ -26,17 +29,23 @@ const KIND = arg('kind', 'added')
 const COUNT = Number(arg('count', 5))
 const OUT_DIR = arg('out', path.join(ROOT, 'shots', 'tiktok'))
 const SLIDES_ONLY = process.argv.includes('--slides-only')
+const API_BASE = arg('api', '').replace(/\/+$/, '')
 
 const env = {}
-for (const line of fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split(/\r?\n/)) {
-  const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
-  if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+const envPath = path.join(ROOT, '.env.local')
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+  }
 }
-const TMDB_KEY = process.env.TMDB_API_KEY || env.TMDB_API_KEY
-const KV_URL = env.UPSTASH_REDIS_KV_REST_API_URL
-const KV_TOKEN = env.UPSTASH_REDIS_KV_REST_API_READ_ONLY_TOKEN || env.UPSTASH_REDIS_KV_REST_API_TOKEN
-if (!TMDB_KEY || !KV_URL || !KV_TOKEN) {
-  console.error('Need TMDB_API_KEY + UPSTASH_REDIS_KV_REST_API_URL + a read token in .env.local')
+const envVar = (name) => process.env[name] || env[name]
+const TMDB_KEY = envVar('TMDB_API_KEY')
+const KV_URL = envVar('UPSTASH_REDIS_KV_REST_API_URL')
+const KV_TOKEN = envVar('UPSTASH_REDIS_KV_REST_API_READ_ONLY_TOKEN') || envVar('UPSTASH_REDIS_KV_REST_API_TOKEN')
+if (!TMDB_KEY) { console.error('Need TMDB_API_KEY'); process.exit(1) }
+if (!API_BASE && (!KV_URL || !KV_TOKEN)) {
+  console.error('Need UPSTASH Redis env vars in .env.local, or pass --api <site url>')
   process.exit(1)
 }
 
@@ -181,6 +190,13 @@ async function redisGet(key) {
   return j.result ? JSON.parse(j.result) : null
 }
 
+async function getDiff() {
+  if (!API_BASE) return redisGet(`changes:diff:${PROVIDER}`)
+  const r = await fetch(`${API_BASE}/api/streaming-changes?provider=${PROVIDER}`)
+  if (!r.ok) throw new Error(`/api/streaming-changes?provider=${PROVIDER}: ${r.status}`)
+  return r.json()
+}
+
 async function tmdb(pathname) {
   const r = await fetch(`https://api.themoviedb.org/3${pathname}?api_key=${TMDB_KEY}`)
   if (!r.ok) throw new Error(`TMDB ${pathname}: ${r.status}`)
@@ -207,7 +223,7 @@ async function renderSlide(imageResponse, outPath) {
 }
 
 async function main() {
-  const diff = await redisGet(`changes:diff:${PROVIDER}`)
+  const diff = await getDiff()
   if (!diff) { console.error(`No diff data for provider "${PROVIDER}"`); process.exit(1) }
   const pool = (diff[KIND] || [])
     .filter((t) => t?.tmdbId && t.title)

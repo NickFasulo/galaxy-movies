@@ -1,0 +1,52 @@
+name: tiktok
+
+# Daily render of the streaming-diff video (scripts/generate-tiktok-video.js).
+# Can't live on the worker crons — no ffmpeg in workerd — and reads the public
+# /api/streaming-changes feed via --api, so TMDB_API_KEY is the only secret.
+on:
+  schedule:
+    - cron: '0 14 * * *' # 14:00 UTC — diff lands ~06:30 UTC; video ready by US morning
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Provider key (netflix, hulu, disney-plus, ...)
+        default: netflix
+      kind:
+        type: choice
+        options: [added, left, coming]
+        default: added
+      count:
+        description: Titles per video
+        default: '5'
+
+concurrency:
+  group: tiktok
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # matches ci.yml
+          cache: npm
+      - run: npm ci
+      - run: >-
+          node scripts/generate-tiktok-video.js
+          --api https://www.galaxymovies.app
+          --provider ${{ inputs.provider || 'netflix' }}
+          --kind ${{ inputs.kind || 'added' }}
+          --count ${{ inputs.count || '5' }}
+      - id: stamp
+        run: echo "date=$(date +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tiktok-${{ steps.stamp.outputs.date }}-${{ inputs.provider || 'netflix' }}-${{ inputs.kind || 'added' }}
+          path: shots/tiktok/
+          retention-days: 30
+          if-no-files-found: error
