@@ -29,6 +29,12 @@ jobs:
     timeout-minutes: 15
     env:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+      TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+      # Optional PAT (repo scope) — lets tiktok-upload.js write the rotated
+      # refresh token back to the TIKTOK_REFRESH_TOKEN secret.
+      TIKTOK_GH_TOKEN: ${{ secrets.TIKTOK_GH_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -50,3 +56,6 @@ jobs:
           path: shots/tiktok/
           retention-days: 30
           if-no-files-found: error
+      # Draft-upload is opt-in: skipped until the TIKTOK_* secrets exist.
+      - if: env.TIKTOK_REFRESH_TOKEN != ''
+        run: node scripts/tiktok-upload.js shots/tiktok/*.mp4
