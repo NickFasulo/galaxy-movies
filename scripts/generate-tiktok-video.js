@@ -81,7 +81,7 @@ const FONTS = [
 // Easing helpers driving the hook-slide intro animation (t is 0..1).
 const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)))
 const easeOut = (t) => 1 - Math.pow(1 - t, 3)
-const easeOutBack = (t) => { const c = 2.2, u = t - 1; return 1 + (c + 1) * u * u * u + c * u * u }
+const easeOutBack = (t) => { const c = 1.3, u = t - 1; return 1 + (c + 1) * u * u * u + c * u * u }
 
 const slide = (children) => new ImageResponse(
   {
@@ -101,7 +101,7 @@ const slide = (children) => new ImageResponse(
             style: {
               position: 'absolute', bottom: 48, left: 0, width: '100%',
               display: 'flex', justifyContent: 'center',
-              fontSize: 40, fontWeight: 700, color: '#a0aec0', letterSpacing: '0.06em'
+              fontSize: 46, fontWeight: 700, color: '#a0aec0', letterSpacing: '0.06em'
             },
             children: 'galaxymovies.app'
           }
@@ -112,11 +112,11 @@ const slide = (children) => new ImageResponse(
   { width: W, height: H, fonts: FONTS }
 )
 
-// t drives the intro pop: eyebrow fades up first, then the headline scales in
-// with an easeOutBack overshoot. Static renders pass t=1.
-const hookSlide = (n, provider, t = 1) => {
-  const pEyebrow = easeOut(seg(t, 0, 0.4))
-  const pHead = easeOutBack(seg(t, 0.18, 0.85))
+// t drives the intro: eyebrow fades up, headline rises with a soft overshoot.
+// zoom adds a slow scale drift during the hold so the open never freezes.
+const hookSlide = (n, provider, t = 1, zoom = 0) => {
+  const pEyebrow = easeOut(seg(t, 0, 0.45))
+  const pHead = easeOutBack(seg(t, 0.15, 0.9))
   return slide(
     {
       type: 'div',
@@ -127,8 +127,8 @@ const hookSlide = (n, provider, t = 1) => {
             type: 'div',
             props: {
               style: {
-                fontSize: 52, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.14em', marginBottom: 32,
-                opacity: pEyebrow, transform: `translateY(${(1 - pEyebrow) * 36}px)`
+                fontSize: 60, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.14em', marginBottom: 36,
+                opacity: pEyebrow, transform: `translateY(${(1 - pEyebrow) * 40}px)`
               },
               children: 'THIS WEEK'
             }
@@ -137,9 +137,9 @@ const hookSlide = (n, provider, t = 1) => {
             type: 'div',
             props: {
               style: {
-                fontSize: 128, fontWeight: 700, lineHeight: 1.12,
-                opacity: seg(t, 0.18, 0.35),
-                transform: `translateY(${(1 - pHead) * 28}px) scale(${0.72 + 0.28 * pHead})`
+                fontSize: 140, fontWeight: 700, lineHeight: 1.12,
+                opacity: easeOut(seg(t, 0.15, 0.6)),
+                transform: `translateY(${(1 - pHead) * 32}px) scale(${0.74 + 0.26 * pHead + zoom})`
               },
               children: meta.headline(n, displayName(provider))
             }
@@ -154,20 +154,20 @@ const titleSlide = (t, i, posterDataUri) => slide(
   {
     type: 'div',
     props: {
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 44, textAlign: 'center' },
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 48, textAlign: 'center' },
       children: [
         {
           type: 'div',
           props: {
-            style: { display: 'flex', alignItems: 'center', gap: 24 },
+            style: { display: 'flex', alignItems: 'center', gap: 26 },
             children: [
-              { type: 'div', props: { style: { fontSize: 52, color: '#718096', fontWeight: 700 }, children: `#${i + 1}` } },
+              { type: 'div', props: { style: { fontSize: 60, color: '#718096', fontWeight: 700 }, children: `#${i + 1}` } },
               {
                 type: 'div',
                 props: {
                   style: {
-                    backgroundColor: meta.badgeBg, color: '#fff', fontSize: 34, fontWeight: 700,
-                    padding: '12px 26px', borderRadius: 14, letterSpacing: '0.08em'
+                    backgroundColor: meta.badgeBg, color: '#fff', fontSize: 40, fontWeight: 700,
+                    padding: '14px 30px', borderRadius: 16, letterSpacing: '0.08em'
                   },
                   children: meta.badge
                 }
@@ -178,17 +178,17 @@ const titleSlide = (t, i, posterDataUri) => slide(
         posterDataUri && {
           type: 'img',
           props: {
-            src: posterDataUri, width: 480, height: 720,
-            style: { borderRadius: 28, objectFit: 'cover' }
+            src: posterDataUri, width: 620, height: 930,
+            style: { borderRadius: 32, objectFit: 'cover' }
           }
         },
         {
           type: 'div',
           props: {
-            style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, maxWidth: 920 },
+            style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, maxWidth: 940 },
             children: [
-              { type: 'div', props: { style: { fontSize: 80, fontWeight: 700, lineHeight: 1.12 }, children: t.title } },
-              t.year ? { type: 'div', props: { style: { fontSize: 44, color: '#a0aec0' }, children: String(t.year) } } : null,
+              { type: 'div', props: { style: { fontSize: 88, fontWeight: 700, lineHeight: 1.12 }, children: t.title } },
+              t.year ? { type: 'div', props: { style: { fontSize: 50, color: '#a0aec0' }, children: String(t.year) } } : null,
             ].filter(Boolean)
           }
         }
@@ -203,9 +203,9 @@ const ctaSlide = () => slide(
     props: {
       style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', textAlign: 'center' },
       children: [
-        { type: 'div', props: { style: { fontSize: 60, color: '#a0aec0', marginBottom: 36 }, children: 'Every arrival & departure,' } },
-        { type: 'div', props: { style: { fontSize: 112, fontWeight: 700, lineHeight: 1.15 }, children: 'tracked daily.' } },
-        { type: 'div', props: { style: { fontSize: 46, color: '#63b3ed', marginTop: 48 }, children: 'Free alerts when your watchlist moves' } },
+        { type: 'div', props: { style: { fontSize: 66, color: '#a0aec0', marginBottom: 40 }, children: 'Every arrival & departure,' } },
+        { type: 'div', props: { style: { fontSize: 124, fontWeight: 700, lineHeight: 1.15 }, children: 'tracked daily.' } },
+        { type: 'div', props: { style: { fontSize: 52, color: '#63b3ed', marginTop: 52 }, children: 'Free alerts when your watchlist moves' } },
       ]
     }
   }
@@ -272,11 +272,12 @@ async function main() {
     }
   }))
 
-  // 0.8s of intro motion rendered as per-frame slides, then a static hold.
-  const HOOK_FRAMES = 24
+  // ~1s ease-in pop, then a slow-zoom hold — all rendered as per-frame slides.
+  const POP_FRAMES = 30
+  const HOLD_FRAMES = 36
   const slides = [
-    ...Array.from({ length: HOOK_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, (i + 1) / HOOK_FRAMES), dur: 1 / 30 })),
-    { resp: hookSlide(titles.length, PROVIDER, 1), dur: 1.2 },
+    ...Array.from({ length: POP_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, (i + 1) / POP_FRAMES), dur: 1 / 30 })),
+    ...Array.from({ length: HOLD_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, 1, 0.025 * (i + 1) / HOLD_FRAMES), dur: 1 / 30 })),
     ...titles.map((t, i) => ({ resp: titleSlide(t, i, t.posterDataUri), dur: 2.6 })),
     { resp: ctaSlide(), dur: 2.2 }
   ]
