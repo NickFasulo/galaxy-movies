@@ -93,8 +93,8 @@ function PanelCard({ panel }: { panel: UsagePanel }) {
           </Text>
         )}
 
-        {panel.metrics.map((m) => (
-          <Flex key={m.label} justify='space-between' align='baseline' gap={3} py={1}>
+        {panel.metrics.map((m, i) => (
+          <Flex key={`${i}:${m.label}`} justify='space-between' align='baseline' gap={3} py={1}>
             <Box minW={0}>
               <Text fontSize='sm' color='gray.400'>{m.label}</Text>
               {m.hint && <Text fontSize='xs' color='gray.500'>{m.hint}</Text>}

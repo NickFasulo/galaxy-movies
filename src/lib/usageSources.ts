@@ -789,8 +789,8 @@ async function chatDemandPanel(): Promise<UsagePanel> {
     ...demand.topQuestions.slice(0, 3).map((q) => ({ label: `"${clip(q.q, 55)}"`, value: `×${q.count}` })),
     ...demand.topTitles.slice(0, 3).map((t) => ({ label: clip(t.title, 50), value: `×${t.count}`, hint: 'in replies' })),
     ...demand.recent.slice(0, 5).map((e) => ({
-      label: `${rel(e.ts)} ago${e.cached ? ' · cache' : ''}`,
-      value: `"${clip(e.q, 50)}"`,
+      label: `"${clip(e.q, 60)}"`,
+      value: `${rel(e.ts)} ago${e.cached ? ' · cache' : ''}`,
       hint: [e.region, e.plus ? 'plus' : '', e.intents[0] || ''].filter(Boolean).join(' · ')
     }))
   ]
