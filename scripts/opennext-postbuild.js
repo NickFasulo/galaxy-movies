@@ -59,6 +59,7 @@ const CRON_ROUTES = {
   '0 16 * * 5': '/api/cron/weekly-digest',
   '30 15 * * 1': '/api/cron/social-broadcast',
   '0 17 25 * *': '/api/cron/social-monthly',
+  '0 14 * * *': '/api/cron/social-lastchance',
   '0 14 * * 1': '/api/cron/indexing-report',
   '0 15 * * 3': '/api/cron/price-drops'
 }

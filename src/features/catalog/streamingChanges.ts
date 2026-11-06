@@ -72,6 +72,7 @@ export interface LeavingSoonTitle {
   title: string
   date: string
   season: number | null
+  popularity?: number
 }
 
 export interface ProviderChanges {
@@ -681,7 +682,8 @@ export async function updateStreamingChanges() {
             tmdbType,
             title: item.title,
             date: item.leaving_date,
-            season: item.season ?? null
+            season: item.season ?? null,
+            popularity: match?.popularity
           }
         })
         const scheduledDeparture = new Map<number, string>()

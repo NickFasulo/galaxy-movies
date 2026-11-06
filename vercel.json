@@ -36,6 +36,10 @@
       "schedule": "0 17 25 * *"
     },
     {
+      "path": "/api/cron/social-lastchance",
+      "schedule": "0 14 * * *"
+    },
+    {
       "path": "/api/cron/indexing-report",
       "schedule": "0 14 * * 1"
     },

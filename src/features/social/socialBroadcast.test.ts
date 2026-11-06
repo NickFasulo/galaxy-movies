@@ -18,7 +18,10 @@ import {
   buildBroadcastPost,
   buildDeparturesDigest,
   buildDeparturesPost,
+  buildLastChanceDigest,
+  buildLastChancePost,
   buildRedditDigest,
+  broadcastLastChance,
   broadcastMonthlyDepartures,
   broadcastWeeklyDigest
 } from './socialBroadcast'
@@ -182,6 +185,113 @@ describe('buildDeparturesPost', () => {
   })
 })
 
+describe('buildLastChancePost', () => {
+  // today = Oct 30, window covers Oct 30 → Nov 1
+  const now = new Date('2026-10-30T12:00:00Z')
+
+  it('lists only departures inside the window with relative day labels', () => {
+    const text = buildLastChancePost(
+      {
+        netflix: {
+          leavingSoon: [
+            { title: 'Gone Tomorrow', date: '2026-10-31', popularity: 50 },
+            { title: 'Gone Today', date: '2026-10-30', popularity: 10 },
+            { title: 'Too Late', date: '2026-10-29' },
+            { title: 'Too Far', date: '2026-11-05' },
+            { title: 'Gone Sunday', date: '2026-11-01', popularity: 90 },
+            { title: 'Undated' }
+          ]
+        }
+      },
+      300,
+      'https://www.galaxymovies.app/leaving',
+      now
+    )
+    expect(text).toContain('Last chance to stream')
+    expect(text.indexOf('− Gone Today ← Netflix (today)')).toBeLessThan(text.indexOf('− Gone Tomorrow ← Netflix (tomorrow)'))
+    expect(text).toContain('− Gone Sunday ← Netflix (Nov 1)')
+    expect(text).not.toContain('Too Late')
+    expect(text).not.toContain('Too Far')
+    expect(text).not.toContain('Undated')
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+
+  it('orders same-day rows by popularity', () => {
+    const text = buildLastChancePost(
+      {
+        hulu: {
+          leavingSoon: [
+            { title: 'Obscure Exit', date: '2026-10-31', popularity: 3 },
+            { title: 'Famous Exit', date: '2026-10-31', popularity: 99 }
+          ]
+        }
+      },
+      300,
+      'https://www.galaxymovies.app/leaving',
+      now
+    )
+    expect(text.indexOf('Famous Exit')).toBeLessThan(text.indexOf('Obscure Exit'))
+  })
+
+  it('returns empty string when nothing is inside the window', () => {
+    expect(
+      buildLastChancePost(
+        { netflix: { leavingSoon: [{ title: 'Too Far', date: '2026-11-20' }] } },
+        300,
+        'https://www.galaxymovies.app/leaving',
+        now
+      )
+    ).toBe('')
+  })
+
+  it('drops lines until the post fits the cap', () => {
+    const long = Array.from({ length: 20 }, (_, i) => ({
+      title: `A Very Long Title Indeed Number ${i + 1}`,
+      date: '2026-10-31'
+    }))
+    const big = Object.fromEntries(
+      ['netflix', 'hulu', 'max', 'disney-plus', 'amazon-prime-video', 'apple-tv'].map((k) => [
+        k,
+        { leavingSoon: long }
+      ])
+    )
+    const text = buildLastChancePost(big, 300, 'https://www.galaxymovies.app/leaving', now)
+    expect(text.length).toBeLessThanOrEqual(300)
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+})
+
+describe('buildLastChanceDigest', () => {
+  const now = new Date('2026-10-30T12:00:00Z')
+
+  it('renders windowed departures under provider sections', () => {
+    const text = buildLastChanceDigest(
+      {
+        netflix: {
+          leavingSoon: [
+            { title: 'Gone Tomorrow', date: '2026-10-31' },
+            { title: 'Too Far', date: '2026-11-20' }
+          ]
+        },
+        hulu: { leavingSoon: [{ title: 'Hulu Exit', date: '2026-10-30' }] }
+      },
+      ['netflix', 'hulu'],
+      10000,
+      'https://www.galaxymovies.app/leaving',
+      now
+    )
+    expect(text).toContain('Last chance to stream')
+    expect(text).toContain('- Leaving soon: Gone Tomorrow (Oct 31)')
+    expect(text).toContain('- Leaving soon: Hulu Exit (Oct 30)')
+    expect(text).not.toContain('Too Far')
+    expect(text).toContain('galaxymovies.app/leaving')
+  })
+
+  it('returns empty string when nothing is inside the window', () => {
+    expect(buildLastChanceDigest({ netflix: { leavingSoon: [] } }, ['netflix'], 10000, 'https://x', now)).toBe('')
+  })
+})
+
 describe('broadcastWeeklyDigest', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
@@ -235,6 +345,9 @@ describe('broadcastWeeklyDigest', () => {
     const body = JSON.parse(String(fbCall![1]?.body))
     expect(body.message).toContain('galaxymovies.app/leaving')
     expect(body.link).toContain('galaxymovies.app/leaving')
+    // per-channel UTM tags let Umami attribute social traffic
+    expect(body.message).toContain('utm_source=facebook')
+    expect(body.link).toContain('utm_campaign=weekly')
   })
 
   it('posts to the facebook page with the token in the form body, not the URL', async () => {
@@ -274,11 +387,44 @@ describe('broadcastMonthlyDepartures', () => {
     expect(body.message).toContain('Leaving soon')
     expect(body.message).toContain('Gone Soon (Oct 31)')
     expect(body.link).toContain('galaxymovies.app/leaving')
+    expect(body.link).toContain('utm_campaign=monthly')
   })
 
   it('skips every channel when no credentials are set', async () => {
     const results = await broadcastMonthlyDepartures()
     for (const r of Object.values(results)) expect(r.status).toBe('skipped')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('broadcastLastChance', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+  })
+
+  it('posts the urgency post with a deep provider link and utm tags', async () => {
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
+    fetchSpy.mockResolvedValue(new Response('Accepted', { status: 200 }))
+
+    // Mock diff has Gone Soon leaving Netflix on Oct 31 — inside the window
+    // on Oct 30, and it's the only provider, so the link goes deep.
+    const results = await broadcastLastChance(new Date('2026-10-30T12:00:00Z'))
+    expect(results.facebook.status).toBe('posted')
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+    expect(body.message).toContain('Last chance to stream')
+    expect(body.message).toContain('Gone Soon')
+    expect(body.message).toContain('(tomorrow)')
+    expect(body.link).toContain('galaxymovies.app/leaving/netflix')
+    expect(body.link).toContain('utm_source=facebook')
+    expect(body.link).toContain('utm_campaign=lastchance')
+  })
+
+  it('skips with nothing to post when the window is empty', async () => {
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
+    const results = await broadcastLastChance(new Date('2026-12-01T12:00:00Z'))
+    expect(results.facebook.status).toBe('skipped')
+    expect(results.facebook.reason).toBe('nothing to post')
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 })
