@@ -6,6 +6,7 @@ import { useRouter } from 'next/router'
 import { HydrationBoundary, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query'
 import { Flex, Box } from '@chakra-ui/react'
 import { Provider } from '../components/ui/provider'
+import { useDismissKeyboardOnScroll } from '../hooks/useDismissKeyboardOnScroll'
 import { useScrollRestore } from '../hooks/useScrollRestore'
 import { useAlertsSync } from '../features/alerts/hooks/useAlertsSync'
 import ChatWidget from '../features/ai/components/ChatWidget'
@@ -48,6 +49,7 @@ function MainApp({ Component, pageProps }: Pick<AppProps<{ dehydratedState?: Deh
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 
   useScrollRestore()
+  useDismissKeyboardOnScroll()
   useAlertsSync()
 
   return (

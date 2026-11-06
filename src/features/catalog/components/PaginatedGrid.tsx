@@ -137,6 +137,10 @@ export function InfiniteTitleGrid({
           hasMore={hasNextPage && !isFetchingNextPage}
           dataLength={visibleTitles.length}
           scrollThreshold={0.95}
+          // The library's default overflow:auto + -webkit-overflow-scrolling:touch
+          // makes this never-scrolled div a scroll region anyway — on iOS it can
+          // capture page scrolls while an input is focused (WebKit #174625).
+          style={{ overflow: 'visible' }}
           loader={<Text textAlign='center' color='gray.300' p='1rem'>Loading more titles...</Text>}
         >
           <MovieGrid movies={visibleTitles} posterFallback={posterFallback} {...gridProps} />
