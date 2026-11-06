@@ -28,7 +28,7 @@ jobs:
       # Same build CI runs — exercises the opennext adapter + postbuild so the
       # worker under test is the exact prod artifact.
       - run: npm run cf:build
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
