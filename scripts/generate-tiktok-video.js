@@ -111,11 +111,12 @@ const slide = (children) => new ImageResponse(
   { width: W, height: H, fonts: FONTS }
 )
 
-// t drives the intro: a clean fade+scale that lands at rest — no positional
-// travel or drift, which reads as floating on mobile.
+// t drives the intro — opacity only. Transform animations (scale/translate)
+// re-rasterize glyphs at fractional sizes every frame, which shimmers and
+// stutters; a pure alpha fade keeps the raster identical frame-to-frame.
 const hookSlide = (n, provider, t = 1) => {
   const pEyebrow = easeOut(seg(t, 0, 0.5))
-  const pHead = easeOut(seg(t, 0.2, 1))
+  const pHead = easeOut(seg(t, 0.25, 1))
   return slide(
     {
       type: 'div',
@@ -127,7 +128,7 @@ const hookSlide = (n, provider, t = 1) => {
             props: {
               style: {
                 fontSize: 60, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.14em', marginBottom: 36,
-                opacity: pEyebrow, transform: `scale(${0.9 + 0.1 * pEyebrow})`
+                opacity: pEyebrow
               },
               children: 'THIS WEEK'
             }
@@ -137,8 +138,7 @@ const hookSlide = (n, provider, t = 1) => {
             props: {
               style: {
                 fontSize: 140, fontWeight: 700, lineHeight: 1.12,
-                opacity: easeOut(seg(t, 0.2, 0.7)),
-                transform: `scale(${0.88 + 0.12 * pHead})`
+                opacity: pHead
               },
               children: meta.headline(n, displayName(provider))
             }
