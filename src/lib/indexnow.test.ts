@@ -42,6 +42,19 @@ describe('pingIndexNow', () => {
     await expect(pingIndexNow(['https://www.galaxymovies.app/movies/1'])).resolves.toBeUndefined()
   })
 
+  it('falls back to the bing endpoint when the relay is rate-limited', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await pingIndexNow(['https://www.galaxymovies.app/movies/1'])
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][0]).toBe('https://www.bing.com/indexnow')
+    expect(mocks.redisSet).toHaveBeenLastCalledWith('gm:indexnow:last', expect.objectContaining({ ok: true, status: 200, via: 'www.bing.com' }))
+  })
+
   it('records the last ping outcome for the weekly report', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 200 })))
     await pingIndexNow(['https://www.galaxymovies.app/movies/1'])

@@ -101,7 +101,7 @@ function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping:
     .map((p) => `<p style="margin:10px 0 0; font-size:13px; line-height:1.5;"><span style="color:#1f2937;">${escapeHtml(p.title)}</span><br/><span style="color:#596579; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`)
     .join('')
   const pingLine = ping
-    ? `IndexNow last ping: ${ping.ok ? `${ping.urls} urls` : `<span style="color:#b91c1c;">failed${ping.status ? ` ${ping.status}` : ''}${ping.error ? ` — ${escapeHtml(ping.error)}` : ''}</span>`} · ${escapeHtml(ping.at.slice(0, 16).replace('T', ' '))} UTC`
+    ? `IndexNow last ping: ${ping.ok ? `${ping.urls} urls${ping.via ? ` via ${ping.via}` : ''}` : `<span style="color:#b91c1c;">failed${ping.status ? ` ${ping.status}` : ''}${ping.error ? ` — ${escapeHtml(ping.error)}` : ''}</span>`} · ${escapeHtml(ping.at.slice(0, 16).replace('T', ' '))} UTC`
     : 'IndexNow: no ping recorded yet'
   const statLine = stats
     ? `<br/><span style="font-size:13px;">${stats.clicks} clicks (${delta(stats.clicks, stats.prevClicks)} vs prior wk) · ${stats.impressions.toLocaleString()} impressions (${delta(stats.impressions, stats.prevImpressions)})</span>`
