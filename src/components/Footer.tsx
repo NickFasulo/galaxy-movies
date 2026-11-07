@@ -1,7 +1,7 @@
 import NextLink from 'next/link'
 import { Fragment } from 'react'
 import type { IconType } from 'react-icons'
-import { FaBluesky, FaDiscord, FaFacebookF, FaMastodon, FaRedditAlien, FaTelegram, FaXTwitter } from 'react-icons/fa6'
+import { FaBluesky, FaDiscord, FaFacebookF, FaRedditAlien, FaTelegram, FaTiktok, FaXTwitter } from 'react-icons/fa6'
 import { Box, Flex, Link, Text } from '@chakra-ui/react'
 import { SOCIAL_PROFILES } from '../lib/site'
 
@@ -31,7 +31,7 @@ const SOCIAL_ICONS: Record<string, IconType> = {
   Facebook: FaFacebookF,
   X: FaXTwitter,
   Bluesky: FaBluesky,
-  Mastodon: FaMastodon,
+  TikTok: FaTiktok,
   Reddit: FaRedditAlien,
   Telegram: FaTelegram,
   Discord: FaDiscord
@@ -48,7 +48,7 @@ function SocialLinks() {
             key={p.name}
             href={p.href}
             target='_blank'
-            rel={p.relMe ? 'me noopener noreferrer' : 'noopener noreferrer'}
+            rel='noopener noreferrer'
             aria-label={`Galaxy Movies on ${p.name}`}
             title={p.name}
             color='gray.500'

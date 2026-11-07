@@ -9,15 +9,13 @@ export function titlePath(tmdbType: MediaType, tmdbId: number): string {
 export interface SocialProfile {
   name: string
   href: string
-  // rel="me" is how Mastodon verifies the linked site back-reference.
-  relMe?: boolean
 }
 
 export const SOCIAL_PROFILES: SocialProfile[] = [
   { name: 'Facebook', href: 'https://www.facebook.com/GalaxyMoviesApp' },
   { name: 'X', href: 'https://x.com/GalaxyMoviesApp' },
   { name: 'Bluesky', href: 'https://bsky.app/profile/galaxymovies.app' },
-  { name: 'Mastodon', href: 'https://mastodon.social/@galaxymovies', relMe: true },
+  { name: 'TikTok', href: 'https://www.tiktok.com/@galaxymoviesapp' },
   { name: 'Reddit', href: 'https://www.reddit.com/r/GalaxyMovies' },
   { name: 'Telegram', href: 'https://t.me/galaxymoviesapp' },
   { name: 'Discord', href: 'https://discord.gg/jC8C89KDk' }
