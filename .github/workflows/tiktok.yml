@@ -3,6 +3,8 @@ name: tiktok
 # Daily render of the streaming-diff video (scripts/generate-tiktok-video.js).
 # Can't live on the worker crons — no ffmpeg in workerd — and reads the public
 # /api/streaming-changes feed via --api, so TMDB_API_KEY is the only secret.
+# Targets the workers.dev host: the custom domain's WAF managed-challenges
+# datacenter IPs (403s from GH runners — same reason e2e avoids it).
 on:
   schedule:
     - cron: '0 14 * * *' # 14:00 UTC — diff lands ~06:30 UTC; video ready by US morning
@@ -44,7 +46,7 @@ jobs:
       - run: npm ci
       - run: >-
           node scripts/generate-tiktok-video.js
-          --api https://www.galaxymovies.app
+          --api https://galaxy-movies.winter-rice-c91a.workers.dev
           --provider ${{ inputs.provider || 'netflix' }}
           --kind ${{ inputs.kind || 'added' }}
           --count ${{ inputs.count || '5' }}
