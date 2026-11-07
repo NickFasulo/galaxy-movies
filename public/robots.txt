@@ -30,6 +30,7 @@ Disallow: /
 
 User-agent: *
 Allow: /
+Allow: /api/og
 Disallow: /api/
 Disallow: /search
 
