@@ -350,6 +350,30 @@ describe('broadcastWeeklyDigest', () => {
     expect(body.link).toContain('utm_campaign=weekly')
   })
 
+  it('posts to X with a signed OAuth 1.0a header and the UTM-tagged link', async () => {
+    process.env.X_API_KEY = 'consumer-key'
+    process.env.X_API_SECRET = 'consumer-secret'
+    process.env.X_ACCESS_TOKEN = 'access-token'
+    process.env.X_ACCESS_TOKEN_SECRET = 'access-secret'
+    fetchSpy.mockResolvedValue(new Response('{}', { status: 201 }))
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.x.status).toBe('posted')
+    const call = fetchSpy.mock.calls.find(([input]) => String(input) === 'https://api.x.com/2/tweets')
+    expect(call).toBeDefined()
+    const [, init] = call!
+    const auth = String((init?.headers as Record<string, string>).Authorization)
+    expect(auth).toMatch(/^OAuth /)
+    expect(auth).toContain('oauth_consumer_key="consumer-key"')
+    expect(auth).toContain('oauth_token="access-token"')
+    expect(auth).toContain('oauth_signature_method="HMAC-SHA1"')
+    expect(auth).toMatch(/oauth_signature="[^"]+"/)
+    const body = JSON.parse(String(init?.body))
+    expect(body.text).toContain('utm_source=x')
+    expect(body.text).toContain('galaxymovies.app/leaving')
+    expect(body.text.length).toBeLessThanOrEqual(280)
+  })
+
   it('posts to the facebook page with the token in the form body, not the URL', async () => {
     process.env.FB_PAGE_ID = '123'
     process.env.FB_PAGE_ACCESS_TOKEN = 'page-token'
