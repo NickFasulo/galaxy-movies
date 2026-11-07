@@ -1,7 +1,7 @@
 import NextLink from 'next/link'
 import { Fragment } from 'react'
 import type { IconType } from 'react-icons'
-import { FaBluesky, FaDiscord, FaFacebookF, FaMastodon, FaRedditAlien, FaTelegram } from 'react-icons/fa6'
+import { FaBluesky, FaDiscord, FaFacebookF, FaMastodon, FaRedditAlien, FaTelegram, FaXTwitter } from 'react-icons/fa6'
 import { Box, Flex, Link, Text } from '@chakra-ui/react'
 import { SOCIAL_PROFILES } from '../lib/site'
 
@@ -29,6 +29,7 @@ function LegalLinks() {
 
 const SOCIAL_ICONS: Record<string, IconType> = {
   Facebook: FaFacebookF,
+  X: FaXTwitter,
   Bluesky: FaBluesky,
   Mastodon: FaMastodon,
   Reddit: FaRedditAlien,

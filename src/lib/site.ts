@@ -15,6 +15,7 @@ export interface SocialProfile {
 
 export const SOCIAL_PROFILES: SocialProfile[] = [
   { name: 'Facebook', href: 'https://www.facebook.com/GalaxyMoviesApp' },
+  { name: 'X', href: 'https://x.com/GalaxyMoviesApp' },
   { name: 'Bluesky', href: 'https://bsky.app/profile/galaxymovies.app' },
   { name: 'Mastodon', href: 'https://mastodon.social/@galaxymovies', relMe: true },
   { name: 'Reddit', href: 'https://www.reddit.com/r/GalaxyMovies' },
