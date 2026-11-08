@@ -47,6 +47,17 @@ jobs:
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       RESEND_FROM: ${{ secrets.RESEND_FROM }}
       TIKTOK_EMAIL_TO: ${{ secrets.TIKTOK_EMAIL_TO }}
+      # YouTube private upload (scripts/youtube-upload.js) — client creds are
+      # the same GOOGLE_OAUTH_* pair the workspace MCP uses.
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      YT_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+      # IG Reels publish (scripts/ig-upload.js) — posts PUBLIC immediately;
+      # the Graph API has no draft mode. Blob is the public staging hop IG
+      # requires for video_url.
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      UPSTASH_BLOB_TOKEN: ${{ secrets.UPSTASH_BLOB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -81,3 +92,10 @@ jobs:
           MODE=""
           if [ "$TIKTOK_POST_MODE" = "post" ]; then MODE="--post"; fi
           node scripts/tiktok-upload.js $MODE shots/tiktok/*.mp4
+      # Cross-posts: YouTube lands private (publish from Studio — same manual
+      # finish as the TikTok draft); IG publishes the Reel immediately since
+      # the Graph API has no draft mode.
+      - if: env.YT_REFRESH_TOKEN != ''
+        run: node scripts/youtube-upload.js shots/tiktok/*.mp4
+      - if: env.IG_ACCESS_TOKEN != '' && env.IG_USER_ID != '' && env.UPSTASH_BLOB_TOKEN != ''
+        run: node scripts/ig-upload.js shots/tiktok/*.mp4
