@@ -8,9 +8,11 @@ export interface TopicSeed {
   hint?: string
 }
 
-// Keyword-informed backlog for the content pipeline. Volumes/KD from OpenSEO
-// research (US, Oct 2026); the Oct 19 reseed batch is popularity-informed
-// (IMDb/Letterboxd most-popular lists) because OpenSEO credits were exhausted.
+// Keyword-informed backlog for the content pipeline. Pending seeds are
+// ordered by measured US volume (OpenSEO get_keyword_metrics, Nov 2026);
+// already-generated seeds keep their original positions. The Oct 19 reseed
+// batch was popularity-informed because OpenSEO credits were exhausted — the
+// Nov pass measured every pending seed and reordered.
 // Array order is the generation priority: the cron takes the first 3 pending
 // seeds daily, so append-at-end means ~weeks of delay for a hot new title.
 // `similar` seeds resolve movieTitle via TMDB search and
@@ -112,77 +114,89 @@ export const topicSeeds: TopicSeed[] = [
   // /tv/{id}/recommendations — TMDB tv genre ids differ from movie ids.
   { slug: 'shows-like-breaking-bad', keyword: 'shows like breaking bad', type: 'similar', media: 'tv', showTitle: 'Breaking Bad' },
   { slug: 'shows-like-game-of-thrones', keyword: 'shows like game of thrones', type: 'similar', media: 'tv', showTitle: 'Game of Thrones' },
-  { slug: 'shows-like-the-office', keyword: 'shows like the office', type: 'similar', media: 'tv', showTitle: 'The Office' },
+
+  // Pending queue — ordered by measured US volume (OpenSEO, Nov 2026).
+  // New validated seeds from the same pass are marked NEW; rejected
+  // candidates: 'shows like the rings of power' (20/mo), 'shows like black
+  // doves' (no measurable volume).
+  { slug: 'heist-movies', keyword: 'heist movies', type: 'discover', hint: 'Caper and heist films: clever crew-driven jobs, crime genre with strong ratings.' },
   { slug: 'shows-like-stranger-things', keyword: 'shows like stranger things', type: 'similar', media: 'tv', showTitle: 'Stranger Things' },
-  { slug: 'shows-like-succession', keyword: 'shows like succession', type: 'similar', media: 'tv', showTitle: 'Succession' },
-  { slug: 'shows-like-true-detective', keyword: 'shows like true detective', type: 'similar', media: 'tv', showTitle: 'True Detective' },
-  { slug: 'shows-like-fleabag', keyword: 'shows like fleabag', type: 'similar', media: 'tv', showTitle: 'Fleabag' },
-  { slug: 'shows-like-the-bear', keyword: 'shows like the bear', type: 'similar', media: 'tv', showTitle: 'The Bear' },
-  { slug: 'shows-like-dark', keyword: 'shows like dark', type: 'similar', media: 'tv', showTitle: 'Dark' },
-  { slug: 'shows-like-severance', keyword: 'shows like severance', type: 'similar', media: 'tv', showTitle: 'Severance' },
-  { slug: 'shows-like-better-call-saul', keyword: 'shows like better call saul', type: 'similar', media: 'tv', showTitle: 'Better Call Saul' },
-  { slug: 'shows-like-black-mirror', keyword: 'shows like black mirror', type: 'similar', media: 'tv', showTitle: 'Black Mirror' },
-  { slug: 'shows-like-the-boys', keyword: 'shows like the boys', type: 'similar', media: 'tv', showTitle: 'The Boys' },
-  { slug: 'shows-like-the-last-of-us', keyword: 'shows like the last of us', type: 'similar', media: 'tv', showTitle: 'The Last of Us' },
-  { slug: 'shows-like-wednesday', keyword: 'shows like wednesday', type: 'similar', media: 'tv', showTitle: 'Wednesday' },
-  { slug: 'shows-like-squid-game', keyword: 'shows like squid game', type: 'similar', media: 'tv', showTitle: 'Squid Game' },
-  { slug: 'shows-like-sherlock', keyword: 'shows like sherlock', type: 'similar', media: 'tv', showTitle: 'Sherlock' },
-  { slug: 'shows-like-ted-lasso', keyword: 'shows like ted lasso', type: 'similar', media: 'tv', showTitle: 'Ted Lasso' },
+  { slug: 'binge-worthy-tv-shows', keyword: 'binge worthy tv shows', type: 'discover', media: 'tv', hint: 'Addictive multi-season series: high popularity and strong ratings.' },
+  { slug: 'best-miniseries', keyword: 'best miniseries', type: 'discover', media: 'tv', hint: 'Top-rated limited series: with_type 2 (Miniseries), high vote average.' },
+  { slug: 'cozy-movies', keyword: 'cozy movies', type: 'discover', hint: 'Warm, low-stakes comfort films: gentle pacing, feel-good tone.' },
+  { slug: 'time-loop-movies', keyword: 'time loop movies', type: 'discover', hint: 'Films built around repeating days or time loops: Groundhog Day-style mechanics across genres.' },
   { slug: 'shows-like-euphoria', keyword: 'shows like euphoria', type: 'similar', media: 'tv', showTitle: 'Euphoria' },
   { slug: 'shows-like-yellowstone', keyword: 'shows like yellowstone', type: 'similar', media: 'tv', showTitle: 'Yellowstone' },
-  { slug: 'shows-like-the-mandalorian', keyword: 'shows like the mandalorian', type: 'similar', media: 'tv', showTitle: 'The Mandalorian' },
-  { slug: 'shows-like-peaky-blinders', keyword: 'shows like peaky blinders', type: 'similar', media: 'tv', showTitle: 'Peaky Blinders' },
-  { slug: 'shows-like-the-crown', keyword: 'shows like the crown', type: 'similar', media: 'tv', showTitle: 'The Crown' },
-  { slug: 'shows-like-mindhunter', keyword: 'shows like mindhunter', type: 'similar', media: 'tv', showTitle: 'Mindhunter' },
-  { slug: 'shows-like-the-witcher', keyword: 'shows like the witcher', type: 'similar', media: 'tv', showTitle: 'The Witcher' },
-  { slug: 'shows-like-house-of-the-dragon', keyword: 'shows like house of the dragon', type: 'similar', media: 'tv', showTitle: 'House of the Dragon' },
-  { slug: 'shows-like-the-wire', keyword: 'shows like the wire', type: 'similar', media: 'tv', showTitle: 'The Wire' },
-  { slug: 'shows-like-the-sopranos', keyword: 'shows like the sopranos', type: 'similar', media: 'tv', showTitle: 'The Sopranos' },
-  { slug: 'shows-like-mad-men', keyword: 'shows like mad men', type: 'similar', media: 'tv', showTitle: 'Mad Men' },
-  { slug: 'shows-like-parks-and-recreation', keyword: 'shows like parks and recreation', type: 'similar', media: 'tv', showTitle: 'Parks and Recreation' },
-  { slug: 'shows-like-brooklyn-nine-nine', keyword: 'shows like brooklyn nine nine', type: 'similar', media: 'tv', showTitle: 'Brooklyn Nine-Nine' },
-  { slug: 'shows-like-the-good-place', keyword: 'shows like the good place', type: 'similar', media: 'tv', showTitle: 'The Good Place' },
-  { slug: 'shows-like-arrested-development', keyword: 'shows like arrested development', type: 'similar', media: 'tv', showTitle: 'Arrested Development' },
-  { slug: 'shows-like-fargo', keyword: 'shows like fargo', type: 'similar', media: 'tv', showTitle: 'Fargo' },
-  { slug: 'shows-like-mr-robot', keyword: 'shows like mr robot', type: 'similar', media: 'tv', showTitle: 'Mr. Robot' },
-  { slug: 'shows-like-ozark', keyword: 'shows like ozark', type: 'similar', media: 'tv', showTitle: 'Ozark' },
+  { slug: 'sad-movies-that-make-you-cry', keyword: 'sad movies that will make you cry', type: 'discover', hint: 'Emotionally devastating dramas: tearjerkers with high vote averages.' },
+  { slug: 'shows-like-the-office', keyword: 'shows like the office', type: 'similar', media: 'tv', showTitle: 'The Office' },
   { slug: 'shows-like-dexter', keyword: 'shows like dexter', type: 'similar', media: 'tv', showTitle: 'Dexter' },
-  { slug: 'shows-like-hannibal', keyword: 'shows like hannibal', type: 'similar', media: 'tv', showTitle: 'Hannibal' },
-  { slug: 'shows-like-the-haunting-of-hill-house', keyword: 'shows like the haunting of hill house', type: 'similar', media: 'tv', showTitle: 'The Haunting of Hill House' },
-  { slug: 'shows-like-the-white-lotus', keyword: 'shows like the white lotus', type: 'similar', media: 'tv', showTitle: 'The White Lotus' },
-  { slug: 'shows-like-only-murders-in-the-building', keyword: 'shows like only murders in the building', type: 'similar', media: 'tv', showTitle: 'Only Murders in the Building' },
-  { slug: 'shows-like-fallout', keyword: 'shows like fallout', type: 'similar', media: 'tv', showTitle: 'Fallout' },
-  { slug: 'shows-like-shogun', keyword: 'shows like shogun', type: 'similar', media: 'tv', showTitle: 'Shōgun' },
-  { slug: 'shows-like-andor', keyword: 'shows like andor', type: 'similar', media: 'tv', showTitle: 'Andor' },
-  { slug: 'shows-like-arcane', keyword: 'shows like arcane', type: 'similar', media: 'tv', showTitle: 'Arcane' },
-  { slug: 'shows-like-slow-horses', keyword: 'shows like slow horses', type: 'similar', media: 'tv', showTitle: 'Slow Horses' },
   { slug: 'shows-like-the-pitt', keyword: 'shows like the pitt', type: 'similar', media: 'tv', showTitle: 'The Pitt' },
-  { slug: 'shows-like-adolescence', keyword: 'shows like adolescence', type: 'similar', media: 'tv', showTitle: 'Adolescence' },
+  { slug: 'feel-good-tv-shows', keyword: 'feel good tv shows', type: 'discover', media: 'tv', hint: 'Warm, uplifting comedies and light dramas: crowd-pleasing and well-reviewed.' },
+  { slug: 'whodunit-movies', keyword: 'whodunit movies', type: 'discover', hint: 'Murder-mystery whodunits with ensemble suspects: mystery/crime with strong ratings.' },
+  { slug: 'animated-movies-for-adults', keyword: 'animated movies for adults', type: 'discover', hint: 'Animation aimed at grown-ups: adult themes, not family fare.' },
+  { slug: 'shows-like-severance', keyword: 'shows like severance', type: 'similar', media: 'tv', showTitle: 'Severance' },
+  { slug: 'shows-like-ted-lasso', keyword: 'shows like ted lasso', type: 'similar', media: 'tv', showTitle: 'Ted Lasso' },
+  { slug: 'movies-like-avatar', keyword: 'movies like avatar', type: 'similar', movieTitle: 'Avatar' }, // NEW — 2.4K/mo KD0
+  { slug: 'shows-like-black-mirror', keyword: 'shows like black mirror', type: 'similar', media: 'tv', showTitle: 'Black Mirror' },
+  { slug: 'shows-like-ozark', keyword: 'shows like ozark', type: 'similar', media: 'tv', showTitle: 'Ozark' },
   { slug: 'shows-like-silo', keyword: 'shows like silo', type: 'similar', media: 'tv', showTitle: 'Silo' },
+  { slug: 'shows-like-peaky-blinders', keyword: 'shows like peaky blinders', type: 'similar', media: 'tv', showTitle: 'Peaky Blinders' },
+  { slug: 'shows-like-fallout', keyword: 'shows like fallout', type: 'similar', media: 'tv', showTitle: 'Fallout' },
+  { slug: 'shows-like-slow-horses', keyword: 'shows like slow horses', type: 'similar', media: 'tv', showTitle: 'Slow Horses' },
+  { slug: 'shows-like-the-sopranos', keyword: 'shows like the sopranos', type: 'similar', media: 'tv', showTitle: 'The Sopranos' },
+  { slug: 'movies-like-shawshank-redemption', keyword: 'movies like shawshank redemption', type: 'similar', movieTitle: 'The Shawshank Redemption' }, // NEW — 1.6K/mo KD0
+  { slug: 'shows-like-succession', keyword: 'shows like succession', type: 'similar', media: 'tv', showTitle: 'Succession' },
+  { slug: 'shows-like-the-good-place', keyword: 'shows like the good place', type: 'similar', media: 'tv', showTitle: 'The Good Place' },
+  { slug: 'shows-like-the-wire', keyword: 'shows like the wire', type: 'similar', media: 'tv', showTitle: 'The Wire' },
+  { slug: 'shows-like-mindhunter', keyword: 'shows like mindhunter', type: 'similar', media: 'tv', showTitle: 'Mindhunter' },
+  { slug: 'crime-shows-to-watch', keyword: 'crime shows to watch', type: 'discover', media: 'tv', hint: 'Acclaimed crime dramas and procedurals: crime genre with strong ratings.' },
+  { slug: 'shows-like-true-detective', keyword: 'shows like true detective', type: 'similar', media: 'tv', showTitle: 'True Detective' },
+  { slug: 'shows-like-parks-and-recreation', keyword: 'shows like parks and recreation', type: 'similar', media: 'tv', showTitle: 'Parks and Recreation' },
+  { slug: 'shows-like-arcane', keyword: 'shows like arcane', type: 'similar', media: 'tv', showTitle: 'Arcane' },
+  { slug: 'movies-like-barbie', keyword: 'movies like barbie', type: 'similar', movieTitle: 'Barbie' }, // NEW — 1K/mo KD0
+  { slug: 'shows-like-squid-game', keyword: 'shows like squid game', type: 'similar', media: 'tv', showTitle: 'Squid Game' },
+  { slug: 'shows-like-the-witcher', keyword: 'shows like the witcher', type: 'similar', media: 'tv', showTitle: 'The Witcher' },
+  { slug: 'shows-like-wednesday', keyword: 'shows like wednesday', type: 'similar', media: 'tv', showTitle: 'Wednesday' },
+  { slug: 'shows-like-dark', keyword: 'shows like dark', type: 'similar', media: 'tv', showTitle: 'Dark' },
+  { slug: 'shows-like-fleabag', keyword: 'shows like fleabag', type: 'similar', media: 'tv', showTitle: 'Fleabag' },
+  { slug: 'shows-like-mad-men', keyword: 'shows like mad men', type: 'similar', media: 'tv', showTitle: 'Mad Men' },
+  { slug: 'underrated-tv-shows', keyword: 'underrated tv shows', type: 'discover', media: 'tv', hint: 'Well-reviewed series most people missed: high vote average, moderate-to-low vote counts.' },
+  { slug: 'shows-like-the-bear', keyword: 'shows like the bear', type: 'similar', media: 'tv', showTitle: 'The Bear' },
+  { slug: 'shows-like-the-crown', keyword: 'shows like the crown', type: 'similar', media: 'tv', showTitle: 'The Crown' },
+  { slug: 'shows-like-the-last-of-us', keyword: 'shows like the last of us', type: 'similar', media: 'tv', showTitle: 'The Last of Us' },
+  { slug: 'shows-like-hannibal', keyword: 'shows like hannibal', type: 'similar', media: 'tv', showTitle: 'Hannibal' },
+  { slug: 'shows-like-mobland', keyword: 'shows like mobland', type: 'similar', media: 'tv', showTitle: 'MobLand' }, // NEW — 590/mo KD0, trending
+  { slug: 'british-tv-shows-to-watch', keyword: 'british tv shows to watch', type: 'discover', media: 'tv', hint: 'Well-regarded UK series: with_origin_country GB, high vote average.' },
+  { slug: 'shows-like-better-call-saul', keyword: 'shows like better call saul', type: 'similar', media: 'tv', showTitle: 'Better Call Saul' },
+  { slug: 'shows-like-house-of-the-dragon', keyword: 'shows like house of the dragon', type: 'similar', media: 'tv', showTitle: 'House of the Dragon' },
+  { slug: 'shows-like-mr-robot', keyword: 'shows like mr robot', type: 'similar', media: 'tv', showTitle: 'Mr. Robot' },
+  { slug: 'shows-like-shogun', keyword: 'shows like shogun', type: 'similar', media: 'tv', showTitle: 'Shōgun' },
+  { slug: 'shows-like-sherlock', keyword: 'shows like sherlock', type: 'similar', media: 'tv', showTitle: 'Sherlock' },
+  { slug: 'movies-like-top-gun-maverick', keyword: 'movies like top gun maverick', type: 'similar', movieTitle: 'Top Gun: Maverick' }, // NEW — 480/mo KD0
+  { slug: 'shows-like-fargo', keyword: 'shows like fargo', type: 'similar', media: 'tv', showTitle: 'Fargo' },
+  { slug: 'shows-like-the-white-lotus', keyword: 'shows like the white lotus', type: 'similar', media: 'tv', showTitle: 'The White Lotus' },
+  { slug: 'shows-like-the-haunting-of-hill-house', keyword: 'shows like the haunting of hill house', type: 'similar', media: 'tv', showTitle: 'The Haunting of Hill House' },
+  { slug: 'shows-like-adolescence', keyword: 'shows like adolescence', type: 'similar', media: 'tv', showTitle: 'Adolescence' },
+  { slug: 'shows-like-andor', keyword: 'shows like andor', type: 'similar', media: 'tv', showTitle: 'Andor' },
+  { slug: 'shows-like-black-clover', keyword: 'shows like black clover', type: 'similar', media: 'tv', showTitle: 'Black Clover' }, // NEW — 260/mo KD0, trending
+  { slug: 'shows-like-brooklyn-nine-nine', keyword: 'shows like brooklyn nine nine', type: 'similar', media: 'tv', showTitle: 'Brooklyn Nine-Nine' },
+  { slug: 'shows-like-only-murders-in-the-building', keyword: 'shows like only murders in the building', type: 'similar', media: 'tv', showTitle: 'Only Murders in the Building' },
+  { slug: 'shows-like-arrested-development', keyword: 'shows like arrested development', type: 'similar', media: 'tv', showTitle: 'Arrested Development' },
+  { slug: 'shows-like-lupin', keyword: 'shows like lupin', type: 'similar', media: 'tv', showTitle: 'Lupin' }, // NEW — 170/mo KD0, trending
+  { slug: 'underrated-2000s-movies', keyword: 'underrated 2000s movies', type: 'discover', hint: 'Well-reviewed 2000s films that flew under the radar: released 2000-2009, high vote average, moderate vote counts.' },
+  { slug: 'shows-like-the-mandalorian', keyword: 'shows like the mandalorian', type: 'similar', media: 'tv', showTitle: 'The Mandalorian' },
+  { slug: 'shows-like-the-boys', keyword: 'shows like the boys', type: 'similar', media: 'tv', showTitle: 'The Boys' }, // no measurable US volume — bottom of queue
 
+  // Generated discover seeds — already published; kept for provenance.
   { slug: 'underrated-horror-movies', keyword: 'underrated horror movies', type: 'discover', hint: 'Well-reviewed horror films most people missed: high vote average, moderate-to-low vote counts.' },
   { slug: 'underrated-comedy-movies', keyword: 'underrated comedy movies', type: 'discover', hint: 'Well-reviewed comedies that flew under the radar: high vote average, moderate-to-low vote counts.' },
   { slug: 'underrated-sci-fi-movies', keyword: 'underrated sci fi movies', type: 'discover', hint: 'Well-reviewed science fiction films that never got a wide audience: high vote average, moderate-to-low vote counts.' },
   { slug: 'underrated-thriller-movies', keyword: 'underrated thriller movies', type: 'discover', hint: 'Well-reviewed thrillers most people missed: high vote average, moderate-to-low vote counts.' },
   { slug: 'underrated-80s-movies', keyword: 'underrated 80s movies', type: 'discover', hint: 'Well-reviewed 1980s films most people missed: released 1980-1989, high vote average, moderate vote counts.' },
-  { slug: 'underrated-2000s-movies', keyword: 'underrated 2000s movies', type: 'discover', hint: 'Well-reviewed 2000s films that flew under the radar: released 2000-2009, high vote average, moderate vote counts.' },
   { slug: 'feel-good-comedy-movies', keyword: 'feel good comedy movies', type: 'discover', hint: 'Uplifting comedies: light, warm, rewatchable.' },
   { slug: 'romantic-movies-to-watch', keyword: 'romantic movies to watch', type: 'discover', hint: 'Great romance films: crowd-pleasing and well-reviewed.' },
   { slug: 'movies-to-watch-high', keyword: 'movies to watch high', type: 'discover', hint: 'Visually trippy or absurdly funny films: stoner-comedy keywords, surreal animated or psychedelic picks.' },
   { slug: 'scary-movies-to-watch', keyword: 'scary movies to watch', type: 'discover', hint: 'The scariest well-regarded horror films: horror genre with strong ratings.' },
   { slug: 'classic-movies-to-watch', keyword: 'classic movies to watch', type: 'discover', hint: 'Essential pre-1990 classics that still hold up: high vote average, high vote counts.' },
   { slug: 'mind-bending-horror-movies', keyword: 'mind bending horror movies', type: 'discover', hint: 'Horror films with psychological or reality-twisting angles: psychological-horror / surreal keywords where possible.' },
-  { slug: 'time-loop-movies', keyword: 'time loop movies', type: 'discover', hint: 'Films built around repeating days or time loops: Groundhog Day-style mechanics across genres.' },
-  { slug: 'whodunit-movies', keyword: 'whodunit movies', type: 'discover', hint: 'Murder-mystery whodunits with ensemble suspects: mystery/crime with strong ratings.' },
-  { slug: 'sad-movies-that-make-you-cry', keyword: 'sad movies that will make you cry', type: 'discover', hint: 'Emotionally devastating dramas: tearjerkers with high vote averages.' },
-  { slug: 'cozy-movies', keyword: 'cozy movies', type: 'discover', hint: 'Warm, low-stakes comfort films: gentle pacing, feel-good tone.' },
-  { slug: 'animated-movies-for-adults', keyword: 'animated movies for adults', type: 'discover', hint: 'Animation aimed at grown-ups: adult themes, not family fare.' },
-  { slug: 'heist-movies', keyword: 'heist movies', type: 'discover', hint: 'Caper and heist films: clever crew-driven jobs, crime genre with strong ratings.' },
-
-  { slug: 'underrated-tv-shows', keyword: 'underrated tv shows', type: 'discover', media: 'tv', hint: 'Well-reviewed series most people missed: high vote average, moderate-to-low vote counts.' },
-  { slug: 'binge-worthy-tv-shows', keyword: 'binge worthy tv shows', type: 'discover', media: 'tv', hint: 'Addictive multi-season series: high popularity and strong ratings.' },
-  { slug: 'best-miniseries', keyword: 'best miniseries', type: 'discover', media: 'tv', hint: 'Top-rated limited series: with_type 2 (Miniseries), high vote average.' },
-  { slug: 'feel-good-tv-shows', keyword: 'feel good tv shows', type: 'discover', media: 'tv', hint: 'Warm, uplifting comedies and light dramas: crowd-pleasing and well-reviewed.' },
-  { slug: 'crime-shows-to-watch', keyword: 'crime shows to watch', type: 'discover', media: 'tv', hint: 'Acclaimed crime dramas and procedurals: crime genre with strong ratings.' },
-  { slug: 'british-tv-shows-to-watch', keyword: 'british tv shows to watch', type: 'discover', media: 'tv', hint: 'Well-regarded UK series: with_origin_country GB, high vote average.' }
 ]
