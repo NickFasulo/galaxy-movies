@@ -101,17 +101,26 @@ const initDraft = (accessToken, size) => post(accessToken, '/v2/post/publish/inb
 
 // Direct Post — publishes straight to the account. Cover at 1.5s: frame 0 is
 // the still-fading intro (near-black), 1.5s is the fully-visible headline.
-const initPost = (accessToken, title, privacy, size) => post(accessToken, '/v2/post/publish/video/init/', {
-  post_info: {
-    title,
-    privacy_level: privacy,
-    disable_duet: false,
-    disable_comment: false,
-    disable_stitch: false,
-    video_cover_timestamp_ms: 1500,
-  },
-  source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 },
-}).then((j) => check(j, 'post init'))
+// privacy_level_options advertises PUBLIC even for unaudited clients — the
+// init rejects it, so retry SELF_ONLY on that specific error.
+const initPost = async (accessToken, title, privacy, size) => {
+  const j = await post(accessToken, '/v2/post/publish/video/init/', {
+    post_info: {
+      title,
+      privacy_level: privacy,
+      disable_duet: false,
+      disable_comment: false,
+      disable_stitch: false,
+      video_cover_timestamp_ms: 1500,
+    },
+    source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 },
+  })
+  if (j.error?.code === 'unaudited_client_can_only_post_to_private_accounts' && privacy !== 'SELF_ONLY') {
+    console.log('unaudited client — retrying as SELF_ONLY')
+    return initPost(accessToken, title, 'SELF_ONLY', size)
+  }
+  return check(j, 'post init')
+}
 
 const fetchStatus = (accessToken, publishId) =>
   post(accessToken, '/v2/post/publish/status/fetch/', { publish_id: publishId })
