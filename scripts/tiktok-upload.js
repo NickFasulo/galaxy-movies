@@ -13,6 +13,8 @@
 //   which is SELF_ONLY while the app is unaudited). Optional: TIKTOK_GH_TOKEN —
 //   a PAT with repo scope; when present the rotated refresh token is written
 //   back to the TIKTOK_REFRESH_TOKEN repo secret via `gh secret set`.
+// --sandbox swaps to the TIKTOK_SANDBOX_* app creds + TIKTOK_SANDBOX_REFRESH_TOKEN
+//   — required for the app-review demo video, which must run on the sandbox.
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
@@ -27,9 +29,11 @@ if (fs.existsSync(envPath)) {
   }
 }
 const envVar = (name) => process.env[name] || env[name]
-const CLIENT_KEY = envVar('TIKTOK_CLIENT_KEY')
-const CLIENT_SECRET = envVar('TIKTOK_CLIENT_SECRET')
-const REFRESH_TOKEN = envVar('TIKTOK_REFRESH_TOKEN')
+const SANDBOX = process.argv.includes('--sandbox')
+const CLIENT_KEY = envVar(SANDBOX ? 'TIKTOK_SANDBOX_KEY' : 'TIKTOK_CLIENT_KEY')
+const CLIENT_SECRET = envVar(SANDBOX ? 'TIKTOK_SANDBOX_SECRET' : 'TIKTOK_CLIENT_SECRET')
+const REFRESH_TOKEN = envVar(SANDBOX ? 'TIKTOK_SANDBOX_REFRESH_TOKEN' : 'TIKTOK_REFRESH_TOKEN')
+const SECRET_NAME = SANDBOX ? 'TIKTOK_SANDBOX_REFRESH_TOKEN' : 'TIKTOK_REFRESH_TOKEN'
 const GH_TOKEN = envVar('TIKTOK_GH_TOKEN')
 
 const arg = (name) => {
@@ -80,10 +84,10 @@ async function refreshAccessToken() {
 // run re-auths from scratch. In CI a PAT lets us update the repo secret.
 function persistRotatedToken(token) {
   if (!GH_TOKEN) {
-    console.error(`Refresh token rotated and no TIKTOK_GH_TOKEN to persist it — update TIKTOK_REFRESH_TOKEN to:\n${token}`)
+    console.error(`Refresh token rotated and no TIKTOK_GH_TOKEN to persist it — update ${SECRET_NAME} to:\n${token}`)
     return
   }
-  const r = spawnSync('gh', ['secret', 'set', 'TIKTOK_REFRESH_TOKEN', '--body', token], {
+  const r = spawnSync('gh', ['secret', 'set', SECRET_NAME, '--body', token], {
     env: { ...process.env, GH_TOKEN },
     stdio: 'pipe',
   })
