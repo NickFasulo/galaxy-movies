@@ -37,6 +37,9 @@ jobs:
       # Optional PAT (repo scope) — lets tiktok-upload.js write the rotated
       # refresh token back to the TIKTOK_REFRESH_TOKEN secret.
       TIKTOK_GH_TOKEN: ${{ secrets.TIKTOK_GH_TOKEN }}
+      # Optional override for the requested privacy level — script defaults to
+      # PUBLIC_TO_EVERYONE and degrades to SELF_ONLY while the app is unaudited.
+      TIKTOK_PRIVACY: ${{ secrets.TIKTOK_PRIVACY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -58,6 +61,8 @@ jobs:
           path: shots/tiktok/
           retention-days: 30
           if-no-files-found: error
-      # Draft-upload is opt-in: skipped until the TIKTOK_* secrets exist.
+      # Auto-post is opt-in: skipped until the TIKTOK_* secrets exist. Direct
+      # Post publishes hands-off — private-only until the TikTok app passes
+      # audit (creator_info flips it public automatically once approved).
       - if: env.TIKTOK_REFRESH_TOKEN != ''
-        run: node scripts/tiktok-upload.js shots/tiktok/*.mp4
+        run: node scripts/tiktok-upload.js --post shots/tiktok/*.mp4

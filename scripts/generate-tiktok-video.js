@@ -1,8 +1,9 @@
 // Daily-diff TikTok generator: pulls a provider's streaming-changes diff
 // (changes:diff:{provider} from Upstash), renders 1080x1920 slides through
 // next/og (same stack as /api/og and the email logo), and concatenates them
-// into an MP4 with ffmpeg. Post the video manually — TikTok's Content Posting
-// API needs an approved app before it can be automated.
+// into an MP4 with ffmpeg. scripts/tiktok-upload.js posts it — --post uses
+// Direct Post (hands-off but SELF_ONLY until the app passes TikTok's audit);
+// a {name}.txt caption written next to each MP4 feeds the post title.
 //
 // Usage: node scripts/generate-tiktok-video.js [--provider netflix]
 //        [--kind added|left|coming] [--count 5] [--out shots/tiktok]
@@ -289,6 +290,24 @@ async function main() {
   console.log(`${files.length} slides -> ${dir}`)
 
   const mp4 = path.join(OUT_DIR, `${stamp}-${PROVIDER}-${KIND}.mp4`)
+  // Sibling caption consumed by tiktok-upload.js --post.
+  const tag = PROVIDER.replace(/-/g, '')
+  const captionTitle = {
+    added: `New on ${displayName(PROVIDER)} this week`,
+    left: `Leaving ${displayName(PROVIDER)} soon`,
+    coming: `Coming to ${displayName(PROVIDER)}`,
+  }[KIND]
+  const kindTag = { added: `newon${tag}`, left: `leaving${tag}`, coming: `comingto${tag}` }[KIND]
+  const caption = [
+    captionTitle,
+    '',
+    ...titles.map((t, i) => `${i + 1}. ${t.title}${t.year ? ` (${t.year})` : ''}`),
+    '',
+    'Every arrival & departure tracked free at galaxymovies.app',
+    '',
+    `#${tag} #${kindTag} #streaming #movies #whattowatch`,
+  ].join('\n')
+  fs.writeFileSync(mp4.replace(/\.mp4$/, '.txt'), caption + '\n')
   if (SLIDES_ONLY) { console.log('--slides-only: done'); return }
   const bin = ffmpegBin()
   if (!bin) {
