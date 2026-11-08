@@ -40,6 +40,13 @@ jobs:
       # Optional override for the requested privacy level — script defaults to
       # PUBLIC_TO_EVERYONE and degrades to SELF_ONLY while the app is unaudited.
       TIKTOK_PRIVACY: ${{ secrets.TIKTOK_PRIVACY }}
+      # 'draft' (or unset) sends the video to the TikTok inbox for manual
+      # finishing — used while the app awaits review. 'post' Direct-Posts.
+      TIKTOK_POST_MODE: ${{ secrets.TIKTOK_POST_MODE }}
+      # Email delivery of the MP4 + caption for manual posting.
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM: ${{ secrets.RESEND_FROM }}
+      TIKTOK_EMAIL_TO: ${{ secrets.TIKTOK_EMAIL_TO }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -61,8 +68,16 @@ jobs:
           path: shots/tiktok/
           retention-days: 30
           if-no-files-found: error
-      # Auto-post is opt-in: skipped until the TIKTOK_* secrets exist. Direct
-      # Post publishes hands-off — private-only until the TikTok app passes
-      # audit (creator_info flips it public automatically once approved).
+      # Email the MP4 + caption for manual posting — works regardless of the
+      # TikTok app review state, skipped until the RESEND_* secrets exist.
+      - if: env.RESEND_API_KEY != '' && env.TIKTOK_EMAIL_TO != ''
+        run: node scripts/tiktok-send.js shots/tiktok/*.mp4
+      # Auto-post is opt-in: skipped until the TIKTOK_* secrets exist. Mode
+      # draft lands the video in the TikTok inbox for manual finishing (no
+      # audit needed); mode post Direct-Posts — private-only until the app
+      # passes review (creator_info flips it public automatically once approved).
       - if: env.TIKTOK_REFRESH_TOKEN != ''
-        run: node scripts/tiktok-upload.js --post shots/tiktok/*.mp4
+        run: |
+          MODE=""
+          if [ "$TIKTOK_POST_MODE" = "post" ]; then MODE="--post"; fi
+          node scripts/tiktok-upload.js $MODE shots/tiktok/*.mp4
