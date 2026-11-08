@@ -46,6 +46,7 @@ vi.mock('./watchmodeQuota', () => ({
 }))
 vi.mock('../ai/warmCache', () => ({ warmAiTitleCache: mocks.warmAiTitleCache }))
 vi.mock('../../lib/indexnow', () => ({ pingIndexNow: mocks.pingIndexNow }))
+vi.mock('../indexing/bingSubmit', () => ({ submitDailyBatch: vi.fn(async () => ({ submitted: 0, budget: 0 })) }))
 
 const mockGetRedis = vi.mocked(getRedis)
 const fake = createFakeRedis()

@@ -1,4 +1,5 @@
 import { getSubmissionQuota, getUrlInfo, submitUrlBatch, type SubmissionQuota } from './bingAnalytics'
+import { recordSubmissions } from './bingSubmit'
 import { upcomingTitles } from './indexCheck'
 import { SITE_URL } from '../../lib/site'
 
@@ -43,6 +44,7 @@ export async function runBingCheck(topN = 12): Promise<BingIndexReport> {
       try {
         await submitUrlBatch(batch)
         report.submitted = batch.length
+        await recordSubmissions(batch)
       } catch (err) {
         report.errors.push({ title: 'SubmitUrlBatch', message: err instanceof Error ? err.message : String(err) })
       }

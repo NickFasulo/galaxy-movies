@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getDailyStats, hasBingCredentials, weekStats, type BingWeekStats } from '../../../features/indexing/bingAnalytics'
 import { runBingCheck, type BingIndexReport } from '../../../features/indexing/bingCheck'
+import { SUBMIT_LOG_KEY } from '../../../features/indexing/bingSubmit'
 import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
@@ -95,7 +96,7 @@ function digestSection(d: WeeklyDigest) {
   )
 }
 
-function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping: IndexNowStatus | null) {
+function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping: IndexNowStatus | null, weekSubmitted: number) {
   const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
   const rows = report.pending
     .map((p) => `<p style="margin:10px 0 0; font-size:13px; line-height:1.5;"><span style="color:#1f2937;">${escapeHtml(p.title)}</span><br/><span style="color:#596579; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`)
@@ -109,7 +110,8 @@ function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping:
   const submitted = report.submitted
     ? ` · ${report.submitted} auto-submitted${report.quota ? ` (quota ${report.quota.daily}/day)` : ''}`
     : ''
-  return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored — ${escapeHtml(report.errors[0].message)}</p>` : ''}`)
+  const dailyLine = weekSubmitted ? ` · ${weekSubmitted} URLs pushed this week via daily submission` : ''
+  return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}${dailyLine}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored — ${escapeHtml(report.errors[0].message)}</p>` : ''}`)
 }
 
 function chatDemandSection(d: ChatDemand) {
@@ -143,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const kv = getRedis()
-    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand] = await Promise.all([
+    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog] = await Promise.all([
       runIndexCheck(),
       hasBingCredentials()
         ? runBingCheck().catch((err) => {
@@ -155,8 +157,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       kv?.get<IndexNowStatus>(INDEXNOW_STATUS_KEY).catch(() => null) ?? Promise.resolve(null),
       kv?.get<string>(LAST_REPORT_KEY).catch(() => null),
       kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null),
-      kv ? getChatDemand(kv).catch(() => null) : Promise.resolve(null)
+      kv ? getChatDemand(kv).catch(() => null) : Promise.resolve(null),
+      kv?.hgetall<Record<string, number>>(SUBMIT_LOG_KEY).catch(() => null) ?? Promise.resolve(null)
     ])
+
+    // Daily submission counter — how many URLs the cron pushed to Bing's
+    // Submission API in the trailing 7 days.
+    const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
+    const weekSubmitted = Object.entries(submitLog || {})
+      .filter(([d]) => d >= weekStart)
+      .reduce((s, [, n]) => s + Number(n), 0)
 
     // CTR-gap section is monthly: include on the first Monday of the month.
     const includeCtrGaps = new Date().getDate() <= 7
@@ -179,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         body:
           indexingSection(report, prevSignature) +
           (digest ? digestSection(digest) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
-          (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null) : '') +
+          (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
           (chatDemand ? chatDemandSection(chatDemand) : '')
       })
     })

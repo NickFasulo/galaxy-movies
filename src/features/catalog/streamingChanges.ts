@@ -5,6 +5,7 @@ import { recordWatchmodeResponse, watchmodeQuotaExceeded } from './watchmodeQuot
 import { recordProviderMoves } from './tenure'
 import { warmAiTitleCache, type WarmCandidate } from '../ai/warmCache'
 import { pingIndexNow } from '../../lib/indexnow'
+import { submitDailyBatch } from '../indexing/bingSubmit'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, TitleSummary, TmdbMovie, TmdbPaged, TmdbTvShow, WatchProvidersResponse } from '../../types/tmdb'
 
@@ -960,6 +961,12 @@ export async function updateStreamingChanges() {
     indexNowUrls.add(`${SITE_URL}/new-on-streaming`)
     indexNowUrls.add(`${SITE_URL}/reports/streaming-churn`)
     await pingIndexNow([...indexNowUrls])
+    // Same priority set feeds Bing's URL Submission API — its 90/day quota is
+    // the only "request indexing" channel that exists, and idle quota is a
+    // missed crawl.
+    const bing = await submitDailyBatch([...indexNowUrls]).catch((err) => ({ submitted: 0, budget: 0, error: String(err) }))
+    summary.bingSubmitted = bing.submitted
+    if (bing.error) summary.bingSubmitError = bing.error
   }
 
   // Referer-less requests (the scraper fingerprint) can no longer trigger AI

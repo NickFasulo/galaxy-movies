@@ -8,6 +8,7 @@ vi.mock('./indexCheck', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./indexCheck')>()),
   upcomingTitles: mocks.upcomingTitles
 }))
+vi.mock('./bingSubmit', () => ({ recordSubmissions: vi.fn(async () => {}) }))
 
 import { runBingCheck } from './bingCheck'
 

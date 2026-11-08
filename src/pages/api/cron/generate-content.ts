@@ -25,6 +25,7 @@ import { curatedLists } from '../../../features/catalog/curatedLists'
 import { isCronAuthorized } from '../../../lib/auth'
 import { aiParams, recordAiUsage, getOpenAIClient, isAiAvailable, isQuotaError, markAiUnavailable } from '../../../features/ai/openai'
 import { pingIndexNow } from '../../../lib/indexnow'
+import { submitDailyBatch } from '../../../features/indexing/bingSubmit'
 import { SITE_URL } from '../../../lib/site'
 
 export const config = { maxDuration: 60 }
@@ -403,7 +404,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const approvedSlugs = summary.approved.map((r) => r.slug)
   if (approvedSlugs.length) {
-    await pingIndexNow([`${SITE_URL}/lists`, ...approvedSlugs.map((slug) => `${SITE_URL}/lists/${slug}`)])
+    const urls = [`${SITE_URL}/lists`, ...approvedSlugs.map((slug) => `${SITE_URL}/lists/${slug}`)]
+    await pingIndexNow(urls)
+    await submitDailyBatch(urls).catch(() => null)
   }
 
   return res.status(200).json(summary)
