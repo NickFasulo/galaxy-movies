@@ -21,7 +21,7 @@ async function main() {
   const page = context.pages()[0] || (await context.newPage())
   console.log(`Recording -> ${OUT}\nClose the browser window when done.`)
   await page.goto(START, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {})
-  await context.waitForEvent('close')
+  await context.waitForEvent('close', { timeout: 0 })
   console.log('saved.')
 }
 
