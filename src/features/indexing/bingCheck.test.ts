@@ -11,15 +11,18 @@ vi.mock('./indexCheck', async (importOriginal) => ({
 
 import { runBingCheck } from './bingCheck'
 
-const bingFetch = (indexedIds: Set<number>) =>
+const bingFetch = (indexedIds: Set<number>, failingIds = new Set<number>()) =>
   vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>((input) => {
     const u = String(input)
     if (u.includes('GetUrlInfo')) {
       const id = Number(new URL(u).searchParams.get('url')!.match(/(\d+)$/)![1])
+      if (failingIds.has(id)) {
+        return Promise.resolve(new Response(JSON.stringify({ ErrorCode: 17, Message: 'ERROR!!! ThrottleIP' }), { status: 400 }))
+      }
       return Promise.resolve(
         indexedIds.has(id)
           ? new Response(JSON.stringify({ d: { HttpStatus: 200 } }))
-          : new Response(JSON.stringify({ ApiFault: { Message: 'UrlNotFound' } }), { status: 400 })
+          : new Response(JSON.stringify({ d: { HttpStatus: 0, LastCrawledDate: '/Date(-62135596800000)/' } }))
       )
     }
     if (u.includes('GetUrlSubmissionQuota')) {
@@ -64,6 +67,24 @@ describe('runBingCheck', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const report = await runBingCheck()
+    expect(report.submitted).toBe(0)
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('SubmitUrlBatch'))).toBe(false)
+  })
+
+  it('counts persistent API faults as errors, not pending rows', async () => {
+    vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
+    mocks.upcomingTitles.mockResolvedValue([
+      { id: 1, title: 'One' },
+      { id: 2, title: 'Two' }
+    ])
+    const fetchMock = bingFetch(new Set([1]), new Set([2]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const report = await runBingCheck()
+    expect(report.pending).toHaveLength(0)
+    expect(report.errors).toHaveLength(1)
+    expect(report.errors[0].message).toContain('ThrottleIP')
+    // nothing proven missing → no quota spent on a blind submit
     expect(report.submitted).toBe(0)
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('SubmitUrlBatch'))).toBe(false)
   })

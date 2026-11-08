@@ -57,18 +57,37 @@ describe('getUrlInfo', () => {
     expect(info.lastCrawled).toBeUndefined()
   })
 
-  it('maps fault responses to a not-indexed state without throwing', async () => {
+  it('rethrows fault responses — a failed check is not a missing URL', async () => {
     vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ ApiFault: { Message: 'UrlNotFound' } }, 400)))
-    const info = await getUrlInfo('https://www.galaxymovies.app/movies/1')
-    expect(info.inIndex).toBe(false)
-    expect(info.state).toContain('not in Bing index')
+    await expect(getUrlInfo('https://www.galaxymovies.app/movies/1')).rejects.toThrow('UrlNotFound')
   })
 
-  it('rethrows auth failures so they surface as report errors', async () => {
+  it('retries ThrottleIP faults on a fresh connection', async () => {
     vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({}, 401)))
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ ErrorCode: 17, Message: 'ERROR!!! ThrottleIP' }, 400))
+      .mockResolvedValueOnce(json({ d: { HttpStatus: 200, LastCrawledDate: '/Date(1730000000000)/' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const info = await getUrlInfo('https://www.galaxymovies.app/movies/1')
+    expect(info.inIndex).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives up after repeated throttles and surfaces the fault message', async () => {
+    vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(json({ ErrorCode: 17, Message: 'ERROR!!! ThrottleIP' }, 400)))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(getUrlInfo('https://www.galaxymovies.app/movies/1')).rejects.toThrow('ThrottleIP')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('rethrows auth failures without retrying', async () => {
+    vi.stubEnv('BING_WEBMASTER_API_KEY', 'k')
+    const fetchMock = vi.fn().mockResolvedValue(json({}, 401))
+    vi.stubGlobal('fetch', fetchMock)
     await expect(getUrlInfo('https://www.galaxymovies.app/movies/1')).rejects.toThrow('HTTP 401')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -18,6 +18,7 @@ import {
 import { detectRegion, regionDisplayName, regionListDisplayNames } from '../../../lib/region'
 import { getContentIndexability, getProviderGenreTarget, getTvProviderGenreTarget, type ProviderGenreTarget } from '../contentOpportunities'
 import { setSwrCache, getPageParam } from '../../../lib/http'
+import { recordIndexability } from '../../../lib/indexability'
 import { titleListSchema } from '../schema'
 import { SITE_URL } from '../../../lib/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../../../types/tmdb'
@@ -108,6 +109,10 @@ export function providerGenreServerSideProps(media: MediaType, opts?: { region?:
       const titles = data.results || []
       if (page > 1 && !titles.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: titles })
+      // Same canonical-space recording as ProviderPage — the sitemap drops
+      // paths whose last render proved thin (region-locked or tiny slices).
+      const indexPath = region === 'IN' ? `/in${basePath}/${providerSlug}/${genreSlug}` : region === 'US' ? `${basePath}/${providerSlug}/${genreSlug}` : null
+      if (indexPath && page === 1) await recordIndexability(indexPath, indexability.isIndexable)
 
       setSwrCache(res)
       return {

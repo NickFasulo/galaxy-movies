@@ -42,6 +42,31 @@ describe('pingIndexNow', () => {
     await expect(pingIndexNow(['https://www.galaxymovies.app/movies/1'])).resolves.toBeUndefined()
   })
 
+  it('sweeps every endpoint twice before recording failure', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 429 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await pingIndexNow(['https://www.galaxymovies.app/movies/1'], ['https://a.example/in', 'https://b.example/in'])
+
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(fetchMock.mock.calls.map(([u]) => u)).toEqual([
+      'https://a.example/in', 'https://b.example/in', 'https://a.example/in', 'https://b.example/in'
+    ])
+    expect(mocks.redisSet).toHaveBeenLastCalledWith('gm:indexnow:last', expect.objectContaining({ ok: false, status: 429 }))
+  })
+
+  it('succeeds on a later pass when the first sweep is rate-limited', async () => {
+    const fetchMock = vi.fn().mockImplementation((u: string) =>
+      Promise.resolve(new Response('', { status: u.includes('bing.com') ? 200 : 429 }))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await pingIndexNow(['https://www.galaxymovies.app/movies/1'], ['https://a.example/in', 'https://www.bing.com/indexnow'])
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(mocks.redisSet).toHaveBeenLastCalledWith('gm:indexnow:last', expect.objectContaining({ ok: true, via: 'www.bing.com' }))
+  })
+
   it('falls back to the bing endpoint when the relay is rate-limited', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response('', { status: 429 }))

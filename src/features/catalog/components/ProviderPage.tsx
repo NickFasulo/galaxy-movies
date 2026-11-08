@@ -20,6 +20,7 @@ import { detectRegion, regionDisplayName, regionListDisplayNames } from '../../.
 import { getProviderChanges, type ProviderChanges } from '../streamingChanges'
 import { providerGenreSlugs, getProviderGenreTarget, tvProviderGenreSlugs, getTvProviderGenreTarget, getContentIndexability, type ProviderGenreTarget } from '../contentOpportunities'
 import { setSwrCache, getPageParam } from '../../../lib/http'
+import { recordIndexability } from '../../../lib/indexability'
 import { titleListSchema } from '../schema'
 import { SITE_URL } from '../../../lib/site'
 import type { MediaType, TitleSummary, TmdbPaged } from '../../../types/tmdb'
@@ -111,6 +112,11 @@ export function providerServerSideProps(media: MediaType, opts?: ProviderPageOpt
       ])
       if (page > 1 && !data.results?.length) return { notFound: true }
       const indexability = getContentIndexability({ movies: data.results })
+      // Record the verdict by canonical path for the sitemap's noindex filter.
+      // Only US/IN map to sitemap URLs — other regions would pollute the
+      // unprefixed verdict with a catalog Googlebot never sees.
+      const indexPath = region === 'IN' ? `/in${basePath}/${slug}` : region === 'US' ? `${basePath}/${slug}` : null
+      if (indexPath && page === 1) await recordIndexability(indexPath, indexability.isIndexable)
       setSwrCache(res)
       return { props: { ...base, titles: data.results, totalPages: data.total_pages || 1, changes: changesMap[slug] || null, isIndexable: indexability.isIndexable, indexabilityReason: indexability.reason } }
     } catch (error) {

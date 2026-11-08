@@ -41,12 +41,31 @@ class BingApiError extends Error {
   }
 }
 
+// Bing's edge rate-limits by source IP: Workers share an egress pool, so a
+// request can land on an IP another tenant already burned out — answered as
+// HTTP 400 {"ErrorCode":17,"Message":"ERROR!!! ThrottleIP"}. Each retry dials
+// a new connection and usually egresses on a different, unthrottled IP.
+const isRetriable = (err: BingApiError) =>
+  err.status === 429 || err.status >= 500 || /throttle/i.test(err.fault?.Message || '')
+
 async function bingApi<T>(method: string, params: Record<string, string>, init?: RequestInit): Promise<T> {
   const qs = new URLSearchParams({ ...params, apikey: process.env.BING_WEBMASTER_API_KEY || '' })
-  const res = await fetch(`${BING_API}/${method}?${qs}`, { signal: AbortSignal.timeout(10000), ...init })
-  const data = await res.json().catch(() => null)
-  if (!res.ok) throw new BingApiError(method, res.status, data?.ApiFault || data?.Error || data)
-  return (data?.d ?? data) as T
+  let lastErr: Error = new Error(`bing ${method}: no response`)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res: Response
+    try {
+      res = await fetch(`${BING_API}/${method}?${qs}`, { signal: AbortSignal.timeout(10000), ...init })
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err))
+      continue
+    }
+    const data = await res.json().catch(() => null)
+    if (res.ok) return (data?.d ?? data) as T
+    const err = new BingApiError(method, res.status, data?.ApiFault || data?.Error || data)
+    if (!isRetriable(err)) throw err
+    lastErr = err
+  }
+  throw lastErr
 }
 
 export interface BingUrlInfo {
@@ -59,7 +78,9 @@ export interface BingUrlInfo {
 
 // GetUrlInfo 200s even for URLs Bing never touched — the empty record is
 // HttpStatus:0 with MinValue dates, so "indexed" = Bing's last fetch was a
-// 200. A fault response (unknown URL) becomes a state, not an error.
+// 200. API faults (throttle, auth, bad params) are rethrown — they say the
+// check failed, not that the URL is missing, and runBingCheck reports them
+// as errors rather than pending rows.
 export async function getUrlInfo(url: string): Promise<BingUrlInfo> {
   try {
     const d = await bingApi<{
@@ -81,9 +102,9 @@ export async function getUrlInfo(url: string): Promise<BingUrlInfo> {
           : 'never crawled'
     }
   } catch (err) {
-    if (err instanceof BingApiError && (err.status === 401 || err.status === 403)) throw err
-    const status = err instanceof BingApiError ? `HTTP ${err.status}` : err instanceof Error ? err.message : 'error'
-    return { url, inIndex: false, state: `not in Bing index (${status})` }
+    if (err instanceof BingApiError) throw err
+    const status = err instanceof Error ? err.message : 'error'
+    return { url, inIndex: false, state: `check failed (${status})` }
   }
 }
 

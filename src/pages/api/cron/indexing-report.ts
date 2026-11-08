@@ -46,7 +46,7 @@ function indexingSection(report: IndexReport, prevSignature: string | null | und
     report.pending.length
       ? ' Open each link and click <strong>Request Indexing</strong> (quota ~10-15/day):'
       : ' Nothing needs a manual request this week.'
-  }</p>${rows}${report.errors.length ? `<p style="margin:10px 0 0; color:#596579; font-size:12px;">${report.errors.length} checks errored and were skipped.</p>` : ''}`
+  }</p>${rows}${report.errors.length ? `<p style="margin:10px 0 0; color:#596579; font-size:12px;">${report.errors.length} checks errored and were skipped — ${escapeHtml(report.errors[0].message)}</p>` : ''}`
 }
 
 function digestSection(d: WeeklyDigest) {
@@ -109,7 +109,7 @@ function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping:
   const submitted = report.submitted
     ? ` · ${report.submitted} auto-submitted${report.quota ? ` (quota ${report.quota.daily}/day)` : ''}`
     : ''
-  return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored.</p>` : ''}`)
+  return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored — ${escapeHtml(report.errors[0].message)}</p>` : ''}`)
 }
 
 function chatDemandSection(d: ChatDemand) {

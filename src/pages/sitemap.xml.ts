@@ -7,6 +7,7 @@ import { curatedLists } from '../features/catalog/curatedLists'
 import { getGeneratedLists } from '../features/catalog/generatedLists'
 import { getProviderGenreTargets, getTvProviderGenreTargets, MIN_INDEXABLE_MOVIES } from '../features/catalog/contentOpportunities'
 import { franchiseCollectionIds } from '../features/catalog/franchises'
+import { noindexPaths } from '../lib/indexability'
 import { SITE_URL as siteUrl } from '../lib/site'
 import { setSwrCache } from '../lib/http'
 
@@ -53,11 +54,12 @@ async function runBatched<R>(tasks: (() => Promise<R>)[], size = 10): Promise<R[
 
 export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const today = new Date().toISOString().split('T')[0]
-  const [generatedLists, titleChangeIndex, monthlyChanges, inCatalogSizes] = await Promise.all([
+  const [generatedLists, titleChangeIndex, monthlyChanges, inCatalogSizes, noindex] = await Promise.all([
     getGeneratedLists(),
     getTitleChangeIndex(),
     getMonthlyChanges([...Object.keys(PROVIDER_NAME_MATCH), ...IN_TRACKED_PROVIDERS.map((k) => `IN:${k}`)]),
-    getCatalogSizes('IN')
+    getCatalogSizes('IN'),
+    noindexPaths()
   ])
 
   // Provider-diff events are real page-content changes ("leaves Netflix Oct 20")
@@ -96,6 +98,10 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
   const inGenrePageOk = (p: string) => (inMovieSize(p) ?? IN_GENRE_FLOOR) >= IN_GENRE_FLOOR
   const inTvProviderPageOk = (p: string) => (inTvSize(p) ?? IN_PROVIDER_FLOOR) >= IN_PROVIDER_FLOOR
   const inTvGenrePageOk = (p: string) => (inTvSize(p) ?? IN_GENRE_FLOOR) >= IN_GENRE_FLOOR
+  // Authoritative gate: paths whose last render actually emitted noindex
+  // (recorded by the page's GSSP) never enter the sitemap — the catalog-size
+  // proxies above can't see thin genre slices.
+  const kept = (path: string) => !noindex.has(path)
 
   // lastmod is only emitted where a real change date exists — emitting
   // "today" everywhere taught Google the field was meaningless.
@@ -146,7 +152,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       urlEntry(`${siteUrl}/genre/${genre}`)
     ),
     ...Object.keys(streamingProviders)
-      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION))
+      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION) && kept(`/streaming/${provider}`))
       .map(provider =>
       urlEntry(`${siteUrl}/streaming/${provider}`)
     ),
@@ -155,7 +161,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     // emit noindex there. Advertising them wastes crawl on URLs that can never
     // index; the pages still exist for users in-region.
     ...getProviderGenreTargets()
-      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION))
+      .filter(({ providerKey, genreKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION) && kept(`/streaming/${providerKey}/${genreKey}`))
       .map(({ providerKey, genreKey }) =>
         urlEntry(`${siteUrl}/streaming/${providerKey}/${genreKey}`)
       ),
@@ -166,12 +172,12 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
       urlEntry(`${siteUrl}/tv/genre/${genre}`)
     ),
     ...Object.keys(streamingProviders)
-      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION))
+      .filter(provider => isProviderAvailableInRegion(provider, DEFAULT_REGION) && kept(`/tv/streaming/${provider}`))
       .map(provider =>
       urlEntry(`${siteUrl}/tv/streaming/${provider}`)
     ),
     ...getTvProviderGenreTargets()
-      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION))
+      .filter(({ providerKey, genreKey }) => isProviderAvailableInRegion(providerKey, DEFAULT_REGION) && kept(`/tv/streaming/${providerKey}/${genreKey}`))
       .map(({ providerKey, genreKey }) =>
         urlEntry(`${siteUrl}/tv/streaming/${providerKey}/${genreKey}`)
       ),
@@ -179,18 +185,18 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     // IN-only providers (JioHotstar, ZEE5, SonyLIV, …) can index at all, since
     // Googlebot always crawls the US render of the unprefixed URLs.
     ...IN_TRACKED_PROVIDERS
-      .filter(inProviderPageOk)
+      .filter(p => inProviderPageOk(p) && kept(`/in/streaming/${p}`))
       .map(provider => urlEntry(`${siteUrl}/in/streaming/${provider}`)),
     ...getProviderGenreTargets()
-      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inGenrePageOk(providerKey))
+      .filter(({ providerKey, genreKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inGenrePageOk(providerKey) && kept(`/in/streaming/${providerKey}/${genreKey}`))
       .map(({ providerKey, genreKey }) =>
         urlEntry(`${siteUrl}/in/streaming/${providerKey}/${genreKey}`)
       ),
     ...IN_TRACKED_PROVIDERS
-      .filter(inTvProviderPageOk)
+      .filter(p => inTvProviderPageOk(p) && kept(`/in/tv/streaming/${p}`))
       .map(provider => urlEntry(`${siteUrl}/in/tv/streaming/${provider}`)),
     ...getTvProviderGenreTargets()
-      .filter(({ providerKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inTvGenrePageOk(providerKey))
+      .filter(({ providerKey, genreKey }) => isProviderAvailableInRegion(providerKey, 'IN') && inTvGenrePageOk(providerKey) && kept(`/in/tv/streaming/${providerKey}/${genreKey}`))
       .map(({ providerKey, genreKey }) =>
         urlEntry(`${siteUrl}/in/tv/streaming/${providerKey}/${genreKey}`)
       ),
