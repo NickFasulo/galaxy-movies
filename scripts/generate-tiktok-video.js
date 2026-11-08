@@ -8,9 +8,15 @@
 // Usage: node scripts/generate-tiktok-video.js [--provider netflix]
 //        [--kind added|left|coming] [--count 5] [--out shots/tiktok]
 //        [--api https://www.galaxymovies.app] [--slides-only]
+//        [--bed path/to/music.mp3] [--no-audio]
 //
 // --api reads the public /api/streaming-changes feed instead of Redis —
 // the tiktok.yml workflow uses it so CI needs no Upstash secrets.
+//
+// Audio bed: --bed or TIKTOK_AUDIO_BED points at a music file (looped/trimmed
+// to video length, faded out); auto-detected at assets/tiktok-bed.{mp3,m4a,wav}.
+// Without one a quiet synthesized pad is generated — Content Posting API can't
+// attach TikTok sounds, so the bed is all an auto-posted video gets.
 //
 // Slides always write to {out}/{date}-{provider}-{kind}/. MP4 assembles when
 // ffmpeg is available (devDep ffmpeg-static, or ffmpeg on PATH).
@@ -30,6 +36,7 @@ const KIND = arg('kind', 'added')
 const COUNT = Number(arg('count', 5))
 const OUT_DIR = arg('out', path.join(ROOT, 'shots', 'tiktok'))
 const SLIDES_ONLY = process.argv.includes('--slides-only')
+const NO_AUDIO = process.argv.includes('--no-audio')
 const API_BASE = arg('api', '').replace(/\/+$/, '')
 
 const env = {}
@@ -326,11 +333,33 @@ async function main() {
       try { fs.linkSync(f.file, dest) } catch { fs.copyFileSync(f.file, dest) }
     }
   }
-  const r = spawnSync(bin, [
-    '-y', '-framerate', '30', '-i', path.join(seqDir, '%05d.png'),
-    '-vf', 'format=yuv420p', '-c:v', 'libx264', '-preset', 'medium',
-    '-crf', '20', '-movflags', '+faststart', mp4
-  ], { stdio: 'inherit' })
+  const dur = files.reduce((s, f) => s + f.dur, 0)
+  const bed = (() => {
+    const p = arg('bed', envVar('TIKTOK_AUDIO_BED'))
+    if (p) return path.resolve(p)
+    for (const ext of ['mp3', 'm4a', 'wav']) {
+      const c = path.join(ROOT, 'assets', `tiktok-bed.${ext}`)
+      if (fs.existsSync(c)) return c
+    }
+  })()
+  if (bed && !fs.existsSync(bed)) { console.error(`--bed not found: ${bed}`); process.exit(1) }
+  const args = ['-y', '-framerate', '30', '-i', path.join(seqDir, '%05d.png')]
+  let graph = null
+  if (!NO_AUDIO) {
+    const fades = `afade=t=in:d=0.5,afade=t=out:st=${Math.max(0, dur - 1)}:d=1`
+    if (bed) {
+      args.push('-stream_loop', '-1', '-i', bed)
+      graph = `[1:a]volume=0.6,${fades}[a]`
+    } else {
+      // Quiet A-major pad so the video isn't silent without a shipped asset.
+      for (const f of [220, 277.18, 329.63]) args.push('-f', 'lavfi', '-i', `sine=frequency=${f}:duration=${dur}`)
+      graph = `[1:a][2:a][3:a]amix=inputs=3:normalize=0,volume=0.15,tremolo=f=0.3:d=0.4,${fades}[a]`
+    }
+  }
+  args.push('-vf', 'format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20')
+  if (graph) args.push('-filter_complex', graph, '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '128k', '-shortest')
+  args.push('-movflags', '+faststart', mp4)
+  const r = spawnSync(bin, args, { stdio: 'inherit' })
   if (r.status !== 0) {
     console.error(`ffmpeg exited ${r.status} — slides still usable at ${dir}`)
     process.exit(1)
