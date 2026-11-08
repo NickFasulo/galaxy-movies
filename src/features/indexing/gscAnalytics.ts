@@ -17,6 +17,7 @@ export interface AnalyticsRow {
 interface AnalyticsOpts {
   dimensions: string[]
   rowLimit?: number
+  page?: string
   pageContains?: string
   // ISO-3166-1 alpha-3 lowercase ('ind', 'usa') as used by the Search
   // Analytics API's country dimension.
@@ -34,6 +35,7 @@ export async function queryAnalytics(startDate: string, endDate: string, opts: A
     aggregationType: 'auto'
   }
   const filters: Record<string, string>[] = []
+  if (opts.page) filters.push({ dimension: 'page', operator: 'equals', expression: opts.page })
   if (opts.pageContains) filters.push({ dimension: 'page', operator: 'contains', expression: opts.pageContains })
   if (opts.country) filters.push({ dimension: 'country', operator: 'equals', expression: opts.country })
   if (filters.length) body.dimensionFilterGroups = [{ filters }]

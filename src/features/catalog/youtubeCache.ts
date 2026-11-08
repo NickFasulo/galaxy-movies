@@ -6,16 +6,17 @@ const videoCache = new LRUCache<string, boolean>({
   ttl: 1000 * 60 * 60 * 24,
 })
 
-export async function getFirstPlayableKey(videos: Video[] = []): Promise<string | null> {
+export async function getFirstPlayableVideo(videos: Video[] = []): Promise<Video | null> {
   if (!videos.length) return null
 
   const candidates = [
-    videos.find((v) => v.type === 'Trailer' && v.official)?.key,
-    videos.find((v) => v.type === 'Trailer')?.key,
-    videos.find((v) => v.type === 'Teaser')?.key,
-  ].filter((key): key is string => Boolean(key))
+    videos.find((v) => v.type === 'Trailer' && v.official),
+    videos.find((v) => v.type === 'Trailer'),
+    videos.find((v) => v.type === 'Teaser'),
+  ].filter((v): v is Video => Boolean(v?.key))
 
-  const playable = await Promise.all(candidates.map(async (key) => {
+  const playable = await Promise.all(candidates.map(async (v) => {
+    const key = v.key
     if (videoCache.has(key)) return videoCache.get(key)
 
     try {

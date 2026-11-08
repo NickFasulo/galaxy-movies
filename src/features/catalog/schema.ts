@@ -47,6 +47,25 @@ export function buildOgImageUrl({
   }).toString()}`
 }
 
+// Emitted only when the page embeds the player (VideoModal) — Google requires
+// the video to be watchable on-page for VideoObject markup to count.
+export function videoObjectSchema({ key, name, description, uploadDate }: {
+  key: string
+  name: string
+  description?: string
+  uploadDate?: string
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name,
+    description: description || name,
+    thumbnailUrl: `https://i.ytimg.com/vi/${key}/hqdefault.jpg`,
+    embedUrl: `https://www.youtube-nocookie.com/embed/${key}`,
+    uploadDate: uploadDate || undefined
+  }
+}
+
 export function itemListSchema({ name, description, url, items, numberOfItems }: {
   name: string
   description?: string

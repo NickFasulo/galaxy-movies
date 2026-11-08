@@ -6,7 +6,10 @@ const COMPARISON_PAGES = [
   { href: '/justwatch-alternative', label: 'JustWatch' },
   { href: '/reelgood-alternative', label: 'Reelgood' },
   { href: '/trakt-alternative', label: 'Trakt' },
-  { href: '/whats-on-netflix-alternative', label: "What's on Netflix" }
+  { href: '/whats-on-netflix-alternative', label: "What's on Netflix" },
+  { href: '/flixable-alternative', label: 'Flixable' },
+  { href: '/instantwatcher-alternative', label: 'InstantWatcher' },
+  { href: '/can-i-stream-it-alternative', label: 'Can I Stream It' }
 ]
 
 export default function ComparisonLinks({ exclude }: { exclude: string }) {

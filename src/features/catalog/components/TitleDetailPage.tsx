@@ -20,7 +20,7 @@ import GalaxyBotTake from './GalaxyBotTake'
 import CastSection from './CastSection'
 import { timeFormatter } from '../../../lib/format/formatters'
 import { dateFormatter } from '../../../lib/format/formatters'
-import { getFirstPlayableKey } from '../youtubeCache'
+import { getFirstPlayableVideo } from '../youtubeCache'
 import { detectRegion } from '../../../lib/region'
 import { useUserData } from '../../alerts/hooks/useUserData'
 import { getProviderIds, isAnimeTitle, normalizeTvTitle, fetchTmdb, TmdbError } from '../tmdb'
@@ -34,7 +34,7 @@ import { getTitleChanges, type TitleChangeEvents } from '../streamingChanges'
 import { getTitleTenure, getProviderTenureStats, type TenureStint, type TenureStats } from '../tenure'
 import { withTimeout } from '../../../lib/withTimeout'
 import { setSwrCache } from '../../../lib/http'
-import { absoluteImageUrl, aggregateRatingSchema, personSchema } from '../schema'
+import { absoluteImageUrl, aggregateRatingSchema, personSchema, videoObjectSchema } from '../schema'
 import { tmdbImage, SITE_URL } from '../../../lib/site'
 import type {
   AggregateCastMember,
@@ -62,6 +62,7 @@ interface PersonRef {
 
 interface CommonProps {
   videoKey: string | null
+  videoMeta: { name?: string; publishedAt?: string } | null
   watchProviders: WatchProvidersRegion | null
   watchProvidersByRegion: Record<string, WatchProvidersRegion>
   detectedRegion: string
@@ -109,6 +110,7 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         context.res.setHeader('Cache-Control', 'private, no-store')
         const thin: CommonProps = {
           videoKey: null,
+          videoMeta: null,
           watchProviders: null,
           watchProvidersByRegion: {},
           detectedRegion: 'US',
@@ -210,8 +212,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         }
       }
 
-      const [validVideoKey, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef, titleChanges, titleTenure] = await Promise.all([
-        withTimeout(getFirstPlayableKey(title.videos?.results), 3000, null),
+      const [validVideo, aiSynopsis, similarTitles, providerAffiliateLinks, similarListRef, titleChanges, titleTenure] = await Promise.all([
+        withTimeout(getFirstPlayableVideo(title.videos?.results), 3000, null),
         title.overview
           ? withTimeout(getOrGenerateMovieReview({
               movieId: title.id,
@@ -274,7 +276,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
       }
 
       const common: CommonProps = {
-        videoKey: validVideoKey || null,
+        videoKey: validVideo?.key || null,
+        videoMeta: validVideo ? { name: validVideo.name, publishedAt: validVideo.published_at } : null,
         watchProviders: userProviders,
         watchProvidersByRegion: providersData?.results || {},
         detectedRegion: countryCode,
@@ -308,7 +311,7 @@ export default function TitleDetailPage(props: TitleDetailProps) {
 function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>) {
   const { media, title } = props
   const isTv = media === 'tv'
-  const { videoKey, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, topCast } = props
+  const { videoKey, videoMeta, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
   // Native-script name (Devanagari, Tamil, …) — TMDB ships it on the detail
@@ -382,7 +385,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   const ogSubtitle = (!isTv && tagline) || description
   const releaseYear = Number((releaseDate || '').slice(0, 4)) || null
 
-  const structuredData: Record<string, unknown> = isTv
+  const titleSchema: Record<string, unknown> = isTv
     ? {
         '@context': 'https://schema.org',
         '@type': 'TVSeries',
@@ -423,6 +426,15 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         } : undefined
       }
 
+  const videoSchema = videoKey
+    ? videoObjectSchema({
+        key: videoKey,
+        name: videoMeta?.name || `${displayTitle} — Official Trailer`,
+        description: `Official trailer for ${displayTitle}.`,
+        uploadDate: videoMeta?.publishedAt
+      })
+    : null
+
   return (
     <>
       <PageHead
@@ -441,7 +453,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
         // No overview means no AI synopsis either (generation requires it) —
         // the page stays thin/duplicative until TMDB adds one.
         noindex={!title.overview}
-        structuredData={structuredData}
+        structuredData={[titleSchema, videoSchema]}
         breadcrumbItems={[
           { name: 'Home', url: SITE_URL },
           { name: isTv ? 'TV Shows' : 'Movies', url: `${SITE_URL}${isTv ? '/tv' : '/browse'}` },

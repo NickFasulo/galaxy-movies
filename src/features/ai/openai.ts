@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { getRedis } from '../../lib/redis'
 
-export type AiTask = 'chat' | 'review' | 'intro' | 'similar' | 'tagline' | 'discover'
+export type AiTask = 'chat' | 'review' | 'intro' | 'similar' | 'tagline' | 'discover' | 'ctr'
 
 type ReasoningEffort = OpenAI.Chat.ChatCompletionReasoningEffort | 'none'
 
@@ -16,7 +16,8 @@ const TASK_EFFORT: Record<AiTask, ReasoningEffort> = {
   intro: 'none',
   similar: 'none',
   tagline: 'none',
-  discover: 'low'
+  discover: 'low',
+  ctr: 'none'
 }
 
 const VALID_EFFORTS = new Set(['none', 'low', 'medium', 'high'])

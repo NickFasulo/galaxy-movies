@@ -5,6 +5,7 @@ import { SUBMIT_LOG_KEY } from '../../../features/indexing/bingSubmit'
 import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
+import { suggestCtrRewrites, type CtrSuggestion } from '../../../features/indexing/ctrSuggest'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { INDEXNOW_STATUS_KEY, type IndexNowStatus } from '../../../lib/indexnow'
@@ -14,6 +15,9 @@ export const config = { maxDuration: 120 }
 
 const LAST_REPORT_KEY = 'gm:indexing:last-report'
 const LAST_BANDS_KEY = 'gm:gsc:lists-bands'
+// Fresh demand data for the seed-research flow (.devin/skills/seed-research) —
+// new queries that appeared this week, kept just past the next report.
+const NEW_QUERIES_KEY = 'gm:gsc:new-queries'
 const RECIPIENT = () => process.env.INDEXING_REPORT_EMAIL || 'fasulo.nick@gmail.com'
 
 const delta = (cur: number, prev: number) => {
@@ -50,7 +54,7 @@ function indexingSection(report: IndexReport, prevSignature: string | null | und
   }</p>${rows}${report.errors.length ? `<p style="margin:10px 0 0; color:#596579; font-size:12px;">${report.errors.length} checks errored and were skipped — ${escapeHtml(report.errors[0].message)}</p>` : ''}`
 }
 
-function digestSection(d: WeeklyDigest) {
+function digestSection(d: WeeklyDigest, ctrSuggestions: CtrSuggestion[] = []) {
   const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
   const rows = (items: string[]) => items.length ? items.join('') : '<div style="font-size:12px; color:#596579;">none this week</div>'
 
@@ -88,7 +92,19 @@ function digestSection(d: WeeklyDigest) {
           d.nearClick.map((r) => `<div style="font-size:12px; color:#4b5563;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, ''))}: pos ${r.position.toFixed(0)} · ${r.impressions} imp</div>`).join('')
         : '')) +
     (d.ctrGaps?.length
-      ? s(`<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>CTR gaps</strong> <span style="color:#596579; font-size:12px;">impressions ≥100, CTR &lt;1% — rewrite titles/descriptions</span></p>${d.ctrGaps.map((r) => `<div style="font-size:12px; color:#4b5563; line-height:1.6;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, ''))}: ${r.impressions} imp · ${(r.ctr * 100).toFixed(1)}% CTR · pos ${r.position.toFixed(0)}</div>`).join('')}`)
+      ? s(
+          `<p style="margin:0 0 6px; color:#1f2937; font-size:13px;"><strong>CTR gaps</strong> <span style="color:#596579; font-size:12px;">impressions ≥100, CTR &lt;1% — rewrite titles/descriptions</span></p>${d.ctrGaps.map((r) => `<div style="font-size:12px; color:#4b5563; line-height:1.6;">${escapeHtml(r.keys[0].replace(/^https:\/\/www\.galaxymovies\.app/, ''))}: ${r.impressions} imp · ${(r.ctr * 100).toFixed(1)}% CTR · pos ${r.position.toFixed(0)}</div>`).join('')}` +
+          (ctrSuggestions.some((sg) => sg.title || sg.description)
+            ? `<p style="margin:10px 0 4px; color:#596579; font-size:12px;">Suggested rewrites:</p>` +
+              ctrSuggestions
+                .filter((sg) => sg.title || sg.description)
+                .map(
+                  (sg) =>
+                    `<div style="font-size:12px; color:#4b5563; line-height:1.6; margin-top:6px;">${escapeHtml(sg.page.replace(/^https:\/\/www\.galaxymovies\.app/, '') || '/')}${sg.query ? ` · query "${escapeHtml(sg.query)}"` : ''}<br/><span style="color:#1f2937;">${escapeHtml(sg.title)}</span>${sg.description ? `<br/><span style="color:#596579;">${escapeHtml(sg.description)}</span>` : ''}</div>`
+                )
+                .join('')
+            : '')
+        )
       : '') +
     (d.sitemap
       ? s(`<p style="margin:0; color:#4b5563; font-size:13px;"><strong style="color:#1f2937;">Sitemap</strong> · ${d.sitemap.resubmitted ? 'resubmitted' : 'resubmit failed'}${d.sitemap.lastDownloaded ? ` · last fetched ${d.sitemap.lastDownloaded.slice(0, 10)}` : ''}${d.sitemap.errors ? ` · <span style="color:#b91c1c;">${d.sitemap.errors} errors</span>` : ''}${d.sitemap.warnings ? ` · ${d.sitemap.warnings} warnings` : ''}</p>`)
@@ -175,6 +191,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return null
     })
 
+    // CTR-gap section gets AI-drafted rewrite candidates only on its monthly
+    // run (first week of the month) — capped at 5 pages inside the helper.
+    const ctrSuggestions = digest?.ctrGaps?.length
+      ? await suggestCtrRewrites(digest.ctrGaps).catch((err) => {
+          console.error('CTR suggestions failed:', err)
+          return [] as CtrSuggestion[]
+        })
+      : []
+
     const subject = report.pending.length
       ? `${report.pending.length} upcoming release${report.pending.length === 1 ? '' : 's'} need indexing requests`
       : 'Weekly GSC report: all upcoming pages indexed'
@@ -188,7 +213,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         reason: 'Weekly indexing + Search Console report for galaxymovies.app.',
         body:
           indexingSection(report, prevSignature) +
-          (digest ? digestSection(digest) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
+          (digest ? digestSection(digest, ctrSuggestions) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
           (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
           (chatDemand ? chatDemandSection(chatDemand) : '')
       })
@@ -196,6 +221,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (sent) {
       await kv?.set(LAST_REPORT_KEY, pendingSignature(report.pending)).catch(() => {})
       if (digest) await kv?.set(LAST_BANDS_KEY, digest.listsBands).catch(() => {})
+      if (digest?.newQueries?.length) {
+        await kv?.set(
+          NEW_QUERIES_KEY,
+          digest.newQueries.map((q) => ({ q: q.keys[0], imp: q.impressions, pos: Math.round(q.position) })),
+          { ex: 8 * 86400 }
+        ).catch(() => {})
+      }
     }
     return res.status(200).json({ emailed: sent, report, digest, bing: bingReport })
   } catch (err) {
