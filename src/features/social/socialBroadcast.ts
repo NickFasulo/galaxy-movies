@@ -28,26 +28,27 @@ export function buildBroadcastPost(
   maxLen = 300,
   link = BROADCAST_LINK
 ): string {
-  const lines: string[] = [`This week's streaming moves:`]
-
-  // One line per provider — "+ added, − left" reads cleanly and spends fewer
-  // characters than repeating the service name on every title.
+  // One block per provider: header line, then one title per line tagged
+  // ✅ added / ❌ left. Newlines replace the old spaces 1:1 — the taller
+  // scan-friendly layout only costs the blank line between blocks.
+  const blocks: string[] = []
   for (const key of BROADCAST_PROVIDERS) {
     const change = changes[key]
     if (!change) continue
     const parts = [
-      ...change.added.slice(0, 2).map((t) => `+ ${t.title}`),
-      ...change.left.slice(0, 2).map((t) => `− ${t.title}`)
+      ...change.added.slice(0, 2).map((t) => `✅ ${t.title}`),
+      ...change.left.slice(0, 2).map((t) => `❌ ${t.title}`)
     ]
-    if (parts.length) lines.push(`${providerLabel(key)}: ${parts.join(' ')}`)
+    if (parts.length) blocks.push(`${providerLabel(key)}:\n${parts.join('\n')}`)
   }
 
-  let text = `${lines.join('\n')}\n\nFull lists updated daily: ${link}`
+  const render = () => [`This week's streaming moves:`, ...blocks].join('\n\n') + `\n\nFull lists updated daily: ${link}`
 
-  // Drop lines from the end until the post fits the channel's cap.
-  while (text.length > maxLen && lines.length > 1) {
-    lines.pop()
-    text = `${lines.join('\n')}\n\nFull lists updated daily: ${link}`
+  // Drop trailing provider blocks until the post fits the channel's cap.
+  let text = render()
+  while (text.length > maxLen && blocks.length) {
+    blocks.pop()
+    text = render()
   }
   return text
 }
@@ -221,7 +222,7 @@ export function buildDeparturesPost(
   const lines: string[] = [`Leaving soon on streaming:`]
   for (const key of BROADCAST_PROVIDERS) {
     for (const t of changes[key]?.leavingSoon?.slice(0, 3) || []) {
-      lines.push(`− ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} ← ${providerLabel(key)}`)
+      lines.push(`❌ ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} — ${providerLabel(key)}`)
     }
   }
   if (lines.length === 1) return ''
@@ -256,7 +257,7 @@ function buildMonthlyChurnPost(
   const leavingLines: string[] = []
   for (const key of BROADCAST_PROVIDERS) {
     for (const t of changes[key]?.leavingSoon?.slice(0, 2) || []) {
-      leavingLines.push(`− ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} ← ${providerLabel(key)}`)
+      leavingLines.push(`❌ ${t.title}${t.date ? ` (${digestDate(t.date)})` : ''} — ${providerLabel(key)}`)
     }
   }
 
@@ -358,7 +359,7 @@ export function buildLastChancePost(
 
   const lines = [`Last chance to stream:`]
   for (const r of rows.slice(0, 5)) {
-    lines.push(`− ${r.title} ← ${providerLabel(r.provider)} (${relDay(r.date, now)})`)
+    lines.push(`❌ ${r.title} — ${providerLabel(r.provider)} (${relDay(r.date, now)})`)
   }
 
   let text = `${lines.join('\n')}\n\nFull lists updated daily: ${link}`

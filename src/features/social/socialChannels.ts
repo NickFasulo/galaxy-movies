@@ -9,7 +9,7 @@ export interface SocialChannel {
   // Post character cap — Bluesky 300, X 280, the rest effectively unbounded.
   maxLen: number
   // 'markdown' channels (Reddit) get the rich multi-line digest; everything
-  // else gets the compact +/- format tuned for short posts.
+  // else gets the compact ✅/❌ format tuned for short posts.
   format?: 'markdown'
   ready(): boolean
   post(text: string, linkUrl: string, title?: string): Promise<string | null>

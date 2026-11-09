@@ -49,9 +49,9 @@ describe('buildBroadcastPost', () => {
       hulu: { added: items(['Hulu Movie']), left: items([]), coming: items([]) },
       max: { added: items([]), left: items(['Max Movie']), coming: items([]) }
     })
-    expect(text).toContain('Netflix: + Frankenstein + The Rip − Old Show')
-    expect(text).toContain('Hulu: + Hulu Movie')
-    expect(text).toContain('Max: − Max Movie')
+    expect(text).toContain('Netflix:\n✅ Frankenstein\n✅ The Rip\n❌ Old Show')
+    expect(text).toContain('Hulu:\n✅ Hulu Movie')
+    expect(text).toContain('Max:\n❌ Max Movie')
     expect(text).toContain('galaxymovies.app/leaving')
     expect(text.length).toBeLessThanOrEqual(300)
   })
@@ -156,10 +156,10 @@ describe('buildDeparturesPost', () => {
       hulu: { leavingSoon: [{ title: 'Hulu Exit', date: '2026-10-30' }] },
       max: {}
     })
-    expect(text).toContain('− Gone Soon (Oct 31) ← Netflix')
-    expect(text).toContain('− Also Gone ← Netflix')
-    expect(text).toContain('− Hulu Exit (Oct 30) ← Hulu')
-    expect(text).not.toContain('← Max')
+    expect(text).toContain('❌ Gone Soon (Oct 31) — Netflix')
+    expect(text).toContain('❌ Also Gone — Netflix')
+    expect(text).toContain('❌ Hulu Exit (Oct 30) — Hulu')
+    expect(text).not.toContain('— Max')
     expect(text).toContain('galaxymovies.app/leaving')
     expect(text.length).toBeLessThanOrEqual(300)
   })
@@ -208,8 +208,8 @@ describe('buildLastChancePost', () => {
       now
     )
     expect(text).toContain('Last chance to stream')
-    expect(text.indexOf('− Gone Today ← Netflix (today)')).toBeLessThan(text.indexOf('− Gone Tomorrow ← Netflix (tomorrow)'))
-    expect(text).toContain('− Gone Sunday ← Netflix (Nov 1)')
+    expect(text.indexOf('❌ Gone Today — Netflix (today)')).toBeLessThan(text.indexOf('❌ Gone Tomorrow — Netflix (tomorrow)'))
+    expect(text).toContain('❌ Gone Sunday — Netflix (Nov 1)')
     expect(text).not.toContain('Too Late')
     expect(text).not.toContain('Too Far')
     expect(text).not.toContain('Undated')
