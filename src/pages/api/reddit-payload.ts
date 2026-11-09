@@ -3,6 +3,7 @@ import { getProviderChanges } from '../../features/catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH } from '../../features/catalog/tmdb'
 import { BROADCAST_LINK, BROADCAST_PROVIDERS, buildDeparturesDigest, buildRedditDigest, providerLabel } from '../../features/social/socialBroadcast'
 import { checkPublicDigestLimit } from '../../lib/rateLimiter'
+import { readAdhocPost } from '../../features/social/adhocPost'
 
 // Public read-only payload the Devvit app polls on its weekly schedule.
 // Contains only already-public digest content; `key` lets the caller dedupe
@@ -17,6 +18,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!(await checkPublicDigestLimit(req))) {
     return res.status(429).json({ error: 'Rate limit reached. Please try again later.' })
+  }
+
+  // Ad-hoc copy stashed by /api/cron/social-post — the Devvit adhoc-check
+  // pulls it and dedupes on `key`. 404 = nothing new, not a failure.
+  if (req.query.kind === 'adhoc') {
+    const post = await readAdhocPost()
+    if (!post) return res.status(404).json({ error: 'no adhoc post' })
+    res.setHeader('Cache-Control', 'private, no-store')
+    return res.status(200).json(post)
   }
 
   const raw = typeof req.query.providers === 'string' ? req.query.providers : ''

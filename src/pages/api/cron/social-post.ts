@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { broadcastCustomPost } from '../../../features/social/socialBroadcast'
 import { SOCIAL_CHANNELS } from '../../../features/social/socialChannels'
+import { stashAdhocPost } from '../../../features/social/adhocPost'
 import { isCronAuthorized } from '../../../lib/auth'
 
 export const config = { maxDuration: 60 }
@@ -41,6 +42,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       text,
       link
     )
+    // Reddit isn't an env-armed channel — the Devvit app owns it. Stash the
+    // reddit-bound copy (posts.reddit wins, else the shared text) for its
+    // hourly /api/reddit-payload?kind=adhoc pull.
+    const redditText = typeof posts.reddit === 'string' ? posts.reddit : text
+    if (redditText) {
+      await stashAdhocPost(redditText, {
+        title: typeof body.title === 'string' ? body.title : undefined,
+        url: link,
+      })
+    }
     return res.status(200).json(summary)
   } catch (err) {
     console.error('Social post failed:', err)
