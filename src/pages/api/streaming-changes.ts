@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getProviderChanges, type ProviderChanges } from '../../features/catalog/streamingChanges'
+import { getMonthlyChanges, getProviderChanges, type MonthlyChanges, type ProviderChanges } from '../../features/catalog/streamingChanges'
 import { embeddableProviders, isEmbeddableProvider, providerLabel } from '../../features/catalog/embed'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
 import { requireMethod, setApiCache } from '../../lib/http'
@@ -13,6 +13,7 @@ function serialize(provider: string, change: ProviderChanges) {
     coming: change.coming,
     added: change.added,
     left: change.left,
+    leavingSoon: change.leavingSoon || [],
     attribution: {
       text: 'Powered by Galaxy Movies',
       url: `${SITE_URL}/leaving/${provider}`
@@ -48,8 +49,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(429).json({ error: 'Too many requests. Please try again later.' })
   }
 
+  // period=monthly serves the dated month-to-date accumulation instead of the
+  // weekly diff — the departures video aggregates `departed` across providers.
+  const monthly = req.query.period === 'monthly'
+  const serializeMonthly = (key: string, m: MonthlyChanges) => ({
+    provider: key,
+    source: m.source,
+    month: m.month,
+    updatedAt: m.updatedAt,
+    departed: m.departed,
+    arrived: m.arrived,
+  })
+
   if (provider === 'all') {
     const keys = embeddableProviders().map((p) => p.key)
+    if (monthly) {
+      const monthlyChanges = await getMonthlyChanges(keys)
+      const providers: Record<string, ReturnType<typeof serializeMonthly> & { label: string }> = {}
+      for (const key of keys) {
+        if (monthlyChanges[key]) providers[key] = { label: providerLabel(key), ...serializeMonthly(key, monthlyChanges[key]) }
+      }
+      setApiCache(res, 3600, 86400)
+      return res.status(200).json({ providers })
+    }
     const changes = await getProviderChanges(keys)
     const providers: Record<string, ReturnType<typeof serialize> & { label: string }> = {}
     for (const key of keys) {
@@ -64,6 +86,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: `Unknown provider '${provider}'`,
       providers: embeddableProviders().map((p) => p.key)
     })
+  }
+
+  if (monthly) {
+    const change = (await getMonthlyChanges([provider]))[provider]
+    if (!change) return res.status(503).json({ error: 'Change data temporarily unavailable' })
+    setApiCache(res, 3600, 86400)
+    return res.status(200).json({ label: providerLabel(provider), ...serializeMonthly(provider, change) })
   }
 
   const change = (await getProviderChanges([provider]))[provider]

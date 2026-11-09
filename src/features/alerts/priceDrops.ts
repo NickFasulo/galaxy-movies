@@ -140,6 +140,9 @@ export async function sendPriceDropAlerts(): Promise<{ sent: number; failed: num
     if (payload) prices.set(key, payload)
   }
 
+  // Cross-subscriber rollup of this run's drops — the weekly deals video and
+  // /api/price-drops read it; one SET per cron run, no per-request cost.
+  const weekly = new Map<string, WeeklyPriceDrop>()
   for (const [email, entry] of entries) {
     result.tracked += entry.targets.length
     const drops: { target: PriceDropTarget; prev: number; now: number; rent: string | null; buy: string | null }[] = []
@@ -158,6 +161,18 @@ export async function sendPriceDropAlerts(): Promise<{ sent: number; failed: num
           buy: payload!.cheapest.buy?.price != null ? `${money(payload!.cheapest.buy.price)} on ${payload!.cheapest.buy.provider}` : null
         })
         t.minSeen = current
+        const was = prev ?? current
+        const drop: WeeklyPriceDrop = {
+          tmdbId: t.tmdbId,
+          tmdbType: t.tmdbType,
+          title: t.title,
+          was,
+          now: current,
+          provider: payload!.cheapest.buy?.provider || payload!.cheapest.rent?.provider || null,
+        }
+        const dedup = `${t.tmdbType}:${t.tmdbId}`
+        const seen = weekly.get(dedup)
+        if (!seen || was - current > seen.was - seen.now) weekly.set(dedup, drop)
       }
     }
 
@@ -183,5 +198,30 @@ export async function sendPriceDropAlerts(): Promise<{ sent: number; failed: num
     else result.failed++
   }
 
+  const drops = [...weekly.values()]
+    .sort((a, b) => b.was - b.now - (a.was - a.now))
+    .slice(0, MAX_PRICE_DROPS)
+  if (drops.length) {
+    await kv.set(WEEKLY_DROPS_KEY, { updatedAt: now, drops }, { ex: WEEKLY_DROPS_TTL }).catch(() => {})
+  }
+
   return result
+}
+
+export const WEEKLY_DROPS_KEY = 'pricedrops:weekly'
+const WEEKLY_DROPS_TTL = 60 * 60 * 24 * 10
+
+export interface WeeklyPriceDrop {
+  tmdbId: number
+  tmdbType: MediaType
+  title: string
+  was: number
+  now: number
+  provider: string | null
+}
+
+export async function getWeeklyPriceDrops(): Promise<{ updatedAt: number; drops: WeeklyPriceDrop[] } | null> {
+  const kv = getRedis()
+  if (!kv) return null
+  return kv.get<{ updatedAt: number; drops: WeeklyPriceDrop[] }>(WEEKLY_DROPS_KEY).catch(() => null)
 }

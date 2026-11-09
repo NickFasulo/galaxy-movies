@@ -1,12 +1,19 @@
-// Daily-diff TikTok generator: pulls a provider's streaming-changes diff
-// (changes:diff:{provider} from Upstash), renders 1080x1920 slides through
-// next/og (same stack as /api/og and the email logo), and concatenates them
+// TikTok/Shorts/Reels video generator: renders 1080x1920 slides through
+// next/og (same stack as /api/og and the email logo) and concatenates them
 // into an MP4 with ffmpeg. scripts/tiktok-upload.js posts it — --post uses
 // Direct Post (hands-off but SELF_ONLY until the app passes TikTok's audit);
 // a {name}.txt caption written next to each MP4 feeds the post title.
 //
+// Kinds:
+//   added|left|coming  — one provider's weekly diff (changes:diff:{provider})
+//   leaving            — leavingSoon titles aggregated across all providers
+//   departures         — monthly `departed` titles aggregated across providers
+//   pricedrops         — the price-drop cron's weekly rollup (/api/price-drops)
+//   engage             — the week's engagement prompt (no title list)
+//
 // Usage: node scripts/generate-tiktok-video.js [--provider netflix]
-//        [--kind added|left|coming] [--count 5] [--out shots/tiktok]
+//        [--kind added|left|coming|leaving|departures|pricedrops|engage]
+//        [--count 5] [--out shots/tiktok]
 //        [--api https://www.galaxymovies.app] [--slides-only]
 //        [--bed path/to/music.mp3] [--no-audio]
 //
@@ -72,9 +79,14 @@ const NAMES = {
 const displayName = (key) => NAMES[key] || key.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ')
 
 const KIND_META = {
-  added: { headline: (n, p) => `${n} new on ${p}`, badge: 'NEW', badgeBg: '#276749' },
-  left: { headline: (n, p) => `leaving ${p} soon`, badge: 'LEAVING', badgeBg: '#9b2c2c' },
-  coming: { headline: (n, p) => `coming to ${p}`, badge: 'COMING', badgeBg: '#975a16' },
+  added: { eyebrow: 'THIS WEEK', headline: (n, p) => `${n} new on ${p}`, badge: 'NEW', badgeBg: '#276749' },
+  left: { eyebrow: 'THIS WEEK', headline: (n, p) => `leaving ${p} soon`, badge: 'LEAVING', badgeBg: '#9b2c2c' },
+  coming: { eyebrow: 'THIS WEEK', headline: (n, p) => `coming to ${p}`, badge: 'COMING', badgeBg: '#975a16' },
+  // Aggregate kinds — provider-agnostic item lists, need --api (or Redis for pricedrops).
+  leaving: { eyebrow: 'LAST CHANCE', headline: (n) => `${n} leaving this week`, badge: 'LEAVING', badgeBg: '#9b2c2c' },
+  departures: { eyebrow: 'MONTHLY DEPARTURES', headline: (n) => `${n} titles gone this month`, badge: 'GONE', badgeBg: '#742a2a' },
+  pricedrops: { eyebrow: 'DEALS THIS WEEK', headline: (n) => `${n} price drops`, badge: 'DEAL', badgeBg: '#2b6cb0' },
+  engage: { eyebrow: 'QUESTION OF THE WEEK', headline: (n) => n, badge: 'QUESTION', badgeBg: '#2b6cb0' },
 }
 const meta = KIND_META[KIND]
 if (!meta) { console.error(`--kind must be one of ${Object.keys(KIND_META).join('|')}`); process.exit(1) }
@@ -139,7 +151,7 @@ const hookSlide = (n, provider, t = 1) => {
                 fontSize: 60, fontWeight: 700, color: '#63b3ed', letterSpacing: '0.14em', marginBottom: 36,
                 opacity: pEyebrow
               },
-              children: 'THIS WEEK'
+              children: meta.eyebrow
             }
           },
           {
@@ -197,6 +209,7 @@ const titleSlide = (t, i, posterDataUri) => slide(
             children: [
               { type: 'div', props: { style: { fontSize: 88, fontWeight: 700, lineHeight: 1.12 }, children: t.title } },
               t.year ? { type: 'div', props: { style: { fontSize: 50, color: '#a0aec0' }, children: String(t.year) } } : null,
+              t.caption ? { type: 'div', props: { style: { fontSize: 54, color: '#63b3ed', fontWeight: 700 }, children: t.caption } } : null,
             ].filter(Boolean)
           }
         }
@@ -214,6 +227,21 @@ const ctaSlide = () => slide(
         { type: 'div', props: { style: { fontSize: 66, color: '#a0aec0', marginBottom: 40 }, children: 'Every arrival & departure,' } },
         { type: 'div', props: { style: { fontSize: 124, fontWeight: 700, lineHeight: 1.15 }, children: 'tracked daily.' } },
         { type: 'div', props: { style: { fontSize: 52, color: '#63b3ed', marginTop: 52 }, children: 'Free alerts when your watchlist moves' } },
+      ]
+    }
+  }
+)
+
+// Second beat of the engage video — the prompt's supporting line over a
+// "comment below" invite.
+const subSlide = (text) => slide(
+  {
+    type: 'div',
+    props: {
+      style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', textAlign: 'center', gap: 60 },
+      children: [
+        { type: 'div', props: { style: { fontSize: 72, fontWeight: 700, lineHeight: 1.3, maxWidth: 900 }, children: text } },
+        { type: 'div', props: { style: { fontSize: 52, color: '#63b3ed', fontWeight: 700 }, children: 'Drop it in the comments' } },
       ]
     }
   }
@@ -244,6 +272,50 @@ const toDataUri = async (posterPath) => {
   return `data:image/jpeg;base64,${buf.toString('base64')}`
 }
 
+const money = (n) => `$${n.toFixed(2)}`
+
+// Normalized item lists per kind. Aggregate kinds need --api (the workflow
+// always passes it); pricedrops also accepts the Redis key.
+async function loadItems() {
+  if (KIND === 'leaving' || KIND === 'departures') {
+    if (!API_BASE) { console.error(`--kind ${KIND} needs --api <site url>`); process.exit(1) }
+    const period = KIND === 'departures' ? '&period=monthly' : ''
+    const r = await fetch(`${API_BASE}/api/streaming-changes?provider=all${period}`)
+    if (!r.ok) throw new Error(`streaming-changes all${period}: ${r.status}`)
+    const { providers } = await r.json()
+    const field = KIND === 'leaving' ? 'leavingSoon' : 'departed'
+    return Object.values(providers || {}).flatMap((p) =>
+      (p[field] || []).map((t) => ({
+        ...t,
+        caption: `${KIND === 'leaving' ? 'leaving' : 'left'} ${p.label}${t.date ? ` · ${t.date.slice(5).replace('-', '/')}` : ''}`,
+      }))
+    )
+  }
+  if (KIND === 'pricedrops') {
+    const data = API_BASE
+      ? await fetch(`${API_BASE}/api/price-drops`).then((r) => (r.ok ? r.json() : null))
+      : await redisGet('pricedrops:weekly')
+    return (data?.drops || []).map((d) => ({
+      ...d,
+      popularity: 0,
+      caption: `${money(d.was)} → ${money(d.now)}${d.provider ? ` on ${d.provider}` : ''}`,
+    }))
+  }
+  const diff = await getDiff()
+  if (!diff) { console.error(`No diff data for provider "${PROVIDER}"`); process.exit(1) }
+  return (diff[KIND] || [])
+}
+
+// The week's engagement prompt — same ISO-week rotation as
+// features/social/engagementPrompts.ts reads from the shared JSON.
+function engagementPrompt() {
+  const pool = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/features/social/engagementPrompts.data.json'), 'utf8'))
+  const now = new Date()
+  const jan1 = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + jan1.getUTCDay() + 1) / 7)
+  return pool[week % pool.length]
+}
+
 const ffmpegBin = () => {
   try {
     const bin = require('ffmpeg-static')
@@ -257,38 +329,93 @@ async function renderSlide(imageResponse, outPath) {
   await sharp(png).png().toFile(outPath)
 }
 
-async function main() {
-  const diff = await getDiff()
-  if (!diff) { console.error(`No diff data for provider "${PROVIDER}"`); process.exit(1) }
-  const pool = (diff[KIND] || [])
-    .filter((t) => t?.tmdbId && t.title)
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, COUNT)
-  if (!pool.length) { console.error(`changes:diff:${PROVIDER}.${KIND} is empty`); process.exit(1) }
+// Sibling {mp4}.txt consumed by tiktok-upload.js --post.
+function buildCaption(titles) {
+  const tag = PROVIDER.replace(/-/g, '')
+  const [headline, kindTag] = {
+    added: [`New on ${displayName(PROVIDER)} this week`, `newon${tag}`],
+    left: [`Leaving ${displayName(PROVIDER)} soon`, `leaving${tag}`],
+    coming: [`Coming to ${displayName(PROVIDER)}`, `comingto${tag}`],
+    leaving: ['Leaving streaming this week', 'leavingsoon'],
+    departures: ['Gone from streaming this month', 'departures'],
+    pricedrops: ['Price drops this week', 'moviedeals'],
+  }[KIND]
+  return [
+    headline,
+    '',
+    ...titles.map((t, i) => `${i + 1}. ${t.title}${t.year ? ` (${t.year})` : ''}${t.caption ? ` — ${t.caption}` : ''}`),
+    '',
+    'Every arrival & departure tracked free at galaxymovies.app',
+    '',
+    `#${kindTag} #streaming #movies #whattowatch`,
+  ].join('\n')
+}
 
+async function main() {
   const stamp = new Date().toISOString().slice(0, 10)
   const dir = path.join(OUT_DIR, `${stamp}-${PROVIDER}-${KIND}`)
-  fs.mkdirSync(dir, { recursive: true })
 
-  // Poster paths aren't in the diff payload — one detail call per title.
-  const titles = await Promise.all(pool.map(async (t) => {
-    try {
-      const d = await tmdb(`/${t.tmdbType === 'tv' ? 'tv' : 'movie'}/${t.tmdbId}`)
-      return { ...t, posterDataUri: await toDataUri(d.poster_path) }
-    } catch {
-      return { ...t, posterDataUri: null }
-    }
-  }))
-
-  // 1s fade+scale intro, then a static hold — motion stops cleanly.
   const POP_FRAMES = 30
-  const slides = [
-    ...Array.from({ length: POP_FRAMES }, (_, i) => ({ resp: hookSlide(titles.length, PROVIDER, (i + 1) / POP_FRAMES), dur: 1 / 30 })),
-    { resp: hookSlide(titles.length, PROVIDER, 1), dur: 1.4 },
-    ...titles.map((t, i) => ({ resp: titleSlide(t, i, t.posterDataUri), dur: 2.6 })),
-    { resp: ctaSlide(), dur: 2.2 }
-  ]
+  const hook = (headline, t) => hookSlide(headline, PROVIDER, t)
+  let slides
+  let caption
 
+  if (KIND === 'engage') {
+    const prompt = engagementPrompt()
+    slides = [
+      ...Array.from({ length: POP_FRAMES }, (_, i) => ({ resp: hookSlide(prompt.title, PROVIDER, (i + 1) / POP_FRAMES), dur: 1 / 30 })),
+      { resp: hookSlide(prompt.title, PROVIDER, 1), dur: 2.4 },
+      { resp: subSlide(prompt.videoSub), dur: 3.4 },
+      { resp: ctaSlide(), dur: 2.2 }
+    ]
+    caption = [
+      prompt.title,
+      '',
+      prompt.videoSub,
+      '',
+      'Track every arrival & departure free at galaxymovies.app/leaving',
+      '',
+      '#streaming #movies #whattowatch #questionoftheweek',
+    ].join('\n')
+  } else {
+    const pool = (await loadItems())
+      .filter((t) => t?.title)
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+      .slice(0, COUNT)
+    if (!pool.length) { console.error(`No items for kind "${KIND}"`); process.exit(1) }
+
+    // Poster paths aren't in the diff payload — one detail call per title.
+    // leavingSoon items arrive id-less (Watchmode names don't join to the
+    // catalog), so fall back to a title search for a resolvable poster.
+    const titles = (await Promise.all(pool.map(async (t) => {
+      try {
+        let type = t.tmdbType === 'tv' ? 'tv' : 'movie'
+        let id = t.tmdbId
+        if (!id) {
+          const s = await tmdb(`/search/multi?query=${encodeURIComponent(t.title)}&include_adult=false`)
+          const hit = (s.results || []).find((r) => r.media_type === 'movie' || r.media_type === 'tv')
+          if (!hit) return null
+          id = hit.id
+          type = hit.media_type
+        }
+        const d = await tmdb(`/${type}/${id}`)
+        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, posterDataUri: await toDataUri(d.poster_path) }
+      } catch {
+        return { ...t, posterDataUri: null }
+      }
+    }))).filter(Boolean)
+
+    // 1s fade intro, then a static hold — motion stops cleanly.
+    slides = [
+      ...Array.from({ length: POP_FRAMES }, (_, i) => ({ resp: hook(titles.length, (i + 1) / POP_FRAMES), dur: 1 / 30 })),
+      { resp: hook(titles.length, 1), dur: 1.4 },
+      ...titles.map((t, i) => ({ resp: titleSlide(t, i, t.posterDataUri), dur: 2.6 })),
+      { resp: ctaSlide(), dur: 2.2 }
+    ]
+    caption = buildCaption(titles)
+  }
+
+  fs.mkdirSync(dir, { recursive: true })
   const files = []
   for (let i = 0; i < slides.length; i++) {
     const file = path.join(dir, `slide-${String(i).padStart(2, '0')}.png`)
@@ -298,23 +425,6 @@ async function main() {
   console.log(`${files.length} slides -> ${dir}`)
 
   const mp4 = path.join(OUT_DIR, `${stamp}-${PROVIDER}-${KIND}.mp4`)
-  // Sibling caption consumed by tiktok-upload.js --post.
-  const tag = PROVIDER.replace(/-/g, '')
-  const captionTitle = {
-    added: `New on ${displayName(PROVIDER)} this week`,
-    left: `Leaving ${displayName(PROVIDER)} soon`,
-    coming: `Coming to ${displayName(PROVIDER)}`,
-  }[KIND]
-  const kindTag = { added: `newon${tag}`, left: `leaving${tag}`, coming: `comingto${tag}` }[KIND]
-  const caption = [
-    captionTitle,
-    '',
-    ...titles.map((t, i) => `${i + 1}. ${t.title}${t.year ? ` (${t.year})` : ''}`),
-    '',
-    'Every arrival & departure tracked free at galaxymovies.app',
-    '',
-    `#${tag} #${kindTag} #streaming #movies #whattowatch`,
-  ].join('\n')
   fs.writeFileSync(mp4.replace(/\.mp4$/, '.txt'), caption + '\n')
   if (SLIDES_ONLY) { console.log('--slides-only: done'); return }
   const bin = ffmpegBin()

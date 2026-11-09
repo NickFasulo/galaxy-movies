@@ -15,7 +15,7 @@ on:
         default: netflix
       kind:
         type: choice
-        options: [added, left, coming]
+        options: [added, left, coming, leaving, departures, pricedrops, engage]
         default: added
       count:
         description: Titles per video
@@ -70,11 +70,31 @@ jobs:
           node-version: 24 # matches ci.yml
           cache: npm
       - run: npm ci
+      # Scheduled runs rotate the week's content; workflow_dispatch inputs
+      # always win for manual renders. The 25th's departures cut aligns with
+      # the monthly digest that goes out to Reddit + socials the same day.
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "provider=${{ inputs.provider || 'netflix' }}" >> "$GITHUB_OUTPUT"
+            echo "kind=${{ inputs.kind || 'added' }}" >> "$GITHUB_OUTPUT"
+          else
+            case "$(date -u +%u)" in
+              1) echo "provider=netflix"     >> "$GITHUB_OUTPUT"; echo "kind=added"      >> "$GITHUB_OUTPUT" ;;
+              2) echo "provider=hulu"        >> "$GITHUB_OUTPUT"; echo "kind=added"      >> "$GITHUB_OUTPUT" ;;
+              3) echo "provider=netflix"     >> "$GITHUB_OUTPUT"; echo "kind=pricedrops" >> "$GITHUB_OUTPUT" ;;
+              4) echo "provider=netflix"     >> "$GITHUB_OUTPUT"; echo "kind=engage"     >> "$GITHUB_OUTPUT" ;;
+              5) echo "provider=netflix"     >> "$GITHUB_OUTPUT"; echo "kind=leaving"    >> "$GITHUB_OUTPUT" ;;
+              6) echo "provider=disney-plus" >> "$GITHUB_OUTPUT"; echo "kind=coming"     >> "$GITHUB_OUTPUT" ;;
+              7) echo "provider=max"         >> "$GITHUB_OUTPUT"; echo "kind=coming"     >> "$GITHUB_OUTPUT" ;;
+            esac
+            if [ "$(date -u +%-d)" = "25" ]; then echo "kind=departures" >> "$GITHUB_OUTPUT"; fi
+          fi
       - run: >-
           node scripts/generate-tiktok-video.js
           --api https://galaxy-movies.winter-rice-c91a.workers.dev
-          --provider ${{ inputs.provider || 'netflix' }}
-          --kind ${{ inputs.kind || 'added' }}
+          --provider ${{ steps.pick.outputs.provider }}
+          --kind ${{ steps.pick.outputs.kind }}
           --count ${{ inputs.count || '5' }}
       - id: stamp
         run: echo "date=$(date +%F)" >> "$GITHUB_OUTPUT"
