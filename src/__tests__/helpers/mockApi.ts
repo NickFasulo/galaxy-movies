@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 export const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0'
 
 let ipSeq = 0
-export const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
+const nextIp = () => `203.0.113.${(ipSeq++ % 250) + 1}`
 
 export interface MakeReqOptions {
   method?: string

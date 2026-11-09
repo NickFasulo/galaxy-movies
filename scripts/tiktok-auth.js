@@ -64,6 +64,7 @@ if (MODE === 'url') {
     }),
   }).then((r) => r.json()).then((j) => {
     if (j.error) { console.error(`exchange failed: ${j.error_description || j.error}`); process.exit(1) }
+    console.log(`granted scopes: ${j.scope}\nopen_id: ${j.open_id}\n`)
     console.log(`refresh_token (valid ~1yr):\n${j.refresh_token}\n`)
     console.log(SANDBOX
       ? 'Store in .env.local as TIKTOK_SANDBOX_REFRESH_TOKEN'
