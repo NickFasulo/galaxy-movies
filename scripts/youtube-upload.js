@@ -9,6 +9,9 @@
 //   YT_CLIENT_ID/YT_CLIENT_SECRET, falling back to GOOGLE_OAUTH_CLIENT_ID/
 //   GOOGLE_OAUTH_CLIENT_SECRET. A sibling {name}.txt caption feeds the
 //   title (first line, <=100 chars) and description (the rest).
+//   Optional: YT_CHANNEL_ID — aborts before any upload if the refresh token
+//   resolves to a different channel (tokens are bound to the channel picked
+//   at OAuth consent and can't be repointed).
 const fs = require('fs')
 const path = require('path')
 
@@ -25,6 +28,7 @@ const envVar = (name) => process.env[name] || env[name]
 const CLIENT_ID = envVar('YT_CLIENT_ID') || envVar('GOOGLE_OAUTH_CLIENT_ID')
 const CLIENT_SECRET = envVar('YT_CLIENT_SECRET') || envVar('GOOGLE_OAUTH_CLIENT_SECRET')
 const REFRESH_TOKEN = envVar('YT_REFRESH_TOKEN')
+const EXPECT_CHANNEL = envVar('YT_CHANNEL_ID')
 
 const files = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 if (!files.length) { console.error('Usage: node scripts/youtube-upload.js <file.mp4> [...]'); process.exit(1) }
@@ -85,8 +89,26 @@ async function upload(token, file) {
   return j.id
 }
 
+// mine=true resolves the channel the refresh token was issued to — one
+// quota unit per run in exchange for never posting to the wrong account.
+async function channelInfo(token) {
+  const r = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const j = await r.json()
+  if (!r.ok) throw new Error(`channel check failed: ${j.error?.message || r.status}`)
+  const ch = j.items?.[0]
+  if (!ch) throw new Error('channel check failed: token has no channel')
+  return { id: ch.id, title: ch.snippet?.title || ch.id }
+}
+
 async function main() {
   const token = await accessToken()
+  const channel = await channelInfo(token)
+  if (EXPECT_CHANNEL && channel.id !== EXPECT_CHANNEL) {
+    throw new Error(`token is bound to ${channel.title} (${channel.id}) — expected ${EXPECT_CHANNEL}`)
+  }
+  console.log(`channel: ${channel.title} (${channel.id})`)
   for (const file of files) {
     const id = await upload(token, file)
     console.log(`uploaded ${file} -> https://studio.youtube.com/video/${id}/edit (private — publish from Studio)`)

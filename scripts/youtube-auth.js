@@ -70,6 +70,13 @@ if (MODE === 'url') {
       if (!r.ok) throw new Error(`exchange failed: ${r.status} ${j.error_description || j.error}`)
       if (!j.refresh_token) throw new Error('no refresh_token returned — re-run `url` (prompt=consent is required)')
       console.log(`YT_REFRESH_TOKEN=${j.refresh_token}`)
+      // Tokens bind to the channel picked at consent — print which one so a
+      // wrong pick surfaces now, not after an upload.
+      const ch = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+        headers: { Authorization: `Bearer ${j.access_token}` }
+      }).then((r) => r.json())
+      const c = ch.items?.[0]
+      console.log(c ? `\ntoken is bound to channel: ${c.snippet.title} (${c.id})` : '\ncould not resolve channel for this token')
     })
     .catch((err) => { console.error(err.message || err); process.exit(1) })
 } else {

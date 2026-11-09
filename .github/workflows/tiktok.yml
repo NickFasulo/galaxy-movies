@@ -48,8 +48,11 @@ jobs:
       RESEND_FROM: ${{ secrets.RESEND_FROM }}
       TIKTOK_EMAIL_TO: ${{ secrets.TIKTOK_EMAIL_TO }}
       # YouTube private upload (scripts/youtube-upload.js) — client creds are
-      # the same GOOGLE_OAUTH_* pair the workspace MCP uses.
+      # the same GOOGLE_OAUTH_* pair the workspace MCP uses. YT_CHANNEL_ID
+      # guards the target channel — the run aborts if the token resolves
+      # elsewhere (e.g. a token minted while the personal channel was picked).
       YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      YT_CHANNEL_ID: ${{ secrets.YT_CHANNEL_ID }}
       YT_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
       YT_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
       # IG Reels publish (scripts/ig-upload.js) — posts PUBLIC immediately;
