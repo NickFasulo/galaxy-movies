@@ -7,7 +7,9 @@
 // YouTube API audit, so no extra scopes are needed.
 //
 // 1. console.cloud.google.com -> enable "YouTube Data API v3"; add
-//    youtube.upload under OAuth consent screen -> Scopes.
+//    youtube.upload + youtube.readonly under OAuth consent screen -> Scopes.
+//    readonly is what lets youtube-upload.js's channel guard read
+//    channels?mine=true — upload alone can't read channel info.
 // 2. node scripts/youtube-auth.js url -> open the printed URL, approve,
 //    land on the redirect URI ?code=XXX
 // 3. node scripts/youtube-auth.js exchange --code XXX
@@ -34,7 +36,7 @@ const CLIENT_ID = arg('client-id') || envVar('YT_CLIENT_ID') || envVar('GOOGLE_O
 const CLIENT_SECRET = arg('client-secret') || envVar('YT_CLIENT_SECRET') || envVar('GOOGLE_OAUTH_CLIENT_SECRET')
 const REDIRECT = arg('redirect-uri') || 'https://www.galaxymovies.app/'
 const CODE = arg('code') || ''
-const SCOPE = 'https://www.googleapis.com/auth/youtube.upload'
+const SCOPE = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly'
 const MODE = process.argv.slice(2).find((m) => m === 'url' || m === 'exchange')
 
 if (MODE === 'url') {
