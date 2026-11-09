@@ -21,6 +21,7 @@ import {
   buildLastChanceDigest,
   buildLastChancePost,
   buildRedditDigest,
+  broadcastCustomPost,
   broadcastLastChance,
   broadcastMonthlyDepartures,
   broadcastWeeklyDigest
@@ -502,5 +503,73 @@ describe('reddit channel', () => {
     expect(body.get('kind')).toBe('self')
     expect(body.get('title')).toBe("Leaving soon on streaming: this month's departures")
     expect(body.get('text')).toContain('- Leaving soon: Gone Soon (Oct 31)')
+  })
+})
+
+describe('broadcastCustomPost', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+  })
+
+  it('sends per-channel text and the fallback to channels without an entry', async () => {
+    process.env.BSKY_HANDLE = 'galaxymovies.app'
+    process.env.BSKY_APP_PASSWORD = 'test-pass'
+    process.env.SOCIAL_DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1/token'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('createSession')
+        ? new Response(JSON.stringify({ accessJwt: 'jwt', did: 'd' }), { status: 200 })
+        : new Response('{}', { status: 200 })
+    )
+
+    const bskyText = 'bsky copy — platform-specific text that is comfortably over the minimum length'
+    const fallback = 'shared fallback text that is comfortably over the minimum length'
+    const results = await broadcastCustomPost({ bsky: bskyText }, fallback)
+
+    expect(results.bsky.status).toBe('posted')
+    expect(results.discord.status).toBe('posted')
+    const bskyBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('createRecord'))![1]?.body)
+    )
+    expect(bskyBody.record.text).toBe(bskyText)
+    const dcBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('discord.com'))![1]?.body)
+    )
+    expect(dcBody.content).toBe(fallback)
+  })
+
+  it('skips channels with no entry and no fallback', async () => {
+    process.env.BSKY_HANDLE = 'galaxymovies.app'
+    process.env.BSKY_APP_PASSWORD = 'test-pass'
+    process.env.SOCIAL_DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1/token'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('createSession')
+        ? new Response(JSON.stringify({ accessJwt: 'jwt', did: 'd' }), { status: 200 })
+        : new Response('{}', { status: 200 })
+    )
+
+    const results = await broadcastCustomPost({
+      bsky: 'bsky copy — platform-specific text that is comfortably over the minimum length'
+    })
+    expect(results.bsky.status).toBe('posted')
+    expect(results.discord.status).toBe('skipped')
+    expect(results.discord.reason).toBe('nothing to post')
+    expect(fetchSpy.mock.calls.filter(([input]) => String(input).includes('discord.com'))).toHaveLength(0)
+  })
+
+  it('tags the custom link per channel for link-field channels', async () => {
+    process.env.SOCIAL_FACEBOOK_WEBHOOK = 'https://hook.us1.make.com/abc'
+    fetchSpy.mockResolvedValue(new Response('Accepted', { status: 200 }))
+
+    const results = await broadcastCustomPost(
+      {},
+      'shared text that is comfortably over the minimum length',
+      'https://www.galaxymovies.app/movie-night'
+    )
+    expect(results.facebook.status).toBe('posted')
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+    expect(body.link).toContain('galaxymovies.app/movie-night')
+    expect(body.link).toContain('utm_source=facebook')
+    expect(body.link).toContain('utm_campaign=adhoc')
   })
 })

@@ -421,3 +421,21 @@ export async function broadcastLastChance(now = new Date()): Promise<Record<stri
     { scope: 'lastchance', ttlDays: 7 }
   )
 }
+
+// ---------- Ad-hoc ----------
+// Caller-supplied copy for one-off posts (/api/cron/social-post) that aren't
+// built from diff data — platform updates, engagement prompts. `posts` holds
+// per-channel text; `fallback` covers channels without an entry. Text goes
+// out as given, so the caller bakes UTM tags into any links in the copy;
+// `linkBase` still feeds channels that take a separate link field
+// (Facebook preview card, Pinterest) and gets tagged per channel.
+export function broadcastCustomPost(
+  posts: Record<string, string>,
+  fallback?: string,
+  linkBase = BROADCAST_LINK
+): Promise<Record<string, ChannelResult>> {
+  return broadcastToChannels((channel) => ({ text: posts[channel.name] || fallback || '', linkBase }), {
+    scope: 'adhoc',
+    ttlDays: 1
+  })
+}
