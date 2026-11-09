@@ -15,8 +15,9 @@
 //
 // Audio bed: --bed or TIKTOK_AUDIO_BED points at a music file (looped/trimmed
 // to video length, faded out); auto-detected at assets/tiktok-bed.{mp3,m4a,wav}.
-// Without one a quiet synthesized pad is generated — Content Posting API can't
-// attach TikTok sounds, so the bed is all an auto-posted video gets.
+// Without one, generate-tiktok-bed.js renders a pad+bass+hat bed on the fly —
+// Content Posting API can't attach TikTok sounds, so the bed is all an
+// auto-posted video gets.
 //
 // Slides always write to {out}/{date}-{provider}-{kind}/. MP4 assembles when
 // ffmpeg is available (devDep ffmpeg-static, or ffmpeg on PATH).
@@ -351,9 +352,17 @@ async function main() {
       args.push('-stream_loop', '-1', '-i', bed)
       graph = `[1:a]volume=0.6,${fades}[a]`
     } else {
-      // Quiet A-major pad so the video isn't silent without a shipped asset.
-      for (const f of [220, 277.18, 329.63]) args.push('-f', 'lavfi', '-i', `sine=frequency=${f}:duration=${dur}`)
-      graph = `[1:a][2:a][3:a]amix=inputs=3:normalize=0,volume=0.15,tremolo=f=0.3:d=0.4,${fades}[a]`
+      // Procedural bed (generate-tiktok-bed.js) so the video isn't silent
+      // without a shipped asset; sines are the last resort if it fails.
+      const tmpBed = path.join(seqDir, 'bed.wav')
+      const g = spawnSync(process.execPath, [path.join(__dirname, 'generate-tiktok-bed.js'), tmpBed, String(dur)], { stdio: 'inherit' })
+      if (g.status === 0) {
+        args.push('-i', tmpBed)
+        graph = `[1:a]${fades}[a]`
+      } else {
+        for (const f of [220, 277.18, 329.63]) args.push('-f', 'lavfi', '-i', `sine=frequency=${f}:duration=${dur}`)
+        graph = `[1:a][2:a][3:a]amix=inputs=3:normalize=0,volume=0.15,tremolo=f=0.3:d=0.4,${fades}[a]`
+      }
     }
   }
   args.push('-vf', 'format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20')
