@@ -14,10 +14,16 @@ Live at [galaxymovies.app](https://galaxymovies.app).
 * **📺 Where to Watch:** Check exact streaming, rental, and purchase availability for any title across regions (US + India).
 
 
-* **📈 Streaming Changes:** Daily-tracked provider diffs power "new on" and "leaving" pages, monthly arrivals-vs-departures verdicts (`/this-month/[provider]`), and an open JSON feed at `/api/streaming-changes`.
+* **📈 Streaming Changes:** Daily-tracked provider diffs power "new on" and "leaving" pages, monthly arrivals-vs-departures verdicts (`/this-month/[provider]`), churn data studies (`/reports/streaming-churn`), and an open JSON feed at `/api/streaming-changes`.
 
 
-* **🔔 Alerts:** Email and web-push notifications when a specific title lands on a service, a weekly digest of everything coming/leaving, and an ICS calendar feed. Optional Telegram bot.
+* **📋 Lists & Collections:** Editorial picks organized by mood, genre, and theme (`/lists/`, `/collections/`), plus `*-alternative` guides for people comparing streaming trackers.
+
+
+* **🔔 Alerts:** Email and web-push notifications when a specific title lands on a service, a weekly digest of everything coming/leaving, weekly price-drop alerts on tracked titles, and an ICS calendar feed. Optional Telegram bot.
+
+
+* **📣 Social Broadcasts:** Daily streaming-change posts across Bluesky, Mastodon, X, Reddit, Tumblr, Pinterest, Facebook, Discord, and Telegram, plus an auto-generated video cross-posted to TikTok, YouTube Shorts, and IG Reels.
 
 
 * **📖 AI Synopses:** Get quick, objective film summaries generated via the OpenAI API before deciding what to watch.
@@ -55,7 +61,7 @@ Live at [galaxymovies.app](https://galaxymovies.app).
 
 * **Infra:** [Cloudflare Workers](https://workers.cloudflare.com/) via [@opennextjs/cloudflare](https://opennext.js.org/cloudflare) in production; Vercel kept as cold standby
 
-* **Quality:** [Vitest](https://vitest.dev/), ESLint flat config, [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) budgets
+* **Quality:** [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) e2e, ESLint flat config, [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) budgets
 
 * **Analytics:** Umami + Google Search Console indexing reports
 
@@ -71,6 +77,10 @@ npm test               # Vitest unit tests
 npm run test:coverage  # tests + v8 coverage floor
 npm run lint           # ESLint
 npm run check          # typecheck + production build
+npm run test:e2e       # Playwright e2e (needs `npx playwright install chromium` once)
+npm run test:e2e:workerd  # e2e against the last cf:build output under wrangler dev
+npm run index:check    # GSC indexing status for upcoming releases
+npm run lhci           # build + Lighthouse CI budgets
 ```
 
 `npm run dev:turbo` runs Turbopack but currently hits a Next.js Pages Router dev bug — keep `dev` on webpack.
@@ -79,7 +89,7 @@ A husky `pre-commit` hook runs typecheck + lint + tests.
 
 ### Environment
 
-Copy `.env.local` and fill in what you need. `TMDB_API_KEY` is the only hard requirement for browsing; the rest gate specific features:
+Create `.env.local` and fill in what you need. `TMDB_API_KEY` is the only hard requirement for browsing; the rest gate specific features:
 
 | Variable | Feature |
 | --- | --- |
@@ -89,17 +99,25 @@ Copy `.env.local` and fill in what you need. `TMDB_API_KEY` is the only hard req
 | `UPSTASH_REDIS_KV_REST_API_URL` + `_TOKEN` | Caching, rate limits, alerts storage |
 | `RESEND_API_KEY` / `RESEND_FROM` | Email alerts + digests |
 | `POLAR_*` | Plus subscriptions |
+| `TRAKT_CLIENT_ID` | Plus Trakt sync |
 | `NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY` / `WEBPUSH_PRIVATE_KEY` | Push notifications |
 | `CRON_SECRET` | Authenticates `/api/cron/*` |
+| `GSC_CLIENT_EMAIL` / `GSC_PRIVATE_KEY` | Search Console indexing checks + weekly report |
+| `BING_WEBMASTER_API_KEY` | Bing URL submissions |
+| `NEXT_PUBLIC_UMAMI_*` | Analytics |
+| `TAKEADS_*` / `NEXT_PUBLIC_AMAZON_IN_TAG` | Affiliate monetization |
 
-Social-channel keys (`BSKY_*`, `TELEGRAM_*`, `X_*`, `MASTODON_*`, `SOCIAL_*_WEBHOOK`) each gate an optional broadcast channel.
+Social-channel keys (`BSKY_*`, `TELEGRAM_*`, `X_*`, `MASTODON_*`, `REDDIT_*`, `TUMBLR_*`, `PINTEREST_*`, `FB_*`, `SOCIAL_*_WEBHOOK`) each gate an optional broadcast channel. `TIKTOK_*`, `YT_*`, and `IG_*` credentials are only used by the GitHub Actions video pipeline, not the app runtime.
 
 ## 📁 Structure
 
 * `src/pages/` — routes (Pages Router); API routes stay thin and call into features
 * `src/features/{catalog,alerts,billing,ai,social,game,monetize,indexing}/` — domain modules
 * `src/lib/` — cross-cutting infra (redis, auth, rate limiting, email)
+* `src/hooks/` — app-wide hooks
+* `src/types/` — shared TMDB/API + env declarations
 * `src/components/` — shared UI
+* `e2e/` — Playwright specs + fixtures
 * `scripts/` — plain-JS build/deploy tooling
 * `patches/` — patch-package patches for `@opennextjs/cloudflare`
 
@@ -116,7 +134,7 @@ npm run smoke          # post-deploy probe against prod
 npm run smoke:workerd  # boot the built bundle under wrangler dev + smoke it
 ```
 
-Scheduled jobs (streaming-change diffs, watchlist alerts, weekly digest, social broadcasts, content generation, GSC indexing report) run via worker `scheduled()` triggers.
+Scheduled jobs (streaming-change diffs, watchlist + price-drop alerts, weekly digest, social broadcasts/engagement/ad-hoc posts, content generation, charts, digital releases, GSC indexing report) run via worker `scheduled()` triggers. The daily streaming-diff video renders in GitHub Actions (workerd has no ffmpeg) and posts to TikTok, YouTube Shorts, and IG Reels.
 
 Vercel is cold standby only — DNS records and `git.deploymentEnabled: false` in `vercel.json` keep it ready for instant rollback.
 
