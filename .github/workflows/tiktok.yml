@@ -53,6 +53,8 @@ jobs:
       # elsewhere (e.g. a token minted while the personal channel was picked).
       YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
       YT_CHANNEL_ID: ${{ secrets.YT_CHANNEL_ID }}
+      # 'public' once the project passes YouTube's API audit; unset = private.
+      YT_PRIVACY: ${{ secrets.YT_PRIVACY }}
       YT_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
       YT_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
       # IG Reels publish (scripts/ig-upload.js) — posts PUBLIC immediately;

@@ -11,7 +11,9 @@
 //   title (first line, <=100 chars) and description (the rest).
 //   Optional: YT_CHANNEL_ID — aborts before any upload if the refresh token
 //   resolves to a different channel (tokens are bound to the channel picked
-//   at OAuth consent and can't be repointed).
+//   at OAuth consent and can't be repointed). YT_PRIVACY overrides the
+//   privacy status (private|unlisted|public) — 'public' only sticks once the
+//   GCP project passes YouTube's API audit; until then YT forces private.
 const fs = require('fs')
 const path = require('path')
 
@@ -29,6 +31,7 @@ const CLIENT_ID = envVar('YT_CLIENT_ID') || envVar('GOOGLE_OAUTH_CLIENT_ID')
 const CLIENT_SECRET = envVar('YT_CLIENT_SECRET') || envVar('GOOGLE_OAUTH_CLIENT_SECRET')
 const REFRESH_TOKEN = envVar('YT_REFRESH_TOKEN')
 const EXPECT_CHANNEL = envVar('YT_CHANNEL_ID')
+const PRIVACY = ['private', 'unlisted', 'public'].includes(envVar('YT_PRIVACY')) ? envVar('YT_PRIVACY') : 'private'
 
 const files = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 if (!files.length) { console.error('Usage: node scripts/youtube-upload.js <file.mp4> [...]'); process.exit(1) }
@@ -72,7 +75,7 @@ async function upload(token, file) {
     },
     body: JSON.stringify({
       snippet: { title, description, categoryId: '24' },
-      status: { privacyStatus: 'private', selfDeclaredMadeForKids: false }
+      status: { privacyStatus: PRIVACY, selfDeclaredMadeForKids: false }
     })
   })
   if (!init.ok) throw new Error(`init failed for ${file}: ${init.status} ${await init.text()}`)
@@ -111,7 +114,7 @@ async function main() {
   console.log(`channel: ${channel.title} (${channel.id})`)
   for (const file of files) {
     const id = await upload(token, file)
-    console.log(`uploaded ${file} -> https://studio.youtube.com/video/${id}/edit (private — publish from Studio)`)
+    console.log(`uploaded ${file} -> https://studio.youtube.com/video/${id}/edit (${PRIVACY})`)
   }
 }
 
