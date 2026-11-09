@@ -56,6 +56,49 @@
           "503": { "description": "Change data temporarily unavailable." }
         }
       }
+    },
+    "/api/ext/where": {
+      "get": {
+        "operationId": "getWhereToWatch",
+        "summary": "Where a title is streaming",
+        "description": "Resolve a title by TMDB id, IMDb id, or title+year text to its watch providers (subscription, free, ads, rent, buy) in a region. Rate limit: 120 requests/hour per IP.",
+        "parameters": [
+          { "name": "id", "in": "query", "required": false, "description": "TMDB id. Requires `type`.", "schema": { "type": "integer" }, "example": "550" },
+          { "name": "imdb_id", "in": "query", "required": false, "description": "IMDb id (tt...).", "schema": { "type": "string" }, "example": "tt0137523" },
+          { "name": "title", "in": "query", "required": false, "description": "Title text; required when id/imdb_id are absent.", "schema": { "type": "string" }, "example": "fight club" },
+          { "name": "year", "in": "query", "required": false, "description": "4-digit year, narrows title search.", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "required": false, "description": "Required with `id`; otherwise searches both.", "schema": { "type": "string", "enum": ["movie", "tv"] } },
+          { "name": "region", "in": "query", "required": false, "description": "2-letter region code, default US.", "schema": { "type": "string" }, "example": "US" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved title with providers grouped by monetization type.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "fight-club": {
+                    "value": {
+                      "tmdbId": 550, "tmdbType": "movie", "title": "Fight Club", "year": 1999, "region": "US",
+                      "providers": {
+                        "flatrate": [{ "id": 8, "name": "Netflix" }],
+                        "free": [{ "id": 73, "name": "Tubi TV" }],
+                        "ads": [],
+                        "rent": [{ "id": 2, "name": "Apple TV" }],
+                        "buy": []
+                      },
+                      "url": "https://galaxymovies.app/movies/550",
+                      "attribution": { "text": "Powered by Galaxy Movies", "url": "https://galaxymovies.app/movies/550" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid params. Response includes an `example` URL." },
+          "404": { "description": "Title could not be resolved, or no provider data for the region." },
+          "429": { "description": "Rate limit exceeded (120/hour per IP). `Retry-After` header present." }
+        }
+      }
     }
   },
   "components": {

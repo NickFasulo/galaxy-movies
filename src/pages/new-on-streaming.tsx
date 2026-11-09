@@ -167,6 +167,7 @@ export default function NewOnStreaming({ region, sections, arrivalProviders, cha
         ]}
       >
         {region !== 'IN' && <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />}
+        {region !== 'IN' && <link rel='alternate' type='application/rss+xml' title='All services arrivals & departures' href={`${SITE_URL}/api/rss/all`} />}
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
           <Flex wrap='wrap' gap={2} mt={2} align='center'>

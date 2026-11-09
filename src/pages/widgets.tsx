@@ -196,6 +196,30 @@ export default function Widgets({ initialProvider }: Props) {
           browser fetch and server jobs alike.
         </Text>
 
+        <Heading as='h2' size='md' mt={12} mb={4}>RSS &amp; calendar feeds</Heading>
+        <Text maxW='42rem' color='gray.400' fontSize='sm'>
+          Subscribe to a service&apos;s changes in any feed reader, IFTTT/Zapier applet, or calendar app:
+        </Text>
+        <Box
+          as='pre'
+          mt={4}
+          p={4}
+          borderRadius='lg'
+          bg='surface.overlay'
+          border='1px solid'
+          borderColor='border.subtle'
+          fontSize='xs'
+          whiteSpace='pre-wrap'
+          wordBreak='break-all'
+          maxW='42rem'
+        >
+{`# RSS — arrivals & departures per service (or "all")
+${SITE_URL}/api/rss/${provider}
+
+# ICS calendar — announced arrivals & departures
+${SITE_URL}/api/cal/${provider}`}
+        </Box>
+
         <Text mt={12} color='gray.500' fontSize='sm' maxW='42rem'>
           US catalogs, updated daily. Departure dates mark when a title was detected leaving the service. For commercial
           licensing or bulk feeds, <Link href='/contact' style={{ textDecoration: 'underline' }}>get in touch</Link>.

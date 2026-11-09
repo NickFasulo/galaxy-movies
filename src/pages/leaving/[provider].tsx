@@ -214,6 +214,9 @@ export default function LeavingProvider({ provider, providerLabel, region, month
         ]}
       >
         {region === 'US' && <link rel='alternate' type='application/rss+xml' title='Galaxy Movies streaming changes' href={`${SITE_URL}/leaving.xml`} />}
+        {region === 'US' && PROVIDER_NAME_MATCH[provider] && (
+          <link rel='alternate' type='application/rss+xml' title={`${providerLabel} arrivals & departures`} href={`${SITE_URL}/api/rss/${provider}`} />
+        )}
       </PageHead>
       <PageShell title={title} description={description} withBackButton>
         {updatedLabel && (
