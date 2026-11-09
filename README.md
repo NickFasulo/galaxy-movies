@@ -139,3 +139,7 @@ Scheduled jobs (streaming-change diffs, watchlist + price-drop alerts, weekly di
 Vercel is cold standby only — DNS records and `git.deploymentEnabled: false` in `vercel.json` keep it ready for instant rollback.
 
 Operational detail lives in `AGENTS.md`.
+
+## License
+
+[AGPL-3.0](LICENSE) — Copyright (C) 2026 Nicholas Fasulo. Forks are welcome, but if you run a modified version as a public service you must publish your source.
