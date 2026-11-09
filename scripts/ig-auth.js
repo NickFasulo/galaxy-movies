@@ -8,8 +8,14 @@
 // the IG account added under App roles or as app-admin's own asset — dev
 // mode can publish to accounts that have a role on the app, no App Review.
 //
-// 1. Graph API Explorer -> mint a user token on your app with scopes
-//    instagram_business_content_publish, pages_show_list, pages_read_engagement
+// 1. Mint a user token with scopes instagram_basic, instagram_content_publish,
+//    pages_show_list, pages_read_engagement. The Explorer picker may not list
+//    them — the reliable path is the OAuth dialog:
+//    https://www.facebook.com/dialog/oauth?client_id=<app>&redirect_uri=<registered>
+//    &scope=<csv scopes>&response_type=token — then tick the Page in the
+//    asset picker or the permissions get no targets and /me/accounts is empty.
+//    instagram_business_* scopes are a different family (Instagram-login OAuth)
+//    and are invalid on this facebook.com/dialog/oauth flow.
 // 2. node scripts/ig-auth.js --app-id ID --app-secret SECRET --short-token TOK
 //    (or FB_APP_ID/FB_APP_SECRET in .env.local)
 //    -> prints IG_ACCESS_TOKEN + IG_USER_ID for .env.local and repo secrets.
@@ -30,8 +36,8 @@ const arg = (name) => {
 }
 const envVar = (name) => process.env[name] || env[name]
 
-const APP_ID = arg('app-id') || envVar('FB_APP_ID')
-const APP_SECRET = arg('app-secret') || envVar('FB_APP_SECRET')
+const APP_ID = arg('app-id') || envVar('FB_APP_ID') || envVar('FACEBOOK_APP_ID')
+const APP_SECRET = arg('app-secret') || envVar('FB_APP_SECRET') || envVar('FACEBOOK_APP_SECRET')
 const SHORT_TOKEN = arg('short-token') || envVar('FB_SHORT_TOKEN')
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
