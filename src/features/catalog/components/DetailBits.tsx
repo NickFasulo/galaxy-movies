@@ -42,7 +42,7 @@ export function DetailPoster({
   );
 }
 
-export function DetailActions({ videoKey, item }: { videoKey: string | null; item: WatchlistableTitle }) {
+export function DetailActions({ videoKey, item, trailerHref }: { videoKey: string | null; item: WatchlistableTitle; trailerHref?: string }) {
   return (
     <Flex
       direction={{ base: 'column', md: 'row' }}
@@ -53,7 +53,18 @@ export function DetailActions({ videoKey, item }: { videoKey: string | null; ite
       py={{ base: '1rem', md: 0 }}
       my='1rem'
     >
-      <VideoModal videoKey={videoKey} />
+      {videoKey && trailerHref ? (
+        <Flex direction='column' align='center' gap={1}>
+          <VideoModal videoKey={videoKey} />
+          {/* Crawl path to the watch page — the modal's iframe isn't in the
+              rendered DOM, so Googlebot reaches the trailer via this link. */}
+          <Text fontSize='xs' color='gray.400' _hover={{ color: 'white' }} textShadow='0 0 4px black' asChild>
+            <Link href={trailerHref}>Trailer page</Link>
+          </Text>
+        </Flex>
+      ) : (
+        <VideoModal videoKey={videoKey} />
+      )}
       <WatchlistButton movie={item} withLabel />
       <BackButton />
     </Flex>

@@ -629,7 +629,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
 
             <GalaxyBotTake synopsis={aiSynopsis} />
 
-            <DetailActions videoKey={videoKey} item={listItem} />
+            <DetailActions videoKey={videoKey} item={listItem} trailerHref={`${canonicalUrl}/trailer`} />
 
             {/* {!hasStreaming && hasAnyProviders && displayTitle && (
               <Box bg='blackAlpha.500' border='1px solid var(--chakra-colors-border-subtle)' borderRadius='lg' p={4}>
