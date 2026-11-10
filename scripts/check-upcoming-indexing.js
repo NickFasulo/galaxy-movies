@@ -18,7 +18,9 @@
  *   4. If the property is a URL-prefix property rather than a domain one, set
  *      GSC_SITE_URL=https://www.galaxymovies.app/ in .env.local.
  *
- * Usage: node scripts/check-upcoming-indexing.js [--top N]
+ * Usage: node scripts/check-upcoming-indexing.js [--top N] [--trailers]
+ *   --trailers  inspect the /trailer watch pages instead of the detail pages,
+ *               for titles with a playable YouTube trailer only.
  */
 const fs = require('fs')
 const path = require('path')
@@ -26,6 +28,7 @@ const crypto = require('crypto')
 
 const ROOT = path.join(__dirname, '..')
 const topN = Number(process.argv.find((a, i) => process.argv[i - 1] === '--top')) || 12
+const TRAILERS = process.argv.includes('--trailers')
 
 const env = {}
 try {
@@ -51,6 +54,28 @@ if (!fs.existsSync(SA_PATH)) {
 const sa = JSON.parse(fs.readFileSync(SA_PATH, 'utf8'))
 
 const siteBase = 'https://www.galaxymovies.app'
+
+// Mirrors youtubeCache.getFirstPlayableVideo: official trailer → any trailer →
+// teaser, YouTube only, liveness-confirmed via oembed (listed-but-dead videos
+// 404 the watch page).
+async function trailerKeyFor(movieId) {
+  const res = await fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_KEY}&append_to_response=videos`)
+  if (!res.ok) return null
+  const videos = (await res.json())?.videos?.results || []
+  const yt = (v) => v?.key && v.site === 'YouTube'
+  const candidates = [
+    videos.find((v) => yt(v) && v.type === 'Trailer' && v.official),
+    videos.find((v) => yt(v) && v.type === 'Trailer'),
+    videos.find((v) => yt(v) && v.type === 'Teaser')
+  ].filter(Boolean)
+  for (const v of candidates) {
+    try {
+      const check = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${v.key}&format=json`, { method: 'HEAD' })
+      if (check.ok) return v.key
+    } catch {}
+  }
+  return null
+}
 
 async function fetchUpcoming(region) {
   const today = new Date().toISOString().split('T')[0]
@@ -127,8 +152,12 @@ async function main() {
   let errors = 0
 
   for (const t of titles) {
-    const url = `${siteBase}/movies/${t.id}`
+    const url = `${siteBase}/movies/${t.id}${TRAILERS ? '/trailer' : ''}`
     try {
+      if (TRAILERS && !(await trailerKeyFor(t.id))) {
+        console.log(`NO-VIDEO ${(t.title || '').slice(0, 40).padEnd(40)}`)
+        continue
+      }
       const r = await inspect(token, url)
       const st = r.indexStatusResult || {}
       const indexed = st.verdict === 'PASS' || st.coverageState === 'Submitted and indexed'
