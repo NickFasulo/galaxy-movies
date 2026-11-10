@@ -1,5 +1,7 @@
 import { LRUCache } from 'lru-cache'
-import { fetchTmdb } from './tmdb'
+import { fetchTmdb, getProviderIds, streamingProviders } from './tmdb'
+import { getTitleChanges } from './streamingChanges'
+import { providerLabel } from './embed'
 import { SITE_URL } from '../../lib/site'
 import type { MediaType, WatchProvidersResponse } from '../../types/tmdb'
 
@@ -15,6 +17,13 @@ export interface WhereQuery {
 export interface WhereProvider {
   id: number
   name: string
+  leavingOn?: string
+}
+
+export interface WhereEvent {
+  key: string
+  provider: string
+  date?: string
 }
 
 export interface WhereResult {
@@ -29,6 +38,10 @@ export interface WhereResult {
     ads: WhereProvider[]
     rent: WhereProvider[]
     buy: WhereProvider[]
+  }
+  events?: {
+    coming?: WhereEvent[]
+    leaving?: WhereEvent[]
   }
   url: string
 }
@@ -102,8 +115,24 @@ async function resolveTitle(q: WhereQuery): Promise<{ id: number; type: MediaTyp
   return { id: best.id!, type, title: itemTitle(best), year: itemYear(best) ? Number(itemYear(best)) : null }
 }
 
-const toWhereProviders = (list?: { provider_id: number; provider_name: string }[]): WhereProvider[] =>
-  (list || []).map((p) => ({ id: p.provider_id, name: p.provider_name }))
+const toWhereProviders = (
+  list: { provider_id: number; provider_name: string }[] | undefined,
+  leavingIds: Map<number, string>
+): WhereProvider[] =>
+  (list || []).map((p) => {
+    const leavingOn = leavingIds.get(p.provider_id)
+    return leavingOn ? { id: p.provider_id, name: p.provider_name, leavingOn } : { id: p.provider_id, name: p.provider_name }
+  })
+
+// Dated events from our diff index — the "leaves X on Friday" signal no
+// provider listing carries. Providers are annotated by TMDB id so clients can
+// match without fuzzy name comparison; `coming`/`leaving` also go out raw.
+const toWhereEvents = (
+  list: { p: string; date?: string }[] | undefined
+): WhereEvent[] | undefined =>
+  list?.length
+    ? list.filter((e) => streamingProviders[e.p]).map((e) => ({ key: e.p, provider: providerLabel(e.p), date: e.date }))
+    : undefined
 
 // Resolves a title to its watch providers. Returns null when the title can't
 // be resolved or TMDB has no provider data for the region — callers 404 on it.
@@ -118,6 +147,15 @@ export async function resolveWhere(q: WhereQuery): Promise<WhereResult | null> {
     const entry = data.results?.[q.region]
     if (!entry) return null
 
+    const changes = await getTitleChanges(resolved.type, resolved.id, q.region)
+    const leavingIds = new Map<number, string>()
+    for (const e of changes?.leaving || []) {
+      if (!e.date) continue
+      for (const id of getProviderIds(e.p, q.region)) leavingIds.set(id, e.date)
+    }
+    const coming = toWhereEvents(changes?.coming)
+    const leaving = toWhereEvents(changes?.leaving)
+
     return {
       tmdbId: resolved.id,
       tmdbType: resolved.type,
@@ -125,12 +163,13 @@ export async function resolveWhere(q: WhereQuery): Promise<WhereResult | null> {
       year: resolved.year,
       region: q.region,
       providers: {
-        flatrate: toWhereProviders(entry.flatrate),
-        free: toWhereProviders(entry.free),
-        ads: toWhereProviders(entry.ads),
-        rent: toWhereProviders(entry.rent),
-        buy: toWhereProviders(entry.buy)
+        flatrate: toWhereProviders(entry.flatrate, leavingIds),
+        free: toWhereProviders(entry.free, leavingIds),
+        ads: toWhereProviders(entry.ads, leavingIds),
+        rent: toWhereProviders(entry.rent, leavingIds),
+        buy: toWhereProviders(entry.buy, leavingIds)
       },
+      ...(coming || leaving ? { events: { ...(coming ? { coming } : {}), ...(leaving ? { leaving } : {}) } } : {}),
       url: `${SITE_URL}/${resolved.type === 'tv' ? 'tv' : 'movies'}/${resolved.id}`
     }
   } catch {

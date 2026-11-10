@@ -2,10 +2,21 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { resolveWhere, lookupWhere, whereCacheKey, whereResultCache } from './whereLookup'
 
 const mocks = vi.hoisted(() => ({
-  fetchTmdb: vi.fn<(path?: string, params?: Record<string, unknown>) => Promise<unknown>>(async () => ({}))
+  fetchTmdb: vi.fn<(path?: string, params?: Record<string, unknown>) => Promise<unknown>>(async () => ({})),
+  getTitleChanges: vi.fn(async () => null as Record<string, { p: string; date?: string }[] | undefined> | null),
+  getProviderIds: vi.fn((key: string) => (key === 'netflix' ? [8] : key === 'hulu' ? [15] : []))
 }))
 
-vi.mock('./tmdb', () => ({ fetchTmdb: mocks.fetchTmdb }))
+vi.mock('./tmdb', () => ({
+  fetchTmdb: mocks.fetchTmdb,
+  getProviderIds: mocks.getProviderIds,
+  streamingProviders: {
+    netflix: { title: 'Netflix Movies', ids: { default: 8 } },
+    hulu: { title: 'Hulu Movies', ids: { default: 15 } }
+  }
+}))
+vi.mock('./streamingChanges', () => ({ getTitleChanges: mocks.getTitleChanges }))
+vi.mock('./embed', () => ({ providerLabel: (k: string) => (k === 'netflix' ? 'Netflix' : k === 'hulu' ? 'Hulu' : k) }))
 
 const FIGHT_CLUB = { id: 550, title: 'Fight Club', release_date: '1999-10-15', media_type: 'movie' }
 const US_PROVIDERS = {
@@ -119,6 +130,24 @@ describe('resolveWhere', () => {
       return {}
     })
     expect(await resolveWhere({ id: 550, type: 'movie', region: 'US' })).toBeNull()
+  })
+
+  it('annotates providers with departure dates and emits raw events', async () => {
+    mocks.getTitleChanges.mockResolvedValue({
+      leaving: [{ p: 'netflix', date: '2026-11-28' }],
+      coming: [{ p: 'hulu', date: '2026-12-05' }, { p: 'unknown-key', date: '2026-12-01' }]
+    })
+    mocks.fetchTmdb.mockImplementation(async (path) => {
+      if (path === '/movie/550') return FIGHT_CLUB
+      if (path === '/movie/550/watch/providers') return US_PROVIDERS
+      return {}
+    })
+    const result = await resolveWhere({ id: 550, type: 'movie', region: 'US' })
+    expect(result?.providers.flatrate[0]).toEqual({ id: 8, name: 'Netflix', leavingOn: '2026-11-28' })
+    expect(result?.providers.free[0]).toEqual({ id: 73, name: 'Tubi TV' })
+    expect(result?.events?.leaving).toEqual([{ key: 'netflix', provider: 'Netflix', date: '2026-11-28' }])
+    // unknown provider keys are filtered from the events list
+    expect(result?.events?.coming).toEqual([{ key: 'hulu', provider: 'Hulu', date: '2026-12-05' }])
   })
 })
 
