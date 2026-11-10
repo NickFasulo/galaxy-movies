@@ -171,6 +171,9 @@ export default function TraktAlternative({ movies, dataError }: InferGetStaticPr
           <Text textAlign='center' mt={8} color='gray.400'>
             Availability varies by country and changes over time: check each title page for current providers.
           </Text>
+          <Text textAlign='center' mt={4} fontSize='sm' color='gray.500'>
+            Galaxy Movies uses Trakt but is not endorsed or certified by Trakt.
+          </Text>
       </PageShell>
     </>
   );

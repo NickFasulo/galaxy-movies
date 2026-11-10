@@ -5,7 +5,7 @@ import { List } from '@chakra-ui/react';
 export default function Privacy() {
   return (
     <InfoPage title='Privacy Policy' description='Read the Galaxy Movies privacy policy.' withBackButton>
-      <InfoParagraph><em>Last updated: October 20, 2026</em></InfoParagraph>
+      <InfoParagraph><em>Last updated: November 10, 2026</em></InfoParagraph>
       <InfoParagraph>
         Galaxy Movies (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates galaxymovies.app (the
         &quot;Service&quot;), a movie and TV discovery site with streaming availability information and an
@@ -89,7 +89,11 @@ export default function Privacy() {
         <List.Item><strong>Web3Forms</strong> — delivers contact form submissions to us</List.Item>
         <List.Item><strong>TMDB and Watchmode</strong> — supply movie metadata and streaming availability</List.Item>
         <List.Item><strong>YouTube</strong> — embedded trailers (loaded via the youtube-nocookie.com domain)</List.Item>
+        <List.Item><strong>Trakt</strong> — optional account connection that lets Galaxy Plus members sync their watchlist and ratings in both directions</List.Item>
       </List.Root>
+      <InfoParagraph>
+        Galaxy Movies uses Trakt but is not endorsed or certified by Trakt.
+      </InfoParagraph>
       <InfoParagraph>
         Movie poster and backdrop images are served directly from TMDB&apos;s image servers, so your
         browser discloses standard request data (such as IP address and browser type) to them when

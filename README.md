@@ -140,6 +140,8 @@ Vercel is cold standby only — DNS records and `git.deploymentEnabled: false` i
 
 Operational detail lives in `AGENTS.md`.
 
+Galaxy Movies uses Trakt but is not endorsed or certified by Trakt.
+
 ## License
 
 [AGPL-3.0](LICENSE) — Copyright (C) 2026 Nicholas Fasulo. Forks are welcome, but if you run a modified version as a public service you must publish your source.
