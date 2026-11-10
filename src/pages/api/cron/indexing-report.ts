@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getDailyStats, hasBingCredentials, weekStats, type BingWeekStats } from '../../../features/indexing/bingAnalytics'
 import { runBingCheck, type BingIndexReport } from '../../../features/indexing/bingCheck'
 import { SUBMIT_LOG_KEY } from '../../../features/indexing/bingSubmit'
-import { hasGscCredentials, pendingSignature, runIndexCheck, type IndexReport } from '../../../features/indexing/indexCheck'
+import { hasGscCredentials, pendingSignature, runIndexCheck, runTrailerCheck, upcomingTitles, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
 import { suggestCtrRewrites, type CtrSuggestion } from '../../../features/indexing/ctrSuggest'
@@ -39,19 +39,24 @@ function shiftsHtml(shifts: BandShift[], arrow: string, color: string) {
     .join('')
 }
 
-function indexingSection(report: IndexReport, prevSignature: string | null | undefined) {
+function indexingSection(report: IndexReport, trailerReport: IndexReport | null, prevSignature: string | null | undefined) {
   const prevSet = new Set((prevSignature || '').split('|').filter(Boolean))
-  const rows = report.pending
-    .map((p) => {
-      const isNew = !prevSet.has(p.url)
-      return `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${escapeHtml(p.link)}" style="color:#1d4ed8;">${escapeHtml(p.title)}${isNew ? ' <span style="color:#92400e; font-size:11px;">NEW</span>' : ''}</a><br/><span style="color:#596579; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
-    })
-    .join('')
-  return `<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Indexing</strong> · ${report.indexed}/${report.checked} upcoming pages indexed.${
-    report.pending.length
+  const row = (p: IndexReport['pending'][number]) => {
+    const isNew = !prevSet.has(p.url)
+    return `<p style="margin:14px 0 0; font-size:14px; line-height:1.5;"><a href="${escapeHtml(p.link)}" style="color:#1d4ed8;">${escapeHtml(p.title)}${isNew ? ' <span style="color:#92400e; font-size:11px;">NEW</span>' : ''}</a><br/><span style="color:#596579; font-size:12px;">${escapeHtml(p.state)} · ${escapeHtml(p.url)}</span></p>`
+  }
+  const trailerPending = trailerReport?.pending || []
+  const anyPending = report.pending.length + trailerPending.length > 0
+  const errors = [...report.errors, ...(trailerReport?.errors || [])]
+  return `<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Indexing</strong> · ${report.indexed}/${report.checked} upcoming pages indexed${trailerReport ? ` · ${trailerReport.indexed}/${trailerReport.checked} trailer watch pages` : ''}.${
+    anyPending
       ? ' Open each link and click <strong>Request Indexing</strong> (quota ~10-15/day):'
       : ' Nothing needs a manual request this week.'
-  }</p>${rows}${report.errors.length ? `<p style="margin:10px 0 0; color:#596579; font-size:12px;">${report.errors.length} checks errored and were skipped — ${escapeHtml(report.errors[0].message)}</p>` : ''}`
+  }</p>${report.pending.map(row).join('')}${
+    trailerPending.length
+      ? `<p style="margin:16px 0 0; font-size:13px; color:#1f2937;"><strong>Trailer watch pages pending</strong></p>${trailerPending.map(row).join('')}`
+      : ''
+  }${errors.length ? `<p style="margin:10px 0 0; color:#596579; font-size:12px;">${errors.length} checks errored and were skipped — ${escapeHtml(errors[0].message)}</p>` : ''}`
 }
 
 function digestSection(d: WeeklyDigest, ctrSuggestions: CtrSuggestion[] = []) {
@@ -161,8 +166,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const kv = getRedis()
-    const [report, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog] = await Promise.all([
-      runIndexCheck(),
+    // One upcoming set feeds the detail-page and trailer-page checks — the
+    // trailer check additionally resolves each title's videos before
+    // inspecting (trailer-less titles' /trailer URLs 404).
+    const upcoming = await upcomingTitles()
+    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog] = await Promise.all([
+      runIndexCheck(12, upcoming),
+      runTrailerCheck(upcoming).catch((err) => {
+        console.error('Trailer check failed:', err)
+        return null
+      }),
       hasBingCredentials()
         ? runBingCheck().catch((err) => {
             console.error('Bing check failed:', err)
@@ -200,8 +213,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       : []
 
-    const subject = report.pending.length
-      ? `${report.pending.length} upcoming release${report.pending.length === 1 ? '' : 's'} need indexing requests`
+    const totalPending = report.pending.length + (trailerReport?.pending.length || 0)
+    const subject = totalPending
+      ? `${totalPending} page${totalPending === 1 ? '' : 's'} need indexing requests`
       : 'Weekly GSC report: all upcoming pages indexed'
 
     const sent = await sendEmail({
@@ -212,14 +226,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         preheader: subject,
         reason: 'Weekly indexing + Search Console report for galaxymovies.app.',
         body:
-          indexingSection(report, prevSignature) +
+          indexingSection(report, trailerReport, prevSignature) +
           (digest ? digestSection(digest, ctrSuggestions) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
           (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
           (chatDemand ? chatDemandSection(chatDemand) : '')
       })
     })
     if (sent) {
-      await kv?.set(LAST_REPORT_KEY, pendingSignature(report.pending)).catch(() => {})
+      await kv?.set(LAST_REPORT_KEY, pendingSignature([...report.pending, ...(trailerReport?.pending || [])])).catch(() => {})
       if (digest) await kv?.set(LAST_BANDS_KEY, digest.listsBands).catch(() => {})
       if (digest?.newQueries?.length) {
         await kv?.set(
@@ -229,7 +243,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ).catch(() => {})
       }
     }
-    return res.status(200).json({ emailed: sent, report, digest, bing: bingReport })
+    return res.status(200).json({ emailed: sent, report, trailers: trailerReport, digest, bing: bingReport })
   } catch (err) {
     console.error('Indexing report failed:', err)
     return res.status(500).json({ error: 'Indexing report failed' })

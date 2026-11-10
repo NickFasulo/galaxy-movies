@@ -1,5 +1,6 @@
 import { fetchTmdb } from '../catalog/tmdb'
-import type { TmdbMovie, TmdbPaged } from '../../types/tmdb'
+import { getFirstPlayableVideo } from '../catalog/youtubeCache'
+import type { TmdbMovie, TmdbMovieDetails, TmdbPaged } from '../../types/tmdb'
 import { SITE_URL } from '../../lib/site'
 
 // Weekly companion to scripts/check-upcoming-indexing.js — same upcoming set
@@ -121,29 +122,59 @@ export async function upcomingTitles(topN = 12): Promise<TmdbMovie[]> {
     .slice(0, topN)
 }
 
-export async function runIndexCheck(topN = 12): Promise<IndexReport> {
-  const titles = await upcomingTitles(topN)
+async function inspectInto(report: IndexReport, token: string, url: string, title: string) {
+  try {
+    const r = await inspect(token, url)
+    const st = r.indexStatusResult
+    if (isIndexed(st)) {
+      report.indexed++
+    } else {
+      report.pending.push({
+        url,
+        title,
+        state: st?.coverageState || st?.verdict || 'unknown',
+        link: r.inspectionResultLink || url
+      })
+    }
+  } catch (err) {
+    report.errors.push({ title, message: err instanceof Error ? err.message : String(err) })
+  }
+}
+
+export async function runIndexCheck(topN = 12, titles?: TmdbMovie[]): Promise<IndexReport> {
+  const checkTitles = titles ?? (await upcomingTitles(topN))
   const token = await gscAccessToken()
-  const report: IndexReport = { checked: titles.length, indexed: 0, pending: [], errors: [] }
+  const report: IndexReport = { checked: checkTitles.length, indexed: 0, pending: [], errors: [] }
+
+  for (const t of checkTitles) {
+    await inspectInto(report, token, `${SITE_URL}/movies/${t.id}`, t.title || String(t.id))
+  }
+  return report
+}
+
+// Trailer watch pages only exist where a playable video resolves — a
+// trailer-less title's /trailer 404s and would sit in pending forever.
+export async function trailerUrlFor(title: TmdbMovie): Promise<string | null> {
+  const details = await fetchTmdb<TmdbMovieDetails>(`/movie/${title.id}`, { append_to_response: 'videos' })
+  const video = await getFirstPlayableVideo(details.videos?.results)
+  return video ? `${SITE_URL}/movies/${title.id}/trailer` : null
+}
+
+export async function runTrailerCheck(titles: TmdbMovie[]): Promise<IndexReport> {
+  const token = await gscAccessToken()
+  const report: IndexReport = { checked: 0, indexed: 0, pending: [], errors: [] }
 
   for (const t of titles) {
-    const url = `${SITE_URL}/movies/${t.id}`
+    let url: string | null
     try {
-      const r = await inspect(token, url)
-      const st = r.indexStatusResult
-      if (isIndexed(st)) {
-        report.indexed++
-      } else {
-        report.pending.push({
-          url,
-          title: t.title || url,
-          state: st?.coverageState || st?.verdict || 'unknown',
-          link: r.inspectionResultLink || url
-        })
-      }
+      url = await trailerUrlFor(t)
     } catch (err) {
-      report.errors.push({ title: t.title || url, message: err instanceof Error ? err.message : String(err) })
+      report.errors.push({ title: t.title || String(t.id), message: err instanceof Error ? err.message : String(err) })
+      continue
     }
+    if (!url) continue
+    report.checked++
+    await inspectInto(report, token, url, t.title || url)
   }
   return report
 }
