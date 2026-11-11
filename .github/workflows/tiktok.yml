@@ -90,17 +90,35 @@ jobs:
             esac
             if [ "$(date -u +%-d)" = "25" ]; then echo "kind=departures" >> "$GITHUB_OUTPUT"; fi
           fi
-      - run: >-
-          node scripts/generate-tiktok-video.js
-          --api https://galaxy-movies.winter-rice-c91a.workers.dev
-          --provider ${{ steps.pick.outputs.provider }}
-          --kind ${{ steps.pick.outputs.kind }}
-          --count ${{ inputs.count || '5' }}
+      # Scheduled runs degrade through kinds that almost always have content
+      # (a week with no price drops or an empty coming list exits 2, not an
+      # error — engage needs no feed data at all, so it's the last resort).
+      # Manual dispatches stay strict: an empty kind should report, not swap.
+      - env:
+          API: https://galaxy-movies.winter-rice-c91a.workers.dev
+          PROVIDER: ${{ steps.pick.outputs.provider }}
+          KIND: ${{ steps.pick.outputs.kind }}
+          COUNT: ${{ inputs.count || '5' }}
+          SCHEDULED: ${{ github.event_name == 'schedule' }}
+        run: |
+          attempts=("$PROVIDER:$KIND")
+          if [ "$KIND" != "added" ]; then attempts+=("$PROVIDER:added"); fi
+          if [ "$KIND" != "departures" ]; then attempts+=("netflix:departures"); fi
+          attempts+=("netflix:engage")
+          rc=0
+          for a in "${attempts[@]}"; do
+            rc=0
+            node scripts/generate-tiktok-video.js --api "$API" --provider "${a%%:*}" --kind "${a##*:}" --count "$COUNT" || rc=$?
+            if [ "$rc" -eq 0 ]; then exit 0; fi
+            if [ "$SCHEDULED" != "true" ] || [ "$rc" -ne 2 ]; then exit "$rc"; fi
+            echo "::warning::no items for ${a%%:*}/${a##*:} — trying next fallback"
+          done
+          exit "$rc"
       - id: stamp
         run: echo "date=$(date +%F)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
         with:
-          name: tiktok-${{ steps.stamp.outputs.date }}-${{ inputs.provider || 'netflix' }}-${{ inputs.kind || 'added' }}
+          name: tiktok-${{ steps.stamp.outputs.date }}-${{ steps.pick.outputs.provider }}-${{ steps.pick.outputs.kind }}
           path: shots/tiktok/
           retention-days: 30
           if-no-files-found: error

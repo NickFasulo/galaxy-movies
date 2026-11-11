@@ -293,7 +293,11 @@ async function loadItems() {
   }
   if (KIND === 'pricedrops') {
     const data = API_BASE
-      ? await fetch(`${API_BASE}/api/price-drops`).then((r) => (r.ok ? r.json() : null))
+      ? await fetch(`${API_BASE}/api/price-drops`).then((r) => {
+          if (r.status === 404) return null
+          if (!r.ok) throw new Error(`/api/price-drops: ${r.status}`)
+          return r.json()
+        })
       : await redisGet('pricedrops:weekly')
     return (data?.drops || []).map((d) => ({
       ...d,
@@ -302,7 +306,9 @@ async function loadItems() {
     }))
   }
   const diff = await getDiff()
-  if (!diff) { console.error(`No diff data for provider "${PROVIDER}"`); process.exit(1) }
+  // Exit 2 = "no content" (empty week, missing diff) — tiktok.yml treats it as
+  // a signal to try the next fallback kind. Exit 1 stays reserved for errors.
+  if (!diff) { console.error(`No diff data for provider "${PROVIDER}"`); process.exit(2) }
   return (diff[KIND] || [])
 }
 
@@ -382,7 +388,7 @@ async function main() {
       .filter((t) => t?.title)
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, COUNT)
-    if (!pool.length) { console.error(`No items for kind "${KIND}"`); process.exit(1) }
+    if (!pool.length) { console.error(`No items for kind "${KIND}"`); process.exit(2) }
 
     // Poster paths aren't in the diff payload — one detail call per title.
     // leavingSoon items arrive id-less (Watchmode names don't join to the
