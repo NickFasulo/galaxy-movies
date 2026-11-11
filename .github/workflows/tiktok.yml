@@ -102,7 +102,13 @@ jobs:
           SCHEDULED: ${{ github.event_name == 'schedule' }}
         run: |
           attempts=("$PROVIDER:$KIND")
-          if [ "$KIND" != "added" ]; then attempts+=("$PROVIDER:added"); fi
+          # The provider's weekly adds are an on-theme fallback — except for
+          # netflix/hulu, whose added videos already ran Mon/Tue; re-rendering
+          # them midweek posts a near-duplicate. Those cases skip to
+          # departures (monthly-gone titles, fresh theme) then engage.
+          if [ "$KIND" != "added" ] && [ "$PROVIDER" != netflix ] && [ "$PROVIDER" != hulu ]; then
+            attempts+=("$PROVIDER:added")
+          fi
           if [ "$KIND" != "departures" ]; then attempts+=("netflix:departures"); fi
           attempts+=("netflix:engage")
           rc=0
