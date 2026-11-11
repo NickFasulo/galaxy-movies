@@ -4,7 +4,9 @@ module.exports = {
       startServerCommand: 'npm run start',
       startServerReadyPattern: 'Ready in',
       startServerReadyTimeout: 120000,
-      numberOfRuns: 1,
+      // Median of 3 — a single run flakes on shared-runner CPU variance
+      // (TBT alone has swung 99→340ms week-over-week with no code change).
+      numberOfRuns: 3,
       url: [
         'http://localhost:3000/',
         'http://localhost:3000/movies/969681',
