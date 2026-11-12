@@ -8,7 +8,7 @@ const { mulberry32, makeNoiseLayer, fbm } = require('./generate-backdrop-fallbac
 
 const OUT_DIR = path.join(__dirname, '..', 'public')
 
-function buildPlusFrame({ width: W, height: H, seed, compose = {} }) {
+function buildPlusFrame({ width: W, height: H, seed, compose = {}, nebula = 1 }) {
   const rand = mulberry32(seed)
   const aspect = W / H
   const gs = (s) => Math.max(1, Math.round(s * aspect * 1.125))
@@ -77,9 +77,9 @@ function buildPlusFrame({ width: W, height: H, seed, compose = {} }) {
       if (diffuse > 0.001 || fil > 0.001) {
         const hue = fbm(nebHue, wu + 3.7, wv + 9.1)
         const mix = Math.min(Math.max((hue - 0.40) * 4.0, 0), 1)
-        buf[i] += diffuse * (BLUE[0] + (PURPLE[0] - BLUE[0]) * mix) * 0.25 + fil * (0.20 + 0.10 * mix)
-        buf[i + 1] += diffuse * (BLUE[1] + (PURPLE[1] - BLUE[1]) * mix) * 0.25 + fil * (0.33 - 0.08 * mix)
-        buf[i + 2] += diffuse * (BLUE[2] + (PURPLE[2] - BLUE[2]) * mix) * 0.25 + fil * 0.48
+        buf[i] += nebula * (diffuse * (BLUE[0] + (PURPLE[0] - BLUE[0]) * mix) * 0.25 + fil * (0.20 + 0.10 * mix))
+        buf[i + 1] += nebula * (diffuse * (BLUE[1] + (PURPLE[1] - BLUE[1]) * mix) * 0.25 + fil * (0.33 - 0.08 * mix))
+        buf[i + 2] += nebula * (diffuse * (BLUE[2] + (PURPLE[2] - BLUE[2]) * mix) * 0.25 + fil * 0.48)
       }
 
       const px = x - CX
