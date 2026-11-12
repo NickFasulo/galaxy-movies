@@ -68,21 +68,35 @@ async function main() {
   if (!tokens.access_token) throw new Error('code exchange returned no token')
 
   let urn = ORG_URN
+  if (!urn && tokens.id_token) {
+    const payload = JSON.parse(Buffer.from(tokens.id_token.split('.')[1], 'base64url').toString())
+    if (payload.sub) urn = `urn:li:person:${payload.sub}`
+  }
   if (!urn) {
     const r = await fetch('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` }
     })
     const j = await r.json().catch(() => ({}))
-    if (!r.ok || !j.sub) throw new Error(`userinfo failed: ${r.status} — pass --org-urn for page posting`)
-    urn = `urn:li:person:${j.sub}`
+    if (!r.ok || !j.sub) {
+      console.error(`userinfo failed: ${r.status} ${JSON.stringify(j)} — set LINKEDIN_AUTHOR_URN manually (urn:li:person:<id> or urn:li:organization:<id>)`)
+    } else {
+      urn = `urn:li:person:${j.sub}`
+    }
   }
 
-  console.log(`LINKEDIN_AUTHOR_URN=${urn}`)
-  console.log(`LINKEDIN_ACCESS_TOKEN=${tokens.access_token}`)
-  if (tokens.refresh_token) console.log(`LINKEDIN_REFRESH_TOKEN=${tokens.refresh_token}`)
-  else console.log('(no refresh token issued — re-run this script when the 60d token expires)')
-  console.log(`LINKEDIN_CLIENT_ID=${CLIENT_ID}`)
-  console.log(`LINKEDIN_CLIENT_SECRET=${CLIENT_SECRET}`)
+  const lines = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8').split(/\r?\n/) : []
+  const setEnv = (key, value) => {
+    const i = lines.findIndex((l) => l.startsWith(`${key}=`))
+    if (i > -1) lines[i] = `${key}=${value}`
+    else lines.push(`${key}=${value}`)
+  }
+  setEnv('LINKEDIN_ACCESS_TOKEN', tokens.access_token)
+  if (tokens.refresh_token) setEnv('LINKEDIN_REFRESH_TOKEN', tokens.refresh_token)
+  if (urn) setEnv('LINKEDIN_AUTHOR_URN', urn)
+  fs.writeFileSync(envPath, lines.filter((l, i) => l !== '' || i < lines.length - 1).join('\n'))
+  console.log(`wrote ${['LINKEDIN_ACCESS_TOKEN', tokens.refresh_token && 'LINKEDIN_REFRESH_TOKEN', urn && 'LINKEDIN_AUTHOR_URN'].filter(Boolean).join(', ')} -> .env.local`)
+  if (!tokens.refresh_token) console.log('(no refresh token issued — re-run this script when the 60d token expires)')
+  if (!urn) console.log('URN unresolved — add openid profile to the consent scopes for member posting')
 }
 
 main().catch((err) => { console.error(err.message || err); process.exit(1) })
