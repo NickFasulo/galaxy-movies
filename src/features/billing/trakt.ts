@@ -2,13 +2,13 @@ import { createHash, randomBytes } from 'crypto'
 import { getRedis, TRAKT_KEY } from '../alerts/waitlistStore'
 import type { MediaType } from '../../types/tmdb'
 
-const TRAKT_API = 'https://api.trakt.tv'
+export const TRAKT_API = 'https://api.trakt.tv'
 // New Trakt apps are PKCE-only (no client secret) and logins must move off
 // trakt.tv/api.trakt.tv to auth.trakt.tv by Feb 2027.
-const TRAKT_AUTH = 'https://auth.trakt.tv'
+export const TRAKT_AUTH = 'https://auth.trakt.tv'
 // api.trakt.tv sits behind Cloudflare bot rules that 403 the bare node/undici
 // fetch UA — every server call needs an explicit app UA to reach the API.
-const TRAKT_UA = 'Galaxy Movies (+https://www.galaxymovies.app)'
+export const TRAKT_UA = 'Galaxy Movies (+https://www.galaxymovies.app)'
 export const TRAKT_PKCE_PREFIX = 'gm:alerts:trakt:pkce:'
 const PKCE_TTL_SECONDS = 600
 
