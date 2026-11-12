@@ -446,7 +446,9 @@ const linkedin: SocialChannel = {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${tokens.accessToken}`,
-        'LinkedIn-Version': '202504',
+        // LinkedIn activates versions ~1mo behind the calendar — last month's
+        // YYYYMM always exists while a hardcoded string goes stale.
+        'LinkedIn-Version': new Date(Date.now() - 32 * 86400000).toISOString().slice(0, 7).replace('-', ''),
         'X-Restli-Protocol-Version': '2.0.0'
       },
       body: JSON.stringify({
@@ -454,6 +456,11 @@ const linkedin: SocialChannel = {
         commentary: text,
         visibility: 'PUBLIC',
         lifecycleState: 'PUBLISHED',
+        distribution: {
+          feedDistribution: 'MAIN_FEED',
+          targetEntities: [],
+          thirdPartyDistributionChannels: []
+        },
         isReshareDisabledByAuthor: false
       })
     })
