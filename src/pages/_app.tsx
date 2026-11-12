@@ -44,7 +44,7 @@ function MainApp({ Component, pageProps }: Pick<AppProps<{ dehydratedState?: Deh
   // Pages whose main feed is infinite-scroll — an in-flow footer is
   // unreachable below an endless feed, so they get the floating pill instead.
   const hasInfiniteScroll = /^\/($|search$|browse\/.|genre\/.|tv\/(browse|genre|streaming)\/.|streaming\/.|company\/.|network\/.)/.test(router.pathname)
-  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|reelgood-alternative$|trakt-alternative$|tv-time-alternative$|whats-on-netflix-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|leaving|this-month|anime$|genre|browse|watchlist$|plus$|email-status$|alerts$|movie-night$|reports|widgets$|search$|usage$|$)/.test(router.pathname)
+  const isDark = /^\/(movies\/|person\/|company\/|network\/|about$|privacy$|terms$|contact$|disclosure$|streaming-in-india$|justwatch-alternative$|reelgood-alternative$|trakt-alternative$|tv-time-alternative$|imdb-alternative$|whats-on-netflix-alternative$|404$|streaming|tv|lists?|collections|free$|new-on-streaming|leaving|this-month|anime$|genre|browse|watchlist$|plus$|email-status$|alerts$|movie-night$|reports|widgets$|search$|usage$|$)/.test(router.pathname)
   // /plus mounts its own taller galaxy band instead of the shared TopBackdrop
   const showTopBackdrop = isDark && !isHome && !router.pathname.startsWith('/movies/') && router.pathname !== '/tv/[showId]' && router.pathname !== '/plus'
 

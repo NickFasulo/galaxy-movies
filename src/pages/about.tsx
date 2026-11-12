@@ -18,7 +18,8 @@ export default function About() {
         <Link href='/justwatch-alternative' style={{ textDecoration: 'underline' }}>JustWatch</Link>,{' '}
         <Link href='/reelgood-alternative' style={{ textDecoration: 'underline' }}>Reelgood</Link>,{' '}
         <Link href='/trakt-alternative' style={{ textDecoration: 'underline' }}>Trakt</Link>,{' '}
-        <Link href='/tv-time-alternative' style={{ textDecoration: 'underline' }}>TV Time</Link>, or{' '}
+        <Link href='/tv-time-alternative' style={{ textDecoration: 'underline' }}>TV Time</Link>,{' '}
+        <Link href='/imdb-alternative' style={{ textDecoration: 'underline' }}>IMDb</Link>, or{' '}
         <Link href='/whats-on-netflix-alternative' style={{ textDecoration: 'underline' }}>What&apos;s on Netflix</Link>.
       </InfoParagraph>
       <Flex wrap="wrap" gap="1.5rem" alignItems="center" justify={{ base: 'center', md: 'flex-start' }} my='2rem'>

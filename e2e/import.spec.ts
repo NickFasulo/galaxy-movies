@@ -71,7 +71,7 @@ test.describe('free imports (no account)', () => {
   test('import controls render without creds or plus', async ({ page }) => {
     await page.goto('/watchlist')
     await expect(page.getByText('Import your list')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Letterboxd or TV Time export' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Letterboxd, IMDb, or TV Time export' })).toBeVisible()
     // Trakt tools stay Plus-gated.
     await expect(page.getByRole('button', { name: 'Import from Trakt' })).toHaveCount(0)
   })
@@ -192,5 +192,14 @@ test.describe('tv time alternative page', () => {
     await expect(page.getByRole('heading', { name: 'TV Time Alternative: Import Your List, No Account Needed' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Pick your TV Time export' })).toBeVisible()
     await expect(page.getByText('Galaxy Movies vs TV Time')).toBeVisible()
+  })
+})
+
+test.describe('imdb alternative page', () => {
+  test('renders the comparison and the import widget', async ({ page }) => {
+    await page.goto('/imdb-alternative')
+    await expect(page.getByRole('heading', { name: 'A No-Account IMDb Alternative for Watchlists and Alerts' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Pick your IMDb export' })).toBeVisible()
+    await expect(page.getByText('Galaxy Movies vs IMDb')).toBeVisible()
   })
 })

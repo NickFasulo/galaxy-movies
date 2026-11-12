@@ -121,6 +121,7 @@ export async function getServerSideProps({ res }: GetServerSidePropsContext) {
     urlEntry(`${siteUrl}/reelgood-alternative`),
     urlEntry(`${siteUrl}/trakt-alternative`),
     urlEntry(`${siteUrl}/tv-time-alternative`),
+    urlEntry(`${siteUrl}/imdb-alternative`),
     urlEntry(`${siteUrl}/whats-on-netflix-alternative`),
     urlEntry(`${siteUrl}/flixable-alternative`),
     urlEntry(`${siteUrl}/instantwatcher-alternative`),

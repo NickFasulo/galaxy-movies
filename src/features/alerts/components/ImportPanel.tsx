@@ -104,7 +104,7 @@ function mergeItems(batches: ImportItem[][], resolved: (ResolvedTitle | null)[][
   }
 }
 
-export default function ImportPanel({ source }: { source?: 'tvtime' }) {
+export default function ImportPanel({ source }: { source?: 'tvtime' | 'imdb' }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -229,12 +229,14 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
           }}
         />
         <Button size='xs' {...secondaryButton} disabled={busy} loading={busy} onClick={() => fileRef.current?.click()}>
-          {source === 'tvtime' ? 'Pick your TV Time export' : 'Letterboxd, IMDb, or TV Time export'}
+          {source === 'tvtime' ? 'Pick your TV Time export' : source === 'imdb' ? 'Pick your IMDb export' : 'Letterboxd, IMDb, or TV Time export'}
         </Button>
         <Text color='gray.400' fontSize='xs'>
           {source === 'tvtime'
             ? 'Your saved GDPR export ZIP works as-is, or pick the CSVs inside it.'
-            : 'Letterboxd watchlist.csv/ratings.csv/diary.csv, IMDb exports (watchlist, ratings, check-ins), or a TV Time GDPR ZIP. Parsed on your device.'}
+            : source === 'imdb'
+              ? 'Your exported watchlist, ratings, and check-ins CSVs, picked together or one at a time.'
+              : 'Letterboxd watchlist.csv/ratings.csv/diary.csv, IMDb exports (watchlist, ratings, check-ins), or a TV Time GDPR ZIP. Parsed on your device.'}
         </Text>
       </Flex>
       {note && <Text color='gray.300' fontSize='xs' mt={2}>{note}</Text>}
