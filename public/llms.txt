@@ -26,6 +26,7 @@
 - /api/cal/{provider} — public ICS calendar of announced arrivals and departures per service
 - /api/rss/{provider} — per-service RSS feed of arrivals, departures and announced releases (or /api/rss/all)
 - /leaving.xml — RSS feed of recent departures
+- MCP server for agents: `npx -y galaxymovies-mcp` (stdio; provider list, catalog changes, arrivals/departures, where-to-watch, feed URLs — wraps the feeds above). Source: https://github.com/NickFasulo/galaxymovies-mcp
 
 ## Data notes
 
