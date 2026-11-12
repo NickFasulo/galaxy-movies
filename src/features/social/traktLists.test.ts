@@ -25,7 +25,10 @@ vi.mock('./socialBroadcast', () => ({
 }))
 vi.stubGlobal('fetch', mocks.fetch)
 
-const kv = { hget: vi.fn(async () => null), hset: vi.fn(async () => 1) }
+const kv = {
+  hget: vi.fn(async (): Promise<{ refreshToken: string; redirectUri: string } | null> => null),
+  hset: vi.fn(async () => 1)
+}
 
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body })
 const fail = (status = 500) => ({ ok: false, status, json: async () => ({}) })
