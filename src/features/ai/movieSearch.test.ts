@@ -192,6 +192,43 @@ describe('resolveMovieMentions', () => {
     fetchTmdb.mockRejectedValue(new Error('tmdb down'))
     expect(await resolveMovieMentions([mention()])).toEqual([])
   })
+
+  it('retries with an article-stripped query when the verbatim query misses', async () => {
+    fetchTmdb.mockImplementation((_path: string, params: { query?: string }) =>
+      Promise.resolve(
+        params.query === 'Food, Inc.'
+          ? multiPage([{ id: 18570, media_type: 'movie', title: 'Food, Inc.', release_date: '2008-09-07', poster_path: '/f.jpg' }])
+          : multiPage([])
+      )
+    )
+    const resolved = await resolveMovieMentions([
+      mention({ match: '"The Food, Inc. (2008)"', title: 'The Food, Inc.', year: '2008' })
+    ])
+    expect(resolved).toEqual([{ match: '"The Food, Inc. (2008)"', movieId: 18570, mediaType: 'movie', title: 'The Food, Inc.', year: '2008', poster_path: '/f.jpg', releaseDate: '2008-09-07' }])
+  })
+
+  it('matches titles with leading-article differences', async () => {
+    fetchTmdb.mockResolvedValue(multiPage([{ id: 18570, media_type: 'movie', title: 'Food, Inc.', release_date: '2008-09-07', poster_path: '/f.jpg' }]))
+    const resolved = await resolveMovieMentions([
+      mention({ match: '"The Food, Inc. (2008)"', title: 'The Food, Inc.', year: '2008', quoted: false })
+    ])
+    expect(resolved[0]?.movieId).toBe(18570)
+  })
+
+  it('collapses punctuation in the query as a last resort', async () => {
+    fetchTmdb.mockImplementation((_path: string, params: { query?: string }) =>
+      Promise.resolve(
+        params.query === 'food inc'
+          ? multiPage([{ id: 18570, media_type: 'movie', title: 'Food, Inc.', release_date: '2008-09-07', poster_path: '/f.jpg' }])
+          : multiPage([])
+      )
+    )
+    const resolved = await resolveMovieMentions([
+      mention({ match: '"Food, Inc. (2008)"', title: 'Food, Inc.', year: '2008' })
+    ])
+    expect(fetchTmdb).toHaveBeenCalledWith('/search/multi', expect.objectContaining({ query: 'food inc' }))
+    expect(resolved[0]?.movieId).toBe(18570)
+  })
 })
 
 describe('recent releases', () => {

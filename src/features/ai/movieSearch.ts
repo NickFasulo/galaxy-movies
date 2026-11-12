@@ -151,17 +151,36 @@ function normalizeTitle(value: string): string {
   return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 }
 
+const stripArticle = (value: string) => value.replace(/^(?:the|a|an)\s+/i, '')
+
 const titleYear = (item: MultiSearchResult) => item.release_date || item.first_air_date || ''
+
+// TMDB search is brittle about leading articles and punctuation ("The Food,
+// Inc." returns nothing where "Food, Inc." hits) — and an empty page can sit
+// in the edge cache for an hour, so a retried variant doubles as a fresh-key
+// retry for transient misses.
+function titleQueryVariants(title: string): string[] {
+  const variants = [title]
+  const noArticle = stripArticle(title).trim()
+  if (noArticle && noArticle !== title) variants.push(noArticle)
+  const plain = normalizeTitle(title)
+  if (plain && !variants.includes(plain)) variants.push(plain)
+  return variants
+}
 
 export async function resolveMovieMentions(mentions: MovieMention[]): Promise<ResolvedMention[]> {
   const resolved = await Promise.all(
     mentions.map(async (mention): Promise<ResolvedMention | null> => {
       try {
-        const results = await searchMultiByQuery(mention.title, 1)
-        const want = normalizeTitle(mention.title)
+        let results: MultiSearchResult[] = []
+        for (const query of titleQueryVariants(mention.title)) {
+          results = await searchMultiByQuery(query, 1)
+          if (results.length > 0) break
+        }
+        const want = stripArticle(normalizeTitle(mention.title))
         const sameTitle = results.filter((item) =>
           [item.title, item.name, item.original_title, item.original_name].some(
-            (t) => t !== undefined && normalizeTitle(t) === want
+            (t) => t !== undefined && stripArticle(normalizeTitle(t)) === want
           )
         )
         // Unquoted mentions need a real title match — otherwise a phrase like
