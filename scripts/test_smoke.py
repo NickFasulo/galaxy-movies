@@ -9,6 +9,7 @@ SCRIPT = Path(__file__).with_name('smoke.sh')
 MOCK_CURL = r'''#!/usr/bin/env python3
 import os
 import sys
+import time
 
 args = sys.argv[1:]
 url = args[-1]
@@ -20,6 +21,10 @@ if url == 'https://galaxymovies.app/':
     print('HTTP/2 ' + os.environ['APEX_CODE'] + '\r')
     print(headers + '\r\n')
     print(os.environ['APEX_CODE'] + ' ' + os.environ.get('APEX_URL', ''), end='')
+elif 'streaming-changes?provider=all' in url:
+    ts = int(time.time() * 1000)
+    print('HTTP/2 200\r\n\r\n', end='')
+    print('{"providers":{"netflix":{"updatedAt":%d},"hulu":{"updatedAt":%d}}}' % (ts, ts))
 elif url.endswith('/in') or url.endswith('/in/streaming'):
     # check_redirect wants '%{http_code} %{redirect_url}' — emit just that line.
     print('308 https://smoke.invalid/streaming-in-india', end='')
