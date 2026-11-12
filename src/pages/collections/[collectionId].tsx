@@ -75,12 +75,15 @@ export default function Collection({ collection, movies, boxSet }: Props) {
   const description = collection.overview
     ? collection.overview.slice(0, 160)
     : `All ${movies.length} ${collection.name} movies in release order: and where each one is streaming now.`
+  // SERP description answers the query the title implies; the TMDB overview
+  // stays as on-page copy (it's franchise marketing text, not a search answer).
+  const metaDescription = `All ${movies.length} ${collection.name} movies in release order, plus where each one is streaming now.`
 
   return (
     <>
       <PageHead
         title={pageTitle}
-        description={description}
+        description={metaDescription}
         canonicalUrl={canonicalUrl}
         posterPath={movies[0]?.poster_path}
         structuredData={titleListSchema({ name: title, description, url: canonicalUrl, titles: movies, limit: movies.length })}
