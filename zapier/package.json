@@ -15,6 +15,6 @@
   },
   "devDependencies": {
     "zapier-platform-cli": "19.3.0",
-    "mocha": "11.7.5"
+    "mocha": "12.0.3"
   }
 }
