@@ -42,7 +42,8 @@ const COMPARISON_ROWS = [
   { feature: 'Region picker', galaxy: 'Yes: switch countries on any title page to see availability there', justwatch: 'Yes' },
   { feature: 'Movies and TV shows', galaxy: 'Yes', justwatch: 'Yes' },
   { feature: 'Curated lists', galaxy: 'Yes: themed lists updated regularly', justwatch: 'Limited' },
-  { feature: 'Watchlist', galaxy: 'Yes', justwatch: 'Yes' },
+  { feature: 'Watchlist & tracking', galaxy: 'Yes: watchlist, ratings, and a watched diary, all without an account', justwatch: 'Yes: watchlist and seen-it marks, account needed for sync' },
+  { feature: 'Import from other trackers', galaxy: 'Yes: TV Time, Letterboxd and IMDb files import free in the browser', justwatch: 'No' },
   { feature: 'Mobile apps', galaxy: 'Web only', justwatch: 'iOS and Android' },
   { feature: 'Account required', galaxy: 'No', justwatch: 'No' },
   { feature: 'Price', galaxy: 'Free', justwatch: 'Free' }

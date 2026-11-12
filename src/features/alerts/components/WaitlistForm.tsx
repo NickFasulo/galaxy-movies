@@ -57,7 +57,7 @@ export default function WaitlistForm({ purpose = 'alerts', onConfirmed }: { purp
           <Text color='gray.400' fontSize='sm' mb={3}>
             {login
               ? 'We\u2019ll send one link to verify it. That address becomes your login on every device and where Polar sends receipts.'
-              : 'Leave your email and we\u2019ll alert you the moment a saved movie or show lands on one of your streaming services. Confirming also syncs your list and ratings across devices.'}
+              : 'Leave your email and we\u2019ll alert you the moment a saved movie or show lands on one of your streaming services. Confirming also syncs your list, ratings, and watched history across devices.'}
           </Text>
           <Flex gap={2} direction={{ base: 'column', md: 'row' }} asChild><form onSubmit={submit}>
               <DarkInput

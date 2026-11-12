@@ -32,17 +32,17 @@ export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; 
 
 const COMPARISON_ROWS = [
   { feature: 'Where-to-watch availability', galaxy: 'Yes: stream, rent and buy options on every movie and TV page', trakt: 'Basic: where-to-watch links sourced from JustWatch' },
-  { feature: 'Watchlist & ratings', galaxy: 'Yes: watchlist and ratings saved on your device, no account', trakt: 'Yes: full tracking history, account required' },
+  { feature: 'Watchlist, ratings & diary', galaxy: 'Yes: watchlist, ratings, and a dated watched diary saved on your device, no account', trakt: 'Yes: full tracking history, account required' },
   { feature: 'Alerts without an account', galaxy: 'Yes: email alerts for specific titles and weekly digests, no sign-up', trakt: 'No: notifications need a Trakt account' },
   { feature: 'Streaming-change tracking', galaxy: 'Yes: arrivals and departures per service, tracked daily, plus a monthly churn report', trakt: 'No: shows where to watch now, not what changed' },
   { feature: 'Streaming history & predictions', galaxy: 'Yes: per-title availability timeline and how-long titles typically stay', trakt: 'No' },
   { feature: 'Rent/buy price comparison', galaxy: 'Yes: real rental and purchase prices, cheapest option highlighted, Plus price-drop alerts', trakt: 'No' },
   { feature: 'AI recommendation assistant', galaxy: 'Yes: Galaxy Bot picks by mood, group, time limit and what you can stream', trakt: 'No' },
   { feature: 'Movie night for two', galaxy: 'Yes: merge two taste profiles for picks you can both stream', trakt: 'No' },
-  { feature: 'Automatic watch tracking', galaxy: 'No: you rate titles manually; Plus can sync your Trakt history in', trakt: 'Yes: scrobbles automatically from Plex, Kodi and media apps' },
-  { feature: 'Episode progress', galaxy: 'Partial: next-episode alerts and calendar events for watchlisted shows (Plus)', trakt: 'Yes: per-episode progress across every show' },
+  { feature: 'Automatic watch tracking', galaxy: 'No scrobbling: you mark titles watched manually or import your history; Plus can sync your Trakt history in', trakt: 'Yes: scrobbles automatically from Plex, Kodi and media apps' },
+  { feature: 'Episode progress', galaxy: 'Partial: imported episode watches roll up per show; next-episode alerts and calendar events for watchlisted shows (Plus)', trakt: 'Yes: per-episode progress across every show' },
   { feature: 'Community & comments', galaxy: 'No', trakt: 'Yes: large community, comments and public lists' },
-  { feature: 'Import your Trakt history', galaxy: 'Yes: connect Trakt to sync your watchlist and ratings (Plus)', trakt: '—' },
+  { feature: 'Import your history', galaxy: 'Yes: TV Time, Letterboxd and IMDb files import free in the browser; Trakt sync is Plus', trakt: '—' },
   { feature: 'Account required', galaxy: 'No: everything works anonymously; Plus adds extras', trakt: 'Yes: tracking and sync all require an account' },
   { feature: 'Price', galaxy: 'Free; optional Plus for alerts+', trakt: 'Free tier; VIP removes ads and adds features' }
 ]
@@ -50,7 +50,7 @@ const COMPARISON_ROWS = [
 const FAQ_ITEMS = [
   {
     question: 'Is Galaxy Movies a good Trakt alternative?',
-    answer: 'Yes if what you want is a watchlist, ratings and alerts without maintaining another account — plus streaming-change data Trakt does not track, like dated departures and monthly churn. Trakt stays ahead if you rely on automatic scrobbling, per-episode progress or its community.'
+    answer: 'Yes if what you want is a watchlist, ratings, a watched diary and alerts without maintaining another account — plus streaming-change data Trakt does not track, like dated departures and monthly churn. Trakt stays ahead if you rely on automatic scrobbling, per-episode progress or its community.'
   },
   {
     question: 'Can I import my Trakt history into Galaxy Movies?',
@@ -69,7 +69,7 @@ const FAQ_ITEMS = [
 export default function TraktAlternative({ movies, dataError }: InferGetStaticPropsType<typeof getStaticProps>) {
   const canonicalUrl = `${SITE_URL}/trakt-alternative`
   const title = 'A No-Account Trakt Alternative for Watchlists and Alerts'
-  const description = 'Galaxy Movies is a free Trakt alternative: watchlists, ratings, email alerts and streaming-change tracking with no account — and it can sync your Trakt history if you have one.'
+  const description = 'Galaxy Movies is a free Trakt alternative: watchlists, ratings, a watched diary, email alerts and streaming-change tracking with no account — and it can sync your Trakt history if you have one.'
 
   const faqSchema = {
     '@context': 'https://schema.org',

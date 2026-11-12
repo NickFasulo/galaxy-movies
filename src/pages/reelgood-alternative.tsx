@@ -33,7 +33,7 @@ export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; 
 const COMPARISON_ROWS = [
   { feature: 'Status', galaxy: 'Actively maintained and shipping', reelgood: 'Effectively abandoned: apps unmaintained since late 2024, login and sync issues reported' },
   { feature: 'Where-to-watch availability', galaxy: 'Yes: stream, rent and buy options on every movie and TV page', reelgood: 'Yes: large aggregator covering US and UK catalogs' },
-  { feature: 'Watchlist & seen-it tracking', galaxy: 'Yes: watchlist and ratings saved on your device, no account', reelgood: 'Yes: unified tracking across services, account required' },
+  { feature: 'Watchlist & seen-it tracking', galaxy: 'Yes: watchlist, ratings, and a dated watched diary saved on your device, no account', reelgood: 'Yes: unified tracking across services, account required' },
   { feature: 'Alerts without an account', galaxy: 'Yes: email alerts for specific titles and weekly digests, no sign-up', reelgood: 'No: notifications require a free account' },
   { feature: 'Leaving-soon tracking', galaxy: 'Yes: dated departures per service, tracked daily, plus calendar feeds', reelgood: 'Yes: leaving lists inside the app' },
   { feature: 'Streaming history & predictions', galaxy: 'Yes: per-title availability timeline and how-long titles typically stay', reelgood: 'No' },
@@ -60,7 +60,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Do I need an account to use Galaxy Movies?',
-    answer: 'No. Watchlists, ratings and service picks save to your device, and email alerts work with just an email address and a confirmation click. A Plus subscription adds leaving-soon warnings, a personal calendar feed, price-drop alerts and share links — still no password.'
+    answer: 'No. Watchlists, ratings, watched history and service picks save to your device, and email alerts work with just an email address and a confirmation click. A Plus subscription adds leaving-soon warnings, a personal calendar feed, price-drop alerts and share links — still no password.'
   },
   {
     question: 'Does Galaxy Movies track TV shows?',

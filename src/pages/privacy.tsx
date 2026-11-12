@@ -16,14 +16,14 @@ export default function Privacy() {
 
       <InfoHeading>1. Information We Collect</InfoHeading>
       <InfoParagraph><strong>Data stored on your device.</strong> Galaxy Movies does not require an
-        account. Your saved titles, ratings, and streaming service preferences are stored in your
+        account. Your saved titles, ratings, watched history, and streaming service preferences are stored in your
         browser&apos;s local storage on your device. You can delete this data at any time by clearing
         your browser storage.</InfoParagraph>
       <InfoParagraph><strong>Synced alert preferences (optional).</strong> If you join streaming
         alerts and confirm your email, the device you confirmed on stores a sync credential and
-        uploads a snapshot of your watchlist titles, ratings, chosen streaming services, and region
+        uploads a snapshot of your watchlist titles, ratings, watched history, chosen streaming services, and region
         to our servers. We use this snapshot to email you when a saved title arrives on one of your
-        services and to restore your list and ratings on other devices you link. Unsubscribing
+        services and to restore your list, ratings, and watched history on other devices you link. Unsubscribing
         deletes your synced data from our servers.</InfoParagraph>
       <InfoParagraph><strong>Email address (optional).</strong> If you join streaming alerts, we ask
         you to confirm your email address and store it to send you watchlist alerts, a weekly
@@ -57,7 +57,7 @@ export default function Privacy() {
       <InfoHeading>3. Cookies and Local Storage</InfoHeading>
       <InfoParagraph>
         Galaxy Movies does not set tracking cookies. We use your browser&apos;s local storage to keep
-        your watchlist, ratings, and service preferences on your device, and — if you confirm a
+        your watchlist, ratings, watched history, and service preferences on your device, and — if you confirm a
         streaming alerts subscription — to hold the sync credential that links this device to your
         alerts. You can manage or clear cookies and site data through your browser settings.
       </InfoParagraph>
@@ -103,8 +103,8 @@ export default function Privacy() {
 
       <InfoHeading>6. Data Retention</InfoHeading>
       <List.Root as='ul' mb={4} pl={4} gap={1}>
-        <List.Item>Watchlist, ratings, and preferences: stored only on your device until you clear them</List.Item>
-        <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced watchlist snapshot, and alert history from our servers</List.Item>
+        <List.Item>Watchlist, ratings, watched history, and preferences: stored only on your device until you clear them</List.Item>
+        <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced list snapshot, and alert history from our servers</List.Item>
         <List.Item>Galaxy Plus subscription status (plan state, customer and subscription IDs): kept while your subscription is active; payment records are retained by Polar as merchant of record</List.Item>
         <List.Item>Galaxy Bot anonymous usage data — session statistics, prompt and response logs (kept to review quality and understand what people ask about), and OpenAI request logs: up to 30 days; optional response ratings, which may include the rated reply: up to 90 days</List.Item>
         <List.Item>Chat responses may be cached server-side for up to 30 minutes to improve performance</List.Item>
