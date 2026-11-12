@@ -1,0 +1,15 @@
+name: trakt-probe
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      # api.trakt.tv edge-429s Cloudflare workerd egress (error 1015). Probe
+      # whether GH runner egress gets a real API response instead: a 401/2xx
+      # means reachable; 429/403 means the same block applies here.
+      - run: |
+          code=$(curl -s -o /tmp/resp.txt -w '%{http_code}' https://api.trakt.tv/movies/trending -H "User-Agent: Galaxy Movies (+https://www.galaxymovies.app)" -H "trakt-api-version: 2")
+          echo "status: $code"
+          head -c 300 /tmp/resp.txt
