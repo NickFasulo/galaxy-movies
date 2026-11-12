@@ -1,21 +1,12 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Badge, Box, Button, Flex, Text } from '@chakra-ui/react'
 import { secondaryButton } from '../../../theme'
 import DarkInput from '../../../components/DarkInput'
-import { fetchSyncedPrefs, scheduleAlertsSync, type AlertsCredentials } from '../alertsSync'
+import { fetchSyncedPrefs, type AlertsCredentials } from '../alertsSync'
 import { letterboxdCsvs } from '../../../lib/format/exportCsv'
-import { parseLetterboxdCsv, type LetterboxdItem } from '../../../lib/format/importLetterboxd'
-import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../../../lib/userData'
+import { mergeSyncedPrefs } from '../../../lib/userData'
 import type { PlusFeatures } from '../../billing/hooks/usePlus'
 import { SITE_URL } from '../../../lib/site'
-
-interface ResolvedTitle {
-  id: number
-  mediaType: 'movie' | 'tv'
-  title: string
-  year?: string
-  poster_path: string | null
-}
 
 const actionBtn = {
   size: 'xs',
@@ -47,10 +38,9 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
 }) {
   const [busy, setBusy] = useState(false)
   const [webhookSaving, setWebhookSaving] = useState(false)
-  type NoteKey = 'import' | 'trakt' | 'discord' | 'telegram' | 'share'
+  type NoteKey = 'trakt' | 'discord' | 'telegram' | 'share'
   const [notes, setNotes] = useState<Partial<Record<NoteKey, string>>>({})
   const setNote = (key: NoteKey, msg: string) => setNotes((n) => ({ ...n, [key]: msg }))
-  const fileRef = useRef<HTMLInputElement>(null)
   const [webhook, setWebhook] = useState(features?.discordWebhook ?? '')
   const [shareUrl, setShareUrl] = useState(
     features?.shareId ? `${SITE_URL}/list/${features.shareId}` : ''
@@ -122,58 +112,6 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
       setNote('trakt', data?.error || 'Trakt import failed.')
     }
   })
-
-  const importCsvs = (files: FileList | null) => {
-    if (!files?.length) return
-    void run(async () => {
-      const watchlistItems: LetterboxdItem[] = []
-      const ratingItems: LetterboxdItem[] = []
-      for (const file of Array.from(files)) {
-        const items = parseLetterboxdCsv(await file.text())
-        if (file.name.toLowerCase().includes('rating')) ratingItems.push(...items)
-        else watchlistItems.push(...items)
-      }
-      if (!watchlistItems.length && !ratingItems.length) {
-        setNote('import', 'No Letterboxd rows found: use watchlist.csv or ratings.csv exports.')
-        return
-      }
-
-      const resolve = async (items: LetterboxdItem[]) => {
-        const resolved: (ResolvedTitle | null)[] = []
-        for (let i = 0; i < items.length; i += 50) {
-          const batch = items.slice(i, i + 50)
-          const { data } = await post('/api/resolve-titles', {
-            items: batch.map(({ title, year }) => ({ title, year }))
-          })
-          const results = Array.isArray(data?.results) ? data.results : []
-          batch.forEach((_, j) => resolved.push(results[j]?.resolved ?? null))
-        }
-        return resolved
-      }
-
-      const [wl, rt] = await Promise.all([resolve(watchlistItems), resolve(ratingItems)])
-      const prefs: SyncedPrefs = {
-        watchlist: wl
-          .map((r, i) => (r ? { id: r.id, mediaType: r.mediaType, title: r.title, poster_path: r.poster_path, year: r.year ?? watchlistItems[i]!.year ?? null } : null))
-          .filter((r): r is NonNullable<typeof r> => Boolean(r)),
-        ratings: rt
-          .map((r, i) =>
-            r && ratingItems[i]!.rating
-              ? { id: r.id, mediaType: r.mediaType, title: r.title, rating: ratingItems[i]!.rating, poster_path: r.poster_path, year: r.year ?? ratingItems[i]!.year ?? null }
-              : null
-          )
-          .filter((r): r is NonNullable<typeof r> => Boolean(r))
-      }
-      const skipped = watchlistItems.length + ratingItems.length - prefs.watchlist!.length - prefs.ratings!.length
-      mergeSyncedPrefs(prefs)
-      scheduleAlertsSync(getUserData())
-      setNote('import',
-        `Imported ${prefs.watchlist!.length} watchlist + ${prefs.ratings!.length} ratings` +
-          (skipped ? `: ${skipped} titles couldn't be matched` : '') +
-          '.'
-      )
-    })
-  }
 
   const disconnectTrakt = () => run(async () => {
     if ((await post('/api/trakt/disconnect')).ok) refresh()
@@ -253,26 +191,6 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('watchlist')}>Letterboxd watchlist CSV</Button>
         <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('ratings')}>Letterboxd ratings CSV</Button>
       </Flex>
-
-      <Text {...sectionTitle}>Import</Text>
-      <Flex gap={2} align='center' wrap='wrap'>
-        <input
-          ref={fileRef}
-          type='file'
-          accept='.csv,text/csv'
-          multiple
-          hidden
-          onChange={(e) => {
-            importCsvs(e.target.files)
-            e.target.value = ''
-          }}
-        />
-        <Button {...actionBtn} disabled={busy} onClick={() => fileRef.current?.click()}>
-          Letterboxd CSV
-        </Button>
-        <Text color='gray.400' fontSize='xs'>watchlist.csv and/or ratings.csv exports merge into your list.</Text>
-      </Flex>
-      {notes.import && <Text color='gray.300' fontSize='xs' mt={2}>{notes.import}</Text>}
 
       <Flex align='center' gap={2} {...sectionTitle}>
         <Text>Trakt</Text>

@@ -26,6 +26,7 @@ const multiPage = (results: unknown[]) => ({ results, total_pages: 1, total_resu
 let extractTitleMentions: typeof import('./movieSearch').extractTitleMentions
 let resolveMovieMentions: typeof import('./movieSearch').resolveMovieMentions
 let resolveTitleItem: typeof import('./movieSearch').resolveTitleItem
+let resolveTvdbItem: typeof import('./movieSearch').resolveTvdbItem
 let getRecentReleases: typeof import('./movieSearch').getRecentReleases
 let getRecentShows: typeof import('./movieSearch').getRecentShows
 let formatMovieForChat: typeof import('./movieSearch').formatMovieForChat
@@ -39,6 +40,7 @@ beforeEach(async () => {
   extractTitleMentions = mod.extractTitleMentions
   resolveMovieMentions = mod.resolveMovieMentions
   resolveTitleItem = mod.resolveTitleItem
+  resolveTvdbItem = mod.resolveTvdbItem
   getRecentReleases = mod.getRecentReleases
   getRecentShows = mod.getRecentShows
   formatMovieForChat = mod.formatMovieForChat
@@ -289,5 +291,52 @@ describe('resolveTitleItem', () => {
     expect(await resolveTitleItem('Heat')).toBeNull()
     fetchTmdb.mockResolvedValue(multiPage([]))
     expect(await resolveTitleItem('Heat')).toBeNull()
+  })
+})
+
+describe('resolveTvdbItem', () => {
+  it('resolves a show via /find with the tvdb external source', async () => {
+    fetchTmdb.mockResolvedValue({
+      tv_results: [{ id: 1399, media_type: 'tv', name: 'Game of Thrones', first_air_date: '2011-04-17', poster_path: '/got.jpg' }]
+    })
+    const resolved = await resolveTvdbItem(121361, 'Game of Thrones')
+    expect(fetchTmdb).toHaveBeenCalledWith('/find/121361', { external_source: 'tvdb_id' })
+    expect(resolved).toMatchObject({ id: 1399, mediaType: 'tv', title: 'Game of Thrones', year: '2011', poster_path: '/got.jpg' })
+  })
+
+  it('prefers results with posters and falls back to title search when unmapped', async () => {
+    fetchTmdb.mockImplementation((path: string) =>
+      Promise.resolve(
+        path.startsWith('/find/')
+          ? { tv_results: [{ id: 1, media_type: 'tv', name: 'Posterless', poster_path: null }, { id: 2, media_type: 'tv', name: 'Fringe', first_air_date: '2008-09-09', poster_path: '/f.jpg' }] }
+          : multiPage([{ id: 82066, media_type: 'tv', name: 'Fringe', first_air_date: '2008-09-09', poster_path: '/f.jpg' }])
+      )
+    )
+    expect(await resolveTvdbItem(82066, 'Fringe')).toMatchObject({ id: 2, title: 'Fringe' })
+
+    fetchTmdb.mockImplementation((path: string) =>
+      Promise.resolve(
+        path.startsWith('/find/')
+          ? { tv_results: [] }
+          : multiPage([{ id: 82066, media_type: 'tv', name: 'Fringe', first_air_date: '2008-09-09', poster_path: '/f.jpg' }])
+      )
+    )
+    const resolved = await resolveTvdbItem(82066, 'Fringe')
+    expect(fetchTmdb).toHaveBeenCalledWith('/search/multi', expect.objectContaining({ query: 'Fringe' }))
+    expect(resolved).toMatchObject({ id: 82066, mediaType: 'tv' })
+  })
+
+  it('returns null when /find is empty and no fallback title is given', async () => {
+    fetchTmdb.mockResolvedValue({ tv_results: [] })
+    expect(await resolveTvdbItem(999999)).toBeNull()
+  })
+
+  it('falls back to title search when /find throws', async () => {
+    fetchTmdb.mockImplementation((path: string) =>
+      path.startsWith('/find/')
+        ? Promise.reject(new Error('tmdb down'))
+        : Promise.resolve(multiPage([{ id: 5, media_type: 'tv', name: 'Show', first_air_date: '2020-01-01', poster_path: '/s.jpg' }]))
+    )
+    expect(await resolveTvdbItem(123, 'Show')).toMatchObject({ id: 5 })
   })
 })

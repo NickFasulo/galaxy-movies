@@ -1,17 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireMethod, rejectBot } from '../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { resolveTitleItem } from '../../features/ai/movieSearch'
+import { resolveTitleItem, resolveTvdbItem } from '../../features/ai/movieSearch'
 
 // Batch title resolution for imports (Letterboxd CSV rows arrive as bare
-// title+year). Free TMDB searches, bounded by the per-IP bucket and the
-// 50-item cap; chunks of 10 keep bursts under TMDB's rate ceiling.
+// title+year; TV Time show rows can carry a tvdbId for exact /find lookups).
+// Free TMDB searches, bounded by the per-IP bucket and the 50-item cap;
+// chunks of 10 keep bursts under TMDB's rate ceiling.
 const MAX_ITEMS = 50
 const BATCH = 10
 
 interface Item {
   title: string
   year?: string
+  tvdbId?: number
 }
 
 function parseItems(input: unknown): Item[] | null {
@@ -19,10 +21,11 @@ function parseItems(input: unknown): Item[] | null {
   const out: Item[] = []
   for (const raw of input) {
     if (!raw || typeof raw !== 'object') return null
-    const { title, year } = raw as Record<string, unknown>
+    const { title, year, tvdbId } = raw as Record<string, unknown>
     if (typeof title !== 'string' || !title.trim() || title.length > 100) return null
     const item: Item = { title: title.trim() }
     if (typeof year === 'string' && /^\d{4}$/.test(year)) item.year = year
+    if (typeof tvdbId === 'number' && Number.isInteger(tvdbId) && tvdbId > 0 && tvdbId < 1e12) item.tvdbId = tvdbId
     out.push(item)
   }
   return out
@@ -49,7 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const results: ({ title: string; year?: string; resolved: Awaited<ReturnType<typeof resolveTitleItem>> })[] = []
     for (let i = 0; i < items.length; i += BATCH) {
-      const resolved = await Promise.all(items.slice(i, i + BATCH).map((item) => resolveTitleItem(item.title, item.year)))
+      const resolved = await Promise.all(items.slice(i, i + BATCH).map((item) =>
+        item.tvdbId ? resolveTvdbItem(item.tvdbId, item.title) : resolveTitleItem(item.title, item.year)
+      ))
       resolved.forEach((r, j) => results.push({ title: items[i + j]!.title, year: items[i + j]!.year, resolved: r }))
     }
     return res.status(200).json({ results })

@@ -12,6 +12,7 @@ import ServicesPicker from '../features/alerts/components/ServicesPicker'
 import WaitlistForm from '../features/alerts/components/WaitlistForm'
 import PageHead from '../components/PageHead'
 import PageShell from '../components/PageShell'
+import ImportPanel from '../features/alerts/components/ImportPanel'
 import PlusTools from '../features/alerts/components/PlusTools'
 import PushAlerts, { PushInstallHint } from '../features/alerts/components/PushAlerts'
 import { useUserData } from '../features/alerts/hooks/useUserData'
@@ -211,6 +212,10 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
         <Box mt={10} maxW='36rem'>
           <WaitlistForm />
         </Box>
+
+        <Panel mt={6} maxW='36rem'>
+          <ImportPanel />
+        </Panel>
 
         {!plusLoading && (
           <Panel mt={6} maxW='36rem'>

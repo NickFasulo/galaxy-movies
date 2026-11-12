@@ -5,8 +5,9 @@ export interface LetterboxdItem {
 }
 
 // Minimal RFC-4180 parser — Letterboxd exports quote fields containing
-// commas and escape quotes as "".
-function parseCsv(text: string): string[][] {
+// commas and escape quotes as "". Exported for the TV Time importer, whose
+// GDPR CSVs follow the same quoting rules.
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = []
   let row: string[] = []
   let field = ''

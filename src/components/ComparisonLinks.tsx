@@ -6,6 +6,7 @@ const COMPARISON_PAGES = [
   { href: '/justwatch-alternative', label: 'JustWatch' },
   { href: '/reelgood-alternative', label: 'Reelgood' },
   { href: '/trakt-alternative', label: 'Trakt' },
+  { href: '/tv-time-alternative', label: 'TV Time' },
   { href: '/whats-on-netflix-alternative', label: "What's on Netflix" },
   { href: '/flixable-alternative', label: 'Flixable' },
   { href: '/instantwatcher-alternative', label: 'InstantWatcher' },

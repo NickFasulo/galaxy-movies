@@ -31,6 +31,7 @@ export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; 
 }
 
 const COMPARISON_ROWS = [
+  { feature: 'Status', galaxy: 'Actively maintained and shipping', reelgood: 'Effectively abandoned: apps unmaintained since late 2024, login and sync issues reported' },
   { feature: 'Where-to-watch availability', galaxy: 'Yes: stream, rent and buy options on every movie and TV page', reelgood: 'Yes: large aggregator covering US and UK catalogs' },
   { feature: 'Watchlist & seen-it tracking', galaxy: 'Yes: watchlist and ratings saved on your device, no account', reelgood: 'Yes: unified tracking across services, account required' },
   { feature: 'Alerts without an account', galaxy: 'Yes: email alerts for specific titles and weekly digests, no sign-up', reelgood: 'No: notifications require a free account' },
@@ -49,6 +50,10 @@ const COMPARISON_ROWS = [
 ]
 
 const FAQ_ITEMS = [
+  {
+    question: 'Is Reelgood still maintained?',
+    answer: 'Not really. The service still runs and its site still answers where-to-watch searches, but the iOS app has not shipped an update since September 2024 and users report broken logins and tracking that no longer syncs. If your list lives there, this is a good time to export or rebuild it somewhere maintained.'
+  },
   {
     question: 'Is Galaxy Movies a good Reelgood alternative?',
     answer: 'Yes if you want tracking without the account. Galaxy Movies covers where to stream, rent and buy with real prices, tracks arrivals and departures per service, and emails you about titles you pick — all without signing up. Reelgood remains stronger if you want automatic seen-it tracking and native TV apps.'
@@ -98,10 +103,11 @@ export default function ReelgoodAlternative({ movies, dataError }: InferGetStati
       <PageShell title={title} description={description} withBackButton>
 
           <Text maxW='60rem' mt={8}>
-            Reelgood is the aggregator for people who want one app to track everything they watch: a single
-            watchlist, automatic seen-it marking, and next-episode tracking — all behind a free account. Galaxy
-            Movies takes the opposite bet: the same tracking and alerts, but nothing requires a sign-up. Your
-            watchlist lives on your device, and alerts land in your inbox with one confirmation click.
+            Reelgood built the aggregator for people who want one app to track everything they watch: a single
+            watchlist, automatic seen-it marking, and next-episode tracking — all behind a free account. It still
+            runs, but its apps have not been updated since 2024 and users report broken logins and stale tracking.
+            Galaxy Movies takes the opposite bet on both counts: actively maintained, and nothing requires a
+            sign-up. Your watchlist lives on your device, and alerts land in your inbox with one confirmation click.
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Galaxy Movies vs Reelgood</Heading>

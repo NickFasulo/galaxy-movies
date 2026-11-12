@@ -229,3 +229,25 @@ export async function resolveTitleItem(title: string, year?: string): Promise<Re
     return null
   }
 }
+
+// TV Time exports carry TVDB ids — a /find lookup beats title search (exact
+// id, no ambiguity). Falls back to strict title match when TMDB has no
+// tvdb_id mapping for the show.
+export async function resolveTvdbItem(tvdbId: number, fallbackTitle?: string): Promise<ResolvedTitle | null> {
+  try {
+    const data = await fetchTmdb<{ tv_results?: MultiSearchResult[] }>(`/find/${tvdbId}`, { external_source: 'tvdb_id' })
+    const best = (data.tv_results || []).find((item) => item.poster_path) ?? data.tv_results?.[0]
+    if (best) {
+      return {
+        id: best.id,
+        mediaType: 'tv',
+        title: best.name || best.title || fallbackTitle || '',
+        year: (best.first_air_date || best.release_date || '').slice(0, 4) || undefined,
+        poster_path: best.poster_path ?? null
+      }
+    }
+  } catch (error) {
+    console.error(`Error resolving tvdb id ${tvdbId}:`, error)
+  }
+  return fallbackTitle ? resolveTitleItem(fallbackTitle) : null
+}
