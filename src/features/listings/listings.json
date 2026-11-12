@@ -330,6 +330,191 @@
       "category": "feed",
       "status": "queued",
       "notes": "Submit /api/cal/{provider} calendar feeds."
+    },
+    {
+      "id": "mcp-official-registry",
+      "name": "MCP official registry",
+      "category": "api-directory",
+      "status": "live",
+      "liveUrl": "https://registry.modelcontextprotocol.io/v0/servers?search=galaxymovies",
+      "submittedAt": "2026-11-12",
+      "notes": "app.galaxymovies/mcp v1.0.1, published Nov 12, status active. Feeds all MCP-directory crawlers."
+    },
+    {
+      "id": "public-apis-pr",
+      "name": "public-apis GitHub list",
+      "category": "api-directory",
+      "status": "in-review",
+      "submittedAt": "2026-11-11",
+      "submitUrl": "https://github.com/public-apis/public-apis",
+      "notes": "PR submitted for /api/streaming-changes; check merge status next run."
+    },
+    {
+      "id": "discord-app-directory",
+      "name": "Discord App Directory",
+      "category": "store",
+      "status": "unknown",
+      "submitUrl": "https://discord.com/developers/applications",
+      "notes": "Discord app exists; verify whether it's listed at discord.com/application-directory, submit for discovery if not."
+    },
+    {
+      "id": "slack-app-directory",
+      "name": "Slack App Directory",
+      "category": "store",
+      "status": "unknown",
+      "submitUrl": "https://api.slack.com/apps",
+      "notes": "Slack app exists; verify listing at slack.com/apps, submit for directory review if not."
+    },
+    {
+      "id": "reddit-app-directory",
+      "name": "Reddit app directory",
+      "category": "store",
+      "status": "unknown",
+      "submitUrl": "https://developers.reddit.com/",
+      "notes": "Devvit app exists (galaxy-movies-devvit repo); check apps.reddit.com listing status and publish flow."
+    },
+    {
+      "id": "crunchbase",
+      "name": "Crunchbase",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://www.crunchbase.com/add-new",
+      "notes": "Free company profile, high-DR backlink. Needs account."
+    },
+    {
+      "id": "wellfound",
+      "name": "Wellfound (AngelList)",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://wellfound.com/",
+      "notes": "Free startup profile, high DR."
+    },
+    {
+      "id": "f6s",
+      "name": "F6S",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://www.f6s.com/",
+      "notes": "Startup profile + deals network."
+    },
+    {
+      "id": "trustpilot",
+      "name": "Trustpilot",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://business.trustpilot.com/",
+      "notes": "Claim free business profile; review platform, high DR."
+    },
+    {
+      "id": "sourceforge",
+      "name": "SourceForge",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://sourceforge.net/software/vendors/new/",
+      "notes": "Business-software arm lists web apps; high DR."
+    },
+    {
+      "id": "softwaresuggest",
+      "name": "SoftwareSuggest",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://www.softwaresuggest.com/"
+    },
+    {
+      "id": "killerstartups",
+      "name": "KillerStartups",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://www.killerstartups.com/"
+    },
+    {
+      "id": "startupbuffer",
+      "name": "Startup Buffer",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://startupbuffer.com/"
+    },
+    {
+      "id": "betapage",
+      "name": "BetaPage",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://betapage.co/"
+    },
+    {
+      "id": "indiehackers",
+      "name": "Indie Hackers products",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://www.indiehackers.com/products",
+      "notes": "Product page + revenue/milestone posts; targeted founder audience."
+    },
+    {
+      "id": "startupstash",
+      "name": "Startup Stash",
+      "category": "directory",
+      "status": "queued",
+      "submitUrl": "https://startupstash.com/"
+    },
+    {
+      "id": "opera-addons",
+      "name": "Opera add-ons",
+      "category": "store",
+      "status": "queued",
+      "submitUrl": "https://addons.opera.com/developer/",
+      "notes": "Accepts Chrome-extension zips; same package as CWS/AMO, free."
+    },
+    {
+      "id": "futurepedia",
+      "name": "Futurepedia",
+      "category": "ai-directory",
+      "status": "queued",
+      "submitUrl": "https://www.futurepedia.io/submit-tool",
+      "notes": "Galaxy Bot qualifies us for AI directories; high traffic."
+    },
+    {
+      "id": "toolify",
+      "name": "Toolify",
+      "category": "ai-directory",
+      "status": "queued",
+      "submitUrl": "https://www.toolify.ai/"
+    },
+    {
+      "id": "topai-tools",
+      "name": "TopAI.tools",
+      "category": "ai-directory",
+      "status": "queued",
+      "submitUrl": "https://topai.tools/"
+    },
+    {
+      "id": "smithery",
+      "name": "Smithery",
+      "category": "api-directory",
+      "status": "queued",
+      "submitUrl": "https://smithery.ai/",
+      "notes": "Largest MCP-server directory; claims servers from the official registry."
+    },
+    {
+      "id": "pulsemcp",
+      "name": "PulseMCP",
+      "category": "api-directory",
+      "status": "queued",
+      "submitUrl": "https://www.pulsemcp.com/"
+    },
+    {
+      "id": "mcpservers-org",
+      "name": "MCPServers.org",
+      "category": "api-directory",
+      "status": "queued",
+      "submitUrl": "https://mcpservers.org/"
+    },
+    {
+      "id": "inboxreads",
+      "name": "InboxReads",
+      "category": "feed",
+      "status": "queued",
+      "submitUrl": "https://inboxreads.co/",
+      "notes": "Newsletter directory — submit the weekly streaming digest."
     }
   ]
 }

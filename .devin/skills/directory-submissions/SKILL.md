@@ -66,9 +66,10 @@ Workflow per run:
 5. Mirror to Drive: sync the current state into the "Galaxy Movies —
    Listings Registry" Sheet (id `18GE4zz9Rp0Za8J8buB_NgRCYCB1htGmbiI4aiWT9FlU`,
    Galaxy Movies folder) so there's a human-readable copy outside git — export
-   the JSON to CSV into `shots/`, upload with `import_to_google_sheets`, delete
-   the local copy. Repo registry stays the source of truth; the older
-   "Directory Submissions" Google Doc is superseded.
+   the JSON to CSV into `shots/`, then `update_drive_file` on that Sheet id
+   with the CSV (keeps the file/link stable), and delete the local copy. Repo
+   registry stays the source of truth; the older "Directory Submissions"
+   Google Doc is superseded.
 
 ## Guardrails
 
