@@ -1,0 +1,335 @@
+{
+  "site": "https://www.galaxymovies.app",
+  "listings": [
+    {
+      "id": "alternativeto",
+      "name": "AlternativeTo",
+      "category": "directory",
+      "status": "live",
+      "liveUrl": "https://alternativeto.net/software/galaxy-movies/",
+      "submitUrl": "https://alternativeto.net/software/new/",
+      "submittedAt": "2026-09-24",
+      "notes": "Verified public Nov 12, 43 alternatives linked. Listed as alternative to JustWatch, Reelgood, InstantWatcher, Flixable, Trakt."
+    },
+    {
+      "id": "saashub",
+      "name": "SaaSHub",
+      "category": "directory",
+      "status": "live",
+      "liveUrl": "https://www.saashub.com/galaxy-movies-app",
+      "submittedAt": "2026-09-28",
+      "notes": "Listing slug is 'galaxy-movies-app'. Shows 'Status: Down' flag — their monitor reads ~25% uptime over 30d (Vercel→CF migration + WAF challenges on unverified bot). Claim/recheck at saashub.com/galaxy-movies-app-status."
+    },
+    {
+      "id": "trakt-lists",
+      "name": "Trakt lists",
+      "category": "social",
+      "status": "live",
+      "liveUrl": "https://trakt.tv/users/galaxymovies/lists",
+      "notes": "Automated lists via trakt-lists cron; production API access granted."
+    },
+    {
+      "id": "chrome-web-store",
+      "name": "Chrome Web Store",
+      "category": "store",
+      "status": "live",
+      "submittedAt": "2026-11-12",
+      "account": "fasulo.nick@gmail.com",
+      "notes": "v1.1.1 published. liveUrl needed — find in devconsole or Gmail receipt; new listings don't surface in store search."
+    },
+    {
+      "id": "product-hunt",
+      "name": "Product Hunt",
+      "category": "launch",
+      "status": "live",
+      "submittedAt": "2026-09-24",
+      "notes": "Launched ~Sep 24, confirmed via Afterlaunch congrats email. liveUrl needed — PH blocks bots, verify manually."
+    },
+    {
+      "id": "uneed",
+      "name": "Uneed",
+      "category": "launch",
+      "status": "live",
+      "submittedAt": "2026-09-24",
+      "notes": "Scheduled Sep 23, launched Sep 24. liveUrl needed."
+    },
+    {
+      "id": "startupbase",
+      "name": "StartupBase",
+      "category": "directory",
+      "status": "live",
+      "submittedAt": "2026-09-24",
+      "notes": "Approved same day. liveUrl needed."
+    },
+    {
+      "id": "fazier",
+      "name": "Fazier",
+      "category": "launch",
+      "status": "live",
+      "submittedAt": "2026-11-07",
+      "notes": "Org page only, no launch (launch requires a site badge — skipped). liveUrl needed."
+    },
+    {
+      "id": "commune",
+      "name": "Commune",
+      "category": "launch",
+      "status": "live",
+      "submittedAt": "2026-09-25",
+      "notes": "Live on launchpad; launch summary received Sep 28. liveUrl needed."
+    },
+    {
+      "id": "sideprojectors",
+      "name": "SideProjectors",
+      "category": "directory",
+      "status": "live",
+      "submittedAt": "2026-09-25",
+      "notes": "Approved, was on homepage. Re-submitted Oct 29 — second review pending. liveUrl needed."
+    },
+    {
+      "id": "coderlegion",
+      "name": "CoderLegion",
+      "category": "directory",
+      "status": "live",
+      "submittedAt": "2026-10-02",
+      "notes": "liveUrl needed."
+    },
+    {
+      "id": "tinylaunch",
+      "name": "TinyLaunch",
+      "category": "launch",
+      "status": "live",
+      "submittedAt": "2026-10-26",
+      "notes": "Launch results emailed Nov 2. liveUrl needed."
+    },
+    {
+      "id": "earlyhound",
+      "name": "EarlyHound",
+      "category": "directory",
+      "status": "live",
+      "submittedAt": "2026-11-01",
+      "notes": "Added by a 'Scout', not self-submitted; claim link replied Nov 2. liveUrl needed."
+    },
+    {
+      "id": "wordpress-org",
+      "name": "WordPress.org plugin",
+      "category": "store",
+      "status": "in-review",
+      "submittedAt": "2026-11-12",
+      "notes": "~684 queue position. galaxy-movies-wp repo, dist zip uploaded. Expected URL once approved: wordpress.org/plugins/galaxy-movies/."
+    },
+    {
+      "id": "zapier",
+      "name": "Zapier directory",
+      "category": "directory",
+      "status": "in-review",
+      "submittedAt": "2026-11-11",
+      "notes": "App v1.0.0 pushed; directory review needs live Zaps from users. Invite link live."
+    },
+    {
+      "id": "ctrlaltcc",
+      "name": "CtrlAlt.CC",
+      "category": "directory",
+      "status": "in-review",
+      "submittedAt": "2026-09-24",
+      "notes": "Founder reviews by hand; mentioned Oct 1 launch target — may have stalled."
+    },
+    {
+      "id": "microlaunch",
+      "name": "Microlaunch (HackWithUs)",
+      "category": "launch",
+      "status": "in-review",
+      "submittedAt": "2026-09-24",
+      "notes": "Via HackWithUs challenge."
+    },
+    {
+      "id": "fmhy",
+      "name": "FMHY (FreeMediaHeckYeah)",
+      "category": "directory",
+      "status": "in-review",
+      "submittedAt": "2026-10-21",
+      "submitUrl": "https://github.com/FMHY/edit/issues",
+      "notes": "Issue #6815 under review; maintainer reopened Discord thread — follow up if it stalls."
+    },
+    {
+      "id": "launchingnext",
+      "name": "LaunchingNext",
+      "category": "launch",
+      "status": "in-review",
+      "submittedAt": "2026-10-21",
+      "notes": "Free tier = 2–4 month wait; paid expedite offered."
+    },
+    {
+      "id": "g2",
+      "name": "G2",
+      "category": "directory",
+      "status": "in-review",
+      "submittedAt": "2026-10-28",
+      "notes": "'Thank you for submitting' received."
+    },
+    {
+      "id": "mcpso",
+      "name": "mcp.so",
+      "category": "api-directory",
+      "status": "in-review",
+      "submittedAt": "2026-11-12",
+      "notes": "Via github.com/chatmcp/mcpso issue comment."
+    },
+    {
+      "id": "glama",
+      "name": "glama.ai",
+      "category": "api-directory",
+      "status": "in-review",
+      "notes": "Awaiting crawl — glama.json + repo topics in place; claim with GitHub login once indexed."
+    },
+    {
+      "id": "amo",
+      "name": "Firefox Add-ons (AMO)",
+      "category": "store",
+      "status": "needs-account",
+      "submitUrl": "https://addons.mozilla.org/developers/",
+      "notes": "Submission-ready: manifest has gecko id + data_collection_permissions + background.scripts fallback; dist/galaxy-movies-extension-1.1.4.zip built. Needs AMO login."
+    },
+    {
+      "id": "edge-addons",
+      "name": "Edge Add-ons",
+      "category": "store",
+      "status": "queued",
+      "submitUrl": "https://partner.microsoft.com/",
+      "notes": "Same zip as AMO/CWS; free."
+    },
+    {
+      "id": "peerpush",
+      "name": "PeerPush",
+      "category": "directory",
+      "status": "needs-payment",
+      "submittedAt": "2026-11-01",
+      "notes": "Approved but unpaid ($49) — pay or let it lapse."
+    },
+    {
+      "id": "betalist",
+      "name": "BetaList",
+      "category": "directory",
+      "status": "needs-payment",
+      "submittedAt": "2026-09-26",
+      "notes": "Saved, unpaid — from $39 to complete submission."
+    },
+    {
+      "id": "startupranking",
+      "name": "StartupRanking",
+      "category": "directory",
+      "status": "unknown",
+      "submittedAt": "2026-10-30",
+      "notes": "Only a pending-confirmation email — may not even be a listing."
+    },
+    {
+      "id": "taaft",
+      "name": "There's An AI For That",
+      "category": "directory",
+      "status": "unknown",
+      "submittedAt": "2026-10-11",
+      "notes": "Account exists, in-app message received; unclear if the tool was actually submitted."
+    },
+    {
+      "id": "stackshare",
+      "name": "StackShare",
+      "category": "directory",
+      "status": "unknown",
+      "submittedAt": "2026-10-30",
+      "notes": "Welcome email only — unclear if tool/stack was listed."
+    },
+    {
+      "id": "apislist",
+      "name": "APIsList",
+      "category": "api-directory",
+      "status": "blocked",
+      "submitUrl": "https://apislist.com/api/add",
+      "notes": "Form blocked by CSRF. Fields: name=Galaxy Movies Streaming Changes, apiURL=/api/streaming-changes, docsURL=/widgets, spec=/openapi.json, cat=Video, auth=No, free plan."
+    },
+    {
+      "id": "raycast-store",
+      "name": "Raycast store",
+      "category": "store",
+      "status": "queued",
+      "submitUrl": "https://github.com/raycast/extensions",
+      "notes": "raycast/ dir in main repo. Set author in package.json to a raycast.com username, npx ray lint, fork raycast/extensions, copy to extensions/galaxy-movies/, PR."
+    },
+    {
+      "id": "afterlaunch",
+      "name": "Afterlaunch",
+      "category": "launch",
+      "status": "queued",
+      "notes": "Invited (founder emailed after PH launch); free to add launch."
+    },
+    {
+      "id": "openhunts",
+      "name": "openhunts",
+      "category": "directory",
+      "status": "queued",
+      "notes": "Newsletter sub only — no submission evidence; worth submitting if not already listed."
+    },
+    {
+      "id": "slant",
+      "name": "Slant",
+      "category": "directory",
+      "status": "queued",
+      "notes": "Candidate — alternatives model like AlternativeTo."
+    },
+    {
+      "id": "alternative-me",
+      "name": "Alternative.me",
+      "category": "directory",
+      "status": "queued"
+    },
+    {
+      "id": "openalternative",
+      "name": "OpenAlternative",
+      "category": "directory",
+      "status": "queued"
+    },
+    {
+      "id": "launchigniter",
+      "name": "Launchigniter",
+      "category": "launch",
+      "status": "queued"
+    },
+    {
+      "id": "betabound",
+      "name": "Betabound",
+      "category": "directory",
+      "status": "queued"
+    },
+    {
+      "id": "capterra-getapp",
+      "name": "Capterra / GetApp",
+      "category": "directory",
+      "status": "queued",
+      "notes": "One submission feeds both Gartner Digital Markets properties."
+    },
+    {
+      "id": "productivity-directory",
+      "name": "Productivity.directory",
+      "category": "directory",
+      "status": "queued"
+    },
+    {
+      "id": "feedly",
+      "name": "Feedly",
+      "category": "feed",
+      "status": "queued",
+      "notes": "Submit RSS feeds for /new-on-streaming and provider diffs."
+    },
+    {
+      "id": "feedspot",
+      "name": "Feedspot",
+      "category": "feed",
+      "status": "queued"
+    },
+    {
+      "id": "icalshare",
+      "name": "iCalShare",
+      "category": "feed",
+      "status": "queued",
+      "notes": "Submit /api/cal/{provider} calendar feeds."
+    }
+  ]
+}

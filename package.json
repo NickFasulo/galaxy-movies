@@ -26,7 +26,8 @@
     "prepare": "husky",
     "smoke": "bash scripts/smoke.sh",
     "smoke:workerd": "bash scripts/workerd-smoke.sh",
-    "index:check": "node scripts/check-upcoming-indexing.js"
+    "index:check": "node scripts/check-upcoming-indexing.js",
+    "listings:check": "node scripts/check-listings.js"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.37.0",

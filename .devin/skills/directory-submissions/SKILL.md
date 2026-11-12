@@ -1,6 +1,6 @@
 ---
 name: directory-submissions
-description: Submit Galaxy Movies to app directories, alternative-to sites, and "best of" listicles that rank for streaming-tool queries, tracking what's been submitted in Drive. Use when asked to submit the site to directories, get on AlternativeTo, or run listicle outreach.
+description: Submit Galaxy Movies to app directories, alternative-to sites, and "best of" listicles that rank for streaming-tool queries, tracked in the repo listings registry. Use when asked to submit the site to directories, get on AlternativeTo, or run listicle outreach.
 ---
 
 # Directory & listicle submissions
@@ -43,10 +43,32 @@ switching tools.
 
 ## Tracking
 
-Keep one Google Doc/Sheet in the Galaxy Movies Drive folder as the
-submission tracker: directory, submission URL, date, login used, status
-(pending/live/rejected), listing URL once live. Check it before every run —
-re-submitting a live listing looks sloppy.
+The canonical tracker is `src/features/listings/listings.json` — every
+directory, store, launch site, and feed with status (`live`, `in-review`,
+`queued`, `needs-account`, `needs-payment`, `blocked`, `declined`,
+`unknown`), submit URL, live URL, dates, and notes. Read it at the start of
+every run — re-submitting a live listing looks sloppy.
+
+Workflow per run:
+
+1. `npm run listings:check` — fetches every `live` entry with a `liveUrl`,
+   verifies the page resolves AND still links to galaxymovies.app. Failures
+   and the backlog print at the end. (The Monday indexing-report cron runs
+   the same check and emails the results.)
+2. Fill gaps: any `live` entry missing `liveUrl` is unverifiable — find the
+   real listing URL (search the site, check Gmail receipts) and add it.
+3. Work the backlog: `queued`/`needs-account`/`needs-payment`/`blocked`/
+   `unknown` entries are the to-do list. Update `status`, `submittedAt`,
+   `liveUrl`, `account`, `notes` as things move — commit the JSON with the
+   code that run produces (or on its own).
+4. Add new directories as `queued` entries so the queue persists across
+   sessions.
+5. Mirror to Drive: sync the current state into the "Galaxy Movies —
+   Listings Registry" Sheet (id `18GE4zz9Rp0Za8J8buB_NgRCYCB1htGmbiI4aiWT9FlU`,
+   Galaxy Movies folder) so there's a human-readable copy outside git — export
+   the JSON to CSV into `shots/`, upload with `import_to_google_sheets`, delete
+   the local copy. Repo registry stays the source of truth; the older
+   "Directory Submissions" Google Doc is superseded.
 
 ## Guardrails
 

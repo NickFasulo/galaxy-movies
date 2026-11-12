@@ -5,6 +5,7 @@ import { SUBMIT_LOG_KEY } from '../../../features/indexing/bingSubmit'
 import { hasGscCredentials, pendingSignature, runIndexCheck, runTrailerCheck, upcomingTitles, type IndexReport } from '../../../features/indexing/indexCheck'
 import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from '../../../features/indexing/gscAnalytics'
 import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
+import { allListings, backlogListings, checkListings, unverifiableListings, type ListingCheck } from '../../../features/listings/check'
 import { suggestCtrRewrites, type CtrSuggestion } from '../../../features/indexing/ctrSuggest'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
@@ -135,6 +136,31 @@ function bingSection(report: BingIndexReport, stats: BingWeekStats | null, ping:
   return s(`<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Bing</strong> · ${report.indexed}/${report.checked} upcoming pages in index${submitted}${dailyLine}.${statLine}<br/><span style="font-size:12px; color:#596579;">${pingLine}</span></p>${rows}${report.errors.length ? `<p style="margin:8px 0 0; color:#596579; font-size:12px;">${report.errors.length} Bing calls errored — ${escapeHtml(report.errors[0].message)}</p>` : ''}`)
 }
 
+function listingsSection(checks: ListingCheck[]) {
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
+  const ok = checks.filter((c) => c.ok).length
+  const failures = checks.filter((c) => !c.ok && !c.blocked)
+  const blocked = checks.filter((c) => !c.ok && c.blocked)
+  const unverified = unverifiableListings()
+  const backlog = backlogListings()
+  const inReview = allListings().filter((l) => l.status === 'in-review').length
+  const failureRows = failures
+    .map(
+      (c) =>
+        `<div style="font-size:12px; color:#b91c1c; line-height:1.6;">${escapeHtml(c.name)}: ${c.httpStatus ? `HTTP ${c.httpStatus}` : escapeHtml(c.error || 'failed')}${c.linksBack === false && c.httpStatus === 200 ? ' — page up but no galaxymovies link' : ''}<br/><span style="color:#596579;">${escapeHtml(c.liveUrl)}</span></div>`
+    )
+    .join('')
+  const blockedLine = blocked.length
+    ? `<br/><span style="font-size:12px; color:#596579;">${blocked.length} check${blocked.length === 1 ? '' : 's'} WAF-blocked, verify manually if curious (${blocked.map((c) => escapeHtml(c.name)).join(', ')})</span>`
+    : ''
+  const unverifiedLine = unverified.length
+    ? `<br/><span style="font-size:12px; color:#92400e;">${unverified.length} live listing${unverified.length === 1 ? '' : 's'} missing liveUrl (${unverified.map((l) => escapeHtml(l.name)).join(', ')}) — fill in via the directory-submissions skill</span>`
+    : ''
+  return s(
+    `<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Listings</strong> · ${ok}/${checks.length} live URLs still link back · ${inReview} in review · ${backlog.length} in the submission backlog.${blockedLine}${unverifiedLine}</p>${failureRows}`
+  )
+}
+
 function chatDemandSection(d: ChatDemand) {
   const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
   if (!d.requests) {
@@ -170,7 +196,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // trailer check additionally resolves each title's videos before
     // inspecting (trailer-less titles' /trailer URLs 404).
     const upcoming = await upcomingTitles()
-    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog] = await Promise.all([
+    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog, listingChecks] = await Promise.all([
       runIndexCheck(12, upcoming),
       runTrailerCheck(upcoming).catch((err) => {
         console.error('Trailer check failed:', err)
@@ -187,7 +213,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       kv?.get<string>(LAST_REPORT_KEY).catch(() => null),
       kv?.get<Record<string, Band>>(LAST_BANDS_KEY).catch(() => null),
       kv ? getChatDemand(kv).catch(() => null) : Promise.resolve(null),
-      kv?.hgetall<Record<string, number>>(SUBMIT_LOG_KEY).catch(() => null) ?? Promise.resolve(null)
+      kv?.hgetall<Record<string, number>>(SUBMIT_LOG_KEY).catch(() => null) ?? Promise.resolve(null),
+      checkListings().catch((err) => {
+        console.error('Listings check failed:', err)
+        return [] as ListingCheck[]
+      })
     ])
 
     // Daily submission counter — how many URLs the cron pushed to Bing's
@@ -229,7 +259,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           indexingSection(report, trailerReport, prevSignature) +
           (digest ? digestSection(digest, ctrSuggestions) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
           (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
-          (chatDemand ? chatDemandSection(chatDemand) : '')
+          (chatDemand ? chatDemandSection(chatDemand) : '') +
+          listingsSection(listingChecks)
       })
     })
     if (sent) {
