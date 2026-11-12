@@ -1,4 +1,4 @@
-import { Box, Button, Icon, useDisclosure, Dialog, Portal, chakra } from '@chakra-ui/react';
+import { Box, Button, CloseButton, Icon, useDisclosure, Dialog, Portal, chakra } from '@chakra-ui/react';
 import { BsCaretRightFill } from 'react-icons/bs'
 import Head from 'next/head'
 import { useState } from 'react'
@@ -56,16 +56,20 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
               top={0}
               left={0}
               overflow="hidden">
-              <Dialog.CloseTrigger
-                color="white"
-                zIndex={20}
-                position="absolute"
-                top={{ base: '12px', md: '20px' }}
-                right={{ base: '12px', md: '20px' }}
-                bg="blackAlpha.600"
-                borderRadius="full"
-                _hover={{ bg: 'whiteAlpha.400' }}
-              />
+              <Dialog.CloseTrigger asChild>
+                <CloseButton
+                  aria-label="Close trailer"
+                  size="md"
+                  color="white"
+                  zIndex={20}
+                  position="absolute"
+                  top={{ base: '12px', md: '20px' }}
+                  right={{ base: '12px', md: '20px' }}
+                  bg="blackAlpha.600"
+                  borderRadius="full"
+                  _hover={{ bg: 'whiteAlpha.400' }}
+                />
+              </Dialog.CloseTrigger>
               {/* Landscape/desktop cover-fit fills the viewport edge-to-edge;
                   portrait keeps the full-width 16:9 box with black above/below
                   since a cover crop would lose most of the frame. */}

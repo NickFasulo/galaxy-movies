@@ -6,7 +6,6 @@ import { Box, Flex, Icon, Text } from '@chakra-ui/react'
 import VideoModal from './VideoModal'
 import WatchlistButton from '../../alerts/components/WatchlistButton'
 import WatchedButton from '../../alerts/components/WatchedButton'
-import BackButton from '../../../components/BackButton'
 import type { WatchlistableTitle } from '../../../lib/userData'
 
 export function DetailMetaItem({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
@@ -47,7 +46,7 @@ export function DetailActions({ videoKey, item, trailerHref }: { videoKey: strin
   return (
     <Flex
       direction={{ base: 'column', md: 'row' }}
-      align={{ base: 'center', md: 'flex-end' }}
+      align={{ base: 'center', md: 'flex-start' }}
       justify={{ base: 'center', md: 'space-evenly' }}
       gap='2rem'
       w='100%'
@@ -68,7 +67,6 @@ export function DetailActions({ videoKey, item, trailerHref }: { videoKey: strin
       )}
       <WatchlistButton movie={item} withLabel />
       <WatchedButton movie={item} withLabel />
-      <BackButton />
     </Flex>
   );
 }
