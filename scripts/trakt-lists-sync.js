@@ -25,7 +25,10 @@ if (fs.existsSync(envPath)) {
 const envVar = (name) => process.env[name] || env[name]
 
 if (process.argv.includes('--install')) {
-  const node = process.execPath
+  // Prefer the brew PATH symlink over the version-pinned Cellar path so a
+  // node upgrade doesn't break the agent.
+  const { execSync } = require('child_process')
+  const node = execSync('command -v node', { shell: '/bin/zsh' }).toString().trim() || process.execPath
   const script = path.join(__dirname, 'trakt-lists-sync.js')
   const workdir = path.join(__dirname, '..')
   console.log(`Save as ~/Library/LaunchAgents/app.galaxymovies.trakt-lists.plist, then:
