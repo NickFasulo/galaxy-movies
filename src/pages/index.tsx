@@ -359,7 +359,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
               {' Know before it leaves.'}
             </Text>
             <Text textAlign='center' color='gray.500' fontSize='xs' mt={2} mb='1.5rem' px={4}>
-              Free alerts, no account.{' '}
+              Free alerts, no account needed.{' '}
               <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>See the data</Link>
             </Text>
           </HomeHero>
