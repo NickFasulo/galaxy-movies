@@ -65,11 +65,14 @@ Workflow per run:
    sessions.
 5. Mirror to Drive: sync the current state into the "Galaxy Movies —
    Listings Registry" Sheet (id `18GE4zz9Rp0Za8J8buB_NgRCYCB1htGmbiI4aiWT9FlU`,
-   Galaxy Movies folder) so there's a human-readable copy outside git — export
-   the JSON to CSV into `shots/`, then `update_drive_file` on that Sheet id
-   with the CSV (keeps the file/link stable), and delete the local copy. Repo
-   registry stays the source of truth; the older "Directory Submissions"
-   Google Doc is superseded.
+   Galaxy Movies folder) so there's a human-readable copy outside git — run
+   `python3 scripts/export-listings-xlsx.py` (writes a formatted xlsx to
+   `shots/`; needs `pip3 install --user openpyxl` once), then
+   `update_drive_file` on that Sheet id with `source_format: 'xlsx'` (keeps
+   the file/link stable), and delete the local copy. Do NOT sync CSV — a CSV
+   import resets all Sheet formatting; the xlsx carries it through
+   conversion. Repo registry stays the source of truth; the older
+   "Directory Submissions" Google Doc is superseded.
 
 ## Guardrails
 
