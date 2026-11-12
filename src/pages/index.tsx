@@ -361,9 +361,13 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             </Heading>
             <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>Know when it streams. Know before it leaves.</Text>
             <Text textAlign='center' color='gray.500' fontSize='xs' mt={2} mb='1.5rem' px={4}>
-              {catalogSize >= 1000
-                ? `Free alerts, no account — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs. `
-                : `Free alerts, no account — arrivals and departures tracked daily across ${providerCount} services. `}
+              Free alerts, no account
+              <Box as='span' display={{ base: 'none', md: 'inline' }}>
+                {catalogSize >= 1000
+                  ? ` — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs`
+                  : ` — arrivals and departures tracked daily across ${providerCount} services`}
+              </Box>
+              {'. '}
               <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>See the data</Link>
             </Text>
           </HomeHero>
