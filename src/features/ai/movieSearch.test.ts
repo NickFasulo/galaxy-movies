@@ -27,6 +27,7 @@ let extractTitleMentions: typeof import('./movieSearch').extractTitleMentions
 let resolveMovieMentions: typeof import('./movieSearch').resolveMovieMentions
 let resolveTitleItem: typeof import('./movieSearch').resolveTitleItem
 let resolveTvdbItem: typeof import('./movieSearch').resolveTvdbItem
+let resolveImdbItem: typeof import('./movieSearch').resolveImdbItem
 let getRecentReleases: typeof import('./movieSearch').getRecentReleases
 let getRecentShows: typeof import('./movieSearch').getRecentShows
 let formatMovieForChat: typeof import('./movieSearch').formatMovieForChat
@@ -41,6 +42,7 @@ beforeEach(async () => {
   resolveMovieMentions = mod.resolveMovieMentions
   resolveTitleItem = mod.resolveTitleItem
   resolveTvdbItem = mod.resolveTvdbItem
+  resolveImdbItem = mod.resolveImdbItem
   getRecentReleases = mod.getRecentReleases
   getRecentShows = mod.getRecentShows
   formatMovieForChat = mod.formatMovieForChat
@@ -338,5 +340,41 @@ describe('resolveTvdbItem', () => {
         : Promise.resolve(multiPage([{ id: 5, media_type: 'tv', name: 'Show', first_air_date: '2020-01-01', poster_path: '/s.jpg' }]))
     )
     expect(await resolveTvdbItem(123, 'Show')).toMatchObject({ id: 5 })
+  })
+})
+
+describe('resolveImdbItem', () => {
+  it('resolves a movie via /find with the imdb external source', async () => {
+    fetchTmdb.mockResolvedValue({
+      movie_results: [{ id: 278, media_type: 'movie', title: 'The Shawshank Redemption', release_date: '1994-09-10', poster_path: '/s.jpg' }],
+      tv_results: []
+    })
+    const resolved = await resolveImdbItem('tt0111161', 'The Shawshank Redemption')
+    expect(fetchTmdb).toHaveBeenCalledWith('/find/tt0111161', { external_source: 'imdb_id' })
+    expect(resolved).toMatchObject({ id: 278, mediaType: 'movie', title: 'The Shawshank Redemption', year: '1994', poster_path: '/s.jpg' })
+  })
+
+  it('falls back to tv_results then to title search', async () => {
+    fetchTmdb.mockResolvedValue({
+      movie_results: [],
+      tv_results: [{ id: 1396, media_type: 'tv', name: 'Breaking Bad', first_air_date: '2008-01-20', poster_path: '/bb.jpg' }]
+    })
+    expect(await resolveImdbItem('tt0903747', 'Breaking Bad')).toMatchObject({ id: 1396, mediaType: 'tv', title: 'Breaking Bad', year: '2008' })
+
+    fetchTmdb.mockImplementation((path: string) =>
+      Promise.resolve(
+        path.startsWith('/find/')
+          ? { movie_results: [], tv_results: [] }
+          : multiPage([{ id: 680, media_type: 'movie', title: 'Pulp Fiction', release_date: '1994-10-14', poster_path: '/p.jpg' }])
+      )
+    )
+    const resolved = await resolveImdbItem('tt0110912', 'Pulp Fiction', '1994')
+    expect(fetchTmdb).toHaveBeenCalledWith('/search/multi', expect.objectContaining({ query: 'Pulp Fiction' }))
+    expect(resolved).toMatchObject({ id: 680, mediaType: 'movie' })
+  })
+
+  it('returns null when nothing resolves', async () => {
+    fetchTmdb.mockResolvedValue({ movie_results: [], tv_results: [] })
+    expect(await resolveImdbItem('tt9999999')).toBeNull()
   })
 })

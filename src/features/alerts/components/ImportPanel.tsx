@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, Flex, Text } from '@chakra-ui/react'
 import { secondaryButton } from '../../../theme'
 import { parseLetterboxdCsv } from '../../../lib/format/importLetterboxd'
+import { parseImdbCsv } from '../../../lib/format/importImdb'
 import { parseTvTimeCsvs } from '../../../lib/format/importTvTime'
 import { unzipEntries } from '../../../lib/format/unzip'
 import { getUserData, mergeSyncedPrefs, type SyncedPrefs } from '../../../lib/userData'
@@ -16,6 +17,7 @@ interface ImportItem {
   title: string
   year?: string
   tvdbId?: number
+  imdbId?: string
   mediaType: MediaType
   rating?: number
   watchedAt?: string
@@ -49,7 +51,7 @@ async function resolveItems(items: ImportItem[]): Promise<(ResolvedTitle | null)
     const resp = await fetch('/api/resolve-titles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: batch.map(({ title, year, tvdbId }) => ({ title, year, tvdbId })) }),
+      body: JSON.stringify({ items: batch.map(({ title, year, tvdbId, imdbId }) => ({ title, year, tvdbId, imdbId })) }),
       signal: AbortSignal.timeout(30_000)
     })
     const data = await resp.json().catch(() => ({}))
@@ -59,13 +61,14 @@ async function resolveItems(items: ImportItem[]): Promise<(ResolvedTitle | null)
   return resolved
 }
 
-// Letterboxd's Name/Year/Letterboxd URI header is distinctive; TV Time files
-// are routed by name because emotions-live-votes.csv shares a header with
-// ratings-live-votes.csv.
-function detectCsv(name: string, text: string): 'tvtime' | 'letterboxd' | 'unknown' {
+// Letterboxd's Name/Year/Letterboxd URI and IMDb's leading Const column are
+// distinctive; TV Time files are routed by name because emotions-live-votes.csv
+// shares a header with ratings-live-votes.csv.
+function detectCsv(name: string, text: string): 'tvtime' | 'letterboxd' | 'imdb' | 'unknown' {
   if (TV_TIME_CSV_NAMES.has(name.toLowerCase())) return 'tvtime'
   const header = text.slice(0, text.indexOf('\n') + 1 || undefined).toLowerCase()
   if (header.includes('letterboxd uri')) return 'letterboxd'
+  if (header.startsWith('const,')) return 'imdb'
   return 'unknown'
 }
 
@@ -133,6 +136,16 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
           const kind = detectCsv(file.name, text)
           if (kind === 'tvtime') {
             tvTimeCsvs.push({ name: file.name, text })
+          } else if (kind === 'imdb') {
+            const items = parseImdbCsv(text)
+            if (!items.length) {
+              ignored++
+              continue
+            }
+            const lower = file.name.toLowerCase()
+            if (lower.includes('rating')) ratingItems.push(...items)
+            else if (lower.includes('checkin')) watchedItems.push(...items)
+            else watchlistItems.push(...items)
           } else if (kind === 'letterboxd' || file.name.toLowerCase().endsWith('.csv')) {
             const items = parseLetterboxdCsv(text)
             if (!items.length) {
@@ -161,7 +174,12 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
       const skippedWatched = parsed.skippedWatched
       ignored += parsed.filesIgnored
 
-      if (!watchlistItems.length && !ratingItems.length && !watchedItems.length) {
+      // A title in ratings or watched history doesn't belong on the to-watch
+      // list — same suppression mark-watched applies in-app.
+      const doneTitles = new Set([...ratingItems, ...watchedItems].map((i) => i.title.toLowerCase()))
+      const keptWatchlist = watchlistItems.filter((i) => !doneTitles.has(i.title.toLowerCase()))
+
+      if (!keptWatchlist.length && !ratingItems.length && !watchedItems.length) {
         setNote(
           ignored
             ? 'No importable rows found: those files have nothing Galaxy Movies tracks.'
@@ -172,11 +190,11 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
       }
 
       try {
-        const batches = [watchlistItems, ratingItems, watchedItems]
+        const batches = [keptWatchlist, ratingItems, watchedItems]
         const resolved = await Promise.all(batches.map(resolveItems))
         const prefs = mergeItems(batches, resolved)
         const counts = [prefs.watchlist!.length, prefs.ratings!.length, prefs.watched!.length]
-        const skipped = watchlistItems.length + ratingItems.length + watchedItems.length - counts.reduce((a, b) => a + b, 0)
+        const skipped = keptWatchlist.length + ratingItems.length + watchedItems.length - counts.reduce((a, b) => a + b, 0)
         mergeSyncedPrefs(prefs)
         scheduleAlertsSync(getUserData())
         const parts = [`${counts[0]} watchlist`, `${counts[1]} ratings`, `${counts[2]} watched`]
@@ -211,12 +229,12 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
           }}
         />
         <Button size='xs' {...secondaryButton} disabled={busy} loading={busy} onClick={() => fileRef.current?.click()}>
-          {source === 'tvtime' ? 'Pick your TV Time export' : 'Letterboxd or TV Time export'}
+          {source === 'tvtime' ? 'Pick your TV Time export' : 'Letterboxd, IMDb, or TV Time export'}
         </Button>
         <Text color='gray.400' fontSize='xs'>
           {source === 'tvtime'
             ? 'Your saved GDPR export ZIP works as-is, or pick the CSVs inside it.'
-            : 'Letterboxd watchlist.csv/ratings.csv, or a TV Time GDPR export ZIP. Parsed on your device.'}
+            : 'Letterboxd watchlist.csv/ratings.csv/diary.csv, IMDb exports (watchlist, ratings, check-ins), or a TV Time GDPR ZIP. Parsed on your device.'}
         </Text>
       </Flex>
       {note && <Text color='gray.300' fontSize='xs' mt={2}>{note}</Text>}

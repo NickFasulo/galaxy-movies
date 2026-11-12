@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireMethod, rejectBot } from '../../lib/http'
 import { getClientIP, checkDistributedRateLimit } from '../../lib/rateLimiter'
-import { resolveTitleItem, resolveTvdbItem } from '../../features/ai/movieSearch'
+import { resolveImdbItem, resolveTitleItem, resolveTvdbItem } from '../../features/ai/movieSearch'
 
 // Batch title resolution for imports (Letterboxd CSV rows arrive as bare
 // title+year; TV Time show rows can carry a tvdbId for exact /find lookups).
@@ -14,6 +14,7 @@ interface Item {
   title: string
   year?: string
   tvdbId?: number
+  imdbId?: string
 }
 
 function parseItems(input: unknown): Item[] | null {
@@ -21,11 +22,12 @@ function parseItems(input: unknown): Item[] | null {
   const out: Item[] = []
   for (const raw of input) {
     if (!raw || typeof raw !== 'object') return null
-    const { title, year, tvdbId } = raw as Record<string, unknown>
+    const { title, year, tvdbId, imdbId } = raw as Record<string, unknown>
     if (typeof title !== 'string' || !title.trim() || title.length > 100) return null
     const item: Item = { title: title.trim() }
     if (typeof year === 'string' && /^\d{4}$/.test(year)) item.year = year
     if (typeof tvdbId === 'number' && Number.isInteger(tvdbId) && tvdbId > 0 && tvdbId < 1e12) item.tvdbId = tvdbId
+    if (typeof imdbId === 'string' && /^tt\d{5,10}$/.test(imdbId)) item.imdbId = imdbId
     out.push(item)
   }
   return out
@@ -53,7 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const results: ({ title: string; year?: string; resolved: Awaited<ReturnType<typeof resolveTitleItem>> })[] = []
     for (let i = 0; i < items.length; i += BATCH) {
       const resolved = await Promise.all(items.slice(i, i + BATCH).map((item) =>
-        item.tvdbId ? resolveTvdbItem(item.tvdbId, item.title) : resolveTitleItem(item.title, item.year)
+        item.imdbId ? resolveImdbItem(item.imdbId, item.title, item.year)
+          : item.tvdbId ? resolveTvdbItem(item.tvdbId, item.title)
+          : resolveTitleItem(item.title, item.year)
       ))
       resolved.forEach((r, j) => results.push({ title: items[i + j]!.title, year: items[i + j]!.year, resolved: r }))
     }

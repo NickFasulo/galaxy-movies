@@ -138,6 +138,36 @@ test.describe('free imports (no account)', () => {
     await expect(page.getByRole('link', { name: 'Game of Thrones', exact: true })).toBeVisible()
   })
 
+  test('imdb exports import watchlist, ratings and check-ins', async ({ page }) => {
+    const account = await stubAccountApi(page)
+    account.resolvedTitles = {
+      'the matrix': { id: 603, mediaType: 'movie', title: 'The Matrix', year: '1999', poster_path: null },
+      'breaking bad': { id: 1396, mediaType: 'tv', title: 'Breaking Bad', year: '2008', poster_path: null },
+      'the shawshank redemption': { id: 278, mediaType: 'movie', title: 'The Shawshank Redemption', year: '1994', poster_path: null }
+    }
+    const watchlist = `Const,Created,Modified,Description,Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors
+tt0133093,2024-01-05,2024-01-05,,The Matrix,https://imdb.com/title/tt0133093/,movie,8.7,136,1999,"Action, Sci-Fi",2000000,1999-03-31,Wachowskis
+`
+    const ratings = `Const,Your Rating,Date Rated,Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors
+tt0903747,9,2023-04-12,Breaking Bad,https://imdb.com/title/tt0903747/,TV Series,9.5,49,2008,"Crime, Drama",1900000,2008-01-20,
+`
+    const checkins = `Const,Created,Modified,Description,Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors
+tt0111161,2024-02-10,2024-02-10,,The Shawshank Redemption,https://imdb.com/title/tt0111161/,movie,9.3,142,1994,Drama,2800000,1994-09-10,Frank Darabont
+`
+    await page.goto('/watchlist')
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: 'watchlist.csv', mimeType: 'text/csv', buffer: Buffer.from(watchlist) },
+      { name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from(ratings) },
+      { name: 'checkins.csv', mimeType: 'text/csv', buffer: Buffer.from(checkins) }
+    ])
+    await expect(page.getByText('Imported 1 watchlist + 1 ratings + 1 watched.')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'The Matrix', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Breaking Bad', exact: true })).toBeVisible()
+    await expect(page.getByText('★ 9/10')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Watched', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'The Shawshank Redemption', exact: true })).toBeVisible()
+  })
+
   test('letterboxd diary imports to watched, not the watchlist', async ({ page }) => {
     const account = await stubAccountApi(page)
     account.resolvedTitles = {

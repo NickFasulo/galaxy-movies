@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { Badge, Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react'
 import {
   LuArrowLeftRight,
+  LuBadgePercent,
   LuBell,
   LuBot,
   LuCalendar,
   LuFileOutput,
   LuHourglass,
-  LuImport,
   LuLayers,
   LuSend,
   LuShare2,
@@ -38,10 +38,10 @@ const FEATURES = [
   { icon: LuBot, title: '10× Galaxy Bot', blurb: '100 messages an hour: knows your taste, and your chat history follows you across devices.' },
   { icon: LuSparkles, title: 'Picked for you', blurb: 'A recommendations rail on your list page, seeded by your ratings.' },
   { icon: LuShare2, title: 'A shareable list', blurb: 'A public link for your watchlist and ratings you can send to friends.' },
-  { icon: LuLayers, title: 'Bigger limits', blurb: '1,000 list entries and 2,500 ratings synced across every device you link.' },
+  { icon: LuLayers, title: 'Bigger limits', blurb: '1,000 list entries, 2,500 ratings, and 5,000 watched entries synced across every device you link.' },
   { icon: LuArrowLeftRight, title: 'Two-way Trakt sync', blurb: 'Push your list out, or pull your existing Trakt history in.' },
-  { icon: LuImport, title: 'Letterboxd import', blurb: 'Watchlist and ratings carry over in seconds.' },
-  { icon: LuFileOutput, title: 'Export anytime', blurb: 'JSON or Letterboxd-ready CSVs whenever you want them.' },
+  { icon: LuBadgePercent, title: 'Price-drop alerts', blurb: 'Pick titles to track and get emailed when a rental or purchase hits a new low.' },
+  { icon: LuFileOutput, title: 'Export anytime', blurb: 'JSON, Letterboxd-ready CSVs, or a watched-history CSV whenever you want them.' },
   { icon: LuCalendar, title: 'Calendar feed', blurb: 'Upcoming releases for your watchlist in Google or Apple Calendar.' }
 ]
 
@@ -131,7 +131,7 @@ export default function Plus({ inr }: InferGetServerSidePropsType<typeof getServ
             Galaxy Plus
           </Heading>
           <Text maxW='36rem' mt={4} color='gray.300'>
-            The free tier already syncs your list and ratings across devices. Plus makes your taste profile work harder.
+            The free tier already syncs your list, ratings, and watched diary across devices. Plus makes your taste profile work harder.
           </Text>
         </Flex>
 
@@ -254,7 +254,7 @@ export default function Plus({ inr }: InferGetServerSidePropsType<typeof getServ
 
         <Box mt={10} maxW='36rem'>
           <Text color='gray.500' fontSize='xs'>
-            Not sure yet? The <Link href='/watchlist' style={{ textDecoration: 'underline' }}>list page</Link> keeps working free: sync, watchlist alerts, and the weekly digest aren&apos;t going anywhere.
+            Not sure yet? The <Link href='/watchlist' style={{ textDecoration: 'underline' }}>list page</Link> keeps working free: sync, the watched diary, imports from TV Time/Letterboxd/IMDb, watchlist alerts, and the weekly digest aren&apos;t going anywhere.
           </Text>
         </Box>
         </PageShell>

@@ -251,3 +251,29 @@ export async function resolveTvdbItem(tvdbId: number, fallbackTitle?: string): P
   }
   return fallbackTitle ? resolveTitleItem(fallbackTitle) : null
 }
+
+// IMDb exports carry tt ids — same /find shortcut, hitting movie_results and
+// tv_results. Falls back to strict title+year match when TMDB lacks the
+// imdb_id mapping.
+export async function resolveImdbItem(imdbId: string, fallbackTitle?: string, year?: string): Promise<ResolvedTitle | null> {
+  try {
+    const data = await fetchTmdb<{ movie_results?: MultiSearchResult[]; tv_results?: MultiSearchResult[] }>(
+      `/find/${imdbId}`,
+      { external_source: 'imdb_id' }
+    )
+    const best = (data.movie_results || []).find((item) => item.poster_path) ?? data.movie_results?.[0]
+      ?? (data.tv_results || []).find((item) => item.poster_path) ?? data.tv_results?.[0]
+    if (best) {
+      return {
+        id: best.id,
+        mediaType: best.media_type as MediaType,
+        title: best.title || best.name || fallbackTitle || '',
+        year: (best.release_date || best.first_air_date || '').slice(0, 4) || undefined,
+        poster_path: best.poster_path ?? null
+      }
+    }
+  } catch (error) {
+    console.error(`Error resolving imdb id ${imdbId}:`, error)
+  }
+  return fallbackTitle ? resolveTitleItem(fallbackTitle, year) : null
+}
