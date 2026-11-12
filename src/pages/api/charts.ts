@@ -21,13 +21,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const feed = await getLatestCharts()
-  if (!feed || (!feed.trakt && !feed.apple && !feed.netflix)) {
+  if (!feed || (!feed.apple && !feed.netflix)) {
     return res.status(503).json({ error: 'Chart data temporarily unavailable' })
   }
 
+  // Trakt allows showing its rankings in-app (/reports) but forbids
+  // republishing them as a feed — keep the trakt bucket out of the response.
+  const { generated, apple, netflix } = feed
+
   setApiCache(res, 3600, 86400)
   return res.status(200).json({
-    ...feed,
+    generated,
+    apple,
+    netflix,
     attribution: {
       text: 'Powered by Galaxy Movies',
       url: `${SITE_URL}/reports`

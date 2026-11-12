@@ -5,7 +5,7 @@ import { List } from '@chakra-ui/react';
 export default function Privacy() {
   return (
     <InfoPage title='Privacy Policy' description='Read the Galaxy Movies privacy policy.' withBackButton>
-      <InfoParagraph><em>Last updated: November 10, 2026</em></InfoParagraph>
+      <InfoParagraph><em>Last updated: November 12, 2026</em></InfoParagraph>
       <InfoParagraph>
         Galaxy Movies (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) operates galaxymovies.app (the
         &quot;Service&quot;), a movie and TV discovery site with streaming availability information and an
@@ -25,6 +25,10 @@ export default function Privacy() {
         to our servers. We use this snapshot to email you when a saved title arrives on one of your
         services and to restore your list, ratings, and watched history on other devices you link. Unsubscribing
         deletes your synced data from our servers.</InfoParagraph>
+      <InfoParagraph><strong>Trakt connection (Galaxy Plus, optional).</strong> If you connect your
+        Trakt account, we store a Trakt refresh token linked to your synced email address. We use
+        it to sync your watchlist and ratings between Galaxy Movies and Trakt in both directions,
+        only when you ask. We never see your Trakt password.</InfoParagraph>
       <InfoParagraph><strong>Email address (optional).</strong> If you join streaming alerts, we ask
         you to confirm your email address and store it to send you watchlist alerts, a weekly
         streaming digest, and related service emails (such as device-linking links).</InfoParagraph>
@@ -106,6 +110,7 @@ export default function Privacy() {
         <List.Item>Watchlist, ratings, watched history, and preferences: stored only on your device until you clear them</List.Item>
         <List.Item>Subscriber email addresses and synced alert preferences: kept while you stay subscribed; the unsubscribe link in every email deletes your email address, sync credential, synced list snapshot, and alert history from our servers</List.Item>
         <List.Item>Galaxy Plus subscription status (plan state, customer and subscription IDs): kept while your subscription is active; payment records are retained by Polar as merchant of record</List.Item>
+        <List.Item>Trakt refresh token: kept while your Trakt connection is active; deleted from our servers when you disconnect Trakt or unsubscribe</List.Item>
         <List.Item>Galaxy Bot anonymous usage data — session statistics, prompt and response logs (kept to review quality and understand what people ask about), and OpenAI request logs: up to 30 days; optional response ratings, which may include the rated reply: up to 90 days</List.Item>
         <List.Item>Chat responses may be cached server-side for up to 30 minutes to improve performance</List.Item>
         <List.Item>Hosting and security logs: retained by Vercel under their standard retention periods</List.Item>
@@ -121,6 +126,12 @@ export default function Privacy() {
         messages — you can ask us to access or delete these at any time via
         the <Link href='/contact' style={{ textDecoration: 'underline' }}>contact page</Link>. Every email we send includes an unsubscribe
         link that removes your subscription and synced alert data.
+      </InfoParagraph>
+      <InfoParagraph>
+        Connected Trakt? You can disconnect at any time from the Plus tools on your <Link
+        href='/watchlist' style={{ textDecoration: 'underline' }}>watchlist page</Link> — disconnecting
+        deletes the stored refresh token from our servers and revokes Galaxy Movies&apos; access on
+        Trakt&apos;s side. You can also revoke access from your Trakt account settings at trakt.tv.
       </InfoParagraph>
 
       <InfoHeading>8. Data Security</InfoHeading>
