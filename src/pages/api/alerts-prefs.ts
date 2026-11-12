@@ -9,8 +9,8 @@ import { streamingProviders } from '../../features/catalog/tmdb'
 
 const EMAIL_PATTERN = /^[^\s@<>"'`,;()\\]+@[^\s@<>"'`,;()\\]+\.[^\s@<>"'`,;()\\]+$/
 const KEY_PATTERN = /^[0-9a-f-]{36}$/i
-const FREE_LIMITS = { watchlist: 200, services: 20, ratings: 500 }
-const PLUS_LIMITS = { watchlist: 1000, services: 40, ratings: 2500 }
+const FREE_LIMITS = { watchlist: 200, services: 20, ratings: 500, watched: 500 }
+const PLUS_LIMITS = { watchlist: 1000, services: 40, ratings: 2500, watched: 5000 }
 
 // Only real inbound-webhook URLs — anything else is an SSRF hole.
 function isDiscordWebhook(value: unknown): value is string {
@@ -56,6 +56,33 @@ function parseWatchlist(input: unknown, max: number): StoredItem[] | null {
     if (!item) return null
     const rec = raw as Record<string, unknown>
     out.push({ ...item, poster_path: optionalText(rec.poster_path, 500), year: optionalText(rec.year, 10) })
+  }
+  return out
+}
+
+interface StoredWatched extends StoredItem {
+  watched_at?: string
+  episodes?: number
+  lastEpisode?: string
+}
+
+// Absent watched array = old client — treated as empty rather than invalid.
+// watched_at is optional: imported show rollups can arrive dateless.
+function parseWatched(input: unknown, max: number): StoredWatched[] | null {
+  if (input === undefined || input === null) return []
+  if (!Array.isArray(input) || input.length > max) return null
+  const out: StoredWatched[] = []
+  for (const raw of input) {
+    const item = parseIdTitleMedia(raw)
+    if (!item) return null
+    const rec = raw as Record<string, unknown>
+    const entry: StoredWatched = { ...item, poster_path: optionalText(rec.poster_path, 500), year: optionalText(rec.year, 10) }
+    const watched_at = optionalText(rec.watched_at, 30)
+    if (watched_at) entry.watched_at = watched_at
+    if (typeof rec.episodes === 'number' && Number.isInteger(rec.episodes) && rec.episodes > 0) entry.episodes = rec.episodes
+    const lastEpisode = optionalText(rec.lastEpisode, 10)
+    if (lastEpisode) entry.lastEpisode = lastEpisode
+    out.push(entry)
   }
   return out
 }
@@ -142,13 +169,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const watchlist = parseWatchlist(req.body?.watchlist, limits.watchlist)
     const services = parseServices(req.body?.services, limits.services)
     const ratings = parseRatings(req.body?.ratings, limits.ratings)
+    const watched = parseWatched(req.body?.watched, limits.watched)
     const region = typeof req.body?.region === 'string' ? req.body.region.slice(0, 8) : 'US'
-    if (!watchlist || !services || !ratings) {
-      return res.status(400).json({ error: 'Invalid watchlist, services, or ratings payload' })
+    if (!watchlist || !services || !ratings || !watched) {
+      return res.status(400).json({ error: 'Invalid watchlist, services, ratings, or watched payload' })
     }
 
     await kv.hset(ALERTS_PREFS_KEY, {
-      [email]: { watchlist, services, region, ratings, updatedAt: Date.now() }
+      [email]: { watchlist, services, region, ratings, watched, updatedAt: Date.now() }
     })
     return res.status(200).json({ ok: true })
   } catch (err) {

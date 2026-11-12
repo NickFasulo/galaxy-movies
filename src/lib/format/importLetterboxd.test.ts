@@ -16,18 +16,25 @@ describe('parseLetterboxdCsv', () => {
   it('parses a watchlist export with quoted comma titles', () => {
     const items = parseLetterboxdCsv(WATCHLIST_CSV)
     expect(items).toEqual([
-      { title: 'The Matrix', year: '1999' },
-      { title: 'The Good, the Bad and the Ugly', year: '1966' }
+      { title: 'The Matrix', year: '1999', date: '2024-01-05' },
+      { title: 'The Good, the Bad and the Ugly', year: '1966', date: '2024-01-06' }
     ])
   })
 
   it('maps half-star ratings to the 1–10 scale and skips empty ratings', () => {
     const items = parseLetterboxdCsv(RATINGS_CSV)
     expect(items).toEqual([
-      { title: 'Heat', year: '1995', rating: 9 },
-      { title: 'He said "Hi"', year: '2001', rating: 1 },
-      { title: 'Unrated Title', year: '2020' }
+      { title: 'Heat', year: '1995', rating: 9, date: '2024-02-01' },
+      { title: 'He said "Hi"', year: '2001', rating: 1, date: '2024-02-02' },
+      { title: 'Unrated Title', year: '2020', date: '2024-02-03' }
     ])
+  })
+
+  it('reads the Watched Date column on diary exports', () => {
+    const items = parseLetterboxdCsv(`Watched Date,Name,Year,Letterboxd URI,Rating,Rewatch
+2024-03-01,Alien,1979,https://letterboxd.com/film/alien/,4,Yes
+`)
+    expect(items).toEqual([{ title: 'Alien', year: '1979', rating: 8, date: '2024-03-01' }])
   })
 
   it('handles CRLF, BOM, and missing year column', () => {

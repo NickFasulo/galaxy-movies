@@ -19,9 +19,26 @@ export interface RatingEntry {
   year?: string | null
 }
 
+// Dated diary entry. Imported watches carry 'YYYY-MM-DD'; marks made in-app
+// are full ISO — merge normalizes to the day.
+export interface WatchedItem {
+  id: number
+  mediaType: MediaType
+  title: string | undefined
+  poster_path: string | null
+  year: string | null
+  watched_at: string
+  episodes?: number
+  lastEpisode?: string
+  // Local-only undo hint (not synced): un-watching only restores the watchlist
+  // slot when the mark actually removed one.
+  fromWatchlist?: boolean
+}
+
 export interface UserData {
   watchlist: WatchlistItem[]
   ratings: Record<string, RatingEntry>
+  watched: WatchedItem[]
   services: { region: string; providers: string[] }
 }
 
@@ -40,6 +57,7 @@ const STORAGE_KEY = 'gm.userData.v1'
 export const EMPTY_USER_DATA: UserData = {
   watchlist: [],
   ratings: {},
+  watched: [],
   services: { region: 'US', providers: [] }
 }
 
@@ -54,6 +72,7 @@ function normalize(raw: string | null): UserData {
     return {
       watchlist: Array.isArray(obj.watchlist) ? obj.watchlist : [],
       ratings: obj.ratings && typeof obj.ratings === 'object' ? obj.ratings : {},
+      watched: Array.isArray(obj.watched) ? obj.watched : [],
       services: {
         region: obj.services?.region || 'US',
         providers: Array.isArray(obj.services?.providers) ? obj.services.providers : []
@@ -153,6 +172,62 @@ export function isWatchlisted(id: number, data: UserData = getUserData(), mediaT
   return data.watchlist.some((item) => item.id === id && (item.mediaType || 'movie') === mediaType)
 }
 
+const sameTitle = (a: { id: number; mediaType?: MediaType }, b: { id: number; mediaType?: MediaType }) =>
+  a.id === b.id && (a.mediaType || 'movie') === (b.mediaType || 'movie')
+
+// Marking watched moves the title off the watchlist (to-do semantics);
+// un-watching reverses the whole move — entry out, watchlist slot back.
+export function toggleWatched(movie: WatchlistableTitle): void {
+  update((data) => {
+    const mediaType = movie.mediaType || 'movie'
+    const matches = (item: WatchedItem) => item.id === movie.id && (item.mediaType || 'movie') === mediaType
+    const watched = data.watched.some(matches)
+    if (watched) {
+      const rest = [...data.watched]
+      const lastIdx = rest.map(matches).lastIndexOf(true)
+      const removed = rest[lastIdx]
+      rest.splice(lastIdx, 1)
+      const listed = data.watchlist.some((item) => sameTitle(item, { id: movie.id, mediaType }))
+      return {
+        ...data,
+        watched: rest,
+        watchlist: listed || !removed?.fromWatchlist
+          ? data.watchlist
+          : [{
+              id: movie.id,
+              mediaType,
+              title: movie.title || movie.name,
+              poster_path: movie.poster_path || null,
+              year: (movie.release_date || movie.first_air_date || '').slice(0, 4) || null,
+              added_at: new Date().toISOString()
+            }, ...data.watchlist]
+      }
+    }
+    const fromWatchlist = data.watchlist.some((item) => sameTitle(item, { id: movie.id, mediaType }))
+    return {
+      ...data,
+      watched: [{
+        id: movie.id,
+        mediaType,
+        title: movie.title || movie.name,
+        poster_path: movie.poster_path || null,
+        year: (movie.release_date || movie.first_air_date || '').slice(0, 4) || null,
+        watched_at: new Date().toISOString(),
+        ...(fromWatchlist ? { fromWatchlist: true } : {})
+      }, ...data.watched],
+      watchlist: data.watchlist.filter((item) => !sameTitle(item, { id: movie.id, mediaType }))
+    }
+  })
+}
+
+export function isWatched(id: number, data: UserData = getUserData(), mediaType: MediaType = 'movie'): boolean {
+  return data.watched.some((item) => item.id === id && (item.mediaType || 'movie') === mediaType)
+}
+
+export function watchedEntries(data: UserData): WatchedItem[] {
+  return [...data.watched].sort((a, b) => b.watched_at.localeCompare(a.watched_at))
+}
+
 // Ratings are keyed 'tv:{id}' or bare id; newer entries also store the id on
 // the value. Flatten both shapes so consumers always get a usable id.
 export function ratingEntries(ratings: UserData['ratings']): (RatingEntry & { id: number })[] {
@@ -218,6 +293,7 @@ export interface SyncedPrefs {
   services?: string[]
   region?: string
   ratings?: { id: number; mediaType?: MediaType; title: string; rating: number; poster_path?: string | null; year?: string | null }[]
+  watched?: { id: number; mediaType?: MediaType; title: string; poster_path?: string | null; year?: string | null; watched_at?: string; episodes?: number; lastEpisode?: string }[]
   updatedAt?: number
 }
 
@@ -258,13 +334,35 @@ export function mergePrefsIntoData(data: UserData, prefs: SyncedPrefs): UserData
     }
   }
 
+  // Dedupe key is title+day: an in-app ISO mark and an imported date for the
+  // same day are the same watch. Show rollups can arrive dateless ('').
+  const watched = [...data.watched]
+  const seenWatches = new Set(watched.map((w) => `${w.mediaType || 'movie'}:${w.id}:${(w.watched_at || '').slice(0, 10)}`))
+  for (const w of prefs.watched || []) {
+    if (typeof w?.id !== 'number' || (w.watched_at !== undefined && typeof w.watched_at !== 'string')) continue
+    const mediaType = w.mediaType === 'tv' ? 'tv' : 'movie'
+    const key = `${mediaType}:${w.id}:${(w.watched_at || '').slice(0, 10)}`
+    if (seenWatches.has(key)) continue
+    seenWatches.add(key)
+    watched.push({
+      id: w.id,
+      mediaType,
+      title: w.title,
+      poster_path: w.poster_path || null,
+      year: w.year || null,
+      watched_at: w.watched_at || '',
+      ...(w.episodes ? { episodes: w.episodes } : {}),
+      ...(w.lastEpisode ? { lastEpisode: w.lastEpisode } : {})
+    })
+  }
+
   // An untouched local services block (default region, no providers) adopts the
   // server's; anything the user changed locally stays.
   const services = data.services.providers.length === 0 && data.services.region === 'US' && prefs.region
     ? { region: prefs.region, providers: Array.isArray(prefs.services) ? prefs.services : [] }
     : data.services
 
-  return { watchlist, ratings, services }
+  return { watchlist, ratings, watched, services }
 }
 
 export function mergeSyncedPrefs(prefs: SyncedPrefs): void {
@@ -331,4 +429,28 @@ export function mergeWatchlistMetaIntoData(data: UserData, items: RatingMetaPatc
 export function backfillWatchlistMeta(items: RatingMetaPatch[]): void {
   if (!items.length) return
   update((data) => mergeWatchlistMetaIntoData(data, items))
+}
+
+// Same patch-only-missing semantics for watched entries.
+export function mergeWatchedMetaIntoData(data: UserData, items: RatingMetaPatch[]): UserData {
+  let changed = false
+  const watched = data.watched.map((entry) => {
+    const item = items.find((i) => Number.isInteger(i?.id) && i.id === entry.id && (i.mediaType === 'tv' ? 'tv' : 'movie') === (entry.mediaType || 'movie'))
+    if (!item) return entry
+    const needsPatch = (item.poster_path && !entry.poster_path) || (item.year && !entry.year) || (item.title && !entry.title)
+    if (!needsPatch) return entry
+    changed = true
+    return {
+      ...entry,
+      poster_path: entry.poster_path ?? item.poster_path ?? null,
+      year: entry.year ?? item.year ?? null,
+      title: entry.title || item.title || ''
+    }
+  })
+  return changed ? { ...data, watched } : data
+}
+
+export function backfillWatchedMeta(items: RatingMetaPatch[]): void {
+  if (!items.length) return
+  update((data) => mergeWatchedMetaIntoData(data, items))
 }

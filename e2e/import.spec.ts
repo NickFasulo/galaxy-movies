@@ -85,16 +85,17 @@ test.describe('free imports (no account)', () => {
     await page.locator('input[type="file"]').setInputFiles([
       { name: 'watchlist.csv', mimeType: 'text/csv', buffer: Buffer.from(LETTERBOXD_CSV) }
     ])
-    await expect(page.getByText('Imported 1 watchlist + 0 ratings.')).toBeVisible()
+    await expect(page.getByText('Imported 1 watchlist + 0 ratings + 0 watched.')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Fight Club', exact: true })).toBeVisible()
   })
 
-  test('tv time extracted csvs import shows, movies and ratings', async ({ page }) => {
+  test('tv time extracted csvs import shows, movies, ratings and history', async ({ page }) => {
     const account = await stubAccountApi(page)
     account.resolvedTitles = {
       'game of thrones': { id: 1399, mediaType: 'tv', title: 'Game of Thrones', year: '2011', poster_path: null },
       'interstellar': { id: 157336, mediaType: 'movie', title: 'Interstellar', year: '2014', poster_path: null },
-      'past flick': { id: 42, mediaType: 'movie', title: 'Past Flick', year: '2010', poster_path: null }
+      'past flick': { id: 42, mediaType: 'movie', title: 'Past Flick', year: '2010', poster_path: null },
+      'the flash': { id: 60735, mediaType: 'tv', title: 'The Flash', year: '2014', poster_path: null }
     }
     await page.goto('/watchlist')
     await page.locator('input[type="file"]').setInputFiles([
@@ -102,11 +103,15 @@ test.describe('free imports (no account)', () => {
       { name: 'tracking-prod-records.csv', mimeType: 'text/csv', buffer: Buffer.from(TRACKING_V1_CSV) },
       { name: 'ratings-live-votes.csv', mimeType: 'text/csv', buffer: Buffer.from(RATINGS_CSV) }
     ])
-    // vote_key suffix 29 → 8/10. Watched-but-unrated episode row counts as skipped.
-    await expect(page.getByText(/Imported 2 watchlist \+ 1 ratings.*1 watched titles skipped/)).toBeVisible()
+    // vote_key suffix 29 → 8/10. The Past Flick watch row and the Flash
+    // episode roll up into the Watched section.
+    await expect(page.getByText('Imported 2 watchlist + 1 ratings + 2 watched.')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Game of Thrones', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Interstellar', exact: true })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Past Flick', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Watched', exact: true })).toBeVisible()
+    // Past Flick sits in both Your ratings and Watched — one card each.
+    await expect(page.getByRole('link', { name: 'Past Flick', exact: true })).toHaveCount(2)
+    await expect(page.getByRole('link', { name: 'The Flash', exact: true })).toBeVisible()
     await expect(page.getByText('★ 8/10')).toBeVisible()
   })
 
@@ -115,7 +120,8 @@ test.describe('free imports (no account)', () => {
     account.resolvedTitles = {
       'game of thrones': { id: 1399, mediaType: 'tv', title: 'Game of Thrones', year: '2011', poster_path: null },
       'interstellar': { id: 157336, mediaType: 'movie', title: 'Interstellar', year: '2014', poster_path: null },
-      'past flick': { id: 42, mediaType: 'movie', title: 'Past Flick', year: '2010', poster_path: null }
+      'past flick': { id: 42, mediaType: 'movie', title: 'Past Flick', year: '2010', poster_path: null },
+      'the flash': { id: 60735, mediaType: 'tv', title: 'The Flash', year: '2014', poster_path: null }
     }
     const zip = buildZip([
       { name: 'followed_tv_show.csv', data: csv(FOLLOWED_CSV) },
@@ -128,8 +134,25 @@ test.describe('free imports (no account)', () => {
     await page.locator('input[type="file"]').setInputFiles([
       { name: 'tv-time-export.zip', mimeType: 'application/zip', buffer: Buffer.from(zip) }
     ])
-    await expect(page.getByText(/Imported 2 watchlist \+ 1 ratings.*2 files ignored/)).toBeVisible()
+    await expect(page.getByText(/Imported 2 watchlist \+ 1 ratings \+ 2 watched.*2 files ignored/)).toBeVisible()
     await expect(page.getByRole('link', { name: 'Game of Thrones', exact: true })).toBeVisible()
+  })
+
+  test('letterboxd diary imports to watched, not the watchlist', async ({ page }) => {
+    const account = await stubAccountApi(page)
+    account.resolvedTitles = {
+      'fight club': { id: 550, mediaType: 'movie', title: 'Fight Club', year: '1999', poster_path: null }
+    }
+    await page.goto('/watchlist')
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: 'diary.csv', mimeType: 'text/csv', buffer: Buffer.from(`Watched Date,Name,Year,Letterboxd URI,Rating
+2024-03-01,Fight Club,1999,https://boxd.it/2a9q,4.5
+`) }
+    ])
+    await expect(page.getByText('Imported 0 watchlist + 0 ratings + 1 watched.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Watched', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Fight Club', exact: true })).toBeVisible()
+    await expect(page.getByText('Nothing saved yet')).toBeVisible()
   })
 })
 

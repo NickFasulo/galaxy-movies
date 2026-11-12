@@ -18,7 +18,8 @@ import PushAlerts, { PushInstallHint } from '../features/alerts/components/PushA
 import { useUserData } from '../features/alerts/hooks/useUserData'
 import { usePlusStatus } from '../features/billing/hooks/usePlus'
 import { fetchTmdb } from '../features/catalog/tmdb'
-import { backfillRatingMeta, backfillWatchlistMeta, ratingEntries, type RatingMetaPatch } from '../lib/userData'
+import { backfillRatingMeta, backfillWatchedMeta, backfillWatchlistMeta, ratingEntries, watchedEntries, type RatingMetaPatch, type WatchedItem } from '../lib/userData'
+import { dateFormatter } from '../lib/format/formatters'
 import { firstParam } from '../lib/http'
 import type { MediaType, TitleSummary, TmdbPaged } from '../types/tmdb'
 
@@ -116,6 +117,13 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
     )
   }, [data.ratings, backfillMissingPosters])
 
+  useEffect(() => {
+    backfillMissingPosters(
+      data.watched.filter((e) => !e.poster_path),
+      backfillWatchedMeta
+    )
+  }, [data.watched, backfillMissingPosters])
+
   const rated = useMemo(() =>
     ratingEntries(data.ratings)
       .sort((a, b) => b.rating - a.rating)
@@ -131,6 +139,27 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
 
   const ratingByKey = useMemo(() =>
     new Map(rated.map(({ entry, movie }) => [`${movie.mediaType || 'movie'}:${movie.id}`, entry.rating])), [rated])
+
+  // Rewatches collapse into one card per title; the badge carries the latest
+  // date and a count when there's more than one watch.
+  const watchedGroups = useMemo(() => {
+    const groups = new Map<string, { entry: WatchedItem; times: number }>()
+    for (const entry of watchedEntries(data)) {
+      const key = `${entry.mediaType || 'movie'}:${entry.id}`
+      const group = groups.get(key)
+      if (group) group.times++
+      else groups.set(key, { entry, times: 1 })
+    }
+    return groups
+  }, [data])
+
+  const watched = useMemo(() =>
+    [...watchedGroups.values()].map(({ entry }) => ({
+      id: entry.id,
+      title: entry.title || '',
+      mediaType: entry.mediaType,
+      poster_path: entry.poster_path ?? null
+    } as TitleSummary)), [watchedGroups])
 
   return (
     <>
@@ -189,6 +218,28 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
               badgeFor={(movie) => {
                 const rating = ratingByKey.get(`${movie.mediaType || 'movie'}:${movie.id}`)
                 return rating != null ? <CardBadge colorPalette='yellow'>★ {rating}/10</CardBadge> : null
+              }}
+            />
+          </Box>
+        )}
+
+        {watched.length > 0 && (
+          <Box as='section' mt={8}>
+            <Heading as='h2' size='md' mb={2}>Watched</Heading>
+            <Text color='gray.400' fontSize='sm'>
+              What you&apos;ve seen, newest first. Marking a title watched moves it off your list.
+            </Text>
+            <MovieGrid
+              movies={watched}
+              posterFallback='/poster_fallback_galaxy.webp'
+              badgeFor={(movie) => {
+                const group = watchedGroups.get(`${movie.mediaType || 'movie'}:${movie.id}`)
+                if (!group) return null
+                const { entry, times } = group
+                const text = entry.episodes
+                  ? `${entry.episodes} eps${entry.lastEpisode ? ` · last ${entry.lastEpisode}` : ''}`
+                  : entry.watched_at ? dateFormatter(entry.watched_at) : 'Seen'
+                return <CardBadge colorPalette='green'>{text}{times > 1 ? ` ×${times}` : ''}</CardBadge>
               }}
             />
           </Box>

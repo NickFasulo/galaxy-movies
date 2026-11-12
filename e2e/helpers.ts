@@ -29,6 +29,12 @@ interface PrefRatingItem extends PrefWatchlistItem {
   rating: number
 }
 
+interface PrefWatchedItem extends PrefWatchlistItem {
+  watched_at?: string
+  episodes?: number
+  lastEpisode?: string
+}
+
 export interface AccountState {
   entitlement: 'free' | 'plus'
   traktConnected: boolean
@@ -39,6 +45,7 @@ export interface AccountState {
   prefs: {
     watchlist: PrefWatchlistItem[]
     ratings: PrefRatingItem[]
+    watched: PrefWatchedItem[]
     services: string[]
     region: string
   }
@@ -63,7 +70,7 @@ export async function stubAccountApi(page: Page, state?: Partial<AccountState>):
     shareId: null,
     discordWebhook: null,
     telegramConnected: false,
-    prefs: { watchlist: [], ratings: [], services: [], region: 'US' },
+    prefs: { watchlist: [], ratings: [], watched: [], services: [], region: 'US' },
     traktImport: { status: 200, body: { ok: true, imported: { watchlist: 1, ratings: 0 } } },
     traktSync: { status: 200, body: { ok: true, synced: { watchlist: 2, ratings: 1 } } },
     resolvedTitles: {},

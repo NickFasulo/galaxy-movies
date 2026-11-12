@@ -3,7 +3,7 @@ import { Badge, Box, Button, Flex, Text } from '@chakra-ui/react'
 import { secondaryButton } from '../../../theme'
 import DarkInput from '../../../components/DarkInput'
 import { fetchSyncedPrefs, type AlertsCredentials } from '../alertsSync'
-import { letterboxdCsvs } from '../../../lib/format/exportCsv'
+import { letterboxdCsvs, watchedCsv } from '../../../lib/format/exportCsv'
 import { mergeSyncedPrefs } from '../../../lib/userData'
 import type { PlusFeatures } from '../../billing/hooks/usePlus'
 import { SITE_URL } from '../../../lib/site'
@@ -85,6 +85,12 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
     if (!prefs) return
     const csvs = letterboxdCsvs(prefs)
     download(`galaxy-${which}-letterboxd.csv`, csvs[which], 'text/csv')
+  })
+
+  const exportWatched = () => run(async () => {
+    const prefs = await fetchSyncedPrefs(creds)
+    if (!prefs) return
+    download('galaxy-watched.csv', watchedCsv(prefs), 'text/csv')
   })
 
   const syncTrakt = () => run(async () => {
@@ -190,6 +196,7 @@ export default function PlusTools({ creds, features, refresh, traktStatus }: {
         <Button {...actionBtn} disabled={busy} onClick={exportJson}>JSON</Button>
         <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('watchlist')}>Letterboxd watchlist CSV</Button>
         <Button {...actionBtn} disabled={busy} onClick={() => exportLetterboxd('ratings')}>Letterboxd ratings CSV</Button>
+        <Button {...actionBtn} disabled={busy} onClick={exportWatched}>Watched history CSV</Button>
       </Flex>
 
       <Flex align='center' gap={2} {...sectionTitle}>

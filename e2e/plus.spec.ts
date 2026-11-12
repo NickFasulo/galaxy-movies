@@ -126,7 +126,7 @@ test.describe('plus tools — import/export', () => {
       { name: 'watchlist.csv', mimeType: 'text/csv', buffer: Buffer.from(WATCHLIST_CSV) },
       { name: 'ratings.csv', mimeType: 'text/csv', buffer: Buffer.from(RATINGS_CSV) }
     ])
-    await expect(page.getByText('Imported 2 watchlist + 1 ratings.')).toBeVisible()
+    await expect(page.getByText('Imported 2 watchlist + 1 ratings + 0 watched.')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Fight Club', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'The Godfather', exact: true })).toBeVisible()
     // 4.5 stars → 9/10 badge on the ratings section card.
@@ -138,6 +138,7 @@ test.describe('plus tools — import/export', () => {
     const account = await stubAccountApi(page)
     account.prefs.watchlist = [{ id: 550, mediaType: 'movie', title: 'Fight Club' }]
     account.prefs.ratings = [{ id: 550, mediaType: 'movie', title: 'Fight Club', rating: 9 }]
+    account.prefs.watched = [{ id: 550, mediaType: 'movie', title: 'Fight Club', watched_at: '2024-01-05' }]
     await page.goto('/watchlist')
 
     const [jsonDl] = await Promise.all([
@@ -157,6 +158,12 @@ test.describe('plus tools — import/export', () => {
       page.getByRole('button', { name: 'Letterboxd ratings CSV' }).click()
     ])
     expect(ratingsDl.suggestedFilename()).toBe('galaxy-ratings-letterboxd.csv')
+
+    const [watchedDl] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Watched history CSV' }).click()
+    ])
+    expect(watchedDl.suggestedFilename()).toBe('galaxy-watched.csv')
   })
 
   test('share link create and disable', async ({ page }) => {

@@ -5,6 +5,7 @@ import type { UserData } from '../../lib/userData'
 const data = (overrides: Partial<UserData> = {}): UserData => ({
   watchlist: [],
   ratings: {},
+  watched: [],
   services: { region: 'US', providers: [] },
   ...overrides
 })
@@ -37,6 +38,19 @@ describe('buildSnapshot', () => {
       ratings: { bogus: { rating: 5, title: 'Broken', mediaType: 'movie' } } as unknown as UserData['ratings']
     }))
     expect(snapshot.ratings).toEqual([])
+  })
+
+  it('serializes watched entries with dates and episode rollups, dropping the local undo flag', () => {
+    const snapshot = buildSnapshot(data({
+      watched: [
+        { id: 1, mediaType: 'movie', title: 'Film', poster_path: '/f.jpg', year: '2020', watched_at: '2024-01-05T00:00:00.000Z', fromWatchlist: true },
+        { id: 2, mediaType: 'tv', title: 'Show', poster_path: null, year: null, watched_at: '', episodes: 62, lastEpisode: 'S5E16' }
+      ]
+    }))
+    expect(snapshot.watched).toEqual([
+      { id: 1, mediaType: 'movie', title: 'Film', poster_path: '/f.jpg', year: '2020', watched_at: '2024-01-05T00:00:00.000Z' },
+      { id: 2, mediaType: 'tv', title: 'Show', poster_path: null, year: null, watched_at: '', episodes: 62, lastEpisode: 'S5E16' }
+    ])
   })
 })
 

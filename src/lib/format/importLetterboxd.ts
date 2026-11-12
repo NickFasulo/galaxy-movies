@@ -2,6 +2,7 @@ export interface LetterboxdItem {
   title: string
   year?: string
   rating?: number
+  date?: string
 }
 
 // Minimal RFC-4180 parser — Letterboxd exports quote fields containing
@@ -51,6 +52,9 @@ export function parseCsv(text: string): string[][] {
 
 // Letterboxd watchlist.csv: Date,Name,Year,Letterboxd URI
 //            ratings.csv: Date,Name,Year,Letterboxd URI,Rating (0.5–5 stars)
+//              diary.csv: Watched Date,Name,Year,Letterboxd URI,Rating,Rewatch,...
+// The date column means "added" on watchlist/ratings and "watched" on diary —
+// callers route by filename.
 export function parseLetterboxdCsv(text: string): LetterboxdItem[] {
   const rows = parseCsv(text.replace(/^﻿/, '').trim())
   if (!rows.length) return []
@@ -58,6 +62,7 @@ export function parseLetterboxdCsv(text: string): LetterboxdItem[] {
   const nameCol = header.indexOf('name')
   const yearCol = header.indexOf('year')
   const ratingCol = header.indexOf('rating')
+  const dateCol = header.indexOf('watched date') >= 0 ? header.indexOf('watched date') : header.indexOf('date')
   if (nameCol < 0) return []
 
   const items: LetterboxdItem[] = []
@@ -69,6 +74,8 @@ export function parseLetterboxdCsv(text: string): LetterboxdItem[] {
     if (year && /^\d{4}$/.test(year)) item.year = year
     const stars = ratingCol >= 0 ? Number(r[ratingCol]) : NaN
     if (Number.isFinite(stars) && stars > 0) item.rating = Math.min(10, Math.max(1, Math.round(stars * 2)))
+    const date = dateCol >= 0 ? r[dateCol]?.trim() : undefined
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) item.date = date
     items.push(item)
   }
   return items

@@ -34,9 +34,9 @@ export async function getStaticProps(): Promise<{ props: { movies: TmdbMovie[]; 
 
 const COMPARISON_ROWS = [
   { feature: 'Status', galaxy: 'Actively maintained and shipping', tvtime: 'Shut down July 15, 2026' },
-  { feature: 'Bring your data', galaxy: 'Yes: imports a saved TV Time GDPR export (ZIP or CSVs) in the browser', tvtime: 'Exports were GDPR-only; no longer available' },
-  { feature: 'Watchlist & ratings', galaxy: 'Yes: watchlist and 1–10 ratings saved on your device', tvtime: 'Yes: shows marked watched per episode' },
-  { feature: 'Episode-level tracking', galaxy: 'No: titles are watchlisted as a whole', tvtime: 'Yes: per-episode check-ins were its core feature' },
+  { feature: 'Bring your data', galaxy: 'Yes: imports a saved TV Time GDPR export (ZIP or CSVs) in the browser, watched history included', tvtime: 'Exports were GDPR-only; no longer available' },
+  { feature: 'Watchlist, ratings & history', galaxy: 'Yes: watchlist, 1–10 ratings and a dated watched diary saved on your device', tvtime: 'Yes: shows marked watched per episode' },
+  { feature: 'Episode-level tracking', galaxy: 'Partial: episode watches roll up per show (count and last episode seen); no per-episode check-ins', tvtime: 'Yes: per-episode check-ins were its core feature' },
   { feature: 'Where-to-watch availability', galaxy: 'Yes: stream, rent and buy options on every movie and TV page', tvtime: 'Yes: showed streaming availability per title' },
   { feature: 'Alerts without an account', galaxy: 'Yes: email alerts for specific titles and weekly digests, no sign-up', tvtime: 'No: notifications required an account' },
   { feature: 'Leaving-soon tracking', galaxy: 'Yes: dated departures per service, tracked daily, plus calendar feeds', tvtime: 'No' },
@@ -56,7 +56,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Can I import my TV Time data into Galaxy Movies?',
-    answer: 'Yes, if you saved a GDPR export before the shutdown. Pick the ZIP file (or the CSVs inside it) above: followed shows land on your watchlist and movie ratings import on the 1–10 scale. Everything parses in your browser; watched-episode history is counted but not imported since Galaxy Movies tracks titles, not episodes.'
+    answer: 'Yes, if you saved a GDPR export before the shutdown. Pick the ZIP file (or the CSVs inside it) above: followed shows land on your watchlist, movie ratings import on the 1–10 scale, and your watched history becomes a dated diary. Episode watches roll up per show — you get "62 eps, last S5E16" rather than a check-in for every episode. Everything parses in your browser.'
   },
   {
     question: 'Is Galaxy Movies a good TV Time alternative?',
@@ -71,7 +71,7 @@ const FAQ_ITEMS = [
 export default function TvTimeAlternative({ movies, dataError }: InferGetStaticPropsType<typeof getStaticProps>) {
   const canonicalUrl = `${SITE_URL}/tv-time-alternative`
   const title = 'TV Time Alternative: Import Your List, No Account Needed'
-  const description = 'TV Time shut down in July 2026. Galaxy Movies is a free TV Time alternative that imports your GDPR export: watchlist, ratings, where-to-watch and alerts with no account.'
+  const description = 'TV Time shut down in July 2026. Galaxy Movies is a free TV Time alternative that imports your GDPR export: watchlist, ratings, watched history, where-to-watch and alerts with no account.'
 
   const faqSchema = {
     '@context': 'https://schema.org',
@@ -100,16 +100,19 @@ export default function TvTimeAlternative({ movies, dataError }: InferGetStaticP
 
           <Text maxW='60rem' mt={8}>
             TV Time shut down on July 15, 2026, leaving tens of millions of trackers without a home. Galaxy Movies
-            covers the part most people actually used: keeping a list, rating what you saw, and knowing where to
-            stream it next. It does that without an account: your list lives on your device, alerts land in your
+            covers the part most people actually used: keeping a list, rating what you saw, remembering what you
+            watched, and knowing where to stream it next. It does that without an account: your data lives on your
+            device, alerts land in your
             inbox with one confirmation click, and the whole import below runs in your browser.
           </Text>
 
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>Bring your TV Time export</Heading>
           <Text maxW='60rem' mb={4}>
             If you downloaded your GDPR data export before the shutdown, it still works here. Pick the ZIP as you
-            got it, or the CSV files inside: followed shows join your watchlist and your movie ratings import on
-            the 1–10 scale. Nothing uploads; the file never leaves this tab.
+            got it, or the CSV files inside: followed shows join your watchlist, your movie ratings import on the
+            1–10 scale, and everything you watched becomes a dated diary entry. Episode watches roll up to the
+            show: &quot;62 eps, last S5E16&quot; instead of a row per episode. Nothing uploads; the file never leaves
+            this tab.
           </Text>
           <Panel maxW='36rem'>
             <ImportPanel source='tvtime' />
@@ -140,8 +143,9 @@ export default function TvTimeAlternative({ movies, dataError }: InferGetStaticP
           <Heading as='h2' size='md' mt={10} mb={4} textAlign={{ base: 'center', md: 'left' }}>What TV Time did that we don&apos;t</Heading>
           <Text maxW='60rem'>
             TV Time&apos;s magic was the episode check-in: tap each episode as you watched, get the exact next one,
-            plus comments and memes under every episode. Galaxy Movies tracks titles, not episodes — a show sits
-            on your watchlist as a whole. If granular per-episode progress is what you miss,{' '}
+            plus comments and memes under every episode. Galaxy Movies tracks titles: your imported episode
+            history collapses into one watched entry per show with the count and last episode seen, but there are
+            no per-episode check-ins here. If granular per-episode progress is what you miss,{' '}
             <Link href='/trakt-alternative' style={{ textDecoration: 'underline' }}>Trakt</Link> or Serializd are
             the closer fit, and your list here can sync to Trakt with Plus.
           </Text>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Box, Flex, Icon, Text } from '@chakra-ui/react'
 import VideoModal from './VideoModal'
 import WatchlistButton from '../../alerts/components/WatchlistButton'
+import WatchedButton from '../../alerts/components/WatchedButton'
 import BackButton from '../../../components/BackButton'
 import type { WatchlistableTitle } from '../../../lib/userData'
 
@@ -66,6 +67,7 @@ export function DetailActions({ videoKey, item, trailerHref }: { videoKey: strin
         <VideoModal videoKey={videoKey} />
       )}
       <WatchlistButton movie={item} withLabel />
+      <WatchedButton movie={item} withLabel />
       <BackButton />
     </Flex>
   );

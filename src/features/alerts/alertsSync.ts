@@ -1,4 +1,4 @@
-import { ratingEntries, type SyncedPrefs, type UserData } from '../../lib/userData'
+import { ratingEntries, watchedEntries, type SyncedPrefs, type UserData } from '../../lib/userData'
 
 const CREDS_KEY = 'gm.alerts.v1'
 const LAST_SYNCED_KEY = 'gm.alerts.lastSynced'
@@ -62,7 +62,17 @@ export function buildSnapshot(data: UserData): SyncedPrefs {
     })),
     services: data.services.providers,
     region: data.services.region,
-    ratings: snapshotRatings(data)
+    ratings: snapshotRatings(data),
+    watched: watchedEntries(data).map((item) => ({
+      id: item.id,
+      mediaType: item.mediaType,
+      title: item.title || '',
+      poster_path: item.poster_path ?? null,
+      year: item.year ?? null,
+      watched_at: item.watched_at,
+      ...(item.episodes ? { episodes: item.episodes } : {}),
+      ...(item.lastEpisode ? { lastEpisode: item.lastEpisode } : {})
+    })).slice(0, MAX_SNAPSHOT_RATINGS)
   }
 }
 

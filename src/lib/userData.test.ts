@@ -4,6 +4,7 @@ import { buildTasteProfile, mergePrefsIntoData, mergeRatingMetaIntoData, type Us
 const data = (overrides: Partial<UserData> = {}): UserData => ({
   watchlist: [],
   ratings: {},
+  watched: [],
   services: { region: 'US', providers: [] },
   ...overrides
 })
@@ -302,5 +303,79 @@ describe('localStorage-backed user data', () => {
     expect(mod.isWatchlisted(1, mod.getUserData())).toBe(true)
     // Persisted nowhere — memory fallback only.
     expect(storage.store.has('gm.userData.v1')).toBe(false)
+  })
+})
+
+describe('watched history', () => {
+  it('merges watched entries and dedupes title+day across ISO and date stamps', () => {
+    const merged = mergePrefsIntoData(data({
+      watched: [{ id: 1, mediaType: 'movie', title: 'Seen', poster_path: null, year: null, watched_at: '2024-01-05T21:30:00.000Z' }]
+    }), {
+      watched: [
+        { id: 1, mediaType: 'movie', title: 'Seen', watched_at: '2024-01-05' },
+        { id: 1, mediaType: 'movie', title: 'Seen', watched_at: '2024-02-01' },
+        { id: 2, mediaType: 'tv', title: 'Show', episodes: 62, lastEpisode: 'S5E16' },
+        { id: 'x' as unknown as number, mediaType: 'movie', title: 'Bad', watched_at: '2024-01-01' }
+      ]
+    })
+    expect(merged.watched).toHaveLength(3)
+    expect(merged.watched.map((w) => `${w.id}:${w.watched_at}`).sort())
+      .toEqual(['1:2024-01-05T21:30:00.000Z', '1:2024-02-01', '2:'])
+    expect(merged.watched.find((w) => w.id === 2)).toMatchObject({ episodes: 62, lastEpisode: 'S5E16' })
+  })
+
+  it('toggleWatched moves a watchlisted title to watched and restores it on undo', async () => {
+    const { mod } = await freshModule()
+    mod.toggleWatchlist(movie)
+    mod.toggleWatched(movie)
+    let ud = mod.getUserData()
+    expect(mod.isWatchlisted(1, ud)).toBe(false)
+    expect(mod.isWatched(1, ud)).toBe(true)
+    expect(ud.watched[0].fromWatchlist).toBe(true)
+
+    mod.toggleWatched(movie)
+    ud = mod.getUserData()
+    expect(mod.isWatched(1, ud)).toBe(false)
+    expect(mod.isWatchlisted(1, ud)).toBe(true)
+  })
+
+  it('un-watching a title that was never watchlisted does not create a watchlist entry', async () => {
+    const { mod } = await freshModule()
+    mod.toggleWatched(movie)
+    expect(mod.getUserData().watched[0].fromWatchlist).toBeUndefined()
+    mod.toggleWatched(movie)
+    expect(mod.isWatchlisted(1, mod.getUserData())).toBe(false)
+    expect(mod.isWatched(1, mod.getUserData())).toBe(false)
+  })
+
+  it('isWatched is keyed by mediaType and watchedEntries sorts newest first', async () => {
+    const { mod } = await freshModule()
+    mod.mergeSyncedPrefs({
+      watched: [
+        { id: 1, mediaType: 'movie', title: 'Old', watched_at: '2020-01-01' },
+        { id: 1, mediaType: 'tv', title: 'Show', watched_at: '2024-01-01' }
+      ]
+    })
+    const ud = mod.getUserData()
+    expect(mod.isWatched(1, ud)).toBe(true)
+    expect(mod.isWatched(1, ud, 'tv')).toBe(true)
+    expect(mod.watchedEntries(ud)[0].watched_at).toBe('2024-01-01')
+  })
+
+  it('backfillWatchedMeta patches posters without touching dates or counts', async () => {
+    const { mod } = await freshModule()
+    mod.mergeSyncedPrefs({
+      watched: [{ id: 9, mediaType: 'tv', title: 'Show', watched_at: '2023-01-01', episodes: 10 }]
+    })
+    mod.backfillWatchedMeta([{ id: 9, mediaType: 'tv', poster_path: '/s.jpg', year: '2020' }])
+    const entry = mod.getUserData().watched[0]
+    expect(entry).toMatchObject({ poster_path: '/s.jpg', year: '2020', watched_at: '2023-01-01', episodes: 10 })
+  })
+
+  it('normalizes a missing watched array on stored data', async () => {
+    const storage = makeStorage()
+    storage.store.set('gm.userData.v1', JSON.stringify({ watchlist: [{ id: 1 }] }))
+    const { mod } = await freshModule(storage)
+    expect(mod.getUserData().watched).toEqual([])
   })
 })

@@ -2,6 +2,7 @@ import type { SyncedPrefs } from '../userData'
 
 type CsvItem = NonNullable<SyncedPrefs['watchlist']>[number]
 type CsvRating = NonNullable<SyncedPrefs['ratings']>[number]
+type CsvWatched = NonNullable<SyncedPrefs['watched']>[number]
 
 function csvCell(value: string | number | null | undefined): string {
   const s = value == null ? '' : String(value)
@@ -29,4 +30,21 @@ export function letterboxdCsvs(prefs: SyncedPrefs): { ratings: string; watchlist
     moviesOnly(prefs.watchlist).map((w: CsvItem) => [w.id, w.title, w.year ?? ''])
   )
   return { ratings, watchlist }
+}
+
+// Galaxy's own diary export — keeps tv rows (unlike the Letterboxd files) and
+// carries the episode rollup fields so nothing imported is lost on the way out.
+export function watchedCsv(prefs: SyncedPrefs): string {
+  return toCsv(
+    ['tmdbID', 'MediaType', 'Title', 'Year', 'WatchedDate', 'Episodes', 'LastEpisode'],
+    (prefs.watched || []).map((w: CsvWatched) => [
+      w.id,
+      w.mediaType ?? 'movie',
+      w.title,
+      w.year ?? '',
+      (w.watched_at || '').slice(0, 10),
+      w.episodes ?? '',
+      w.lastEpisode ?? ''
+    ])
+  )
 }

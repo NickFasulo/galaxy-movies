@@ -18,6 +18,9 @@ interface ImportItem {
   tvdbId?: number
   mediaType: MediaType
   rating?: number
+  watchedAt?: string
+  episodes?: number
+  lastEpisode?: string
 }
 
 interface ResolvedTitle {
@@ -66,15 +69,32 @@ function detectCsv(name: string, text: string): 'tvtime' | 'letterboxd' | 'unkno
   return 'unknown'
 }
 
-function mergeItems(watchlistItems: ImportItem[], ratingItems: ImportItem[], wl: (ResolvedTitle | null)[], rt: (ResolvedTitle | null)[]): SyncedPrefs {
+function mergeItems(batches: ImportItem[][], resolved: (ResolvedTitle | null)[][]): SyncedPrefs {
+  const [wl, rt, wt] = resolved
   return {
     watchlist: wl
-      .map((r, i) => (r ? { id: r.id, mediaType: r.mediaType, title: r.title, poster_path: r.poster_path, year: r.year ?? watchlistItems[i]!.year ?? null } : null))
+      .map((r, i) => (r ? { id: r.id, mediaType: r.mediaType, title: r.title, poster_path: r.poster_path, year: r.year ?? batches[0][i]!.year ?? null } : null))
       .filter((r): r is NonNullable<typeof r> => Boolean(r)),
     ratings: rt
       .map((r, i) =>
-        r && ratingItems[i]!.rating
-          ? { id: r.id, mediaType: r.mediaType, title: r.title, rating: ratingItems[i]!.rating, poster_path: r.poster_path, year: r.year ?? ratingItems[i]!.year ?? null }
+        r && batches[1][i]!.rating
+          ? { id: r.id, mediaType: r.mediaType, title: r.title, rating: batches[1][i]!.rating, poster_path: r.poster_path, year: r.year ?? batches[1][i]!.year ?? null }
+          : null
+      )
+      .filter((r): r is NonNullable<typeof r> => Boolean(r)),
+    watched: wt
+      .map((r, i) =>
+        r
+          ? {
+              id: r.id,
+              mediaType: r.mediaType,
+              title: r.title,
+              poster_path: r.poster_path,
+              year: r.year ?? batches[2][i]!.year ?? null,
+              watched_at: batches[2][i]!.watchedAt || '',
+              episodes: batches[2][i]!.episodes,
+              lastEpisode: batches[2][i]!.lastEpisode
+            }
           : null
       )
       .filter((r): r is NonNullable<typeof r> => Boolean(r))
@@ -93,6 +113,7 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
     void (async () => {
       const watchlistItems: ImportItem[] = []
       const ratingItems: ImportItem[] = []
+      const watchedItems: ImportItem[] = []
       // TV Time files parse as one set: ratings-live-votes joins tracking
       // rows by uuid, which only works when every CSV is in the same bucket.
       const tvTimeCsvs: { name: string; text: string }[] = []
@@ -118,8 +139,11 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
               ignored++
               continue
             }
-            if (file.name.toLowerCase().includes('rating')) ratingItems.push(...items.map((i) => ({ ...i, mediaType: 'movie' as const })))
-            else watchlistItems.push(...items.map((i) => ({ ...i, mediaType: 'movie' as const })))
+            const lower = file.name.toLowerCase()
+            if (lower.includes('rating')) ratingItems.push(...items.map((i) => ({ ...i, mediaType: 'movie' as const })))
+            else if (lower.includes('diary') || lower.includes('watched')) {
+              watchedItems.push(...items.map((i) => ({ ...i, watchedAt: i.date, mediaType: 'movie' as const })))
+            } else watchlistItems.push(...items.map((i) => ({ ...i, mediaType: 'movie' as const })))
           } else {
             ignored++
           }
@@ -133,10 +157,11 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
       const parsed = parseTvTimeCsvs(tvTimeCsvs)
       watchlistItems.push(...parsed.watchlist)
       ratingItems.push(...parsed.ratings)
+      watchedItems.push(...parsed.watched)
       const skippedWatched = parsed.skippedWatched
       ignored += parsed.filesIgnored
 
-      if (!watchlistItems.length && !ratingItems.length) {
+      if (!watchlistItems.length && !ratingItems.length && !watchedItems.length) {
         setNote(
           ignored
             ? 'No importable rows found: those files have nothing Galaxy Movies tracks.'
@@ -147,15 +172,18 @@ export default function ImportPanel({ source }: { source?: 'tvtime' }) {
       }
 
       try {
-        const [wl, rt] = await Promise.all([resolveItems(watchlistItems), resolveItems(ratingItems)])
-        const prefs = mergeItems(watchlistItems, ratingItems, wl, rt)
-        const skipped = watchlistItems.length + ratingItems.length - prefs.watchlist!.length - prefs.ratings!.length
+        const batches = [watchlistItems, ratingItems, watchedItems]
+        const resolved = await Promise.all(batches.map(resolveItems))
+        const prefs = mergeItems(batches, resolved)
+        const counts = [prefs.watchlist!.length, prefs.ratings!.length, prefs.watched!.length]
+        const skipped = watchlistItems.length + ratingItems.length + watchedItems.length - counts.reduce((a, b) => a + b, 0)
         mergeSyncedPrefs(prefs)
         scheduleAlertsSync(getUserData())
+        const parts = [`${counts[0]} watchlist`, `${counts[1]} ratings`, `${counts[2]} watched`]
         setNote(
-          `Imported ${prefs.watchlist!.length} watchlist + ${prefs.ratings!.length} ratings` +
+          `Imported ${parts.join(' + ')}` +
             (skipped ? `: ${skipped} titles couldn't be matched` : '') +
-            (skippedWatched ? `, ${skippedWatched} watched titles skipped (history isn't imported yet)` : '') +
+            (skippedWatched ? `, ${skippedWatched} history rows unreadable` : '') +
             (ignored ? `, ${ignored} files ignored` : '') +
             '.'
         )

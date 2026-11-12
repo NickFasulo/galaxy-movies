@@ -22,7 +22,7 @@ tracking-stats,,,,,,,,,
 `
 
 const V1_CSV = `type,entity_type,uuid,movie_name,release_date,alpha_range_key,series_id,series_name,season_number,episode_number,episode_id,watch_date
-watch,movie,uu-watch,승리호,2021-02-05,watch-alpha-space-sweepers,,,,,
+watch,movie,uu-watch,승리호,2021-02-05,watch-alpha-space-sweepers,,,,,,2020-05-01
 towatch,movie,uu-later,Dune,2021-10-22,towatch-alpha-dune,,,,,
 watch,episode,uu-ep,,,,1399,Game of Thrones,1,1,123,2021-01-01
 `
@@ -45,21 +45,27 @@ describe('parseTvTimeCsvs', () => {
     expect(result.filesRead).toEqual(['followed_tv_show.csv'])
   })
 
-  it('maps v2 user-series flags and counts watched-only shows as skipped', () => {
+  it('maps v2 user-series flags and rolls watched episodes into show entries', () => {
     const result = parseTvTimeCsvs([{ name: 'tracking-prod-records-v2.csv', text: V2_CSV }])
     expect(result.watchlist).toEqual([
       { title: 'Game of Thrones', tvdbId: 1399, mediaType: 'tv' },
       { title: 'The Flash', tvdbId: 60735, mediaType: 'tv' }
     ])
-    // Breaking Bad only has watch-episode rows: nothing to put it in.
-    expect(result.skippedWatched).toBe(1)
+    expect(result.watched).toEqual([
+      { title: 'Game of Thrones', tvdbId: 1399, mediaType: 'tv', watchedAt: '2021-01-01', episodes: 1, lastEpisode: 'S1E1' },
+      { title: 'Breaking Bad', tvdbId: 1396, mediaType: 'tv', watchedAt: '2021-01-02', episodes: 1, lastEpisode: 'S1E1' }
+    ])
+    expect(result.skippedWatched).toBe(0)
   })
 
-  it('maps v1 movies: towatch to watchlist, watch to skipped, english slug preferred', () => {
+  it('maps v1 movies: towatch to watchlist, watch to dated history, english slug preferred', () => {
     const result = parseTvTimeCsvs([{ name: 'tracking-prod-records.csv', text: V1_CSV }])
     expect(result.watchlist).toEqual([{ title: 'dune', year: '2021', mediaType: 'movie' }])
-    // 승리호 was watched without a rating; Game of Thrones ep watch row also counts.
-    expect(result.skippedWatched).toBe(2)
+    expect(result.watched).toEqual([
+      { title: 'space sweepers', year: '2021', mediaType: 'movie', watchedAt: '2020-05-01' },
+      { title: 'Game of Thrones', tvdbId: 1399, mediaType: 'tv', watchedAt: '2021-01-01', episodes: 1, lastEpisode: 'S1E1' }
+    ])
+    expect(result.skippedWatched).toBe(0)
   })
 
   it('maps scalev2 vote ids to 1-10 ratings and recovers english titles via uuid join', () => {
@@ -70,12 +76,13 @@ describe('parseTvTimeCsvs', () => {
     expect(result.ratings).toEqual([
       { title: 'space sweepers', year: '2021', mediaType: 'movie', rating: 10 }
     ])
-    // A rated watched movie is no longer counted as skipped; the show ep row stays.
-    expect(result.skippedWatched).toBe(1)
+    // The rated movie is also in watched — rating and history coexist.
+    expect(result.watched).toHaveLength(2)
+    expect(result.skippedWatched).toBe(0)
     expect(result.watchlist).toEqual([{ title: 'dune', year: '2021', mediaType: 'movie' }])
   })
 
-  it('keeps a rated movie out of the watchlist even with a towatch row', () => {
+  it('keeps a watched and rated movie out of the watchlist even with a towatch row', () => {
     const v1 = V1_CSV.replace('towatch,movie,uu-later,Dune,2021-10-22,towatch-alpha-dune', 'towatch,movie,uu-later,승리호,2021-02-05,towatch-alpha-space-sweepers')
     const result = parseTvTimeCsvs([
       { name: 'ratings-live-votes.csv', text: RATINGS_CSV },
@@ -85,19 +92,43 @@ describe('parseTvTimeCsvs', () => {
     expect(result.ratings).toHaveLength(1)
   })
 
-  it('reads seen-episode files as skipped watched shows and counts ignored files', () => {
+  it('counts rewatch days as separate entries and dedupes same-day repeats', () => {
+    const v1 = `type,entity_type,uuid,movie_name,release_date,alpha_range_key,series_id,series_name,season_number,episode_number,episode_id,watch_date
+watch,movie,u1,Alien,1979-05-25,watch-alpha-alien,,,,,,2020-01-01
+rewatch,movie,u2,Alien,1979-05-25,watch-alpha-alien,,,,,,2020-01-01
+watch,movie,u3,Alien,1979-05-25,watch-alpha-alien,,,,,,2021-06-15
+`
+    const result = parseTvTimeCsvs([{ name: 'tracking-prod-records.csv', text: v1 }])
+    expect(result.watched).toEqual([
+      { title: 'alien', year: '1979', mediaType: 'movie', watchedAt: '2020-01-01' },
+      { title: 'alien', year: '1979', mediaType: 'movie', watchedAt: '2021-06-15' }
+    ])
+  })
+
+  it('falls back to watch_date_range_key when watch_date is empty', () => {
+    const v1 = `type,entity_type,uuid,movie_name,release_date,alpha_range_key,watch_date_range_key,series_id,series_name,season_number,episode_number,episode_id,watch_date
+watch,movie,u1,Alien,1979-05-25,watch-alpha-alien,watch-date-1649590015,,,,,,
+`
+    const result = parseTvTimeCsvs([{ name: 'tracking-prod-records.csv', text: v1 }])
+    expect(result.watched[0]?.watchedAt).toBe('2022-04-10')
+  })
+
+  it('reads seen-episode files into watched rollups and counts ignored files', () => {
     const result = parseTvTimeCsvs([
       { name: 'watched_on_episode.csv', text: SEEN_CSV },
       { name: 'user.csv', text: 'id,email\n1,x@y.z' },
       { name: 'emotions-live-votes.csv', text: RATINGS_CSV }
     ])
-    expect(result.skippedWatched).toBe(1)
+    expect(result.watched).toEqual([
+      { title: 'The Flash', tvdbId: 60735, mediaType: 'tv', watchedAt: '2022-01-01', episodes: 1, lastEpisode: 'S9E10' }
+    ])
+    expect(result.skippedWatched).toBe(0)
     expect(result.filesRead).toEqual(['watched_on_episode.csv'])
     expect(result.filesIgnored).toBe(2)
     expect(result.ratings).toEqual([])
   })
 
-  it('dedupes a show followed in both csv files and keeps user_tv_show_data follows', () => {
+  it('uses nb_episodes_seen when episode rows are absent', () => {
     const result = parseTvTimeCsvs([
       { name: 'followed_tv_show.csv', text: FOLLOWED_CSV },
       { name: 'user_tv_show_data.csv', text: USER_DATA_CSV }
@@ -105,6 +136,10 @@ describe('parseTvTimeCsvs', () => {
     expect(result.watchlist).toEqual([
       { title: 'Game of Thrones', tvdbId: 1399, mediaType: 'tv' },
       { title: 'Breaking Bad', tvdbId: 1396, mediaType: 'tv' }
+    ])
+    expect(result.watched).toEqual([
+      { title: 'Game of Thrones', tvdbId: 1399, mediaType: 'tv', episodes: 42 },
+      { title: 'Breaking Bad', tvdbId: 1396, mediaType: 'tv', episodes: 62 }
     ])
   })
 })

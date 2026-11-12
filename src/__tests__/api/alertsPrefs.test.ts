@@ -72,6 +72,50 @@ describe('POST /api/alerts-prefs', () => {
     expect(mocks.kvHset).not.toHaveBeenCalled()
   })
 
+  it('stores watched entries with episode rollup fields and optional dates', async () => {
+    const res = makeRes()
+    await handler(makeReq({ method: 'POST', body: validBody({
+      watched: [
+        { id: 3, mediaType: 'tv', title: 'Show', watched_at: '2024-01-05', episodes: 62, lastEpisode: 'S5E16' },
+        { id: 4, mediaType: 'movie', title: 'Film' }
+      ]
+    }) }), res)
+    expect(res.statusCode).toBe(200)
+    const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as WrittenPrefs & { watched: Record<string, unknown>[] }
+    expect(written.watched[0]).toMatchObject({ id: 3, mediaType: 'tv', watched_at: '2024-01-05', episodes: 62, lastEpisode: 'S5E16' })
+    expect(written.watched[1]).toMatchObject({ id: 4, mediaType: 'movie' })
+    expect(written.watched[1].watched_at).toBeUndefined()
+  })
+
+  it('defaults a missing watched array to empty for old clients', async () => {
+    const res = makeRes()
+    await handler(makeReq({ method: 'POST', body: validBody() }), res)
+    expect(res.statusCode).toBe(200)
+    const written = mocks.kvHset.mock.calls[0]![1][EMAIL] as { watched: unknown[] }
+    expect(written.watched).toEqual([])
+  })
+
+  it.each([
+    { id: 'x', title: 'Bad id' },
+    { id: 1, title: 'T', mediaType: 'podcast' },
+    { id: 1, title: 'x'.repeat(301) },
+    'not an object'
+  ])('rejects malformed watched entry %j', async (bad) => {
+    const res = makeRes()
+    await handler(makeReq({ method: 'POST', body: validBody({ watched: [{ watched_at: '2024-01-01', ...(typeof bad === 'object' ? bad : {}) }] }) }), res)
+    expect(res.statusCode).toBe(400)
+    expect(mocks.kvHset).not.toHaveBeenCalled()
+  })
+
+  it('rejects a watched array over the free limit', async () => {
+    const res = makeRes()
+    await handler(makeReq({ method: 'POST', body: validBody({
+      watched: Array.from({ length: 501 }, (_, i) => ({ id: i + 1, mediaType: 'movie', title: 'T' }))
+    }) }), res)
+    expect(res.statusCode).toBe(400)
+    expect(mocks.kvHset).not.toHaveBeenCalled()
+  })
+
   it('rejects a wrong sync key', async () => {
     const res = makeRes()
     await handler(makeReq({ method: 'POST', body: validBody({ key: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' }) }), res)

@@ -6,13 +6,17 @@ export interface TvTimeItem {
   tvdbId?: number
   mediaType: 'movie' | 'tv'
   rating?: number
+  watchedAt?: string
+  episodes?: number
+  lastEpisode?: string
 }
 
 export interface TvTimeParseResult {
   watchlist: TvTimeItem[]
   ratings: TvTimeItem[]
-  // Watched-but-unrated titles have no home in GM's model (no seen log) —
-  // reported so the UI can set expectations instead of silently dropping them.
+  watched: TvTimeItem[]
+  // Rows that produced no item (missing title/id) — reported so the UI can
+  // set expectations instead of silently dropping them.
   skippedWatched: number
   filesRead: string[]
   filesIgnored: number
@@ -50,6 +54,17 @@ const toInt = (v: string | undefined) => {
 function toYear(releaseDate: string | undefined): string | undefined {
   const year = releaseDate?.slice(0, 4)
   return year && Number(year) >= 1888 ? year : undefined
+}
+
+// Dates arrive as 'YYYY-MM-DD' (watch_date), 'YYYY-MM-DD HH:MM:SS' (created_at),
+// or an epoch seconds suffix in watch_date_range_key. Day precision is all a
+// diary needs.
+function toDate(row: Row): string | undefined {
+  const direct = row.watch_date?.slice(0, 10) || row.created_at?.slice(0, 10)
+  if (direct && /^\d{4}-\d{2}-\d{2}$/.test(direct) && Number(direct.slice(0, 4)) >= 1888) return direct
+  const epoch = Number(row.watch_date_range_key?.replace('watch-date-', ''))
+  if (Number.isFinite(epoch) && epoch > 0) return new Date(epoch * 1000).toISOString().slice(0, 10)
+  return undefined
 }
 
 // Movie titles may be localized; the alpha_range_key slug
@@ -92,12 +107,15 @@ export function parseTvTimeCsvs(files: CsvFile[]): TvTimeParseResult {
 
   // Show state: tvdb id -> {title, watchlist, archived}
   const shows = new Map<number, { title?: string; watchlist: boolean; archived: boolean }>()
-  const watchedShowIds = new Set<number>()
-  // uuid -> v1 movie row (ratings join); title -> item accumulation.
+  // Episode watches roll up per show: count, latest date, and the S/E of the
+  // most recent row for a 'last S2E10' tag. declaredSeen is user_tv_show_data's
+  // nb_episodes_seen fallback when episode-level rows are absent.
+  const watchedShows = new Map<number, { title?: string; count: number; declaredSeen?: number; maxDate?: string; lastEp?: { s: number; e: number } }>()
   const movieByUuid = new Map<string, Row>()
   const watchlistMovies = new Map<string, TvTimeItem>()
   const watchedMovies = new Map<string, TvTimeItem>()
   const ratingByUuid = new Map<string, TvTimeItem>()
+  let skippedWatched = 0
 
   const markShow = (tvdbId: number, title: string | undefined, patch: { watchlist?: boolean; archived?: boolean }) => {
     const entry = shows.get(tvdbId) ?? { title: undefined, watchlist: false, archived: false }
@@ -107,21 +125,42 @@ export function parseTvTimeCsvs(files: CsvFile[]): TvTimeParseResult {
     shows.set(tvdbId, entry)
   }
 
+  const noteEpisodeWatch = (id: number | undefined, title: string | undefined, date: string | undefined, s?: number, e?: number) => {
+    if (id == null) {
+      skippedWatched++
+      return
+    }
+    const w = watchedShows.get(id) ?? { count: 0 }
+    w.count++
+    if (title?.trim()) w.title = title.trim()
+    if (date && (!w.maxDate || date >= w.maxDate)) {
+      w.maxDate = date
+      if (s != null && e != null) w.lastEp = { s, e }
+    }
+    watchedShows.set(id, w)
+  }
+
   for (const row of buckets.get('tracking-prod-records.csv') ?? []) {
     if (row.entity_type === 'episode') {
-      if (row.type === 'watch') {
-        const id = toInt(row.series_id)
-        if (id != null) watchedShowIds.add(id)
+      if (row.type === 'watch' || row.type === 'rewatch') {
+        noteEpisodeWatch(toInt(row.series_id), row.series_name, toDate(row), toInt(row.season_number), toInt(row.episode_number))
       }
       continue
     }
     if (row.entity_type !== 'movie') continue
     if (row.uuid) movieByUuid.set(row.uuid, row)
     const title = movieTitle(row)
-    if (!title) continue
-    const item: TvTimeItem = { title, year: toYear(row.release_date), mediaType: 'movie' }
-    if (row.type === 'towatch' || row.type === 'follow') watchlistMovies.set(title.toLowerCase(), item)
-    else if (row.type === 'watch' || row.type === 'rewatch') watchedMovies.set(title.toLowerCase(), item)
+    if (!title) {
+      if (row.type === 'watch' || row.type === 'rewatch') skippedWatched++
+      continue
+    }
+    if (row.type === 'towatch' || row.type === 'follow') {
+      watchlistMovies.set(title.toLowerCase(), { title, year: toYear(row.release_date), mediaType: 'movie' })
+    } else if (row.type === 'watch' || row.type === 'rewatch') {
+      // Same title + same day = one watch; a different day is a rewatch.
+      const date = toDate(row)
+      watchedMovies.set(`${title.toLowerCase()}|${date ?? ''}`, { title, year: toYear(row.release_date), mediaType: 'movie', watchedAt: date })
+    }
   }
 
   for (const row of buckets.get('ratings-live-votes.csv') ?? []) {
@@ -146,7 +185,13 @@ export function parseTvTimeCsvs(files: CsvFile[]): TvTimeParseResult {
     if (id == null) continue
     if (truthy(row.is_followed)) markShow(id, row.tv_show_name, { watchlist: true })
     else markShow(id, row.tv_show_name, {})
-    if (toInt(row.nb_episodes_seen)) watchedShowIds.add(id)
+    const seen = toInt(row.nb_episodes_seen)
+    if (seen) {
+      const w = watchedShows.get(id) ?? { count: 0 }
+      if (row.tv_show_name?.trim()) w.title = row.tv_show_name.trim()
+      w.declaredSeen = Math.max(w.declaredSeen ?? 0, seen)
+      watchedShows.set(id, w)
+    }
   }
 
   for (const row of buckets.get('tracking-prod-records-v2.csv') ?? []) {
@@ -157,21 +202,39 @@ export function parseTvTimeCsvs(files: CsvFile[]): TvTimeParseResult {
       if (truthy(row.is_archived)) markShow(id, row.series_name, { archived: true })
       else if (truthy(row.is_for_later) || truthy(row.is_followed)) markShow(id, row.series_name, { watchlist: true })
     } else if (key.startsWith('watch-episode-') || key.startsWith('rewatch-episode-')) {
-      const id = toInt(row.s_id)
-      if (id != null) watchedShowIds.add(id)
+      noteEpisodeWatch(toInt(row.s_id), row.series_name, toDate(row), toInt(row.s_no), toInt(row.ep_no))
     }
   }
 
   for (const name of EPISODE_FILES) {
     for (const row of buckets.get(name) ?? []) {
-      const id = toInt(row.tv_show_id)
-      if (id != null) watchedShowIds.add(id)
+      noteEpisodeWatch(toInt(row.tv_show_id), row.tv_show_name, toDate(row), toInt(row.episode_season_number), toInt(row.episode_number))
     }
   }
 
-  // Ratings beat watchlist entries for the same title — a rated movie was watched.
   const ratings = [...ratingByUuid.values()]
-  const ratedTitles = new Set(ratings.map((r) => r.title.toLowerCase()))
+
+  const watched: TvTimeItem[] = [...watchedMovies.values()]
+  for (const [tvdbId, w] of watchedShows) {
+    const title = w.title ?? shows.get(tvdbId)?.title
+    if (!title) {
+      skippedWatched++
+      continue
+    }
+    watched.push({
+      title,
+      tvdbId,
+      mediaType: 'tv',
+      watchedAt: w.maxDate,
+      episodes: w.count || w.declaredSeen,
+      lastEpisode: w.lastEp ? `S${w.lastEp.s}E${w.lastEp.e}` : undefined
+    })
+  }
+
+  // A watched or rated title doesn't belong on the to-watch list — the same
+  // semantics mark-watched applies in-app. Shows keep their spot: episodes
+  // watched doesn't mean the series is finished.
+  const doneTitles = new Set([...watched, ...ratings].map((w) => w.title.toLowerCase()))
   const watchlist: TvTimeItem[] = []
 
   for (const [tvdbId, show] of shows) {
@@ -179,15 +242,8 @@ export function parseTvTimeCsvs(files: CsvFile[]): TvTimeParseResult {
     watchlist.push({ title: show.title, tvdbId, mediaType: 'tv' })
   }
   for (const [key, item] of watchlistMovies) {
-    if (!ratedTitles.has(key)) watchlist.push(item)
+    if (!doneTitles.has(key)) watchlist.push(item)
   }
 
-  const skippedWatched =
-    [...watchedMovies.keys()].filter((k) => !ratedTitles.has(k)).length +
-    [...watchedShowIds].filter((id) => {
-      const show = shows.get(id)
-      return !show?.watchlist || show.archived
-    }).length
-
-  return { watchlist, ratings, skippedWatched, filesRead, filesIgnored }
+  return { watchlist, ratings, watched, skippedWatched, filesRead, filesIgnored }
 }
