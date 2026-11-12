@@ -46,10 +46,6 @@
     {
       "path": "/api/cron/price-drops",
       "schedule": "0 15 * * 3"
-    },
-    {
-      "path": "/api/cron/trakt-lists",
-      "schedule": "0 18 * * 2"
     }
   ]
 }
