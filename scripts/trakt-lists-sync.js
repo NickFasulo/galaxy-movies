@@ -132,6 +132,16 @@ async function main() {
 
   for (const list of plan.lists) {
     let slug = slugs.get(list.name)
+    // Free tier caps at 5 lists — last month's departures list is renamed in
+    // place instead of claiming a fresh slot every month.
+    if (!slug && list.name.startsWith('Leaving Soon')) {
+      const stale = existing.find((l) => l.name?.startsWith('Leaving Soon') && l.ids?.slug)
+      if (stale) {
+        const renamed = await trakt(at, `users/me/lists/${stale.ids.slug}`, { method: 'PUT', body: { name: list.name, description: list.description } })
+        slug = renamed?.ids?.slug
+        if (slug) console.log(`renamed "${stale.name}" -> "${list.name}"`)
+      }
+    }
     if (!slug) {
       const created = await trakt(at, 'users/me/lists', {
         method: 'POST',
@@ -142,9 +152,9 @@ async function main() {
         console.error(`skipped "${list.name}" — create failed`)
         continue
       }
-      slugs.set(list.name, slug)
       console.log(`created "${list.name}"`)
     }
+    slugs.set(list.name, slug)
 
     const entries = (await trakt(at, `users/me/lists/${slug}/items`)) || []
     const movies = entries.filter((e) => e.movie?.ids?.tmdb).map((e) => ({ ids: { tmdb: e.movie.ids.tmdb } }))

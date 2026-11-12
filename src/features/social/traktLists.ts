@@ -13,6 +13,9 @@ import { SITE_URL } from '../../lib/site'
 // a residential connection. This builds the desired list contents; the cron
 // route serves them to that script.
 const LIST_CAP = 50
+// Trakt's free tier caps an account at 5 lists — four provider slots plus the
+// monthly departures list. Slice keeps BROADCAST_PROVIDERS' importance order.
+const TRAKT_LIST_PROVIDERS = BROADCAST_PROVIDERS.slice(0, 4)
 const LIST_DESC = `Auto-updated from Galaxy Movies — ${SITE_URL}/leaving`
 
 type ListableTitle = Pick<CatalogTitle, 'tmdbId' | 'tmdbType' | 'popularity'>
@@ -53,7 +56,7 @@ const toList = (name: string, titles: ListableTitle[]): TraktListContent => {
 
 export async function buildTraktLists(): Promise<TraktListsPlan> {
   const plan: TraktListsPlan = { lists: [], skipped: [] }
-  const changes = await getProviderChanges(BROADCAST_PROVIDERS)
+  const changes = await getProviderChanges(TRAKT_LIST_PROVIDERS)
 
   // Free-tier accounts cap at 5 lists — the merged departures list is the
   // signature content, so it claims a slot before per-provider lists do.
@@ -66,7 +69,7 @@ export async function buildTraktLists(): Promise<TraktListsPlan> {
   if (departuresList.movies.length || departuresList.shows.length) plan.lists.push(departuresList)
   else plan.skipped.push(departuresList.name)
 
-  for (const key of BROADCAST_PROVIDERS) {
+  for (const key of TRAKT_LIST_PROVIDERS) {
     const name = `New on ${providerLabel(key)} this week`
     const added = pickTop(changes[key]?.added || [])
     if (!added.length) {
