@@ -32,6 +32,7 @@ import { isBot, isPreviewBot, isSearchEngine } from '../../../lib/rateLimiter'
 import { getProviderAffiliateLinks } from '../../monetize/takeads'
 import { getTitleChanges, type TitleChangeEvents } from '../streamingChanges'
 import { getTitleTenure, getProviderTenureStats, type TenureStint, type TenureStats } from '../tenure'
+import { estimateDigitalWindow, describeEstimate, type EstimateCopy } from '../streamingEstimate'
 import { withTimeout } from '../../../lib/withTimeout'
 import { setSwrCache } from '../../../lib/http'
 import { absoluteImageUrl, aggregateRatingSchema, personSchema, videoObjectSchema } from '../schema'
@@ -74,6 +75,7 @@ interface CommonProps {
   titleChanges: TitleChangeEvents | null
   titleTenure: Record<string, TenureStint> | null
   tenureStats: Record<string, TenureStats | null>
+  streamingEstimate: EstimateCopy | null
 }
 
 export type TitleDetailProps =
@@ -121,7 +123,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
           providerAffiliateLinks: {},
           titleChanges: null,
           titleTenure: null,
-          tenureStats: {}
+          tenureStats: {},
+          streamingEstimate: null
         }
         return media === 'movie'
           ? { props: { ...thin, media, title, director: null, topCast: [] } }
@@ -275,6 +278,22 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         else setSwrCache(context.res)
       }
 
+      // "When does it stream" answer for unreleased/in-theaters movies:
+      // confirmed US digital date, else theatrical + distributor-lag window.
+      // Built once here so SSR and hydration render the same sentence.
+      const today = new Date().toISOString().slice(0, 10)
+      const streamingEstimate = media === 'movie'
+        ? (() => {
+            const estimate = estimateDigitalWindow({
+              releaseDates: ratingsData,
+              companies: title.production_companies,
+              primaryDate: title.release_date,
+              today
+            })
+            return estimate ? describeEstimate(estimate, today) : null
+          })()
+        : null
+
       const common: CommonProps = {
         videoKey: validVideo?.key || null,
         videoMeta: validVideo ? { name: validVideo.name, publishedAt: validVideo.published_at } : null,
@@ -288,7 +307,8 @@ export function titleDetailServerSideProps(media: MediaType): GetServerSideProps
         providerAffiliateLinks,
         titleChanges,
         titleTenure,
-        tenureStats
+        tenureStats,
+        streamingEstimate
       }
 
       return media === 'movie'
@@ -311,7 +331,7 @@ export default function TitleDetailPage(props: TitleDetailProps) {
 function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>) {
   const { media, title } = props
   const isTv = media === 'tv'
-  const { videoKey, videoMeta, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, topCast } = props
+  const { videoKey, videoMeta, watchProviders, watchProvidersByRegion, detectedRegion, ageRating, aiSynopsis, similarTitles, similarListRef, providerAffiliateLinks, titleChanges, titleTenure, tenureStats, streamingEstimate, topCast } = props
 
   const displayTitle = isTv ? (title as TmdbTvDetails).name : (title as TmdbMovieDetails).title
   // Native-script name (Devanagari, Tamil, …) — TMDB ships it on the detail
@@ -379,8 +399,10 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
   const metaDescription = hasStreaming
     ? description
     : unreleased
-      ? `${displayTitle} ${isTv ? 'premieres' : 'releases'} ${dateFormatter(releaseDate!)} — not streaming yet. Get an email the day it lands.`
-      : `${displayTitle} isn't on any streaming service yet: get an email the day it lands.`
+      ? `${displayTitle} ${isTv ? 'premieres' : 'releases'} ${dateFormatter(releaseDate!)} — ${streamingEstimate?.tail || 'not streaming yet'}. Get an email the day it lands.`
+      : streamingEstimate?.tail
+        ? `${displayTitle} isn't streaming yet — ${streamingEstimate.tail}. Get an email the day it lands.`
+        : `${displayTitle} isn't on any streaming service yet: get an email the day it lands.`
   const genres = title.genres?.map((g) => g.name) || []
   const ogSubtitle = (!isTv && tagline) || description
   const releaseYear = Number((releaseDate || '').slice(0, 4)) || null
@@ -485,6 +507,7 @@ function TitleDetailContent(props: Exclude<TitleDetailProps, { error: string }>)
                 mediaType={media}
                 releaseYear={releaseYear}
                 hasTitleEvents={hasTitleEvents}
+                estimateLine={streamingEstimate?.line}
               />
             </Box>
 

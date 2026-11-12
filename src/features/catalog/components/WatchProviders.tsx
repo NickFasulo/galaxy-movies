@@ -185,7 +185,8 @@ export default function WatchProviders({
   tmdbId,
   mediaType = 'movie',
   releaseYear,
-  hasTitleEvents
+  hasTitleEvents,
+  estimateLine
 }: {
   watchProviders?: WatchProvidersRegion | null
   allWatchProviders?: Record<string, WatchProvidersRegion> | null
@@ -197,6 +198,7 @@ export default function WatchProviders({
   mediaType?: MediaType
   releaseYear?: string | number | null
   hasTitleEvents?: boolean
+  estimateLine?: string | null
 }) {
   const { services } = useUserData()
   const [chosenRegion, setChosenRegion] = useState<string | null>(null)
@@ -345,7 +347,7 @@ export default function WatchProviders({
         ) : (
           <Box>
             <Text color='gray.300' fontSize='xs' mb={1.5}>
-              Not currently available to stream: a VPN can sometimes unlock it in another region.
+              {estimateLine || 'Not currently available to stream: a VPN can sometimes unlock it in another region.'}
             </Text>
             {!hasTitleEvents && movieTitle && (
               <StreamingAlertCta tmdbId={tmdbId} tmdbType={mediaType} title={movieTitle} />

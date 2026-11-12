@@ -10,6 +10,14 @@ export function dateFormatter(date: string | number | Date): string {
   })
 }
 
+export function monthYearFormatter(date: string | number | Date): string {
+  return new Date(date).toLocaleDateString('en-us', {
+    year: 'numeric',
+    month: 'long',
+    timeZone: 'UTC'
+  })
+}
+
 export function timeFormatter(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60

@@ -34,7 +34,7 @@ const addDays = (base: Date, days: number) => {
   return d
 }
 
-function usDigitalDate(dates: ReleaseDatesResponse | null): string | null {
+export function usDigitalDate(dates: ReleaseDatesResponse | null): string | null {
   const digital = (dates?.results || [])
     .filter((r) => r.iso_3166_1 === 'US')
     .flatMap((r) => r.release_dates || [])
