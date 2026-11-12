@@ -54,7 +54,10 @@ async function traktFetch(token: string, path: string, init: { method?: string; 
     console.error(`Trakt ${init.method || 'GET'} ${path} threw:`, err)
     return null
   })
-  if (resp && !resp.ok) console.error(`Trakt ${init.method || 'GET'} ${path}:`, resp.status)
+  if (resp && !resp.ok) {
+    const body = await resp.text().catch(() => '')
+    console.error(`Trakt ${init.method || 'GET'} ${path}:`, resp.status, body.slice(0, 300))
+  }
   return resp
 }
 
