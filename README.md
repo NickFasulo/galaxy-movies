@@ -23,7 +23,7 @@ Live at [galaxymovies.app](https://galaxymovies.app).
 * **🔔 Alerts:** Email and web-push notifications when a specific title lands on a service, a weekly digest of everything coming/leaving, weekly price-drop alerts on tracked titles, and an ICS calendar feed. Optional Telegram bot.
 
 
-* **📣 Social Broadcasts:** Daily streaming-change posts across Bluesky, Mastodon, X, Reddit, Tumblr, Pinterest, Facebook, Discord, and Telegram, plus an auto-generated video cross-posted to TikTok, YouTube Shorts, and IG Reels.
+* **📣 Social Broadcasts:** Daily streaming-change posts across Bluesky, Mastodon, X, Reddit, Tumblr, Pinterest, Facebook, Discord, Telegram, Threads, and LinkedIn, plus an auto-generated video cross-posted to TikTok, YouTube Shorts, IG Reels, and Facebook Reels.
 
 
 * **📖 AI Synopses:** Get quick, objective film summaries generated via the OpenAI API before deciding what to watch.
@@ -107,7 +107,7 @@ Create `.env.local` and fill in what you need. `TMDB_API_KEY` is the only hard r
 | `NEXT_PUBLIC_UMAMI_*` | Analytics |
 | `TAKEADS_*` / `NEXT_PUBLIC_AMAZON_IN_TAG` | Affiliate monetization |
 
-Social-channel keys (`BSKY_*`, `TELEGRAM_*`, `X_*`, `MASTODON_*`, `REDDIT_*`, `TUMBLR_*`, `PINTEREST_*`, `FB_*`, `SOCIAL_*_WEBHOOK`) each gate an optional broadcast channel. `TIKTOK_*`, `YT_*`, and `IG_*` credentials are only used by the GitHub Actions video pipeline, not the app runtime.
+Social-channel keys (`BSKY_*`, `TELEGRAM_*`, `X_*`, `MASTODON_*`, `REDDIT_*`, `TUMBLR_*`, `PINTEREST_*`, `FB_*`, `THREADS_*`, `LINKEDIN_*`, `SOCIAL_*_WEBHOOK`) each gate an optional broadcast channel. `TIKTOK_*`, `YT_*`, `IG_*`, and the video-pipeline `FB_*` credentials are only used by the GitHub Actions video pipeline, not the app runtime. `REDDIT_ENGAGE_*` belongs to the community-engagement cron (other subs), not the dormant broadcast channel.
 
 ## 📁 Structure
 
@@ -134,7 +134,7 @@ npm run smoke          # post-deploy probe against prod
 npm run smoke:workerd  # boot the built bundle under wrangler dev + smoke it
 ```
 
-Scheduled jobs (streaming-change diffs, watchlist + price-drop alerts, weekly digest, social broadcasts/engagement/ad-hoc posts, content generation, charts, digital releases, GSC indexing report) run via worker `scheduled()` triggers. The daily streaming-diff video renders in GitHub Actions (workerd has no ffmpeg) and posts to TikTok, YouTube Shorts, and IG Reels.
+Scheduled jobs (streaming-change diffs, watchlist + price-drop alerts, weekly digest, social broadcasts/engagement/ad-hoc posts, content generation, charts, digital releases, GSC indexing report, Reddit community engagement) run via worker `scheduled()` triggers. The daily streaming-diff video renders in GitHub Actions (workerd has no ffmpeg) and posts to TikTok, YouTube Shorts, IG Reels, and Facebook Reels.
 
 Vercel is cold standby only — DNS records and `git.deploymentEnabled: false` in `vercel.json` keep it ready for instant rollback.
 

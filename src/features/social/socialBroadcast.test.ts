@@ -34,7 +34,9 @@ const SOCIAL_ENVS = [
   'MASTODON_INSTANCE', 'MASTODON_TOKEN', 'X_API_KEY', 'X_API_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET',
   'REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'REDDIT_USERNAME', 'REDDIT_PASSWORD', 'REDDIT_SUBREDDIT',
   'TUMBLR_BLOG', 'TUMBLR_ACCESS_TOKEN', 'PINTEREST_BOARD', 'PINTEREST_ACCESS_TOKEN',
-  'FB_PAGE_ID', 'FB_PAGE_ACCESS_TOKEN', 'SOCIAL_FACEBOOK_WEBHOOK'
+  'FB_PAGE_ID', 'FB_PAGE_ACCESS_TOKEN', 'SOCIAL_FACEBOOK_WEBHOOK',
+  'THREADS_USER_ID', 'THREADS_ACCESS_TOKEN',
+  'LINKEDIN_ACCESS_TOKEN', 'LINKEDIN_REFRESH_TOKEN', 'LINKEDIN_AUTHOR_URN', 'LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET'
 ]
 const clearSocialEnv = () => SOCIAL_ENVS.forEach((k) => delete process.env[k])
 
@@ -571,5 +573,90 @@ describe('broadcastCustomPost', () => {
     expect(body.link).toContain('galaxymovies.app/movie-night')
     expect(body.link).toContain('utm_source=facebook')
     expect(body.link).toContain('utm_campaign=adhoc')
+  })
+})
+
+describe('threads channel', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+    process.env.THREADS_USER_ID = '123'
+    process.env.THREADS_ACCESS_TOKEN = 'tok'
+  })
+
+  it('creates a container then publishes it', async () => {
+    fetchSpy.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/threads_publish')) return new Response(JSON.stringify({ id: 'pub' }), { status: 200 })
+      if (url.includes('/threads?') || url.endsWith('/threads')) return new Response(JSON.stringify({ id: 'cont' }), { status: 200 })
+      if (url.includes('refresh_access_token')) return new Response(JSON.stringify({ access_token: 'rotated' }), { status: 200 })
+      return new Response('{}', { status: 200 })
+    })
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.threads.status).toBe('posted')
+
+    const create = fetchSpy.mock.calls.find(([input]) => String(input).endsWith('/threads'))
+    const createBody = new URLSearchParams(String(create![1]?.body))
+    expect(createBody.get('media_type')).toBe('TEXT')
+    expect(createBody.get('access_token')).toBe('tok')
+    expect(createBody.get('text')).toContain('utm_source=threads')
+
+    const publish = fetchSpy.mock.calls.find(([input]) => String(input).includes('threads_publish'))
+    const publishBody = new URLSearchParams(String(publish![1]?.body))
+    expect(publishBody.get('creation_id')).toBe('cont')
+  })
+
+  it('reports the container-create failure and never publishes', async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ error: { message: 'bad token' } }), { status: 400 }))
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.threads.status).toBe('failed')
+    expect(results.threads.reason).toContain('bad token')
+    expect(fetchSpy.mock.calls.find(([input]) => String(input).includes('threads_publish'))).toBeUndefined()
+  })
+})
+
+describe('linkedin channel', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+    process.env.LINKEDIN_ACCESS_TOKEN = 'tok'
+    process.env.LINKEDIN_AUTHOR_URN = 'urn:li:person:abc'
+  })
+
+  it('posts commentary to /rest/posts with the api headers', async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ id: 'urn:li:share:1' }), { status: 201 }))
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.linkedin.status).toBe('posted')
+
+    const call = fetchSpy.mock.calls.find(([input]) => String(input).includes('api.linkedin.com/rest/posts'))
+    const [, init] = call!
+    const headers = init?.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer tok')
+    expect(headers['X-Restli-Protocol-Version']).toBe('2.0.0')
+    const body = JSON.parse(String(init?.body))
+    expect(body.author).toBe('urn:li:person:abc')
+    expect(body.commentary).toContain('galaxymovies.app/leaving')
+    expect(body.visibility).toBe('PUBLIC')
+  })
+
+  it('refreshes the token pair after a successful post', async () => {
+    process.env.LINKEDIN_REFRESH_TOKEN = 'rt'
+    process.env.LINKEDIN_CLIENT_ID = 'cid'
+    process.env.LINKEDIN_CLIENT_SECRET = 'csec'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('oauth/v2/accessToken')
+        ? new Response(JSON.stringify({ access_token: 'new-tok', refresh_token: 'new-rt' }), { status: 200 })
+        : new Response(JSON.stringify({ id: 'x' }), { status: 201 })
+    )
+
+    const results = await broadcastWeeklyDigest()
+    expect(results.linkedin.status).toBe('posted')
+    const refresh = fetchSpy.mock.calls.find(([input]) => String(input).includes('oauth/v2/accessToken'))
+    const body = new URLSearchParams(String(refresh![1]?.body))
+    expect(body.get('grant_type')).toBe('refresh_token')
+    expect(body.get('refresh_token')).toBe('rt')
   })
 })

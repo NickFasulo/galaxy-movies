@@ -10,9 +10,8 @@ export const config = { maxDuration: 60 }
 // broadcasts to every configured channel. Reddit goes through the Devvit
 // stash (adhocPost) like manual /api/cron/social-post calls.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'POST only' })
-  }
+  // No method check — the worker's scheduled() dispatch is a GET (same
+  // convention as social-broadcast; the POST-only check 405'd this cron).
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }

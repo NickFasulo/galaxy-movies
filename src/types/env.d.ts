@@ -45,6 +45,19 @@ declare namespace NodeJS {
     FB_PAGE_ID?: string
     FB_PAGE_ACCESS_TOKEN?: string
     SOCIAL_FACEBOOK_WEBHOOK?: string
+    THREADS_USER_ID?: string
+    THREADS_ACCESS_TOKEN?: string
+    LINKEDIN_ACCESS_TOKEN?: string
+    LINKEDIN_REFRESH_TOKEN?: string
+    LINKEDIN_AUTHOR_URN?: string
+    LINKEDIN_CLIENT_ID?: string
+    LINKEDIN_CLIENT_SECRET?: string
+    REDDIT_ENGAGE_CLIENT_ID?: string
+    REDDIT_ENGAGE_CLIENT_SECRET?: string
+    REDDIT_ENGAGE_USERNAME?: string
+    REDDIT_ENGAGE_PASSWORD?: string
+    REDDIT_ENGAGE_MODE?: string
+    REDDIT_ENGAGE_EMAIL?: string
     NEXT_PUBLIC_SITE_URL?: string
   NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY?: string
   WEBPUSH_PRIVATE_KEY?: string

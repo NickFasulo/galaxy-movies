@@ -9,8 +9,9 @@
 // mode can publish to accounts that have a role on the app, no App Review.
 //
 // 1. Mint a user token with scopes instagram_basic, instagram_content_publish,
-//    pages_show_list, pages_read_engagement. The Explorer picker may not list
-//    them — the reliable path is the OAuth dialog:
+//    pages_show_list, pages_read_engagement — add pages_manage_posts when the
+//    same Page token will also feed scripts/fb-reels-upload.js. The Explorer
+//    picker may not list them — the reliable path is the OAuth dialog:
 //    https://www.facebook.com/dialog/oauth?client_id=<app>&redirect_uri=<registered>
 //    &scope=<csv scopes>&response_type=token — then tick the Page in the
 //    asset picker or the permissions get no targets and /me/accounts is empty.

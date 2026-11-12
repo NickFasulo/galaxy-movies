@@ -4,6 +4,8 @@
 //
 // post() returns null on success or a short reason string on failure.
 
+import { getRedis } from '../../lib/redis'
+
 export interface SocialChannel {
   name: string
   // Post character cap — Bluesky 300, X 280, the rest effectively unbounded.
@@ -25,6 +27,36 @@ const postJson = async (url: string, init: RequestInit): Promise<string | null> 
     return err instanceof Error ? err.message : 'fetch failed'
   }
 }
+
+// postJson variant for calls whose response body matters (container ids).
+const postJsonResult = async (
+  url: string,
+  init: RequestInit
+): Promise<{ json?: { id?: string; error?: { message?: string }; message?: string }; error?: string }> => {
+  try {
+    const resp = await fetch(url, init)
+    const json = await resp.json().catch(() => null)
+    if (!resp.ok) {
+      const detail = json?.error?.message || json?.message || ''
+      return { error: `${resp.status}${detail ? `: ${String(detail).slice(0, 200)}` : ''}` }
+    }
+    return { json }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'fetch failed' }
+  }
+}
+
+// Expiring OAuth tokens (Threads/LinkedIn ~60d) can't be refreshed into
+// worker secrets — so Redis holds the rotated value and the env var is only
+// the seed. Same pattern as traktLists' brand creds.
+async function storedToken<T>(key: string, envSeed: T | undefined): Promise<T | undefined> {
+  const kv = getRedis()
+  const stored = kv ? await kv.hget<T>(key, 'token').catch(() => null) : null
+  return stored ?? envSeed
+}
+
+const storeToken = (key: string, token: unknown) =>
+  getRedis()?.hset(key, { token }).catch(() => undefined)
 
 // ---------- Bluesky ----------
 
@@ -182,6 +214,52 @@ const x: SocialChannel = {
 // ---------- Reddit (script app → own subreddit self post) ----------
 // Self post, not a link post: the digest body IS the content the sub exists
 // for, so the markdown goes in `text` and the site link rides in the footer.
+// redditAccessToken/redditSubmit are exported for the community-engagement
+// cron (redditEngage.ts) — separate REDDIT_ENGAGE_* creds, separate subs.
+
+const REDDIT_UA = 'galaxymovies-bot/1.0 (by /u/galaxymovies)'
+
+export async function redditAccessToken(
+  clientId: string,
+  clientSecret: string,
+  username: string,
+  password: string
+): Promise<{ token?: string; error?: string }> {
+  const resp = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      'User-Agent': REDDIT_UA
+    },
+    body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  }).catch(() => null)
+  if (!resp?.ok) return { error: `token failed: ${resp?.status ?? 'network'}` }
+  const token = (await resp.json().catch(() => null))?.access_token
+  return token ? { token } : { error: 'token missing' }
+}
+
+export async function redditSubmit(
+  token: string,
+  opts: { sub: string; title: string; text: string }
+): Promise<string | null> {
+  return postJson('https://oauth.reddit.com/api/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Bearer ${token}`,
+      'User-Agent': REDDIT_UA
+    },
+    body: new URLSearchParams({
+      sr: opts.sub,
+      title: opts.title.slice(0, 280),
+      kind: 'self',
+      text: opts.text,
+      resubmit: 'true',
+      api_type: 'json'
+    }).toString()
+  })
+}
 
 const reddit: SocialChannel = {
   name: 'reddit',
@@ -192,34 +270,17 @@ const reddit: SocialChannel = {
       process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET && process.env.REDDIT_USERNAME && process.env.REDDIT_PASSWORD
     ),
   async post(text, linkUrl, title) {
-    const tokenResp = await fetch('https://www.reddit.com/api/v1/access_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${btoa(`${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`)}`,
-        'User-Agent': 'galaxymovies-bot/1.0 (by /u/galaxymovies)'
-      },
-      body: `grant_type=password&username=${encodeURIComponent(process.env.REDDIT_USERNAME!)}&password=${encodeURIComponent(process.env.REDDIT_PASSWORD!)}`
-    }).catch(() => null)
-    if (!tokenResp?.ok) return `token failed: ${tokenResp?.status ?? 'network'}`
-    const token = (await tokenResp.json().catch(() => null))?.access_token
-    if (!token) return 'token missing'
-
-    return postJson('https://oauth.reddit.com/api/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'galaxymovies-bot/1.0 (by /u/galaxymovies)'
-      },
-      body: new URLSearchParams({
-        sr: process.env.REDDIT_SUBREDDIT || 'galaxymovies',
-        title: (title || text.split('\n')[0].replace(/:$/, '')).slice(0, 280),
-        kind: 'self',
-        text,
-        resubmit: 'true',
-        api_type: 'json'
-      }).toString()
+    const auth = await redditAccessToken(
+      process.env.REDDIT_CLIENT_ID!,
+      process.env.REDDIT_CLIENT_SECRET!,
+      process.env.REDDIT_USERNAME!,
+      process.env.REDDIT_PASSWORD!
+    )
+    if (!auth.token) return auth.error || 'token missing'
+    return redditSubmit(auth.token, {
+      sub: process.env.REDDIT_SUBREDDIT || 'galaxymovies',
+      title: title || text.split('\n')[0].replace(/:$/, ''),
+      text
     })
   }
 }
@@ -291,6 +352,117 @@ const facebook: SocialChannel = {
   }
 }
 
+// ---------- Threads (Meta app → brand account) ----------
+// Two-step publish: create a TEXT container, then publish it. Long-lived
+// tokens last ~60d; the refresh writes the rotated token to Redis (the env
+// var only seeds it) so weekly posts keep the token alive indefinitely.
+
+const THREADS_TOKEN_KEY = 'gm:social:threads'
+
+async function rotateThreadsToken(token: string) {
+  try {
+    const resp = await fetch(
+      `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(token)}`
+    )
+    const json = await resp.json().catch(() => null)
+    if (resp.ok && json?.access_token) await storeToken(THREADS_TOKEN_KEY, json.access_token)
+  } catch { /* opportunistic — next post retries */ }
+}
+
+const threads: SocialChannel = {
+  name: 'threads',
+  maxLen: 500,
+  ready: () => Boolean(process.env.THREADS_USER_ID && process.env.THREADS_ACCESS_TOKEN),
+  async post(text) {
+    const token = await storedToken<string>(THREADS_TOKEN_KEY, process.env.THREADS_ACCESS_TOKEN)
+    if (!token) return 'no token'
+    const uid = process.env.THREADS_USER_ID!
+
+    const create = await postJsonResult(`https://graph.threads.net/v1.0/${uid}/threads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ media_type: 'TEXT', text, access_token: token }).toString()
+    })
+    if (create.error) return create.error
+    if (!create.json?.id) return 'no container id'
+
+    const published = await postJson(`https://graph.threads.net/v1.0/${uid}/threads_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ creation_id: create.json.id, access_token: token }).toString()
+    })
+    if (published) return published
+    await rotateThreadsToken(token)
+    return null
+  }
+}
+
+// ---------- LinkedIn (app → personal profile or org page) ----------
+// Same rotation story as Threads: 60d access tokens, refresh via the OAuth
+// token endpoint, rotated pair lives in Redis. If the app wasn't issued a
+// refresh token, LINKEDIN_REFRESH_TOKEN stays unset and the channel runs on
+// the static env token until it dies (re-auth via scripts/linkedin-auth.js).
+
+const LINKEDIN_TOKEN_KEY = 'gm:social:linkedin'
+interface LinkedinTokens { accessToken: string; refreshToken?: string }
+
+async function rotateLinkedinToken(tokens: LinkedinTokens) {
+  const { LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET } = process.env
+  if (!tokens.refreshToken || !LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) return
+  try {
+    const resp = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: tokens.refreshToken,
+        client_id: LINKEDIN_CLIENT_ID,
+        client_secret: LINKEDIN_CLIENT_SECRET
+      }).toString()
+    })
+    const json = await resp.json().catch(() => null)
+    if (resp.ok && json?.access_token) {
+      await storeToken(LINKEDIN_TOKEN_KEY, {
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token || tokens.refreshToken
+      } satisfies LinkedinTokens)
+    }
+  } catch { /* opportunistic — next post retries */ }
+}
+
+const linkedin: SocialChannel = {
+  name: 'linkedin',
+  maxLen: 3000,
+  ready: () => Boolean(process.env.LINKEDIN_ACCESS_TOKEN && process.env.LINKEDIN_AUTHOR_URN),
+  async post(text) {
+    const tokens = await storedToken<LinkedinTokens>(LINKEDIN_TOKEN_KEY, {
+      accessToken: process.env.LINKEDIN_ACCESS_TOKEN!,
+      refreshToken: process.env.LINKEDIN_REFRESH_TOKEN
+    })
+    if (!tokens?.accessToken) return 'no token'
+
+    const created = await postJsonResult('https://api.linkedin.com/rest/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokens.accessToken}`,
+        'LinkedIn-Version': '202504',
+        'X-Restli-Protocol-Version': '2.0.0'
+      },
+      body: JSON.stringify({
+        author: process.env.LINKEDIN_AUTHOR_URN,
+        commentary: text,
+        visibility: 'PUBLIC',
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false
+      })
+    })
+    if (created.error) return created.error
+    await rotateLinkedinToken(tokens)
+    return null
+  }
+}
+
 export const SOCIAL_CHANNELS: SocialChannel[] = [
   bsky,
   discord,
@@ -300,5 +472,7 @@ export const SOCIAL_CHANNELS: SocialChannel[] = [
   reddit,
   tumblr,
   pinterest,
-  facebook
+  facebook,
+  threads,
+  linkedin
 ]

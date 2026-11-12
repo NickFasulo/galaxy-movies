@@ -48,7 +48,15 @@ export default defineConfig({
           RESEND_API_KEY: '',
           WATCHMODE_API_KEY: '',
           NEXT_PUBLIC_UMAMI_SRC: '',
-          NEXT_PUBLIC_UMAMI_WEBSITE_ID: ''
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID: '',
+          THREADS_USER_ID: '',
+          THREADS_ACCESS_TOKEN: '',
+          LINKEDIN_ACCESS_TOKEN: '',
+          LINKEDIN_AUTHOR_URN: '',
+          REDDIT_ENGAGE_CLIENT_ID: '',
+          REDDIT_ENGAGE_CLIENT_SECRET: '',
+          REDDIT_ENGAGE_USERNAME: '',
+          REDDIT_ENGAGE_PASSWORD: ''
         }
       }
 })
