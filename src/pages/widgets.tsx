@@ -220,6 +220,21 @@ ${SITE_URL}/api/rss/${provider}
 ${SITE_URL}/api/cal/${provider}`}
         </Box>
 
+        <Heading as='h2' size='md' mt={12} mb={4}>Use with Zapier</Heading>
+        <Text maxW='42rem' color='gray.400' fontSize='sm'>
+          The Galaxy Movies Zapier app triggers on new arrivals per service and looks up where any title streams — wire it
+          into Google Sheets, SMS, Slack, or anything else in your stack. Free, no API key.
+        </Text>
+        <Button mt={4} size='sm' {...secondaryButton} asChild>
+          <a
+            href='https://zapier.com/developer/public-invite/249654/484f9982a8fe07f19d17e5a781cc3b91/'
+            target='_blank'
+            rel='noopener'
+          >
+            Add the Zapier app
+          </a>
+        </Button>
+
         <Text mt={12} color='gray.500' fontSize='sm' maxW='42rem'>
           US catalogs, updated daily. Departure dates mark when a title was detected leaving the service. For commercial
           licensing or bulk feeds, <Link href='/contact' style={{ textDecoration: 'underline' }}>get in touch</Link>.

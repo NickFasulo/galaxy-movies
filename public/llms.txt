@@ -27,6 +27,7 @@
 - /api/rss/{provider} — per-service RSS feed of arrivals, departures and announced releases (or /api/rss/all)
 - /leaving.xml — RSS feed of recent departures
 - MCP server for agents: `npx -y galaxymovies-mcp` (stdio; provider list, catalog changes, arrivals/departures, where-to-watch, feed URLs — wraps the feeds above). Source: https://github.com/NickFasulo/galaxymovies-mcp
+- Zapier app (trigger: new arrivals per service; action: where-to-watch): https://zapier.com/developer/public-invite/249654/484f9982a8fe07f19d17e5a781cc3b91/ — free, no API key
 
 ## Data notes
 
