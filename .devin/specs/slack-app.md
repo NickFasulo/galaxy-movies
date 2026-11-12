@@ -46,20 +46,27 @@ display_information:
   description: What's new and leaving your streaming services
   background_color: "#14181c"
 features:
+  bot_user:
+    display_name: Galaxy Movies
+    always_online: false
   slash_commands:
     - command: /new
-      url: https://galaxymovies.app/api/slack/commands
+      url: https://www.galaxymovies.app/api/slack/commands
       description: Top streaming arrivals this week
       should_escape: false
     - command: /leaving
-      url: https://galaxymovies.app/api/slack/commands
+      url: https://www.galaxymovies.app/api/slack/commands
       description: What's leaving a streaming service
     - command: /where
-      url: https://galaxymovies.app/api/slack/commands
+      url: https://www.galaxymovies.app/api/slack/commands
       description: Where is a title streaming?
     - command: /calendar
-      url: https://galaxymovies.app/api/slack/commands
+      url: https://www.galaxymovies.app/api/slack/commands
       description: Link to the ICS feed for a service
+oauth_config:
+  scopes:
+    bot:
+      - commands
 settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
