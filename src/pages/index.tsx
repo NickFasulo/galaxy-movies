@@ -360,11 +360,10 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
             <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>Know when it streams. Know before it leaves.</Text>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={1}>Free alerts across your services — no account needed</Text>
-            <Text textAlign='center' color='gray.500' fontSize='2xs' letterSpacing='0.14em' textTransform='uppercase' mt={2} mb='1.5rem'>
+            <Text textAlign='center' color='gray.500' fontSize='xs' mt={2} mb='1.5rem' px={4}>
               {catalogSize >= 1000
-                ? `Every arrival, every departure — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs. `
-                : `Arrivals and departures tracked daily across ${providerCount} services — `}
+                ? `Free alerts, no account — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs. `
+                : `Free alerts, no account — arrivals and departures tracked daily across ${providerCount} services. `}
               <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>See the data</Link>
             </Text>
           </HomeHero>
