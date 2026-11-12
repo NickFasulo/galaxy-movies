@@ -104,7 +104,8 @@ const engageCredsReady = () =>
       process.env.REDDIT_ENGAGE_PASSWORD
   )
 
-const engageEmail = () => process.env.REDDIT_ENGAGE_EMAIL || process.env.INDEXING_REPORT_EMAIL
+const engageEmail = () =>
+  process.env.REDDIT_ENGAGE_EMAIL || process.env.INDEXING_REPORT_EMAIL || 'fasulo.nick@gmail.com'
 
 export async function runRedditEngage(now = new Date()): Promise<EngageResult> {
   const provider = engageProviderForWeek(now)
