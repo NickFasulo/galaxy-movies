@@ -24,7 +24,7 @@ export default function VideoModal({ videoKey }: { videoKey?: string | null }) {
         onClick={onOpen}
         aria-label="Watch trailer"
         data-umami-event='trailer-open'
-        bg='surface.raised' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'surface.overlay' }}
+        bg='blackAlpha.600' color='white' border='1px solid var(--chakra-colors-border-subtle)' _hover={{ bg: 'blackAlpha.800' }}
       >
         <Icon boxSize={{ base: 6, md: 5 }} asChild><BsCaretRightFill /></Icon>
       </Button>
