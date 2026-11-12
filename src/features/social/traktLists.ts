@@ -173,6 +173,23 @@ export async function maintainTraktLists(): Promise<TraktListsSummary> {
   const changes = await getProviderChanges(BROADCAST_PROVIDERS)
   const desc = `Auto-updated from Galaxy Movies — https://www.galaxymovies.app/leaving`
 
+  // Free-tier accounts cap at 5 lists — the merged departures list is the
+  // signature content, so it claims a slot before per-provider lists do.
+  const monthly = await getMonthlyChanges(BROADCAST_PROVIDERS)
+  const departures: (DatedCatalogTitle | LeavingSoonTitle)[] = []
+  for (const key of BROADCAST_PROVIDERS) {
+    departures.push(...(monthly[key]?.departed || []), ...(monthly[key]?.leavingSoon || []))
+  }
+  const leavingName = `Leaving Soon ${new Date().toISOString().slice(0, 7)}`
+  const items = pickTop(dedupe(departures))
+  if (!items.length) {
+    summary.skipped.push(leavingName)
+  } else {
+    const slug = await ensureList(auth.token, user, known, leavingName, desc)
+    if (slug && (await replaceItems(auth.token, user, slug, items))) summary.updated.push(leavingName)
+    else summary.skipped.push(leavingName)
+  }
+
   for (const key of BROADCAST_PROVIDERS) {
     const name = `New on ${providerLabel(key)} this week`
     const added = pickTop(changes[key]?.added || [])
@@ -182,22 +199,6 @@ export async function maintainTraktLists(): Promise<TraktListsSummary> {
     }
     const slug = await ensureList(auth.token, user, known, name, desc)
     if (slug && (await replaceItems(auth.token, user, slug, added))) summary.updated.push(name)
-    else summary.skipped.push(name)
-  }
-
-  const monthly = await getMonthlyChanges(BROADCAST_PROVIDERS)
-  const departures: (DatedCatalogTitle | LeavingSoonTitle)[] = []
-  for (const key of BROADCAST_PROVIDERS) {
-    departures.push(...(monthly[key]?.departed || []), ...(monthly[key]?.leavingSoon || []))
-  }
-  const month = new Date().toISOString().slice(0, 7)
-  const name = `Leaving Soon ${month}`
-  const items = pickTop(dedupe(departures))
-  if (!items.length) {
-    summary.skipped.push(name)
-  } else {
-    const slug = await ensureList(auth.token, user, known, name, desc)
-    if (slug && (await replaceItems(auth.token, user, slug, items))) summary.updated.push(name)
     else summary.skipped.push(name)
   }
 

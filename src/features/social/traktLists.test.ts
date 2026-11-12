@@ -109,7 +109,8 @@ describe('maintainTraktLists', () => {
 
     const creates = calls.filter((c) => c.url.endsWith('/users/me/lists') && c.method === 'POST')
     expect(creates).toHaveLength(3)
-    expect(creates[0].body?.name).toBe('New on Netflix this week')
+    // Departures claim a list slot before providers — free-tier caps at 5.
+    expect(creates[0].body?.name).toMatch(/^Leaving Soon \d{4}-\d{2}$/)
 
     const adds = calls.filter((c) => /\/items$/.test(c.url) && c.method === 'POST')
     const netflixAdd = adds.find((c) => c.url.includes('new-on-netflix-this-week'))
