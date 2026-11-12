@@ -19,7 +19,6 @@ import { useProviderCatalog } from '../features/catalog/hooks/useProviderCatalog
 import { useUserData } from '../features/alerts/hooks/useUserData'
 import { fetchDiscoverMovies, fetchListMovies, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders } from '../features/catalog/tmdb'
 import { getProviderCatalog } from '../features/catalog/providerCatalog'
-import { getCatalogSizes } from '../features/catalog/streamingChanges'
 import { detectRegion } from '../lib/region'
 import { ratingEntries, setServices } from '../lib/userData'
 import { setSwrCache } from '../lib/http'
@@ -35,8 +34,6 @@ interface Props {
   providerCatalog: WatchProvider[]
   trendingRail: TitleSummary[]
   newOn: { providerKey: string; providerLabel: string; movies: TmdbMovie[] }
-  catalogSize: number
-  providerCount: number
 }
 
 const nowStreamingBadge = (
@@ -71,7 +68,7 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
   const windowStart = new Date()
   windowStart.setDate(windowStart.getDate() - NEW_ON_WINDOW_DAYS)
 
-  const [popularData, trendingData, catalog, newOnData, sizes] = await Promise.all([
+  const [popularData, trendingData, catalog, newOnData] = await Promise.all([
     fetchDiscoverMovies({ category: 'popular', page: 1 }).catch(() => null),
     fetchTmdb<TmdbPaged<TrendingItem>>('/trending/all/week', { page: 1 }).catch(() => null),
     getProviderCatalog(region).catch(() => [] as WatchProvider[]),
@@ -83,8 +80,7 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
           with_watch_providers: railProviderIds.join('|'),
           watch_region: region
         }).catch(() => null)
-      : Promise.resolve(null),
-    getCatalogSizes('US').catch(() => null)
+      : Promise.resolve(null)
   ])
 
   const trendingItems: TitleSummary[] = (trendingData?.results || [])
@@ -119,14 +115,12 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
         providerKey: railProviderKey,
         providerLabel: streamingProviders[railProviderKey]?.title.replace(' Movies', '') || railProviderKey,
         movies: (newOnData?.results || []).slice(0, RAIL_SIZE)
-      },
-      catalogSize: sizes ? Object.values(sizes).reduce((n, s) => n + (s.m || 0) + (s.t || 0), 0) : 0,
-      providerCount: Object.keys(streamingProviders).filter((k) => isProviderAvailableInRegion(k, 'US')).length
+      }
     }
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn, catalogSize, providerCount }: Props) {
+export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
@@ -359,15 +353,13 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             <Heading as='h1' textAlign='center' mt='2rem'>
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>Know when it streams. Know before it leaves.</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>
+              Know when it streams.
+              <Box as='br' display={{ base: 'block', md: 'none' }} />
+              {' Know before it leaves.'}
+            </Text>
             <Text textAlign='center' color='gray.500' fontSize='xs' mt={2} mb='1.5rem' px={4}>
-              Free alerts, no account
-              <Box as='span' display={{ base: 'none', md: 'inline' }}>
-                {catalogSize >= 1000
-                  ? ` — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs`
-                  : ` — arrivals and departures tracked daily across ${providerCount} services`}
-              </Box>
-              {'. '}
+              Free alerts, no account.{' '}
               <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>See the data</Link>
             </Text>
           </HomeHero>
