@@ -39,26 +39,37 @@ export async function brandAccessToken(): Promise<{ token: string } | { error: '
   return { token: tokens.access_token }
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 async function traktFetch(token: string, path: string, init: { method?: string; body?: object } = {}) {
-  const resp = await fetch(`${TRAKT_API}/${path}`, {
-    method: init.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': TRAKT_UA,
-      'trakt-api-version': '2',
-      'trakt-api-key': process.env.TRAKT_CLIENT_ID!,
-      Authorization: `Bearer ${token}`
-    },
-    ...(init.body ? { body: JSON.stringify(init.body) } : {})
-  }).catch((err) => {
-    console.error(`Trakt ${init.method || 'GET'} ${path} threw:`, err)
-    return null
-  })
-  if (resp && !resp.ok) {
-    const body = await resp.text().catch(() => '')
-    console.error(`Trakt ${init.method || 'GET'} ${path}:`, resp.status, body.slice(0, 300))
+  // api.trakt.tv's Cloudflare edge 429s (error 1015) most worker egress IPs —
+  // each subrequest draws a fresh one, so a few retries usually find a clean path.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const resp = await fetch(`${TRAKT_API}/${path}`, {
+      method: init.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': TRAKT_UA,
+        'trakt-api-version': '2',
+        'trakt-api-key': process.env.TRAKT_CLIENT_ID!,
+        Authorization: `Bearer ${token}`
+      },
+      ...(init.body ? { body: JSON.stringify(init.body) } : {})
+    }).catch((err) => {
+      console.error(`Trakt ${init.method || 'GET'} ${path} threw:`, err)
+      return null
+    })
+    if (resp?.status === 429 && attempt < 3) {
+      await sleep(1500 * (attempt + 1))
+      continue
+    }
+    if (resp && !resp.ok) {
+      const body = await resp.text().catch(() => '')
+      console.error(`Trakt ${init.method || 'GET'} ${path}:`, resp.status, body.slice(0, 300))
+    }
+    return resp
   }
-  return resp
+  return null
 }
 
 interface TraktList {
