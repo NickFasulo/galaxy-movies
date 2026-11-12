@@ -117,6 +117,32 @@ check "/api/cal/netflix" "BEGIN:VCALENDAR"
 
 if [ "$LEVEL" = "full" ]; then
   check "/api/streaming-changes?provider=netflix" '"provider":"netflix"'
+  # Freshness watchdog: the daily cron rewrites updatedAt for every provider —
+  # a dead or half-truncated run leaves stale diffs on every surface with a
+  # healthy 200 and no other alarm. 48h tolerates one missed run plus edge
+  # cache lag; providers legitimately skipped (empty fetch) age the same way.
+  ALL_CHANGES=$(curl -sSi -m 20 "$BASE/api/streaming-changes?provider=all" 2>&1)
+  if printf '%s' "$ALL_CHANGES" | head -30 | grep -qiF 'cf-mitigated: challenge'; then
+    echo "SKIP streaming-changes freshness (managed challenge)"
+    SKIP=$((SKIP + 1))
+  elif printf '%s' "$ALL_CHANGES" | grep -qF '"providers"'; then
+    OLDEST=$(printf '%s' "$ALL_CHANGES" | grep -o '"updatedAt":[0-9]*' | grep -o '[0-9]*' | sort -n | head -1)
+    if [ -z "$OLDEST" ]; then
+      echo "FAIL streaming-changes freshness -> providers payload had no updatedAt"
+      FAIL=1
+    else
+      AGE=$(( $(date +%s) - OLDEST / 1000 ))
+      if [ "$AGE" -gt 172800 ]; then
+        echo "FAIL streaming-changes freshness -> oldest updatedAt ${AGE}s (>48h)"
+        FAIL=1
+      else
+        echo "ok   streaming-changes freshness (oldest ${AGE}s)"
+      fi
+    fi
+  else
+    echo "FAIL streaming-changes freshness -> /api/streaming-changes?provider=all unhealthy"
+    FAIL=1
+  fi
   # Both 503 without a seeded Redis — prod-only checks.
   check "/api/charts" '"attribution"'
   check "/api/digital-releases" '"days"'

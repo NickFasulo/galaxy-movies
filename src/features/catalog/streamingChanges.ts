@@ -18,6 +18,14 @@ const CHANGE_LIST_LIMIT = 40
 const COMING_DAYS = 21
 const MONTHLY_TTL_SECONDS = 60 * 60 * 24 * 62
 const MONTHLY_LIST_LIMIT = 250
+// A skipped provider's stored monthly replays into the index/rollup only while
+// it's recent — a provider broken for weeks shouldn't republish as current.
+const MONTHLY_REPLAY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+// A fetched catalog under half the stored count means the TMDB discover index
+// truncated upstream — real purges run ~20%, never 50%. Small catalogs are
+// exempt: a niche service genuinely halves sometimes.
+const CATALOG_DROP_GUARD_MIN = 200
+const CATALOG_DROP_GUARD_RATIO = 0.5
 
 interface WatchmodeSourceInfo {
   id: number
@@ -104,6 +112,10 @@ interface PendingDeparture {
   d: string
   // Last date a watch/providers check still showed the provider attached.
   v?: string
+  // Date of the first confirmed-gone check — the departure publishes on a
+  // second consecutive `false`, so a transient TMDB availability drop can't
+  // become a false "left" on one bad response.
+  x?: string
   title: CatalogTitle
 }
 
@@ -117,6 +129,27 @@ interface CatalogSnapshot {
   // they publish as "left" — kills discover/metadata flapping at the boundary.
   pendingLeft?: Record<string, PendingDeparture>
 }
+
+// Departures published this run get queued for a delayed re-check: 4-7 days
+// later a free watch/providers call tells us whether the "left" event was a
+// false positive. The only accuracy signal the pipeline has — everything
+// upstream is defensive, this measures whether the defense works.
+interface DepartureAuditCandidate {
+  provider: string
+  region: 'US' | 'IN'
+  tmdbId: number
+  tmdbType: MediaType
+  date: string
+  popularity?: number
+}
+
+const AUDIT_QUEUE_KEY = 'changes:audit:queue'
+const ACCURACY_KEY = 'changes:accuracy'
+const AUDIT_SAMPLE = 15
+const AUDIT_MIN_AGE_DAYS = 4
+const AUDIT_MAX_AGE_DAYS = 7
+const AUDIT_QUEUE_DAYS = 30
+const ACCURACY_ENTRIES = 90
 
 // Per-title view of the monthly diffs: powers "arrives on X / left Y" notices
 // on detail pages and the single-title alert match. Built once a day in the
@@ -345,7 +378,7 @@ const SNAPSHOT_SRC = 'tmdb:v2'
 const CATALOG_PAGES = Number(process.env.CATALOG_PAGES) || 40
 const PAGE_BATCH = 10
 const PROVIDER_CHUNK = 3
-const LEFT_VERIFY_BUDGET = 20
+const LEFT_VERIFY_BUDGET = 50
 const LEFT_REVERIFY_DAYS = 3
 
 async function fetchTmdbCatalog(providerKey: string, region: string): Promise<{ titles: CatalogTitle[]; size: { m: number; t: number } }> {
@@ -418,6 +451,72 @@ async function stillOnProvider(t: CatalogTitle, providerKey: string, region: str
       .some((p) => ids.has(p.provider_id))
   } catch {
     return null
+  }
+}
+
+export interface AccuracyEntry {
+  date: string
+  sampled: number
+  falsePositives: number
+}
+
+// Re-check a sample of departures 4-7 days after publishing: a title whose
+// watch/providers still lists the service means the "left" event was wrong.
+// The stat lands in `changes:accuracy` (newest-first, ~90 entries).
+async function auditDepartureAccuracy(
+  kv: NonNullable<ReturnType<typeof getRedis>>,
+  candidates: DepartureAuditCandidate[],
+  today: string
+): Promise<AccuracyEntry | null> {
+  const [storedQueue, storedStats] = await Promise.all([
+    kv.get<DepartureAuditCandidate[]>(AUDIT_QUEUE_KEY).catch(() => null),
+    kv.get<AccuracyEntry[]>(ACCURACY_KEY).catch(() => null)
+  ])
+  const cutoff = new Date(Date.parse(today) - AUDIT_QUEUE_DAYS * 86400000).toISOString().slice(0, 10)
+  const ageOf = (d: string) => (Date.parse(today) - Date.parse(d)) / 86400000
+  const deduped = new Map<string, DepartureAuditCandidate>()
+  for (const c of [...(storedQueue || []), ...candidates]) {
+    if (c.date < cutoff) continue
+    const k = `${c.region}:${c.provider}:${c.tmdbType}:${c.tmdbId}`
+    const existing = deduped.get(k)
+    if (!existing || c.date > existing.date) deduped.set(k, c)
+  }
+
+  const due = [...deduped.values()]
+    .filter((c) => ageOf(c.date) >= AUDIT_MIN_AGE_DAYS && ageOf(c.date) <= AUDIT_MAX_AGE_DAYS)
+    .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+    .slice(0, AUDIT_SAMPLE)
+
+  let falsePositives = 0
+  for (const c of due) {
+    const on = await stillOnProvider(
+      { tmdbId: c.tmdbId, tmdbType: c.tmdbType, title: '', year: null },
+      c.provider,
+      c.region
+    )
+    if (on === true) falsePositives++
+  }
+
+  try {
+    await kv.set(AUDIT_QUEUE_KEY, [...deduped.values()])
+  } catch {}
+  if (!due.length) return null
+  const entry: AccuracyEntry = { date: today, sampled: due.length, falsePositives }
+  try {
+    await kv.set(ACCURACY_KEY, [entry, ...(storedStats || [])].slice(0, ACCURACY_ENTRIES))
+  } catch {}
+  return entry
+}
+
+// Weekly-report reader: the newest-first stat list auditDepartureAccuracy
+// appends to in each cron run.
+export async function getAccuracyStats(): Promise<AccuracyEntry[]> {
+  const kv = getRedis()
+  if (!kv) return []
+  try {
+    return (await kv.get<AccuracyEntry[]>(ACCURACY_KEY)) || []
+  } catch {
+    return []
   }
 }
 
@@ -519,7 +618,14 @@ async function diffCatalogs(opts: {
           continue
         }
         if (on) {
-          pendingLeft[f] = { ...rec, v: today }
+          pendingLeft[f] = { ...rec, v: today, x: undefined }
+          continue
+        }
+        // First confirmed-gone check only marks the record — publishing waits
+        // for the second consecutive `false`. Records that never got a check
+        // (budget out) still fall through on their second consecutive miss.
+        if (!rec.x) {
+          pendingLeft[f] = { ...rec, x: today }
           continue
         }
       } else if (rec.v && !recheckDue) {
@@ -600,12 +706,14 @@ export async function updateStreamingChanges() {
   if (!kv) return { error: 'Redis unavailable' }
 
   const summary: Record<string, { added: number; left: number; coming: number; catalog: number; pending?: number } | string | number> = {}
+  const today = new Date().toISOString().split('T')[0]
 
   // Every diff item is a detail page whose "where to watch" answer just
   // changed — collect their URLs and ping IndexNow once at the end so Bing
   // recrawls them before the search-demand spike, not weeks after.
   const indexNowUrls = new Set<string>()
   const warmCandidates: WarmCandidate[] = []
+  const auditCandidates: DepartureAuditCandidate[] = []
   const pushTitleUrls = (items: { tmdbId: number | null; tmdbType: MediaType; title?: string; popularity?: number }[]) => {
     for (const t of items) {
       if (!t.tmdbId) continue
@@ -637,7 +745,6 @@ export async function updateStreamingChanges() {
       if (key) (leavingByKey[key] ||= []).push(item)
     }
 
-    const today = new Date().toISOString().split('T')[0]
     const month = today.slice(0, 7)
     const prevMonthly = new Map(
       await Promise.all(
@@ -648,6 +755,14 @@ export async function updateStreamingChanges() {
       )
     )
 
+    const replayStoredMonthly = (key: string) => {
+      const stored = prevMonthly.get(key)
+      if (stored && Date.now() - stored.updatedAt <= MONTHLY_REPLAY_MAX_AGE_MS) {
+        monthliesForIndex.push([key, stored])
+        yearlyUs[`${key}:${month}`] = yearlyFromMonthly(stored)
+      }
+    }
+
     await mapChunked(Object.entries(sourceMap), PROVIDER_CHUNK, async ([key, source]) => {
       try {
         const { titles: catalog, size } = await fetchTmdbCatalog(key, 'US')
@@ -657,24 +772,33 @@ export async function updateStreamingChanges() {
           summary[key] = 'skipped: empty catalog'
           // Keep the skipped provider's last monthly in the title index so its
           // entries don't vanish until it fetches successfully again.
-          const stored = await kv.get<MonthlyChanges>(monthlyKey(key, month)).catch(() => null)
-          if (stored) {
-            monthliesForIndex.push([key, stored])
-            yearlyUs[`${key}:${month}`] = yearlyFromMonthly(stored)
-          }
+          replayStoredMonthly(key)
           return
         }
-        sizesUs[`${key}:${today}`] = size
         const [previous, prevChanges] = await Promise.all([
           kv.get<CatalogSnapshot>(catalogKey(key)).catch(() => null),
           kv.get<ProviderChanges>(changesKey(key)).catch(() => null)
         ])
 
+        const storedCount = previous?.titles?.length || 0
+        if (storedCount >= CATALOG_DROP_GUARD_MIN && catalog.length < storedCount * CATALOG_DROP_GUARD_RATIO) {
+          summary[key] = 'skipped: suspicious catalog drop'
+          replayStoredMonthly(key)
+          return
+        }
+        sizesUs[`${key}:${today}`] = size
+
         // This run's scheduled departures resolve against the fresh catalog —
         // they're still on the service until their date passes. Yesterday's
         // resolved rows (stored on the diff payload) carry dates forward for
         // titles that have since dropped out of the catalog.
-        const catalogByTitle = new Map(catalog.map((t) => [`${t.tmdbType}:${normalizeForMatch(t.title)}`, t]))
+        // First normalized-title match wins: catalog is popularity-sorted, so
+        // same-named remakes/versions bind the leaving date to the popular one.
+        const catalogByTitle = new Map<string, CatalogTitle>()
+        for (const t of catalog) {
+          const matchKey = `${t.tmdbType}:${normalizeForMatch(t.title)}`
+          if (!catalogByTitle.has(matchKey)) catalogByTitle.set(matchKey, t)
+        }
         const leavingSoon: LeavingSoonTitle[] = (leavingByKey[key] || []).map((item) => {
           const tmdbType = wmTitleTypeToMedia(item.title_type)
           const match = catalogByTitle.get(`${tmdbType}:${normalizeForMatch(item.title)}`)
@@ -706,6 +830,9 @@ export async function updateStreamingChanges() {
         })
         added.sort(byPopularity)
         left.sort(byPopularity)
+        for (const t of left) {
+          if (t.tmdbId) auditCandidates.push({ provider: key, region: 'US', tmdbId: t.tmdbId, tmdbType: t.tmdbType, date: departDate.get(t.tmdbId) || today, popularity: t.popularity })
+        }
 
         const payload: ProviderChanges = {
           source: source.name,
@@ -808,12 +935,29 @@ export async function updateStreamingChanges() {
     )
   )
 
+  const replayStoredMonthlyIn = (key: string) => {
+    const stored = prevInMonthly.get(key)
+    if (stored && Date.now() - stored.updatedAt <= MONTHLY_REPLAY_MAX_AGE_MS) {
+      monthliesForIndexIn.push([key, stored])
+    }
+  }
+
   await mapChunked(IN_TRACKED_PROVIDERS, PROVIDER_CHUNK, async (key) => {
     try {
       const { titles: catalog, size } = await fetchTmdbCatalog(key, 'IN')
-      if (!catalog.length) return
-      sizesIn[`${key}:${inToday}`] = size
+      if (!catalog.length) {
+        replayStoredMonthlyIn(key)
+        return
+      }
       const previous = await kv.get<CatalogSnapshot>(catalogKey(key, 'IN')).catch(() => null)
+
+      const inStoredCount = previous?.titles?.length || 0
+      if (inStoredCount >= CATALOG_DROP_GUARD_MIN && catalog.length < inStoredCount * CATALOG_DROP_GUARD_RATIO) {
+        summary[`in:${key}`] = 'skipped: suspicious catalog drop'
+        replayStoredMonthlyIn(key)
+        return
+      }
+      sizesIn[`${key}:${inToday}`] = size
 
       const { added, left, confirmed, pendingLeft, arriveDate, departDate, pendingCount } = await diffCatalogs({
         catalog,
@@ -824,6 +968,9 @@ export async function updateStreamingChanges() {
       })
       added.sort(byPopularity)
       left.sort(byPopularity)
+      for (const t of left) {
+        if (t.tmdbId) auditCandidates.push({ provider: key, region: 'IN', tmdbId: t.tmdbId, tmdbType: t.tmdbType, date: departDate.get(t.tmdbId) || inToday, popularity: t.popularity })
+      }
 
       const payload: ProviderChanges = {
         source: streamingProviders[key].title.replace(/ Movies$/, ''),
@@ -906,6 +1053,9 @@ export async function updateStreamingChanges() {
       console.error('IN size index write failed:', error)
     }
   }
+
+  const accuracy = await auditDepartureAccuracy(kv, auditCandidates, today).catch(() => null)
+  summary.accuracy = accuracy ? `departures n=${accuracy.sampled} fp=${accuracy.falsePositives}` : 'no samples due'
 
   // Trending-week titles ride the "where to watch X" search spikes — ping them
   // daily so Bing indexes the hot set even on days with no provider diff hits.

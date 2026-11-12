@@ -6,9 +6,10 @@ export default function About() {
   return (
     <InfoPage title='About Galaxy Movies' description='Learn about Galaxy Movies and its movie discovery features.' withBackButton>
       <InfoParagraph>
-        Galaxy Movies helps people discover popular, new, and upcoming movies in one place — and keep
-        track of them: save what you want to see, mark what you have watched, and get alerts when
-        titles land on or leave your services, all without an account.
+        Galaxy Movies tracks every arrival and departure across streaming services, daily — so you
+        always know what&apos;s new, what&apos;s leaving, and where to watch. Keep a list, rate what you see,
+        and get alerts before titles disappear from your services. No account needed; your data lives
+        on your device.
       </InfoParagraph>
       <InfoParagraph>
         Movie, TV information, and watch-provider availability are supplied by The Movie Database (TMDB). Rental and purchase prices, provider deep links, and streaming catalog changes are supplied by Watchmode. Availability may vary by country and can change over time.

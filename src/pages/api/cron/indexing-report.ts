@@ -7,6 +7,7 @@ import { buildWeeklyDigest, type Band, type BandShift, type WeeklyDigest } from 
 import { getChatDemand, type ChatDemand } from '../../../features/ai/chatLog'
 import { allListings, backlogListings, checkListings, unverifiableListings, type ListingCheck } from '../../../features/listings/check'
 import { suggestCtrRewrites, type CtrSuggestion } from '../../../features/indexing/ctrSuggest'
+import { getAccuracyStats, type AccuracyEntry } from '../../../features/catalog/streamingChanges'
 import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { INDEXNOW_STATUS_KEY, type IndexNowStatus } from '../../../lib/indexnow'
@@ -182,6 +183,19 @@ function chatDemandSection(d: ChatDemand) {
   )
 }
 
+function accuracySection(stats: AccuracyEntry[]) {
+  if (!stats.length) return ''
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
+  const week = stats.slice(0, 7)
+  const sampled = week.reduce((n, e) => n + e.sampled, 0)
+  const fp = week.reduce((n, e) => n + e.falsePositives, 0)
+  const pct = sampled ? Math.round(((sampled - fp) / sampled) * 100) : null
+  const flag = fp ? ` — <span style="color:#b91c1c;">${fp} "left" title${fp === 1 ? '' : 's'} still listed on the service</span>` : ''
+  return s(
+    `<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Diff accuracy</strong> · ${pct != null ? `departure precision ${pct}%` : 'no samples'} (n=${sampled} re-checked this week)${flag}</p>`
+  )
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isCronAuthorized(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -196,7 +210,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // trailer check additionally resolves each title's videos before
     // inspecting (trailer-less titles' /trailer URLs 404).
     const upcoming = await upcomingTitles()
-    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog, listingChecks] = await Promise.all([
+    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog, listingChecks, accuracyStats] = await Promise.all([
       runIndexCheck(12, upcoming),
       runTrailerCheck(upcoming).catch((err) => {
         console.error('Trailer check failed:', err)
@@ -217,7 +231,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       checkListings().catch((err) => {
         console.error('Listings check failed:', err)
         return [] as ListingCheck[]
-      })
+      }),
+      getAccuracyStats().catch(() => [] as AccuracyEntry[])
     ])
 
     // Daily submission counter — how many URLs the cron pushed to Bing's
@@ -260,7 +275,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (digest ? digestSection(digest, ctrSuggestions) : '<p style="color:#596579; font-size:12px;">Search Analytics section failed this week.</p>') +
           (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
           (chatDemand ? chatDemandSection(chatDemand) : '') +
-          listingsSection(listingChecks)
+          listingsSection(listingChecks) +
+          accuracySection(accuracyStats)
       })
     })
     if (sent) {

@@ -1,7 +1,7 @@
 {
   "name": "Galaxy Movies",
   "short_name": "Galaxy Movies",
-  "description": "Discover popular movies, browse by genre, and find where to watch them. Galaxy Movies helps you explore new releases, top-rated films, and streaming options all in one place.",
+  "description": "Track movies and shows across every streaming service — arrivals, departures, where to watch, and real rental prices. Free alerts, no account needed.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",

@@ -1,5 +1,7 @@
 {
   "site": "https://www.galaxymovies.app",
+  "shortDescription": "Free no-account movie & TV tracker: streaming availability, leaving-soon alerts, and arrivals/departures tracked daily across every service.",
+  "description": "Galaxy Movies is a free movie and TV tracker: where-to-watch availability, daily arrival/departure alerts across streaming services, real rental prices, and an AI pick assistant — all without an account.",
   "listings": [
     {
       "id": "alternativeto",

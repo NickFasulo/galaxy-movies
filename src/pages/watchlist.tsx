@@ -165,12 +165,12 @@ export default function Watchlist({ trending }: InferGetStaticPropsType<typeof g
     <>
       <PageHead
         title='My List'
-        description='Movies you have saved. Your list lives on this device: no account needed.'
+        description="Movies and shows you've saved. Your list lives on this device — no account needed."
         noindex
       />
       <PageShell
         title='My List'
-        description="Movies you've saved. Your list lives on this device: no account needed."
+        description="Movies and shows you've saved. Your list lives on this device — no account needed."
         withBackButton
       >
         <Box mt={6}>

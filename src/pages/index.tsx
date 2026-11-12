@@ -1,4 +1,5 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
@@ -18,6 +19,7 @@ import { useProviderCatalog } from '../features/catalog/hooks/useProviderCatalog
 import { useUserData } from '../features/alerts/hooks/useUserData'
 import { fetchDiscoverMovies, fetchListMovies, fetchTmdb, getProviderIds, isProviderAvailableInRegion, streamingProviders } from '../features/catalog/tmdb'
 import { getProviderCatalog } from '../features/catalog/providerCatalog'
+import { getCatalogSizes } from '../features/catalog/streamingChanges'
 import { detectRegion } from '../lib/region'
 import { ratingEntries, setServices } from '../lib/userData'
 import { setSwrCache } from '../lib/http'
@@ -33,6 +35,8 @@ interface Props {
   providerCatalog: WatchProvider[]
   trendingRail: TitleSummary[]
   newOn: { providerKey: string; providerLabel: string; movies: TmdbMovie[] }
+  catalogSize: number
+  providerCount: number
 }
 
 const nowStreamingBadge = (
@@ -67,7 +71,7 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
   const windowStart = new Date()
   windowStart.setDate(windowStart.getDate() - NEW_ON_WINDOW_DAYS)
 
-  const [popularData, trendingData, catalog, newOnData] = await Promise.all([
+  const [popularData, trendingData, catalog, newOnData, sizes] = await Promise.all([
     fetchDiscoverMovies({ category: 'popular', page: 1 }).catch(() => null),
     fetchTmdb<TmdbPaged<TrendingItem>>('/trending/all/week', { page: 1 }).catch(() => null),
     getProviderCatalog(region).catch(() => [] as WatchProvider[]),
@@ -79,7 +83,8 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
           with_watch_providers: railProviderIds.join('|'),
           watch_region: region
         }).catch(() => null)
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    getCatalogSizes('US').catch(() => null)
   ])
 
   const trendingItems: TitleSummary[] = (trendingData?.results || [])
@@ -114,12 +119,14 @@ export async function getServerSideProps({ req, res, query }: GetServerSideProps
         providerKey: railProviderKey,
         providerLabel: streamingProviders[railProviderKey]?.title.replace(' Movies', '') || railProviderKey,
         movies: (newOnData?.results || []).slice(0, RAIL_SIZE)
-      }
+      },
+      catalogSize: sizes ? Object.values(sizes).reduce((n, s) => n + (s.m || 0) + (s.t || 0), 0) : 0,
+      providerCount: Object.keys(streamingProviders).filter((k) => isProviderAvailableInRegion(k, 'US')).length
     }
   }
 }
 
-export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn }: Props) {
+export default function Home({ initialMovies, initialTotalPages, region, featured, featuredProviders, providerCatalog, trendingRail, newOn, catalogSize, providerCount }: Props) {
   const router = useRouter()
   const [category, setCategory] = useState('popular')
   const [searchInput, setSearchInput] = useState('')
@@ -274,7 +281,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
   }, [moviesList.length])
 
   const pageTitle = 'Galaxy Movies - Decide What to Watch Tonight'
-  const pageDescription = 'Pick something to watch on the services you already have, get free email alerts when titles arrive or leave, and track real rental prices — no account needed.'
+  const pageDescription = 'Track movies and shows across your services — arrivals, departures, and where they\'re streaming. Free alerts, real rental prices, no account needed.'
 
   const websiteSchema = {
     '@context': 'https://schema.org',
@@ -328,7 +335,7 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
         canonicalUrl={SITE_URL}
         ogTitle='Galaxy Movies'
         socialTitle='What to Watch Tonight'
-        ogSubtitle='Alerts before it leaves your services'
+        ogSubtitle='Arrivals and departures, tracked daily'
         structuredData={[websiteSchema, webApplicationSchema, organizationSchema]}
       >
         <link rel='icon' href='/favicon.ico' />
@@ -352,8 +359,14 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
             <Heading as='h1' textAlign='center' mt='2rem'>
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>What to watch tonight</Text>
-            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={1} mb='1.5rem'>Alerts before it leaves your services</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>Know when it streams. Know before it leaves.</Text>
+            <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={1}>Free alerts across your services — no account needed</Text>
+            <Text textAlign='center' color='gray.500' fontSize='2xs' letterSpacing='0.14em' textTransform='uppercase' mt={2} mb='1.5rem'>
+              {catalogSize >= 1000
+                ? `Every arrival, every departure — daily diffs across ${providerCount} services and ~${Math.floor(catalogSize / 1000)},000 titles in their catalogs. `
+                : `Arrivals and departures tracked daily across ${providerCount} services — `}
+              <Link href='/reports/streaming-churn' style={{ textDecoration: 'underline' }}>See the data</Link>
+            </Text>
           </HomeHero>
         )}
 

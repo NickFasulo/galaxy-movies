@@ -421,10 +421,14 @@ describe('updateStreamingChanges', () => {
     // First sighting: the add is pending, the miss is pendingLeft — neither publishes.
     expect(first.netflix).toEqual({ added: 0, left: 0, coming: 0, catalog: 2, pending: 2 })
 
+    const second = await updateStreamingChanges()
+    // The add promotes on its second sighting; the departure needs a second
+    // consecutive confirmed-gone check before it publishes.
+    expect(second.netflix).toEqual({ added: 1, left: 0, coming: 0, catalog: 2, pending: 1 })
+
     const summary = await updateStreamingChanges()
-    expect(summary.netflix).toEqual({ added: 1, left: 1, coming: 0, catalog: 2, pending: 0 })
+    expect(summary.netflix).toEqual({ added: 0, left: 1, coming: 0, catalog: 2, pending: 0 })
     const diff = fake.map.get('changes:diff:netflix') as { added: { tmdbId: number }[]; left: { tmdbId: number }[] }
-    expect(diff.added.map((t) => t.tmdbId)).toEqual([3])
     expect(diff.left.map((t) => t.tmdbId)).toEqual([1])
 
     const monthlyStored = fake.map.get(`changes:monthly:netflix:${thisMonth}`) as MonthlyChanges
@@ -437,7 +441,7 @@ describe('updateStreamingChanges', () => {
     expect(yearStored.arrived.map((t) => t.tmdbId)).toEqual([3])
     expect(yearStored.departed.map((t) => t.tmdbId)).toEqual([1])
 
-    const urls = mocks.pingIndexNow.mock.calls.at(-1)?.[0]
+    const urls = mocks.pingIndexNow.mock.calls.flatMap((c) => c[0])
     expect(urls).toEqual(expect.arrayContaining([
       expect.stringContaining('/movies/3'),
       expect.stringContaining('/movies/1'),
@@ -500,6 +504,80 @@ describe('updateStreamingChanges', () => {
     const index = fake.map.get('changes:index:US') as Record<string, { coming?: { p: string }[]; leaving?: { p: string }[] }>
     expect(index['movie:500']?.coming).toEqual([{ p: 'netflix', date: daysFromNow(5) }])
     expect(index['movie:1']?.leaving).toEqual([{ p: 'netflix', date: daysFromNow(10) }])
+  })
+
+  it('binds a same-named leaving title to the most popular catalog match', async () => {
+    vi.stubGlobal('fetch', fetchStub({
+      leaving_dates: [
+        { id: 9, title: 'Dune', title_type: 'movie', provider_id: 203, leaving_date: daysFromNow(10) }
+      ]
+    }))
+    // Two titles normalize to 'dune' — the leaving date must attach to the
+    // higher-popularity entry, not whichever a Map overwrite leaves last.
+    fake.map.set('changes:catalog:netflix', snapshot([
+      catalogTitle(555, 'Dune', 90),
+      catalogTitle(333, 'Dune', 10)
+    ]))
+    netflixCatalog([555, 333], ['Dune', 'Dune'])
+    await updateStreamingChanges()
+    const diff = fake.map.get('changes:diff:netflix') as {
+      leavingSoon: { tmdbId: number | null }[]
+    }
+    expect(diff.leavingSoon[0]?.tmdbId).toBe(555)
+  })
+
+  it('skips the diff and snapshot write when the catalog drops by half', async () => {
+    fake.map.set('changes:catalog:netflix', snapshot(
+      Array.from({ length: 300 }, (_, i) => catalogTitle(1000 + i))
+    ))
+    fake.map.set(`changes:monthly:netflix:${thisMonth}`, monthly({
+      updatedAt: Date.now(),
+      arrived: [{ tmdbId: 42, tmdbType: 'movie', title: 'Earlier', date: '2026-10-02', season: null }]
+    }))
+    // 60 fetched against 300 stored is an upstream truncation, not a real purge.
+    netflixCatalog(Array.from({ length: 60 }, (_, i) => 2000 + i))
+    const summary = await updateStreamingChanges()
+    expect(summary.netflix).toBe('skipped: suspicious catalog drop')
+    const stored = fake.map.get('changes:catalog:netflix') as { titles: unknown[] }
+    expect(stored.titles).toHaveLength(300)
+    // The stored monthly still feeds the index while it's fresh.
+    const index = fake.map.get('changes:index:US') as Record<string, { added?: { p: string; date?: string }[] }>
+    expect(index['movie:42']?.added).toEqual([{ p: 'netflix', date: '2026-10-02' }])
+  })
+
+  it('stops replaying a stored monthly once it is older than a week', async () => {
+    fake.map.set('changes:catalog:netflix', snapshot([catalogTitle(7)]))
+    fake.map.set(`changes:monthly:netflix:${thisMonth}`, monthly({
+      updatedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
+      arrived: [{ tmdbId: 42, tmdbType: 'movie', title: 'Earlier', date: '2026-10-02', season: null }]
+    }))
+    netflixCatalog([]) // fetch fails — the stored monthly is too old to replay
+    const summary = await updateStreamingChanges()
+    expect(summary.netflix).toBe('skipped: empty catalog')
+    const index = (fake.map.get('changes:index:US') as Record<string, unknown> | undefined) ?? {}
+    expect(index['movie:42']).toBeUndefined()
+  })
+
+  it('queues new departures and re-checks a 4-7 day old sample', async () => {
+    // Title 9 "left" netflix 5 days ago; TMDB still lists it → false positive.
+    fake.map.set('changes:audit:queue', [{
+      provider: 'netflix', region: 'US', tmdbId: 9, tmdbType: 'movie', date: daysFromNow(-5)
+    }])
+    mocks.fetchTmdb.mockImplementation(async (path) =>
+      path === '/movie/9/watch/providers'
+        ? { results: { US: { flatrate: [{ provider_id: 8 }] } } }
+        : { results: [] })
+    // A fresh departure publishes on the third run and joins the audit queue.
+    fake.map.set('changes:catalog:netflix', snapshot([catalogTitle(1), catalogTitle(2)]))
+    netflixCatalog([2])
+    await updateStreamingChanges()
+    await updateStreamingChanges()
+    const summary = await updateStreamingChanges()
+    expect((summary.accuracy as string)).toBe('departures n=1 fp=1')
+    const queue = fake.map.get('changes:audit:queue') as { tmdbId: number }[]
+    expect(queue.map((c) => c.tmdbId)).toContain(1)
+    const stats = fake.map.get('changes:accuracy') as { sampled: number; falsePositives: number }[]
+    expect(stats[0]).toEqual({ date: today, sampled: 1, falsePositives: 1 })
   })
 
   it('carries the scheduled departure date onto departed entries', async () => {
@@ -612,7 +690,9 @@ describe('updateStreamingChanges', () => {
       return { results: [], total_pages: 1 }
     })
     await updateStreamingChanges()
-    // Second run promotes the pending add and verifies the miss as a departure.
+    // Run 2 promotes the pending add and marks the miss confirmed-gone once;
+    // run 3 publishes the departure.
+    await updateStreamingChanges()
     await updateStreamingChanges()
 
     const year = (fake.map.get(`changes:year:IN:${today.slice(0, 4)}`) as Record<string, YearlyChanges>)[`netflix:${thisMonth}`]
@@ -688,17 +768,43 @@ describe('updateStreamingChanges', () => {
     expect(pending?.['movie:1']?.v).toBe(today)
   })
 
-  it('publishes the departure once verification fails past the re-check window', async () => {
+  it('publishes the departure on a second consecutive failed verification', async () => {
     mocks.fetchTmdb.mockImplementation(async () => ({ results: [] }))
     fake.map.set('changes:catalog:netflix', snapshot([catalogTitle(2)], {
       pendingLeft: { 'movie:1': { d: today, v: '2020-01-01', title: catalogTitle(1) } }
     }))
     netflixCatalog([2])
-    const summary = await updateStreamingChanges()
-    expect((summary.netflix as { left: number }).left).toBe(1)
+    const first = await updateStreamingChanges()
+    // First confirmed-gone check only marks the record — nothing publishes yet.
+    expect((first.netflix as { left: number }).left).toBe(0)
+    const pending = (fake.map.get('changes:catalog:netflix') as {
+      pendingLeft?: Record<string, { x?: string }>
+    }).pendingLeft
+    expect(pending?.['movie:1']?.x).toBe(today)
+
+    const second = await updateStreamingChanges()
+    expect((second.netflix as { left: number }).left).toBe(1)
     const monthlyStored = fake.map.get(`changes:monthly:netflix:${thisMonth}`) as MonthlyChanges
     // Departure date is the first-miss day, not publish day.
     expect(monthlyStored.departed.find((t) => t.tmdbId === 1)?.date).toBe(today)
+  })
+
+  it('clears the confirmed-gone mark when the provider shows up again on recheck', async () => {
+    mocks.fetchTmdb.mockImplementation(async (path) =>
+      path === '/movie/1/watch/providers'
+        ? { results: { US: { flatrate: [{ provider_id: 8 }] } } }
+        : { results: [] })
+    fake.map.set('changes:catalog:netflix', snapshot([catalogTitle(2)], {
+      pendingLeft: { 'movie:1': { d: '2020-01-01', x: '2020-01-02', title: catalogTitle(1) } }
+    }))
+    netflixCatalog([2])
+    const summary = await updateStreamingChanges()
+    expect((summary.netflix as { left: number }).left).toBe(0)
+    const pending = (fake.map.get('changes:catalog:netflix') as {
+      pendingLeft?: Record<string, { v?: string; x?: string }>
+    }).pendingLeft
+    expect(pending?.['movie:1']?.v).toBe(today)
+    expect(pending?.['movie:1']?.x).toBeUndefined()
   })
 
   it('fetches beyond page 1 to deepen the snapshot', async () => {
