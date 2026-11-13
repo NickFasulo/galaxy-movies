@@ -267,7 +267,24 @@
       "name": "openhunts",
       "category": "directory",
       "status": "queued",
-      "notes": "Newsletter sub only — no submission evidence; worth submitting if not already listed."
+      "submitUrl": "https://openhunts.com/projects/submit",
+      "notes": "Newsletter sub only; verified Nov 12 — not in their sitemap. 'Club Member' badge was embedded on /about without a listing; badge removed."
+    },
+    {
+      "id": "launchaf",
+      "name": "LaunchAF",
+      "category": "launch",
+      "status": "queued",
+      "submitUrl": "https://launchaf.com/submit",
+      "notes": "Instant-publish launch directory; free submit plus paid plans from $9.99. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
+    },
+    {
+      "id": "shipnlaunch",
+      "name": "ShipNLaunch",
+      "category": "launch",
+      "status": "queued",
+      "submitUrl": "https://www.shipnlaunch.com/submit",
+      "notes": "Free submission model. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
     },
     {
       "id": "slant",

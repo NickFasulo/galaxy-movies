@@ -1,6 +1,5 @@
 import InfoPage, { InfoParagraph } from '../components/InfoPage'
 import Link from 'next/link'
-import { Flex } from '@chakra-ui/react'
 
 export default function About() {
   return (
@@ -28,20 +27,6 @@ export default function About() {
         <Link href='/imdb-alternative' style={{ textDecoration: 'underline' }}>IMDb</Link>, or{' '}
         <Link href='/whats-on-netflix-alternative' style={{ textDecoration: 'underline' }}>What&apos;s on Netflix</Link>.
       </InfoParagraph>
-      <Flex wrap="wrap" gap="1.5rem" alignItems="center" justify={{ base: 'center', md: 'flex-start' }} my='2rem'>
-        <a href="https://launchaf.com/" target="_blank" rel="noopener" data-launchaf-badge="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://launchaf.com/api/badge/light?v=launchaf-blue-2026-2" alt="Featured on LaunchAF" width="200" height="56" />
-        </a>
-        <a href="https://www.shipnlaunch.com/" target="_blank" rel="noopener noreferrer">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://www.shipnlaunch.com/badges/featured-dark.svg" alt="Featured on ShipNLaunch" width="240" height="56" />
-        </a>
-        <a href="https://openhunts.com" target="_blank" title="OpenHunts Club">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img alt="OpenHunts Club Member" src="https://cdn.openhunts.com/badges/club.webp" width="195" height="auto" />
-        </a>
-      </Flex>
     </InfoPage>
   )
 }
