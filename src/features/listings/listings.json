@@ -37,79 +37,113 @@
       "status": "live",
       "submittedAt": "2026-11-12",
       "account": "fasulo.nick@gmail.com",
-      "notes": "v1.1.1 published. liveUrl needed — find in devconsole or Gmail receipt; new listings don't surface in store search."
+      "notes": "v1.1.1 published. liveUrl needed — item ID only exists in devconsole (chromewebstore.google.com/detail/...); no publish email received, not indexed in store search yet."
     },
     {
       "id": "product-hunt",
       "name": "Product Hunt",
       "category": "launch",
       "status": "live",
+      "liveUrl": "https://www.producthunt.com/posts/galaxy-movies",
       "submittedAt": "2026-09-24",
-      "notes": "Launched ~Sep 24, confirmed via Afterlaunch congrats email. liveUrl needed — PH blocks bots, verify manually."
+      "notes": "Submitted (unfeatured) post Sep 24 — 2 upvotes, #158, confirmed via hunted.space mirror. PH 403s bots — verify manually."
     },
     {
       "id": "uneed",
       "name": "Uneed",
       "category": "launch",
-      "status": "live",
-      "submittedAt": "2026-09-24",
-      "notes": "Scheduled Sep 23, launched Sep 24. liveUrl needed."
+      "status": "in-review",
+      "submittedAt": "2026-09-23",
+      "submitUrl": "https://www.uneed.best/submit-a-tool",
+      "account": "fasulo.nick@gmail.com",
+      "notes": "NOT launched — free tier put it in the waiting line; scheduled Feb 17, 2027. Needs 10 upvotes on launch day to stay published, 20 to keep dofollow. Fast-track $14.99 / skip-line $29.99 options exist."
     },
     {
       "id": "startupbase",
       "name": "StartupBase",
       "category": "directory",
       "status": "live",
+      "liveUrl": "https://startupbase.io/@nickfasulo",
       "submittedAt": "2026-09-24",
-      "notes": "Approved same day. liveUrl needed."
+      "notes": "Profile live (links galaxymovies.app). No product/launch page exists — worth posting a real launch from the account."
     },
     {
       "id": "fazier",
       "name": "Fazier",
       "category": "launch",
       "status": "live",
+      "liveUrl": "https://fazier.com/company/galaxy-movies",
       "submittedAt": "2026-11-07",
-      "notes": "Org page only, no launch (launch requires a site badge — skipped). liveUrl needed."
+      "notes": "Company page live with full profile + links. No launch (launch requires a site badge — skipped)."
     },
     {
       "id": "commune",
       "name": "Commune",
       "category": "launch",
       "status": "live",
+      "liveUrl": "https://commune.build/launch/galaxy_movies",
       "submittedAt": "2026-09-25",
-      "notes": "Live on launchpad; launch summary received Sep 28. liveUrl needed."
+      "notes": "Launched Sep 25-28 — score 59, 1 upvote, #5 of 5 for the week. Launch page live at the underscore URL (dated variant 404s)."
     },
     {
       "id": "sideprojectors",
       "name": "SideProjectors",
       "category": "directory",
       "status": "live",
+      "liveUrl": "https://www.sideprojectors.com/project/96389/galaxy-movies",
       "submittedAt": "2026-09-25",
-      "notes": "Approved, was on homepage. Re-submitted Oct 29 — second review pending. liveUrl needed."
+      "notes": "Showcase page live (listed Sep 24). Re-submitted Oct 29 — second review pending."
     },
     {
       "id": "coderlegion",
       "name": "CoderLegion",
       "category": "directory",
       "status": "live",
+      "liveUrl": "https://coderlegion.com/29497/galaxy-movies",
       "submittedAt": "2026-10-02",
-      "notes": "liveUrl needed."
+      "notes": "Project post live; plus a Dev Story interview (coderlegion.com/32487) and follow-up posts."
     },
     {
       "id": "tinylaunch",
       "name": "TinyLaunch",
       "category": "launch",
       "status": "live",
+      "liveUrl": "https://www.tinylaunch.com/launch/22919-galaxy-movies",
       "submittedAt": "2026-10-26",
-      "notes": "Launch results emailed Nov 2. liveUrl needed."
+      "notes": "Launch page live. Launch results emailed Nov 2."
     },
     {
       "id": "earlyhound",
       "name": "EarlyHound",
       "category": "directory",
       "status": "live",
+      "liveUrl": "https://earlyhound.com/products/galaxy-movies",
       "submittedAt": "2026-11-01",
-      "notes": "Added by a 'Scout', not self-submitted; claim link replied Nov 2. liveUrl needed."
+      "notes": "Product page live ('Site up · checked today', shows 'Launching 22 January 2027'). Added by a 'Scout'; claim link replied Nov 2."
+    },
+    {
+      "id": "makers",
+      "name": "Make.rs",
+      "category": "directory",
+      "status": "live",
+      "liveUrl": "https://make.rs/project/11329-galaxy-movies",
+      "notes": "Auto-indexed project page; verified Nov 13."
+    },
+    {
+      "id": "tinyshelf",
+      "name": "TinyShelf",
+      "category": "directory",
+      "status": "live",
+      "liveUrl": "https://www.tinyshelf.co/tools/galaxy-movies",
+      "notes": "Auto-indexed tool page; verified Nov 13."
+    },
+    {
+      "id": "pwas-app",
+      "name": "PWAs.app",
+      "category": "directory",
+      "status": "live",
+      "liveUrl": "https://pwas.app/apps/galaxy-movies",
+      "notes": "Auto-crawled PWA directory, PWA score 88/100; verified Nov 13."
     },
     {
       "id": "wordpress-org",
@@ -150,7 +184,7 @@
       "status": "in-review",
       "submittedAt": "2026-10-21",
       "submitUrl": "https://github.com/FMHY/edit/issues",
-      "notes": "Issue #6815 under review; maintainer reopened Discord thread — follow up if it stalls."
+      "notes": "Issue #6815 CLOSED Oct 22 — maintainer moved review to their Discord thread; galaxymovies not in FMHY wiki content as of Nov 13. Needs a Discord follow-up (fmhy.net Discord) since the GitHub path is exhausted."
     },
     {
       "id": "launchingnext",
@@ -195,9 +229,9 @@
       "id": "edge-addons",
       "name": "Edge Add-ons",
       "category": "store",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://partner.microsoft.com/",
-      "notes": "Same zip as AMO/CWS; free."
+      "notes": "Same zip as AMO/CWS; free. Needs a Microsoft Partner Center account."
     },
     {
       "id": "peerpush",
@@ -251,9 +285,9 @@
       "id": "raycast-store",
       "name": "Raycast store",
       "category": "store",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://github.com/raycast/extensions",
-      "notes": "raycast/ dir in main repo. Set author in package.json to a raycast.com username, npx ray lint, fork raycast/extensions, copy to extensions/galaxy-movies/, PR."
+      "notes": "Extension is store-ready (raycast/ in main repo, icons+ESLint pass) but lint rejects author 'NickFasulo' — 404 on raycast.com API. Create a raycast.com account, set package.json author to that username, npx ray lint, fork raycast/extensions, copy to extensions/galaxy-movies/, PR."
     },
     {
       "id": "afterlaunch",
@@ -266,89 +300,98 @@
       "id": "openhunts",
       "name": "openhunts",
       "category": "directory",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://openhunts.com/projects/submit",
-      "notes": "Newsletter sub only; verified Nov 12 — not in their sitemap. 'Club Member' badge was embedded on /about without a listing; badge removed."
+      "notes": "Submit page requires Google/GitHub/email login (verified Nov 13). Not in their sitemap; 'Club Member' badge was embedded on /about without a listing — removed Nov 12."
     },
     {
       "id": "launchaf",
       "name": "LaunchAF",
       "category": "launch",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://launchaf.com/submit",
-      "notes": "Instant-publish launch directory; free submit plus paid plans from $9.99. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
+      "notes": "Sign-in required: Google OAuth or one-time email code — code request attempted Nov 13, never arrived. Free tier + paid from $9.99. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
     },
     {
       "id": "shipnlaunch",
       "name": "ShipNLaunch",
       "category": "launch",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://www.shipnlaunch.com/submit",
-      "notes": "Free submission model. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
+      "notes": "Submit page is a login-gated SPA (verified Nov 13). Free submission model. 'Featured' badge was embedded on /about without a listing — removed Nov 12."
     },
     {
       "id": "slant",
       "name": "Slant",
       "category": "directory",
-      "status": "queued",
-      "notes": "Candidate — alternatives model like AlternativeTo."
+      "status": "needs-account",
+      "notes": "Community-driven alternatives model; contributions need a slant.co account. Site 403s bots."
     },
     {
       "id": "alternative-me",
       "name": "Alternative.me",
       "category": "directory",
-      "status": "queued"
+      "status": "queued",
+      "notes": "No public submit page found (/software/neu 404s) — check their contact/suggest flow manually."
     },
     {
       "id": "openalternative",
       "name": "OpenAlternative",
       "category": "directory",
-      "status": "queued"
+      "status": "needs-account",
+      "submitUrl": "https://openalternative.co/submit",
+      "notes": "Open-source-only directory — qualifies via the public galaxy-movies repo. Sign-in wall: magic link, Google, or GitHub (verified Nov 13)."
     },
     {
       "id": "launchigniter",
       "name": "Launchigniter",
       "category": "launch",
-      "status": "queued"
+      "status": "needs-account",
+      "submitUrl": "https://launchigniter.com/submit",
+      "notes": "/submit renders a login-gated SPA (verified Nov 13)."
     },
     {
       "id": "betabound",
       "name": "Betabound",
       "category": "directory",
-      "status": "queued"
+      "status": "queued",
+      "notes": "Poor fit — recruits beta testers, not a product directory. Announce path is /announce/ for beta programs only; deprioritize."
     },
     {
       "id": "capterra-getapp",
       "name": "Capterra / GetApp",
       "category": "directory",
-      "status": "queued",
-      "notes": "One submission feeds both Gartner Digital Markets properties."
+      "status": "needs-account",
+      "notes": "One submission feeds both Gartner Digital Markets properties; needs a vendor-portal account."
     },
     {
       "id": "productivity-directory",
       "name": "Productivity.directory",
       "category": "directory",
-      "status": "queued"
+      "status": "needs-account",
+      "submitUrl": "https://www.productivity.directory/submit",
+      "notes": "Submit page is sign-in gated (verified Nov 13)."
     },
     {
       "id": "feedly",
       "name": "Feedly",
       "category": "feed",
       "status": "queued",
-      "notes": "Submit RSS feeds for /new-on-streaming and provider diffs."
+      "notes": "No public submit form — Feedly indexes feeds via its own crawler; /feed.xml is already discoverable. Low priority."
     },
     {
       "id": "feedspot",
       "name": "Feedspot",
       "category": "feed",
-      "status": "queued"
+      "status": "queued",
+      "notes": "feedspot.com/fs/addsuggest 403s bots — manual browser submit."
     },
     {
       "id": "icalshare",
       "name": "iCalShare",
       "category": "feed",
       "status": "queued",
-      "notes": "Submit /api/cal/{provider} calendar feeds."
+      "notes": "Submit /api/cal/{provider} calendar feeds. Site unreachable from bots as of Nov 13 — check manually."
     },
     {
       "id": "mcp-official-registry",
@@ -366,39 +409,39 @@
       "status": "in-review",
       "submittedAt": "2026-11-11",
       "submitUrl": "https://github.com/public-apis/public-apis",
-      "notes": "PR submitted for /api/streaming-changes; check merge status next run."
+      "notes": "Two open PRs as of Nov 13: #8719 (streaming-changes API) and #8970 (MCP server). Awaiting maintainer review."
     },
     {
       "id": "discord-app-directory",
       "name": "Discord App Directory",
       "category": "store",
-      "status": "unknown",
+      "status": "needs-account",
       "submitUrl": "https://discord.com/developers/applications",
-      "notes": "Discord app exists; verify whether it's listed at discord.com/application-directory, submit for discovery if not."
+      "notes": "Discord app exists; verify listing at discord.com/application-directory in the dev console, submit for discovery if not."
     },
     {
       "id": "slack-app-directory",
       "name": "Slack App Directory",
       "category": "store",
-      "status": "unknown",
+      "status": "needs-account",
       "submitUrl": "https://api.slack.com/apps",
-      "notes": "Slack app exists; verify listing at slack.com/apps, submit for directory review if not."
+      "notes": "Slack app exists; verify listing at slack.com/apps in the app dashboard, submit for directory review if not."
     },
     {
       "id": "reddit-app-directory",
       "name": "Reddit app directory",
       "category": "store",
-      "status": "unknown",
+      "status": "needs-account",
       "submitUrl": "https://developers.reddit.com/",
-      "notes": "Devvit app exists (galaxy-movies-devvit repo); check apps.reddit.com listing status and publish flow."
+      "notes": "Devvit app exists (galaxy-movies-devvit repo); check apps.reddit.com listing status and publish flow in the dev console."
     },
     {
       "id": "crunchbase",
       "name": "Crunchbase",
       "category": "directory",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://www.crunchbase.com/add-new",
-      "notes": "Free company profile, high-DR backlink. Needs account."
+      "notes": "Free company profile, high-DR backlink. Email-verification seen in Gmail Nov 12 — account may be mid-setup; finish in browser."
     },
     {
       "id": "wellfound",
@@ -414,17 +457,17 @@
       "id": "f6s",
       "name": "F6S",
       "category": "directory",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://www.f6s.com/",
-      "notes": "Startup profile + deals network."
+      "notes": "Startup profile + deals network; account required."
     },
     {
       "id": "trustpilot",
       "name": "Trustpilot",
       "category": "directory",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://business.trustpilot.com/",
-      "notes": "Claim free business profile; review platform, high DR."
+      "notes": "Claim free business profile; review platform, high DR. Needs a B2B portal account."
     },
     {
       "id": "sourceforge",
@@ -441,52 +484,57 @@
       "id": "softwaresuggest",
       "name": "SoftwareSuggest",
       "category": "directory",
-      "status": "queued",
-      "submitUrl": "https://www.softwaresuggest.com/"
+      "status": "needs-account",
+      "submitUrl": "https://www.softwaresuggest.com/",
+      "notes": "Vendor listing via their software-provider portal; account required."
     },
     {
       "id": "killerstartups",
       "name": "KillerStartups",
       "category": "directory",
-      "status": "queued",
-      "submitUrl": "https://www.killerstartups.com/"
+      "status": "needs-account",
+      "submitUrl": "https://www.killerstartups.com/submit-startup/",
+      "notes": "Submit page funnels into 'join our community' — editorial/community-gated, not a self-serve form (verified Nov 13)."
     },
     {
       "id": "startupbuffer",
       "name": "Startup Buffer",
       "category": "directory",
       "status": "queued",
-      "submitUrl": "https://startupbuffer.com/"
+      "submitUrl": "https://startupbuffer.com/",
+      "notes": "Site 403s bots — manual browser submit."
     },
     {
       "id": "betapage",
       "name": "BetaPage",
       "category": "directory",
       "status": "queued",
-      "submitUrl": "https://betapage.co/"
+      "submitUrl": "https://betapage.co/",
+      "notes": "Submit URL 404s — find their current submit flow (betapage.co)."
     },
     {
       "id": "indiehackers",
       "name": "Indie Hackers products",
       "category": "directory",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://www.indiehackers.com/products",
-      "notes": "Product page + revenue/milestone posts; targeted founder audience."
+      "notes": "Product page + revenue/milestone posts; targeted founder audience. Needs IH account."
     },
     {
       "id": "startupstash",
       "name": "Startup Stash",
       "category": "directory",
       "status": "queued",
-      "submitUrl": "https://startupstash.com/"
+      "submitUrl": "https://startupstash.com/add-listing/",
+      "notes": "No self-serve form — listing goes through hello@startupstash.com email pitch."
     },
     {
       "id": "opera-addons",
       "name": "Opera add-ons",
       "category": "store",
-      "status": "queued",
+      "status": "needs-account",
       "submitUrl": "https://addons.opera.com/developer/",
-      "notes": "Accepts Chrome-extension zips; same package as CWS/AMO, free."
+      "notes": "Accepts Chrome-extension zips; same package as CWS/AMO, free. Needs Opera developer account."
     },
     {
       "id": "futurepedia",
@@ -494,51 +542,55 @@
       "category": "ai-directory",
       "status": "queued",
       "submitUrl": "https://www.futurepedia.io/submit-tool",
-      "notes": "Galaxy Bot qualifies us for AI directories; high traffic."
+      "notes": "Galaxy Bot qualifies us for AI directories; high traffic. Submit URL 404s as of Nov 13 — find current path."
     },
     {
       "id": "toolify",
       "name": "Toolify",
       "category": "ai-directory",
       "status": "queued",
-      "submitUrl": "https://www.toolify.ai/"
+      "submitUrl": "https://www.toolify.ai/",
+      "notes": "Site 403s bots — manual browser submit."
     },
     {
       "id": "topai-tools",
       "name": "TopAI.tools",
       "category": "ai-directory",
       "status": "queued",
-      "submitUrl": "https://topai.tools/"
+      "submitUrl": "https://topai.tools/",
+      "notes": "Site 403s bots — manual browser submit."
     },
     {
       "id": "smithery",
       "name": "Smithery",
       "category": "api-directory",
-      "status": "queued",
+      "status": "blocked",
       "submitUrl": "https://smithery.ai/",
-      "notes": "Largest MCP-server directory; claims servers from the official registry."
+      "notes": "DEAD — Smithery shut down its MCP directory Oct 31, 2026 and pivoted to Arcade; community submissions no longer exist."
     },
     {
       "id": "pulsemcp",
       "name": "PulseMCP",
       "category": "api-directory",
       "status": "queued",
-      "submitUrl": "https://www.pulsemcp.com/"
+      "submitUrl": "https://www.pulsemcp.com/",
+      "notes": "Site 403s bots. Crawls the official MCP registry — may auto-list; check manually."
     },
     {
       "id": "mcpservers-org",
       "name": "MCPServers.org",
       "category": "api-directory",
       "status": "queued",
-      "submitUrl": "https://mcpservers.org/"
+      "submitUrl": "https://mcpservers.org/submit",
+      "notes": "Free form, no account — but scripted submits are rejected (custom TanStack seroval protocol + WAF, tried Nov 13). 2-min manual form: category=Search, url=github.com/NickFasulo/galaxymovies-mcp, registryName=app.galaxymovies/mcp, free plan."
     },
     {
       "id": "inboxreads",
       "name": "InboxReads",
       "category": "feed",
-      "status": "queued",
-      "submitUrl": "https://inboxreads.co/",
-      "notes": "Newsletter directory — submit the weekly streaming digest."
+      "status": "needs-account",
+      "submitUrl": "https://inboxreads.co/submit",
+      "notes": "Newsletter directory — submit the weekly streaming digest. Account required before the submit form unlocks (verified Nov 13)."
     }
   ]
 }
