@@ -387,9 +387,11 @@
       "id": "wellfound",
       "name": "Wellfound (AngelList)",
       "category": "directory",
-      "status": "queued",
+      "status": "live",
+      "liveUrl": "https://wellfound.com/company/galaxy-movies",
       "submitUrl": "https://wellfound.com/",
-      "notes": "Free startup profile, high DR."
+      "submittedAt": "2026-11-12",
+      "notes": "Free startup profile, high DR. Live Nov 12; ~40% complete, About us/socials/funding still to fill."
     },
     {
       "id": "f6s",
@@ -411,9 +413,12 @@
       "id": "sourceforge",
       "name": "SourceForge",
       "category": "directory",
-      "status": "queued",
+      "status": "live",
+      "liveUrl": "https://sourceforge.net/projects/galaxy-movies/",
       "submitUrl": "https://sourceforge.net/software/vendors/new/",
-      "notes": "Business-software arm lists web apps; high DR."
+      "submittedAt": "2026-10-28",
+      "account": "nick-fasulo@users.sourceforge.net",
+      "notes": "OSS project page created Oct 28 via GitHub OAuth (repo clone + issues import confirmed by email). SF blocks bot checks (403) — verify manually. The /software/ vendor directory listing is a separate surface, still claimable."
     },
     {
       "id": "softwaresuggest",
