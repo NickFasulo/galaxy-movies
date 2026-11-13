@@ -354,9 +354,9 @@ export default function Home({ initialMovies, initialTotalPages, region, feature
               <Wordmark fontSize={{ base: '2.5rem', md: '3.75rem' }} />
             </Heading>
             <Text textAlign='center' color='gray.400' fontSize='xs' letterSpacing='0.22em' textTransform='uppercase' mt={3}>
-              Know when it streams.
+              Know when it streams
               <Box as='br' display={{ base: 'block', md: 'none' }} />
-              {' Know before it leaves.'}
+              {' and before it leaves.'}
             </Text>
             <Text textAlign='center' color='gray.500' fontSize='xs' mt={2} mb='1.5rem' px={4}>
               Free alerts, no account needed.{' '}
