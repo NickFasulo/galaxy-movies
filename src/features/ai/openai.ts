@@ -3,13 +3,12 @@ import { getRedis } from '../../lib/redis'
 
 export type AiTask = 'chat' | 'review' | 'intro' | 'similar' | 'tagline' | 'discover' | 'ctr'
 
-type ReasoningEffort = OpenAI.Chat.ChatCompletionReasoningEffort | 'none'
+type ReasoningEffort = NonNullable<OpenAI.Chat.ChatCompletionReasoningEffort>
 
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-6-luna'
 
 // 'none' keeps latency-sensitive tasks fast; discover drafts long-lived TMDB
-// filters, so it gets some reasoning. The API accepts 'none'; openai@4.77's
-// ChatCompletionReasoningEffort predates it.
+// filters, so it gets some reasoning.
 const TASK_EFFORT: Record<AiTask, ReasoningEffort> = {
   chat: 'none',
   review: 'none',
@@ -20,7 +19,7 @@ const TASK_EFFORT: Record<AiTask, ReasoningEffort> = {
   ctr: 'none'
 }
 
-const VALID_EFFORTS = new Set(['none', 'low', 'medium', 'high'])
+const VALID_EFFORTS = new Set(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
 
 function taskModel(task: AiTask): string {
   return process.env[`OPENAI_MODEL_${task.toUpperCase()}`] || DEFAULT_MODEL
@@ -42,17 +41,9 @@ export function aiParams(task: AiTask, maxCompletionTokens: number, temperature:
   return {
     model: taskModel(task),
     max_completion_tokens: maxCompletionTokens,
-    reasoning_effort: effort as OpenAI.Chat.ChatCompletionReasoningEffort,
+    reasoning_effort: effort,
     ...(effort === 'none' ? { temperature } : {})
   }
-}
-
-interface AiUsage {
-  prompt_tokens?: number
-  completion_tokens?: number
-  // SDK 4.77 types lack cache_write_tokens, but the API returns it.
-  prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number }
-  completion_tokens_details?: { reasoning_tokens?: number }
 }
 
 interface AiUsageMeta {
@@ -73,7 +64,7 @@ function bumpUsage(field: string, delta: number): void {
   pendingUsage.set(field, (pendingUsage.get(field) || 0) + delta)
 }
 
-export function recordAiUsage(task: AiTask, usage: AiUsage | null | undefined, meta: AiUsageMeta = {}): void {
+export function recordAiUsage(task: AiTask, usage: OpenAI.Completions.CompletionUsage | null | undefined, meta: AiUsageMeta = {}): void {
   const kv = getRedis()
   if (!kv) return
   const field = `${taskModel(task)}.${task}`

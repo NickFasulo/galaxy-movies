@@ -142,6 +142,7 @@ describe('recordAiUsage', () => {
   const usage = {
     prompt_tokens: 1000,
     completion_tokens: 200,
+    total_tokens: 1200,
     prompt_tokens_details: { cached_tokens: 400, cache_write_tokens: 100 },
     completion_tokens_details: { reasoning_tokens: 50 }
   }

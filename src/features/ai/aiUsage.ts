@@ -99,7 +99,7 @@ export async function getCostEstimate() {
         })
         const tasks: Record<string, Record<Metric, number>> = {}
         for (const [field, raw] of Object.entries(usage)) {
-          const m = field.match(/^(.+)\.(chat|review|intro|similar|tagline|discover)\.(input|output|reasoning|cached|cache_write|uncached|latency_ms|ttft_ms|requests)$/)
+          const m = field.match(/^(.+)\.(chat|review|intro|similar|tagline|discover|ctr)\.(input|output|reasoning|cached|cache_write|uncached|latency_ms|ttft_ms|requests)$/)
           if (!m) continue
           const key = `${m[1]}/${m[2]}`
           const bucket = tasks[key] || (tasks[key] = zero())
