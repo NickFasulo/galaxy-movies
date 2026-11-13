@@ -29,7 +29,10 @@ for c in ws[1]:
     c.alignment = Alignment(vertical='top')
 ws.freeze_panes = 'A2'
 
-for l in reg['listings']:
+status_order = ['live', 'in-review', 'needs-account', 'needs-payment', 'blocked', 'unknown', 'queued']
+listings = sorted(reg['listings'],
+                  key=lambda l: status_order.index(l['status']) if l['status'] in status_order else len(status_order))
+for l in listings:
     ws.append([l.get(k) or '' for k in cols])
 
 status_fill = {
