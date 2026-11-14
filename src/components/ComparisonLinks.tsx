@@ -2,16 +2,18 @@ import Link from 'next/link'
 import { Button, Flex, Heading } from '@chakra-ui/react'
 import { secondaryButton } from '../theme'
 
-const COMPARISON_PAGES = [
+export const COMPARISON_PAGES = [
   { href: '/justwatch-alternative', label: 'JustWatch' },
   { href: '/reelgood-alternative', label: 'Reelgood' },
+  { href: '/letterboxd-alternative', label: 'Letterboxd' },
   { href: '/trakt-alternative', label: 'Trakt' },
   { href: '/tv-time-alternative', label: 'TV Time' },
   { href: '/imdb-alternative', label: 'IMDb' },
   { href: '/whats-on-netflix-alternative', label: "What's on Netflix" },
   { href: '/flixable-alternative', label: 'Flixable' },
   { href: '/instantwatcher-alternative', label: 'InstantWatcher' },
-  { href: '/can-i-stream-it-alternative', label: 'Can I Stream It' }
+  { href: '/can-i-stream-it-alternative', label: 'Can I Stream It' },
+  { href: '/compare/filmatic', label: 'Filmatic' }
 ]
 
 export default function ComparisonLinks({ exclude }: { exclude: string }) {

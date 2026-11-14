@@ -15,7 +15,7 @@
 - /lists — curated lists; /collections — franchise collections
 - /movie-night — merge two taste profiles for a two-person pick
 - /widgets — embeddable "new & leaving" iframes and churn stat card
-- /justwatch-alternative, /reelgood-alternative — comparison pages
+- /justwatch-alternative, /reelgood-alternative, /trakt-alternative, /letterboxd-alternative, /imdb-alternative, /tv-time-alternative, /compare/filmatic — comparison pages (/compare lists them all)
 
 ## Open data & feeds
 
