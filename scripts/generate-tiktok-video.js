@@ -266,10 +266,6 @@ async function tmdb(pathname) {
   return r.json()
 }
 
-// Branded tile for titles with no resolvable poster — an empty slide area
-// reads as a render bug on TikTok, the galaxy art reads as intentional.
-const FALLBACK_POSTER = `data:image/jpeg;base64,${fs.readFileSync(path.join(ROOT, 'public/backdrop_fallback.jpg')).toString('base64')}`
-
 // res.ok matters: a TMDB 404 body would otherwise be base64'd into the <img>,
 // and resvg leaves a transparent hole — the checkerboard flash seen in renders.
 const toDataUri = async (imgPath) => {
@@ -287,13 +283,15 @@ const toDataUri = async (imgPath) => {
 }
 
 // Poster chain: detail poster → search hit's poster → either's backdrop
-// (center-cropped into the portrait slot) → branded tile. Never empty.
+// (center-cropped into the portrait slot). Null when nothing resolves — it's
+// a visual medium, so posterless titles drop from the cut rather than fill
+// the frame with generic art.
 const bestPoster = async (detail, hit) => {
   for (const p of [detail?.poster_path, hit?.poster_path, detail?.backdrop_path, hit?.backdrop_path]) {
     const uri = await toDataUri(p)
-    if (uri) return { uri, real: true }
+    if (uri) return uri
   }
-  return { uri: FALLBACK_POSTER, real: false }
+  return null
 }
 
 const money = (n) => `$${n.toFixed(2)}`
@@ -450,8 +448,8 @@ async function main() {
       '#streaming #movies #whattowatch #questionoftheweek',
     ].join('\n')
   } else {
-    // 3× candidates resolve posters; titles that can't produce a real one
-    // yield their spot to the next title rather than shipping an empty frame.
+    // 3× candidates resolve posters so titles that can't produce one (id-less
+    // leavingSoon rows TMDB doesn't know) drop out without shrinking the cut.
     const candidates = dedupePool((await loadItems()).filter((t) => t?.title))
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, COUNT * 3)
@@ -468,23 +466,22 @@ async function main() {
         if (!id) {
           const s = await tmdb(`/search/multi?query=${encodeURIComponent(t.title)}&include_adult=false`)
           hit = (s.results || []).find((r) => r.media_type === 'movie' || r.media_type === 'tv')
-          if (!hit) return { ...t, realPoster: false, posterDataUri: FALLBACK_POSTER }
+          if (!hit) return { ...t, posterDataUri: null }
           id = hit.id
           type = hit.media_type
         }
         const d = await tmdb(`/${type}/${id}`)
-        const poster = await bestPoster(d, hit)
-        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, realPoster: poster.real, posterDataUri: poster.uri }
+        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, posterDataUri: await bestPoster(d, hit) }
       } catch {
-        return { ...t, realPoster: false, posterDataUri: FALLBACK_POSTER }
+        return { ...t, posterDataUri: null }
       }
     }))
 
-    // Stable sort: real posters first, popularity order preserved inside each
-    // group — the #N badge just counts the video's own ordering anyway.
-    const titles = resolved
-      .sort((a, b) => Number(b.realPoster) - Number(a.realPoster))
-      .slice(0, COUNT)
+    const titles = resolved.filter((t) => t.posterDataUri).slice(0, COUNT)
+    if (!titles.length) {
+      console.error(`No titles with resolvable posters for kind "${KIND}"`)
+      process.exit(2)
+    }
 
     // 1s fade intro, then a static hold — motion stops cleanly.
     slides = [
