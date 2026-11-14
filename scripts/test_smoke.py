@@ -31,7 +31,7 @@ elif url.endswith('/in') or url.endswith('/in/streaming'):
 else:
     print('HTTP/2 200\r\n\r\nTrending Fight Club tv/1399 Netflix Sitemap urlset')
     print('Leaving Worth It reports churn Movie night alerts Curated Cozy')
-    print('JustWatch Reelgood Trakt Widget Galaxy Plus Galaxy Movies')
+    print('JustWatch Reelgood Trakt Widget Galaxy Plus Galaxy Movies Letterboxd Filmatic')
     print('JioHotstar SonyLIV India BEGIN:VCALENDAR')
     print('"provider":"netflix" "attribution" "days" smoke-test-key')
     print('200', end='')
