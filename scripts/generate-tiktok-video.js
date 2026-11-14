@@ -57,6 +57,7 @@ if (fs.existsSync(envPath)) {
 }
 const envVar = (name) => process.env[name] || env[name]
 const TMDB_KEY = envVar('TMDB_API_KEY')
+const WM_KEY = envVar('WATCHMODE_API_KEY')
 const KV_URL = envVar('UPSTASH_REDIS_KV_REST_API_URL')
 const KV_TOKEN = envVar('UPSTASH_REDIS_KV_REST_API_READ_ONLY_TOKEN') || envVar('UPSTASH_REDIS_KV_REST_API_TOKEN')
 if (!TMDB_KEY) { console.error('Need TMDB_API_KEY'); process.exit(1) }
@@ -268,30 +269,48 @@ async function tmdb(pathname) {
 
 // res.ok matters: a TMDB 404 body would otherwise be base64'd into the <img>,
 // and resvg leaves a transparent hole — the checkerboard flash seen in renders.
+// Accepts a TMDB path (/xx.jpg) or an absolute image URL (Watchmode hands back
+// full image.tmdb.org URLs).
 const toDataUri = async (imgPath) => {
   if (!imgPath) return null
+  const url = imgPath.startsWith('http') ? imgPath : `https://image.tmdb.org/t/p/w780${imgPath}`
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await fetch(`https://image.tmdb.org/t/p/w780${imgPath}`)
+      const r = await fetch(url)
       if (r.ok) {
         const buf = Buffer.from(await r.arrayBuffer())
-        return `data:image/jpeg;base64,${buf.toString('base64')}`
+        return `data:${r.headers.get('content-type') || 'image/jpeg'};base64,${buf.toString('base64')}`
       }
     } catch { /* retry once, then give up */ }
   }
   return null
 }
 
-// Poster chain: detail poster → search hit's poster → either's backdrop
-// (center-cropped into the portrait slot). Null when nothing resolves — it's
-// a visual medium, so posterless titles drop from the cut rather than fill
-// the frame with generic art.
-const bestPoster = async (detail, hit) => {
-  for (const p of [detail?.poster_path, hit?.poster_path, detail?.backdrop_path, hit?.backdrop_path]) {
+const firstUri = async (paths) => {
+  for (const p of paths) {
     const uri = await toDataUri(p)
     if (uri) return uri
   }
   return null
+}
+
+// Poster chain: detail poster → search hit's poster → either's backdrop
+// (center-cropped into the portrait slot) → Watchmode's URLs. Null when
+// nothing resolves — it's a visual medium, so posterless titles drop from
+// the cut rather than fill the frame with generic art.
+const bestPoster = (detail, hit, wmPaths = []) =>
+  firstUri([detail?.poster_path, hit?.poster_path, detail?.backdrop_path, hit?.backdrop_path, ...wmPaths])
+
+// Watchmode /details — the leaving feed carries its title id, and Watchmode's
+// record resolves the real tmdb_id + art for titles TMDB search can't index
+// (the Tubi/Freevee long tail). One call per unmatched title, only on render.
+const watchmodeDetails = async (id) => {
+  try {
+    const r = await fetch(`https://api.watchmode.com/v1/title/${id}/details/?apiKey=${WM_KEY}`)
+    return r.ok ? r.json() : null
+  } catch {
+    return null
+  }
 }
 
 const money = (n) => `$${n.toFixed(2)}`
@@ -457,21 +476,32 @@ async function main() {
 
     // Poster paths aren't in the diff payload — one detail call per title.
     // leavingSoon items arrive id-less (Watchmode names don't join to the
-    // catalog), so fall back to a title search for a resolvable poster.
+    // catalog): resolve via their watchmodeId first — /details hands back the
+    // exact tmdb_id even for titles TMDB search can't index — then a title
+    // search, with Watchmode's own art as the last poster source.
     const resolved = await Promise.all(candidates.map(async (t) => {
       try {
         let type = t.tmdbType === 'tv' ? 'tv' : 'movie'
         let id = t.tmdbId
         let hit = null
+        let wmPaths = []
+        if (!id && t.watchmodeId && WM_KEY) {
+          const wm = await watchmodeDetails(t.watchmodeId)
+          if (wm?.tmdb_id) {
+            id = wm.tmdb_id
+            type = String(wm.type || '').startsWith('tv') ? 'tv' : 'movie'
+          }
+          wmPaths = [wm?.poster, wm?.backdrop]
+        }
         if (!id) {
           const s = await tmdb(`/search/multi?query=${encodeURIComponent(t.title)}&include_adult=false`)
           hit = (s.results || []).find((r) => r.media_type === 'movie' || r.media_type === 'tv')
-          if (!hit) return { ...t, posterDataUri: null }
+          if (!hit) return { ...t, posterDataUri: await firstUri(wmPaths) }
           id = hit.id
           type = hit.media_type
         }
         const d = await tmdb(`/${type}/${id}`)
-        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, posterDataUri: await bestPoster(d, hit) }
+        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, posterDataUri: await bestPoster(d, hit, wmPaths) }
       } catch {
         return { ...t, posterDataUri: null }
       }

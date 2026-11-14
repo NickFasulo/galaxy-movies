@@ -74,7 +74,9 @@ export interface ComingTitle {
 }
 
 // tmdbId is null when the title can't be matched to our catalog snapshot —
-// the row still renders (unlinked) on leaving pages.
+// the row still renders (unlinked) on leaving pages. watchmodeId stays
+// attached so consumers (the video render) can resolve art for titles TMDB
+// doesn't index via Watchmode's own /title/{id}/details.
 export interface LeavingSoonTitle {
   tmdbId: number | null
   tmdbType: MediaType
@@ -82,6 +84,7 @@ export interface LeavingSoonTitle {
   date: string
   season: number | null
   popularity?: number
+  watchmodeId?: number
 }
 
 export interface ProviderChanges {
@@ -808,7 +811,8 @@ export async function updateStreamingChanges() {
             title: item.title,
             date: item.leaving_date,
             season: item.season ?? null,
-            popularity: match?.popularity
+            popularity: match?.popularity,
+            watchmodeId: item.id
           }
         })
         const scheduledDeparture = new Map<number, string>()

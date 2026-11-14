@@ -31,6 +31,9 @@ jobs:
     timeout-minutes: 15
     env:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      # Resolves posters for id-less leavingSoon titles via /title/{id}/details
+      # (a few calls per render — the daily diff cron owns quota management).
+      WATCHMODE_API_KEY: ${{ secrets.WATCHMODE_API_KEY }}
       TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
       TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
       TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
