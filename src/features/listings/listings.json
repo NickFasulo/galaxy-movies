@@ -300,9 +300,10 @@
       "id": "openhunts",
       "name": "openhunts",
       "category": "directory",
-      "status": "needs-account",
+      "status": "in-review",
+      "submittedAt": "2026-11-13",
       "submitUrl": "https://openhunts.com/projects/submit",
-      "notes": "Submit page requires Google/GitHub/email login (verified Nov 13). Not in their sitemap; 'Club Member' badge was embedded on /about without a listing — removed Nov 12."
+      "notes": "Submitted Nov 13. Not in their sitemap; 'Club Member' badge was embedded on /about without a listing — removed Nov 12."
     },
     {
       "id": "launchaf",
