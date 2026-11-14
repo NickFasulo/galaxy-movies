@@ -79,6 +79,8 @@ declare namespace NodeJS {
     OPENAI_ADMIN_KEY?: string
     OPENAI_CREDITS_BASELINE?: string
     OPENAI_CREDITS_BASELINE_DATE?: string
+    SOCIAL_SCOPES_X?: string
+    SOCIAL_SCOPES_LINKEDIN?: string
     GSC_CLIENT_EMAIL?: string
     GSC_PRIVATE_KEY?: string
     GSC_SITE_URL?: string

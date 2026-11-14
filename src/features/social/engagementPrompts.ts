@@ -1,12 +1,14 @@
 import promptData from './engagementPrompts.data.json'
 
-// Rotating engagement-prompt pool for the weekly /api/cron/social-engagement
-// job — data lives in engagementPrompts.data.json so scripts/generate-
-// tiktok-video.js (plain CJS, can't import TS) reads the same pool for the
-// Thursday question video. `x` fits 280, `bsky` fits 300 (mastodon reuses
-// it), `long` covers telegram/discord/facebook and the reddit stash. `{link}`
-// in each body is swapped for the channel's UTM-tagged URL at build time —
-// the adhoc broadcast does not tag text copy, only separate link fields.
+// Rotating engagement-prompt pool — `title` (the bare question) closes the
+// weekly digest broadcast; the full bodies back manual adhoc posts via
+// /api/cron/social-post. Data lives in engagementPrompts.data.json so
+// scripts/generate-tiktok-video.js (plain CJS, can't import TS) reads the
+// same pool for the Thursday question video. `x` fits 280, `bsky` fits 300
+// (mastodon reuses it), `long` covers telegram/discord/facebook and the
+// reddit stash. `{link}` in each body is swapped for the channel's UTM-tagged
+// URL at build time — the adhoc broadcast does not tag text copy, only
+// separate link fields.
 export interface EngagementPrompt {
   title: string
   videoSub: string

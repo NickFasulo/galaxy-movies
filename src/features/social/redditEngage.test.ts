@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => ({
     get: vi.fn(async () => null as string | null),
     set: vi.fn(async () => 'OK'),
     hget: vi.fn(async () => null),
-    hset: vi.fn(async () => 1)
+    hset: vi.fn(async () => 1),
+    expire: vi.fn(async () => 1)
   }
 }))
 

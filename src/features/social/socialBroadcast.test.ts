@@ -36,7 +36,8 @@ const SOCIAL_ENVS = [
   'TUMBLR_BLOG', 'TUMBLR_ACCESS_TOKEN', 'PINTEREST_BOARD', 'PINTEREST_ACCESS_TOKEN',
   'FB_PAGE_ID', 'FB_PAGE_ACCESS_TOKEN', 'SOCIAL_FACEBOOK_WEBHOOK',
   'THREADS_USER_ID', 'THREADS_ACCESS_TOKEN',
-  'LINKEDIN_ACCESS_TOKEN', 'LINKEDIN_REFRESH_TOKEN', 'LINKEDIN_AUTHOR_URN', 'LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET'
+  'LINKEDIN_ACCESS_TOKEN', 'LINKEDIN_REFRESH_TOKEN', 'LINKEDIN_AUTHOR_URN', 'LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET',
+  'SOCIAL_SCOPES_X', 'SOCIAL_SCOPES_LINKEDIN'
 ]
 const clearSocialEnv = () => SOCIAL_ENVS.forEach((k) => delete process.env[k])
 
@@ -68,6 +69,30 @@ describe('buildBroadcastPost', () => {
     })
     expect(text.length).toBeLessThanOrEqual(300)
     expect(text).toContain('galaxymovies.app/leaving')
+  })
+
+  it('appends the closing line after the footer link', () => {
+    const text = buildBroadcastPost(
+      { netflix: { added: items(['Frankenstein']), left: items([]), coming: items([]) } },
+      300,
+      'https://www.galaxymovies.app/leaving',
+      'What did you finally watch right before it left?'
+    )
+    expect(text.endsWith('What did you finally watch right before it left?')).toBe(true)
+    expect(text.indexOf('galaxymovies.app/leaving')).toBeLessThan(text.indexOf('What did you finally watch'))
+  })
+
+  it('drops the closing line before the link when over cap', () => {
+    const long = Array.from({ length: 40 }, (_, i) => `A Very Long Title Indeed Number ${i + 1}`)
+    const text = buildBroadcastPost(
+      { netflix: { added: items(long), left: items(long), coming: items([]) } },
+      120,
+      'https://www.galaxymovies.app/leaving',
+      'Closing question that gets dropped?'
+    )
+    expect(text.length).toBeLessThanOrEqual(120)
+    expect(text).toContain('galaxymovies.app/leaving')
+    expect(text).not.toContain('Closing question')
   })
 
   it('handles empty diffs', () => {
@@ -198,7 +223,7 @@ describe('buildLastChancePost', () => {
         netflix: {
           leavingSoon: [
             { title: 'Gone Tomorrow', date: '2026-10-31', popularity: 50 },
-            { title: 'Gone Today', date: '2026-10-30', popularity: 10 },
+            { title: 'Gone Today', date: '2026-10-30', popularity: 20 },
             { title: 'Too Late', date: '2026-10-29' },
             { title: 'Too Far', date: '2026-11-05' },
             { title: 'Gone Sunday', date: '2026-11-01', popularity: 90 },
@@ -224,7 +249,7 @@ describe('buildLastChancePost', () => {
       {
         hulu: {
           leavingSoon: [
-            { title: 'Obscure Exit', date: '2026-10-31', popularity: 3 },
+            { title: 'Obscure Exit', date: '2026-10-31', popularity: 20 },
             { title: 'Famous Exit', date: '2026-10-31', popularity: 99 }
           ]
         }
@@ -234,6 +259,26 @@ describe('buildLastChancePost', () => {
       now
     )
     expect(text.indexOf('Famous Exit')).toBeLessThan(text.indexOf('Obscure Exit'))
+  })
+
+  it('floors known-obscure titles but keeps unscored ones', () => {
+    const text = buildLastChancePost(
+      {
+        netflix: {
+          leavingSoon: [
+            { title: 'Bottom Barrel', date: '2026-10-31', popularity: 3 },
+            { title: 'Unscored Exit', date: '2026-10-31' },
+            { title: 'Famous Exit', date: '2026-10-31', popularity: 60 }
+          ]
+        }
+      },
+      300,
+      'https://www.galaxymovies.app/leaving',
+      now
+    )
+    expect(text).not.toContain('Bottom Barrel')
+    expect(text).toContain('Unscored Exit')
+    expect(text).toContain('Famous Exit')
   })
 
   it('returns empty string when nothing is inside the window', () => {
@@ -658,5 +703,112 @@ describe('linkedin channel', () => {
     const body = new URLSearchParams(String(refresh![1]?.body))
     expect(body.get('grant_type')).toBe('refresh_token')
     expect(body.get('refresh_token')).toBe('rt')
+  })
+})
+
+describe('scope gating', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+    process.env.X_API_KEY = 'consumer-key'
+    process.env.X_API_SECRET = 'consumer-secret'
+    process.env.X_ACCESS_TOKEN = 'access-token'
+    process.env.X_ACCESS_TOKEN_SECRET = 'access-secret'
+    process.env.LINKEDIN_ACCESS_TOKEN = 'tok'
+    process.env.LINKEDIN_AUTHOR_URN = 'urn:li:person:abc'
+    fetchSpy.mockResolvedValue(new Response('{}', { status: 200 }))
+  })
+
+  it('gates x and linkedin out of the daily lastchance scope by default', async () => {
+    const results = await broadcastLastChance(new Date('2026-10-30T12:00:00Z'))
+    expect(results.x.status).toBe('skipped')
+    expect(results.x.reason).toBe('scope gated')
+    expect(results.linkedin.status).toBe('skipped')
+    expect(results.linkedin.reason).toBe('scope gated')
+    expect(fetchSpy.mock.calls.find(([input]) => String(input).includes('api.x.com'))).toBeUndefined()
+    expect(fetchSpy.mock.calls.find(([input]) => String(input).includes('api.linkedin.com'))).toBeUndefined()
+  })
+
+  it('still lets x and linkedin post the weekly digest', async () => {
+    const results = await broadcastWeeklyDigest()
+    expect(results.x.status).toBe('posted')
+    expect(results.linkedin.status).toBe('posted')
+  })
+
+  it('SOCIAL_SCOPES_<channel> overrides the defaults', async () => {
+    process.env.SOCIAL_SCOPES_X = 'weekly,lastchance'
+    const results = await broadcastLastChance(new Date('2026-10-30T12:00:00Z'))
+    expect(results.x.status).toBe('posted')
+  })
+})
+
+describe('channel hashtags', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+  })
+
+  it('appends discovery tags on bsky and mastodon but not x', async () => {
+    process.env.BSKY_HANDLE = 'galaxymovies.app'
+    process.env.BSKY_APP_PASSWORD = 'test-pass'
+    process.env.MASTODON_INSTANCE = 'https://mastodon.social'
+    process.env.MASTODON_TOKEN = 'tok'
+    process.env.X_API_KEY = 'k'
+    process.env.X_API_SECRET = 's'
+    process.env.X_ACCESS_TOKEN = 'at'
+    process.env.X_ACCESS_TOKEN_SECRET = 'ats'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('createSession')
+        ? new Response(JSON.stringify({ accessJwt: 'jwt', did: 'd' }), { status: 200 })
+        : new Response('{}', { status: 200 })
+    )
+
+    await broadcastWeeklyDigest()
+    const bskyBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('createRecord'))![1]?.body)
+    )
+    expect(bskyBody.record.text).toContain('#movies #streaming')
+    const mastoBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('mastodon.social/api/v1/statuses'))![1]?.body)
+    )
+    expect(mastoBody.status).toContain('#movies #streaming')
+    const xBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input) === 'https://api.x.com/2/tweets')![1]?.body)
+    )
+    expect(xBody.text).not.toContain('#movies')
+  })
+
+  it('never tags adhoc copy', async () => {
+    process.env.BSKY_HANDLE = 'galaxymovies.app'
+    process.env.BSKY_APP_PASSWORD = 'test-pass'
+    fetchSpy.mockImplementation(async (input) =>
+      String(input).includes('createSession')
+        ? new Response(JSON.stringify({ accessJwt: 'jwt', did: 'd' }), { status: 200 })
+        : new Response('{}', { status: 200 })
+    )
+    const copy = 'adhoc copy that is comfortably over the minimum length for posting'
+    await broadcastCustomPost({ bsky: copy })
+    const bskyBody = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('createRecord'))![1]?.body)
+    )
+    expect(bskyBody.record.text).toBe(copy)
+  })
+})
+
+describe('weekly digest closing line', () => {
+  beforeEach(() => {
+    fetchSpy.mockReset()
+    clearSocialEnv()
+  })
+
+  it("closes the digest post with the week's rotating question", async () => {
+    process.env.SOCIAL_DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1/token'
+    fetchSpy.mockResolvedValue(new Response('{}', { status: 200 }))
+    const { engagementPromptForWeek } = await import('./engagementPrompts')
+    await broadcastWeeklyDigest()
+    const body = JSON.parse(
+      String(fetchSpy.mock.calls.find(([input]) => String(input).includes('discord.com'))![1]?.body)
+    )
+    expect(body.content).toContain(engagementPromptForWeek().title)
   })
 })

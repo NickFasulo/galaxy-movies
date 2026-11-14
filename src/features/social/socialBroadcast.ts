@@ -1,6 +1,7 @@
 import { getRedis } from '../../lib/redis'
 import { getMonthlyChanges, getProviderChanges, type MonthlyChanges } from '../catalog/streamingChanges'
 import { PROVIDER_NAME_MATCH, streamingProviders } from '../catalog/tmdb'
+import { engagementPromptForWeek } from './engagementPrompts'
 import { SOCIAL_CHANNELS, type SocialChannel } from './socialChannels'
 import { SITE_URL } from '../../lib/site'
 
@@ -26,7 +27,8 @@ export const BROADCAST_LINK = `${SITE_URL}/leaving`
 export function buildBroadcastPost(
   changes: Record<string, { added: { title: string }[]; left: { title: string }[]; coming: { title: string }[] }>,
   maxLen = 300,
-  link = BROADCAST_LINK
+  link = BROADCAST_LINK,
+  closing?: string
 ): string {
   // One block per provider: header line, then one title per line tagged
   // ✅ added / ❌ left. Newlines replace the old spaces 1:1 — the taller
@@ -42,7 +44,10 @@ export function buildBroadcastPost(
     if (parts.length) blocks.push(`${providerLabel(key)}:\n${parts.join('\n')}`)
   }
 
-  const render = () => [`This week's streaming moves:`, ...blocks].join('\n\n') + `\n\nFull lists updated daily: ${link}`
+  const render = () =>
+    [`This week's streaming moves:`, ...blocks].join('\n\n') +
+    `\n\nFull lists updated daily: ${link}` +
+    (closing ? `\n\n${closing}` : '')
 
   // Drop trailing provider blocks until the post fits the channel's cap.
   let text = render()
@@ -50,6 +55,9 @@ export function buildBroadcastPost(
     blocks.pop()
     text = render()
   }
+  // The closing line is the first thing to drop when the post still
+  // overflows — the footer link always survives.
+  if (text.length > maxLen && closing) return buildBroadcastPost(changes, maxLen, link)
   return text
 }
 
@@ -137,6 +145,49 @@ export function buildDeparturesDigest(
 const lastPostKey = (channel: string, scope?: string) =>
   `gm:social:last-post:${scope ? `${scope}:` : ''}${channel}`
 
+// Per-channel scope allowlist — defaults keep metered/professional feeds off
+// the daily urgency post: X posts draw from a pay-per-use credit balance and
+// LinkedIn tolerates ~weekly cadence before it reads as spam. Unlisted
+// channels get every scope. SOCIAL_SCOPES_<CHANNEL>=weekly,monthly overrides.
+const DEFAULT_SCOPES: Record<string, string[]> = {
+  x: ['weekly', 'monthly', 'adhoc'],
+  linkedin: ['weekly', 'monthly', 'adhoc']
+}
+const scopeAllowed = (channel: string, scope: string) => {
+  const env = process.env[`SOCIAL_SCOPES_${channel.toUpperCase()}`]
+  const allowed = env
+    ? env.split(',').map((s) => s.trim()).filter(Boolean)
+    : DEFAULT_SCOPES[channel]
+  return !allowed || allowed.includes(scope)
+}
+
+// Discovery hashtags — only feeds that index them. Appended after the post is
+// built so a near-cap post drops the tags rather than content.
+const CHANNEL_TAGS: Record<string, string> = { bsky: '#movies #streaming', mastodon: '#movies #streaming' }
+const withChannelTags = (channel: string, text: string, maxLen: number) => {
+  const tags = CHANNEL_TAGS[channel]
+  if (!tags) return text
+  const suffix = `\n\n${tags}`
+  return text.length + suffix.length <= maxLen ? text + suffix : text
+}
+
+// Health record per channel — the indexing-report email renders these so a
+// dead token or exhausted credits surface instead of failing silently.
+export const socialResultKey = (channel: string) => `gm:social:last-result:${channel}`
+const RESULT_TTL = 60 * 60 * 24 * 40
+export async function recordChannelResult(
+  kv: NonNullable<ReturnType<typeof getRedis>>,
+  channel: string,
+  scope: string,
+  r: { status: string; reason?: string }
+) {
+  const now = new Date().toISOString()
+  const fields: Record<string, string> = { status: r.status, scope, ts: now, reason: r.reason || '' }
+  if (r.status === 'posted' || r.status === 'emailed') fields.lastPosted = now
+  await kv.hset(socialResultKey(channel), fields).catch(() => {})
+  await kv.expire(socialResultKey(channel), RESULT_TTL).catch(() => {})
+}
+
 // Every channel posts a differently-tagged link so Umami can attribute the
 // traffic — the tag rides inside the post text too, since that's the URL
 // Bluesky/X readers actually click.
@@ -158,10 +209,15 @@ async function broadcastToChannels(
 ): Promise<Record<string, ChannelResult>> {
   const kv = getRedis()
   const results: Record<string, ChannelResult> = {}
+  const scope = opts.scope || 'weekly'
 
   for (const channel of SOCIAL_CHANNELS) {
     if (!channel.ready()) {
       results[channel.name] = { status: 'skipped', reason: 'not configured' }
+      continue
+    }
+    if (!scopeAllowed(channel.name, scope)) {
+      results[channel.name] = { status: 'skipped', reason: 'scope gated' }
       continue
     }
 
@@ -171,29 +227,40 @@ async function broadcastToChannels(
       results[channel.name] = { status: 'skipped', reason: 'nothing to post' }
       continue
     }
+    // Adhoc copy arrives final — hashtags only ride on the diff broadcasts.
+    const body = opts.scope === 'adhoc' ? text : withChannelTags(channel.name, text, channel.maxLen)
 
     const key = lastPostKey(channel.name, opts.scope)
     const last = kv ? await kv.get<string>(key).catch(() => null) : null
-    if (last === text) {
+    if (last === body) {
       results[channel.name] = { status: 'skipped', reason: 'already posted' }
       continue
     }
 
-    const failure = await channel.post(text, tagLink(linkBase), title)
+    const failure = await channel.post(body, tagLink(linkBase), title)
     if (failure) {
       results[channel.name] = { status: 'failed', reason: failure }
       continue
     }
-    await kv?.set(key, text, { ex: 60 * 60 * 24 * opts.ttlDays }).catch(() => {})
+    await kv?.set(key, body, { ex: 60 * 60 * 24 * opts.ttlDays }).catch(() => {})
     results[channel.name] = { status: 'posted' }
   }
 
+  if (kv) {
+    for (const [name, r] of Object.entries(results)) {
+      await recordChannelResult(kv, name, scope, r)
+    }
+  }
   return results
 }
 
 export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelResult>> {
   const changes = await getProviderChanges(BROADCAST_PROVIDERS)
   if (!Object.keys(changes).length) return { bsky: { status: 'failed', reason: 'no changes data' } }
+  // The week's rotating question closes the digest — folded in from the
+  // retired standalone Thursday broadcast (a question to zero followers got
+  // zero answers; inside a data post it reads like a human wrote it).
+  const prompt = engagementPromptForWeek()
   return broadcastToChannels(
     (channel, tagLink) =>
       channel.format === 'markdown'
@@ -207,7 +274,7 @@ export async function broadcastWeeklyDigest(): Promise<Record<string, ChannelRes
             ),
             title: "This week's streaming moves: new arrivals & departures"
           }
-        : { text: buildBroadcastPost(changes, channel.maxLen, tagLink(BROADCAST_LINK)) },
+        : { text: buildBroadcastPost(changes, channel.maxLen, tagLink(BROADCAST_LINK), prompt.title) },
     { ttlDays: 8 }
   )
 }
@@ -311,6 +378,10 @@ export async function broadcastMonthlyDepartures(): Promise<Record<string, Chann
 // fires hardest.
 
 const LAST_CHANCE_DAYS = 2
+// Bottom-barrel departures aren't worth a daily post on public feeds — a
+// defined score below the floor is a known-obscure title; undefined keeps
+// (a missing score is an uncatalogued title, not a verdict).
+const LAST_CHANCE_MIN_POPULARITY = 15
 
 interface LastChanceRow {
   title: string
@@ -334,6 +405,7 @@ function lastChanceRows(
   for (const key of BROADCAST_PROVIDERS) {
     for (const t of changes[key]?.leavingSoon || []) {
       if (!inWindow(t.date, today, cutoff)) continue
+      if (typeof t.popularity === 'number' && t.popularity < LAST_CHANCE_MIN_POPULARITY) continue
       rows.push({ title: t.title, provider: key, date: t.date, popularity: t.popularity ?? 0 })
     }
   }

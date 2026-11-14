@@ -2,7 +2,7 @@ import { getProviderChanges } from '../catalog/streamingChanges'
 import { getRedis } from '../../lib/redis'
 import { sendEmail, emailLayout, escapeHtml } from '../../lib/email'
 import { redditAccessToken, redditSubmit } from './socialChannels'
-import { providerLabel } from './socialBroadcast'
+import { providerLabel, recordChannelResult } from './socialBroadcast'
 import { SITE_URL } from '../../lib/site'
 
 // Weekly community-engagement post for OTHER people's subs — the
@@ -112,23 +112,30 @@ export async function runRedditEngage(now = new Date()): Promise<EngageResult> {
   const target = ENGAGE_SUBS[provider]
   const mode = process.env.REDDIT_ENGAGE_MODE === 'post' ? ('post' as const) : ('draft' as const)
   const base = { provider, sub: target.sub, mode }
+  // Record every outcome into the shared channel-health keys so a dead email
+  // target or bad creds surfaces in the indexing report instead of silently.
+  const finish = async (r: EngageResult): Promise<EngageResult> => {
+    const kv = getRedis()
+    if (kv) await recordChannelResult(kv, 'reddit-engage', 'engage', r)
+    return r
+  }
 
   const draftReady = Boolean(engageEmail() && process.env.RESEND_API_KEY)
   if (mode === 'post' ? !engageCredsReady() : !draftReady) {
-    return { ...base, status: 'skipped', reason: mode === 'post' ? 'REDDIT_ENGAGE_* creds not configured' : 'no email target' }
+    return finish({ ...base, status: 'skipped', reason: mode === 'post' ? 'REDDIT_ENGAGE_* creds not configured' : 'no email target' })
   }
 
   const changes = await getProviderChanges([provider])
   const change = changes[provider]
-  if (!change) return { ...base, status: 'skipped', reason: 'no changes data' }
+  if (!change) return finish({ ...base, status: 'skipped', reason: 'no changes data' })
 
   const { title, text } = buildProviderEngagePost(provider, change, { link: target.link })
-  if (text.length < 40) return { ...base, status: 'skipped', reason: 'nothing to post' }
+  if (text.length < 40) return finish({ ...base, status: 'skipped', reason: 'nothing to post' })
 
   const kv = getRedis()
   const key = dedupeKey(target.sub)
   const last = kv ? await kv.get<string>(key).catch(() => null) : null
-  if (last === text) return { ...base, status: 'skipped', reason: 'already posted' }
+  if (last === text) return finish({ ...base, status: 'skipped', reason: 'already posted' })
 
   let failure: string | null = null
   if (mode === 'post') {
@@ -138,7 +145,7 @@ export async function runRedditEngage(now = new Date()): Promise<EngageResult> {
       process.env.REDDIT_ENGAGE_USERNAME!,
       process.env.REDDIT_ENGAGE_PASSWORD!
     )
-    if (!auth.token) return { ...base, status: 'failed', reason: auth.error || 'token missing' }
+    if (!auth.token) return finish({ ...base, status: 'failed', reason: auth.error || 'token missing' })
     failure = await redditSubmit(auth.token, { sub: target.sub, title, text })
   } else {
     const ok = await sendEmail({
@@ -155,8 +162,8 @@ export async function runRedditEngage(now = new Date()): Promise<EngageResult> {
     })
     failure = ok ? null : 'email send failed'
   }
-  if (failure) return { ...base, status: 'failed', reason: failure }
+  if (failure) return finish({ ...base, status: 'failed', reason: failure })
 
   await kv?.set(key, text, { ex: ENGAGE_DEDUPE_TTL }).catch(() => {})
-  return { ...base, status: mode === 'post' ? 'posted' : 'emailed' }
+  return finish({ ...base, status: mode === 'post' ? 'posted' : 'emailed' })
 }

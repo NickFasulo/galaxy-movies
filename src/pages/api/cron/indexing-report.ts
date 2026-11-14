@@ -12,6 +12,7 @@ import { isCronAuthorized } from '../../../lib/auth'
 import { emailLayout, escapeHtml, sendEmail } from '../../../lib/email'
 import { INDEXNOW_STATUS_KEY, type IndexNowStatus } from '../../../lib/indexnow'
 import { getRedis } from '../../../lib/redis'
+import { collectSocialHealth, type ChannelHealth } from '../../../features/social/socialHealth'
 
 export const config = { maxDuration: 120 }
 
@@ -183,6 +184,21 @@ function chatDemandSection(d: ChatDemand) {
   )
 }
 
+function socialSection(health: ChannelHealth[]) {
+  const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
+  const ok = health.filter((h) => h.tone === 'ok').length
+  const bad = health.filter((h) => h.tone === 'bad')
+  const warn = health.filter((h) => h.tone === 'warn')
+  const muted = health.filter((h) => h.tone === 'muted').length
+  const line = (h: ChannelHealth, color: string) =>
+    `<div style="font-size:12px; color:${color}; line-height:1.6;">${escapeHtml(h.channel)}: ${escapeHtml(h.text)}</div>`
+  return s(
+    `<p style="margin:0; color:#4b5563; font-size:14px; line-height:1.6;"><strong style="color:#1f2937;">Social</strong> · ${ok} channels healthy${bad.length ? ` · <span style="color:#b91c1c;">${bad.length} failing</span>` : ''}${muted ? ` · ${muted} unconfigured/gated` : ''}</p>` +
+      bad.map((h) => line(h, '#b91c1c')).join('') +
+      warn.map((h) => line(h, '#92400e')).join('')
+  )
+}
+
 function accuracySection(stats: AccuracyEntry[]) {
   if (!stats.length) return ''
   const s = (html: string) => `<div style="margin-top:22px; padding-top:16px; border-top:1px solid #d1d5db;">${html}</div>`
@@ -210,7 +226,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // trailer check additionally resolves each title's videos before
     // inspecting (trailer-less titles' /trailer URLs 404).
     const upcoming = await upcomingTitles()
-    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog, listingChecks, accuracyStats] = await Promise.all([
+    const [report, trailerReport, bingReport, bingStats, indexNowStatus, prevSignature, prevBands, chatDemand, submitLog, listingChecks, accuracyStats, socialHealth] = await Promise.all([
       runIndexCheck(12, upcoming),
       runTrailerCheck(upcoming).catch((err) => {
         console.error('Trailer check failed:', err)
@@ -232,7 +248,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.error('Listings check failed:', err)
         return [] as ListingCheck[]
       }),
-      getAccuracyStats().catch(() => [] as AccuracyEntry[])
+      getAccuracyStats().catch(() => [] as AccuracyEntry[]),
+      collectSocialHealth().catch(() => [] as ChannelHealth[])
     ])
 
     // Daily submission counter — how many URLs the cron pushed to Bing's
@@ -276,6 +293,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (bingReport ? bingSection(bingReport, bingStats, indexNowStatus ?? null, weekSubmitted) : '') +
           (chatDemand ? chatDemandSection(chatDemand) : '') +
           listingsSection(listingChecks) +
+          socialSection(socialHealth) +
           accuracySection(accuracyStats)
       })
     })
