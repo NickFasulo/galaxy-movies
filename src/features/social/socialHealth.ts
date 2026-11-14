@@ -48,7 +48,7 @@ export function describeChannel(name: string, rec: SocialResultRec | null, now =
 
 export async function collectSocialHealth(now = new Date()): Promise<ChannelHealth[]> {
   const kv = getRedis()
-  const names = [...SOCIAL_CHANNELS.map((c) => c.name), 'reddit-engage']
+  const names = [...SOCIAL_CHANNELS.map((c) => c.name), 'reddit-engage', 'bsky-scout']
   const rows: ChannelHealth[] = []
   for (const name of names) {
     const rec = kv

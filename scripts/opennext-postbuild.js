@@ -62,7 +62,8 @@ const CRON_ROUTES = {
   '0 14 * * *': '/api/cron/social-lastchance',
   '0 14 * * 1': '/api/cron/indexing-report',
   '0 15 * * 3': '/api/cron/price-drops',
-  '0 18 * * 5': '/api/cron/social-reddit-engage'
+  '0 18 * * 5': '/api/cron/social-reddit-engage',
+  '0 16 * * 2,5': '/api/cron/social-bsky-scout'
 }
 
 // s-maxage on a Worker response does NOT reach Cloudflare's edge cache, so
