@@ -13,6 +13,7 @@ Implementation-ready specs for free (or near-free) channels that put Galaxy Movi
 | 7 | [trakt-lists.md](trakt-lists.md) | weekly public Trakt lists | this repo | one weekly cron | Trakt profile + Google | $0 |
 | 8 | [wordpress-plugin.md](wordpress-plugin.md) | `[galaxy]` shortcode / block | `galaxy-movies-wp` | none (iframe embeds) | wordpress.org directory | $0 |
 | 9 | [zapier-app.md](zapier-app.md) | trigger + action | `zapier/` | none | Zapier invite link → review | $0 |
+| 10 | [bsky-scout.md](bsky-scout.md) | BSKY reply drafts → email | this repo | one twice-weekly cron | replies into film/streaming conversations | $0 |
 
 ## Build order
 
@@ -22,6 +23,7 @@ Implementation-ready specs for free (or near-free) channels that put Galaxy Movi
 4. **slack-app** — same shape as Discord, quick follow.
 5. **trakt-lists** — independent cron.
 6. **wordpress-plugin**, **zapier-app** — thin wrappers, lowest priority.
+7. **bsky-scout** — engagement play, not a surface; independent of 1–6, pick up whenever social growth is the priority.
 
 ## Shared conventions the specs rely on
 
