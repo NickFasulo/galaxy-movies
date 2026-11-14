@@ -266,10 +266,34 @@ async function tmdb(pathname) {
   return r.json()
 }
 
-const toDataUri = async (posterPath) => {
-  if (!posterPath) return null
-  const buf = Buffer.from(await (await fetch(`https://image.tmdb.org/t/p/w500${posterPath}`)).arrayBuffer())
-  return `data:image/jpeg;base64,${buf.toString('base64')}`
+// Branded tile for titles with no resolvable poster — an empty slide area
+// reads as a render bug on TikTok, the galaxy art reads as intentional.
+const FALLBACK_POSTER = `data:image/jpeg;base64,${fs.readFileSync(path.join(ROOT, 'public/backdrop_fallback.jpg')).toString('base64')}`
+
+// res.ok matters: a TMDB 404 body would otherwise be base64'd into the <img>,
+// and resvg leaves a transparent hole — the checkerboard flash seen in renders.
+const toDataUri = async (imgPath) => {
+  if (!imgPath) return null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(`https://image.tmdb.org/t/p/w780${imgPath}`)
+      if (r.ok) {
+        const buf = Buffer.from(await r.arrayBuffer())
+        return `data:image/jpeg;base64,${buf.toString('base64')}`
+      }
+    } catch { /* retry once, then give up */ }
+  }
+  return null
+}
+
+// Poster chain: detail poster → search hit's poster → either's backdrop
+// (center-cropped into the portrait slot) → branded tile. Never empty.
+const bestPoster = async (detail, hit) => {
+  for (const p of [detail?.poster_path, hit?.poster_path, detail?.backdrop_path, hit?.backdrop_path]) {
+    const uri = await toDataUri(p)
+    if (uri) return { uri, real: true }
+  }
+  return { uri: FALLBACK_POSTER, real: false }
 }
 
 const money = (n) => `$${n.toFixed(2)}`
@@ -362,8 +386,19 @@ const ffmpegBin = () => {
 }
 
 async function renderSlide(imageResponse, outPath) {
-  const png = Buffer.from(await imageResponse.arrayBuffer())
-  await sharp(png).png().toFile(outPath)
+  // Guardrails: flatten alpha onto the canvas color (players show transparent
+  // pixels as checkerboard) and reject a uniform frame as a broken render —
+  // one retry, then the run aborts rather than shipping a flashed video.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const png = Buffer.from(await imageResponse.arrayBuffer())
+    const img = sharp(png)
+    const [meta, { channels }] = await Promise.all([img.metadata(), img.stats()])
+    if (meta.width === W && meta.height === H && channels.some((c) => c.stdev > 1)) {
+      await img.flatten({ background: C.canvas }).png().toFile(outPath)
+      return
+    }
+  }
+  throw new Error(`slide rendered a blank/uniform frame: ${outPath}`)
 }
 
 // Sibling {mp4}.txt consumed by tiktok-upload.js --post.
@@ -415,31 +450,41 @@ async function main() {
       '#streaming #movies #whattowatch #questionoftheweek',
     ].join('\n')
   } else {
-    const pool = dedupePool((await loadItems()).filter((t) => t?.title))
+    // 3× candidates resolve posters; titles that can't produce a real one
+    // yield their spot to the next title rather than shipping an empty frame.
+    const candidates = dedupePool((await loadItems()).filter((t) => t?.title))
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-      .slice(0, COUNT)
-    if (!pool.length) { console.error(`No items for kind "${KIND}"`); process.exit(2) }
+      .slice(0, COUNT * 3)
+    if (!candidates.length) { console.error(`No items for kind "${KIND}"`); process.exit(2) }
 
     // Poster paths aren't in the diff payload — one detail call per title.
     // leavingSoon items arrive id-less (Watchmode names don't join to the
     // catalog), so fall back to a title search for a resolvable poster.
-    const titles = (await Promise.all(pool.map(async (t) => {
+    const resolved = await Promise.all(candidates.map(async (t) => {
       try {
         let type = t.tmdbType === 'tv' ? 'tv' : 'movie'
         let id = t.tmdbId
+        let hit = null
         if (!id) {
           const s = await tmdb(`/search/multi?query=${encodeURIComponent(t.title)}&include_adult=false`)
-          const hit = (s.results || []).find((r) => r.media_type === 'movie' || r.media_type === 'tv')
-          if (!hit) return null
+          hit = (s.results || []).find((r) => r.media_type === 'movie' || r.media_type === 'tv')
+          if (!hit) return { ...t, realPoster: false, posterDataUri: FALLBACK_POSTER }
           id = hit.id
           type = hit.media_type
         }
         const d = await tmdb(`/${type}/${id}`)
-        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, posterDataUri: await toDataUri(d.poster_path) }
+        const poster = await bestPoster(d, hit)
+        return { ...t, tmdbId: id, tmdbType: type, popularity: t.popularity ?? d.popularity, realPoster: poster.real, posterDataUri: poster.uri }
       } catch {
-        return { ...t, posterDataUri: null }
+        return { ...t, realPoster: false, posterDataUri: FALLBACK_POSTER }
       }
-    }))).filter(Boolean)
+    }))
+
+    // Stable sort: real posters first, popularity order preserved inside each
+    // group — the #N badge just counts the video's own ordering anyway.
+    const titles = resolved
+      .sort((a, b) => Number(b.realPoster) - Number(a.realPoster))
+      .slice(0, COUNT)
 
     // 1s fade intro, then a static hold — motion stops cleanly.
     slides = [
