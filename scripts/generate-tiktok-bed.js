@@ -47,22 +47,24 @@ const R = new Float64Array(n)
 let seed = h || 1
 const noise = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return (seed / 2 ** 32) * 2 - 1 }
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c) }
-const i2f = (i) => Math.sin((i / SR) * 0.4) * 0.5 // detunes partials against organ lock
 
+// Pad envelope stays dry on purpose: a fast attack and a short tail past the
+// chord boundary — the previous 0.6s swell + 0.5s overlap smeared chords into
+// each other and read as reverb.
 function pad(freqs, t0, segLen) {
   const start = Math.floor(t0 * SR)
-  const len = Math.floor((segLen + 0.5) * SR)
+  const len = Math.floor((segLen + 0.15) * SR)
   const hi = 0.16 * STYLE.bright
   for (let i = 0; i < len && start + i < n; i++) {
     const t = i / SR
-    const env = smooth(t / 0.6) * (1 - smooth((t - segLen + 0.3) / 0.7))
+    const env = smooth(t / 0.18) * (1 - smooth((t - segLen + 0.15) / 0.3))
     let sl = 0, sr = 0
     for (let v = 0; v < freqs.length; v++) {
       const f = freqs[v]
       const o =
         Math.sin(2 * Math.PI * f * t) * 0.55 +
-        Math.sin(2 * Math.PI * f * 1.0019 * t + 1.3) * 0.35 +
-        Math.sin(2 * Math.PI * f * 2 * t + i2f(i)) * hi +
+        Math.sin(2 * Math.PI * f * 1.0014 * t + 1.3) * 0.3 +
+        Math.sin(2 * Math.PI * f * 2 * t) * hi +
         Math.sin(2 * Math.PI * f * 3 * t) * hi * 0.4
       const pan = (v / (freqs.length - 1) - 0.5) * 0.7
       sl += o * Math.sqrt((1 - pan) / 2)

@@ -274,6 +274,23 @@ const toDataUri = async (posterPath) => {
 
 const money = (n) => `$${n.toFixed(2)}`
 
+// Diff rows repeat a title — leavingSoon emits one row per departing season,
+// coming can list S1+S2, and the aggregate kinds stack the same film across
+// providers — so slides are deduped on normalized title (per media type)
+// before the popularity cut, or every spot in the video is one movie.
+const dedupeKey = (t) =>
+  `${t.tmdbType || ''}:${(t.title || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()}`
+
+const dedupePool = (items) => {
+  const seen = new Set()
+  return items.filter((t) => {
+    const key = dedupeKey(t)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 // Normalized item lists per kind. Aggregate kinds need --api (the workflow
 // always passes it); pricedrops also accepts the Redis key.
 async function loadItems() {
@@ -284,12 +301,26 @@ async function loadItems() {
     if (!r.ok) throw new Error(`streaming-changes all${period}: ${r.status}`)
     const { providers } = await r.json()
     const field = KIND === 'leaving' ? 'leavingSoon' : 'departed'
-    return Object.values(providers || {}).flatMap((p) =>
-      (p[field] || []).map((t) => ({
-        ...t,
-        caption: `${KIND === 'leaving' ? 'leaving' : 'left'} ${p.label}${t.date ? ` · ${t.date.slice(5).replace('-', '/')}` : ''}`,
-      }))
-    )
+    // Cross-provider dupes merge here (not in dedupePool) so the kept row's
+    // caption can name every provider the title is leaving.
+    const seen = new Map()
+    const merged = []
+    for (const p of Object.values(providers || {})) {
+      for (const t of p[field] || []) {
+        const prev = seen.get(dedupeKey(t))
+        if (prev) {
+          if (!prev._providers.includes(p.label)) prev._providers.push(p.label)
+          continue
+        }
+        const row = { ...t, _providers: [p.label] }
+        seen.set(dedupeKey(t), row)
+        merged.push(row)
+      }
+    }
+    return merged.map(({ _providers, ...t }) => ({
+      ...t,
+      caption: `${KIND === 'leaving' ? 'leaving' : 'left'} ${_providers.join(', ')}${t.date ? ` · ${t.date.slice(5).replace('-', '/')}` : ''}`,
+    }))
   }
   if (KIND === 'pricedrops') {
     const data = API_BASE
@@ -384,8 +415,7 @@ async function main() {
       '#streaming #movies #whattowatch #questionoftheweek',
     ].join('\n')
   } else {
-    const pool = (await loadItems())
-      .filter((t) => t?.title)
+    const pool = dedupePool((await loadItems()).filter((t) => t?.title))
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, COUNT)
     if (!pool.length) { console.error(`No items for kind "${KIND}"`); process.exit(2) }
